@@ -2,38 +2,145 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
 const ProfileAsesi = sequelize.define("profile_asesi", {
-  id_user: { type: DataTypes.INTEGER, primaryKey: true },
-  nik: { type: DataTypes.CHAR(16), unique: true },
-  nama_lengkap: DataTypes.STRING(100),
-  jenis_kelamin: DataTypes.ENUM("laki-laki","perempuan"),
-  tempat_lahir: DataTypes.STRING(50),
-  tanggal_lahir: DataTypes.DATE,
-  kebangsaan: DataTypes.STRING(50),
-
-  alamat: DataTypes.TEXT,
-  rt: DataTypes.STRING(5),
-  rw: DataTypes.STRING(5),
-  provinsi: DataTypes.STRING(50),
-  kota: DataTypes.STRING(50),
-  kecamatan: DataTypes.STRING(50),
-  kelurahan: DataTypes.STRING(50),
-  kode_pos: DataTypes.STRING(10),
-
-  pendidikan_terakhir: DataTypes.STRING(100),
-  universitas: DataTypes.STRING(150),
-  jurusan: DataTypes.STRING(100),
-  tahun_lulus: DataTypes.INTEGER,
-
-  pekerjaan: DataTypes.STRING(100),
-  jabatan: DataTypes.STRING(100),
-  nama_perusahaan: DataTypes.STRING(150),
-  alamat_perusahaan: DataTypes.TEXT,
-  telp_perusahaan: DataTypes.STRING(20),
-  fax_perusahaan: DataTypes.STRING(20),
-  email_perusahaan: DataTypes.STRING(100),
-
-  foto_profil: DataTypes.STRING(255),
-  portofolio: DataTypes.STRING(255)
+  id_user: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true  // Ditambahkan untuk konsistensi dengan SQL table
+  },
+  nik: {
+    type: DataTypes.CHAR(16),
+    unique: true,
+    allowNull: true  // Sesuai dengan struktur tabel (nullable)
+  },
+  nama_lengkap: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  jenis_kelamin: {
+    type: DataTypes.ENUM("laki-laki", "perempuan"),
+    allowNull: true
+  },
+  tempat_lahir: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  tanggal_lahir: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  kebangsaan: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  alamat: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  rt: {
+    type: DataTypes.STRING(5),
+    allowNull: true
+  },
+  rw: {
+    type: DataTypes.STRING(5),
+    allowNull: true
+  },
+  provinsi: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  kota: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  kecamatan: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  kelurahan: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  kode_pos: {
+    type: DataTypes.STRING(10),
+    allowNull: true
+  },
+  pendidikan_terakhir: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  universitas: {
+    type: DataTypes.STRING(150),
+    allowNull: true
+  },
+  jurusan: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  tahun_lulus: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  pekerjaan: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  jabatan: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  nama_perusahaan: {
+    type: DataTypes.STRING(150),
+    allowNull: true
+  },
+  alamat_perusahaan: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  telp_perusahaan: {
+    type: DataTypes.STRING(20),
+    allowNull: true
+  },
+  fax_perusahaan: {
+    type: DataTypes.STRING(20),
+    allowNull: true
+  },
+  email_perusahaan: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  foto_profil: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  portofolio: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  // Field baru untuk dokumen persyaratan LSP (upload file scan)
+  pas_foto: {
+    type: DataTypes.STRING(255),  // Path ke file pas foto
+    allowNull: true
+  },
+  ktp: {
+    type: DataTypes.STRING(255),  // Path ke file KTP
+    allowNull: true
+  },
+  ijazah: {
+    type: DataTypes.STRING(255),  // Path ke file ijazah terakhir
+    allowNull: true
+  },
+  transkrip: {
+    type: DataTypes.STRING(255),  // Path ke file transkrip nilai/daftar nilai
+    allowNull: true
+  },
+  kk: {
+    type: DataTypes.STRING(255),  // Path ke file kartu keluarga/KK
+    allowNull: true
+  },
+  surat_kerja: {
+    type: DataTypes.STRING(255),  // Path ke file surat keterangan kerja/magang
+    allowNull: true
+  }
 }, {
   tableName: "profile_asesi",
   timestamps: false
