@@ -15,6 +15,10 @@ const persyaratanController = require("../controllers/admin/persyaratan.controll
 const persyaratanTukController = require("../controllers/admin/persyaratanTuk.controller");
 const kelompokPekerjaanController = require("../controllers/admin/kelompokPekerjaan.controller");
 const tukTempatController = require("../controllers/admin/tukTempat.controller");
+const adminProfile = require("../controllers/admin/profile.controller");
+
+router.get("/profile", adminProfile.getProfile);
+router.put("/profile", adminProfile.updateProfile);
 
 
 router.post("/asesor", asesorAdmin.createAsesor);
