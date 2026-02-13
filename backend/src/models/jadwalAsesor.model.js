@@ -39,8 +39,16 @@ const JadwalAsesor = sequelize.define('JadwalAsesor', {
 });
 
 JadwalAsesor.associate = (models) => {
-  JadwalAsesor.belongsTo(models.JadwalTUK, { foreignKey: 'id_jadwal', as: 'jadwal' });
-  JadwalAsesor.belongsTo(models.User, { foreignKey: 'id_user', as: 'user' });
+  JadwalAsesor.belongsTo(models.Jadwal, {
+    foreignKey: "id_jadwal",
+    as: "jadwal"
+  });
+
+  JadwalAsesor.belongsTo(models.User, {
+    foreignKey: "id_user",
+    as: "user"
+  });
 };
+
 
 module.exports = JadwalAsesor;
