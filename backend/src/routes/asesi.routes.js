@@ -3,12 +3,13 @@ const router = require("express").Router();
 const authMiddleware = require("../middlewares/auth.middleware");
 const roleMiddleware = require("../middlewares/role.middleware");
 const uploadMiddleware = require("../middlewares/upload.middleware");  
-
 const profileController = require("../controllers/asesi/profile.controller");
 const pendaftaranController = require("../controllers/asesi/pendaftaran.controller");
 const aplikasiController = require("../controllers/asesi/aplikasi.controller");  
 const apl02Controller = require("../controllers/asesi/apl02.controller");  
 const pembayaranController = require("../controllers/asesi/pembayaran.controller"); 
+const bandingController = require("../controllers/asesi/banding.controller");
+const pesertaJadwalController = require("../controllers/asesi/pesertaJadwal.controller");
 
 router.use(authMiddleware, roleMiddleware.asesiOnly);
 
@@ -34,5 +35,10 @@ router.get("/apl02/:id_aplikasi/units", apl02Controller.getUnitsForApl02);
 router.post("/apl02/submit", uploadMiddleware, apl02Controller.submitApl02);  
 router.put("/apl02/update/:id_apl02", uploadMiddleware, apl02Controller.updateApl02);  
 router.get("/apl02/:id_aplikasi", apl02Controller.getApl02Data);  
+
+router.get("/jadwal-saya", pesertaJadwalController.getJadwalSaya);
+
+router.post("/banding", bandingController.ajukanBanding);
+router.get("/banding-saya", bandingController.getBandingSaya);
 
 module.exports = router;
