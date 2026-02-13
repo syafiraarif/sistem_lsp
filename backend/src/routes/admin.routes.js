@@ -16,6 +16,9 @@ const persyaratanTukController = require("../controllers/admin/persyaratanTuk.co
 const kelompokPekerjaanController = require("../controllers/admin/kelompokPekerjaan.controller");
 const tukTempatController = require("../controllers/admin/tukTempat.controller");
 const adminProfile = require("../controllers/admin/profile.controller");
+const bandingController = require("../controllers/admin/banding.controller");
+const dokumenMutuController = require("../controllers/admin/dokumenMutu.controller");
+const pesertaJadwalController = require("../controllers/admin/pesertaJadwal.controller");
 
 router.get("/profile", adminProfile.getProfile);
 router.put("/profile", adminProfile.updateProfile);
@@ -82,5 +85,19 @@ router.delete(
   "/tuk-tempat/detach-skema/:id_tuk/:id_skema",
   tukTempatController.detachSkema
 );
+
+router.get("/banding", bandingController.getAllBanding);
+router.put("/banding/:id", bandingController.updateStatusBanding);
+
+router.post("/dokumen-mutu", dokumenMutuController.createDokumen);
+router.get("/dokumen-mutu", dokumenMutuController.getAllDokumen);
+router.put("/dokumen-mutu/:id", dokumenMutuController.updateDokumen);
+router.delete("/dokumen-mutu/:id", dokumenMutuController.deleteDokumen);
+
+router.get(
+  "/jadwal/:id_jadwal/peserta",
+  pesertaJadwalController.getPesertaByJadwal
+);
+
 
 module.exports = router;

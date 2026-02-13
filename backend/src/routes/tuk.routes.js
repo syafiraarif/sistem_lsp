@@ -17,8 +17,4 @@ router.get("/jadwal/:id", jadwalController.getJadwalById);
 router.put("/jadwal/:id", jadwalController.updateJadwal);
 router.delete("/jadwal/:id", jadwalController.deleteJadwal);
 
-router.post("/jadwal/:id/asesor", jadwalController.addAsesorToJadwal); 
-router.delete("/jadwal/:id/asesor/:userId", jadwalController.removeAsesorFromJadwal); 
-router.get("/jadwal/:id/asesor", jadwalController.getAsesorInJadwal); 
-
 module.exports = router;

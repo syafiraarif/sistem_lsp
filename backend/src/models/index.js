@@ -17,12 +17,14 @@ const SkemaPersyaratanTuk = require("./skemaPersyaratanTuk.model");
 const KelompokPekerjaan = require("./kelompokPekerjaan.model");
 const Tuk = require("./tuk.model");
 const TukSkema = require("./tukSkema.model");
+const BandingAsesmen = require("./bandingAsesmen.model");
+const DokumenMutu = require("./dokumenMutu.model");
+const PesertaJadwal = require("./pesertaJadwal.model");
+const Jadwal = require("./jadwal.model");
 
-// relasi role - user
 Role.hasMany(User, { foreignKey: "id_role" });
 User.belongsTo(Role, { foreignKey: "id_role" });
 
-// relasi user - profile
 User.hasOne(ProfileAsesi, { foreignKey: "id_user" });
 User.hasOne(ProfileAsesor, { foreignKey: "id_user" });
 User.hasOne(ProfileAdmin, { foreignKey: "id_user" });
@@ -33,19 +35,15 @@ ProfileAsesor.belongsTo(User, { foreignKey: "id_user" });
 ProfileAdmin.belongsTo(User, { foreignKey: "id_user" });
 ProfileTuk.belongsTo(User, { foreignKey: "id_user" });
 
-/* SKKNI - SKEMA */
 Skkni.hasMany(Skema, { foreignKey: "skkni_id" });
 Skema.belongsTo(Skkni, { foreignKey: "skkni_id" });
 
-/* SKEMA SELF REFERENCE */
 Skema.hasMany(Skema, { foreignKey: "skema_induk_id", as: "subSkema" });
 Skema.belongsTo(Skema, { foreignKey: "skema_induk_id", as: "skemaInduk" });
 
-/* SKEMA - BIAYA */
 Skema.hasMany(BiayaUji, { foreignKey: "id_skema" });
 BiayaUji.belongsTo(Skema, { foreignKey: "id_skema" });
 
-/* SKEMA - PERSYARATAN ASESI */
 Skema.belongsToMany(Persyaratan, {
   through: SkemaPersyaratan,
   foreignKey: "id_skema"
@@ -76,6 +74,34 @@ Tuk.belongsToMany(Skema, {
   foreignKey: "id_tuk"
 });
 
+User.hasMany(BandingAsesmen, { foreignKey: "id_user" });
+BandingAsesmen.belongsTo(User, { foreignKey: "id_user", as: "user" });
+
+Jadwal.hasMany(BandingAsesmen, { foreignKey: "id_jadwal" });
+BandingAsesmen.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
+
+Skema.hasMany(BandingAsesmen, { foreignKey: "id_skema" });
+BandingAsesmen.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
+
+User.hasMany(PesertaJadwal, { foreignKey: "id_user" });
+PesertaJadwal.belongsTo(User, { foreignKey: "id_user", as: "user" });
+
+Jadwal.hasMany(PesertaJadwal, { foreignKey: "id_jadwal" });
+PesertaJadwal.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
+
+Skema.hasMany(Jadwal, { foreignKey: "Skema_Kompetensi" });
+Jadwal.belongsTo(Skema, {
+  foreignKey: "Skema_Kompetensi",
+  as: "skema"
+});
+
+Tuk.hasMany(Jadwal, { foreignKey: "TUK" });
+Jadwal.belongsTo(Tuk, {
+  foreignKey: "TUK",
+  as: "tuk"
+});
+
+
 module.exports = {
   User,
   Role,
@@ -95,5 +121,10 @@ module.exports = {
   PersyaratanTuk,
   SkemaPersyaratanTuk,
   KelompokPekerjaan,
-  Tuk
+  Tuk,
+  BandingAsesmen,
+  DokumenMutu,
+  Jadwal,
+
+  PesertaJadwal
 };
