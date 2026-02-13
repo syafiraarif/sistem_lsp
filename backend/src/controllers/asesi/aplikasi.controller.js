@@ -3,10 +3,9 @@ const SkemaPersyaratan = require("../../models/skemaPersyaratan.model");
 const Skkni = require("../../models/skkni.model");
 const UnitKompetensi = require("../../models/unitKompetensi.model");
 const AplikasiAsesmen = require("../../models/aplikasiAsesmen.model");
-const Pembayaran = require("../../models/pembayaran.model");  // Tambahkan import untuk cek pembayaran
+const Pembayaran = require("../../models/pembayaran.model");  
 const response = require("../../utils/response.util");
 
-// Get list skema aktif
 exports.getSkema = async (req, res) => {
   try {
     const data = await Skema.findAll({ where: { status: "aktif" } });
@@ -16,7 +15,6 @@ exports.getSkema = async (req, res) => {
   }
 };
 
-// Get persyaratan untuk skema tertentu
 exports.getPersyaratanBySkema = async (req, res) => {
   try {
     const { id_skema } = req.params;
@@ -27,7 +25,6 @@ exports.getPersyaratanBySkema = async (req, res) => {
   }
 };
 
-// Get list SKKNI
 exports.getSkkni = async (req, res) => {
   try {
     const data = await Skkni.findAll();
@@ -37,7 +34,6 @@ exports.getSkkni = async (req, res) => {
   }
 };
 
-// Get unit kompetensi berdasarkan SKKNI
 exports.getUnitKompetensiBySkkni = async (req, res) => {
   try {
     const { id_skkni } = req.params;
@@ -48,18 +44,15 @@ exports.getUnitKompetensiBySkkni = async (req, res) => {
   }
 };
 
-// Submit aplikasi asesmen (termasuk upload dokumen dan tanda tangan) - Harus bayar dulu untuk skema tersebut
 exports.submitAplikasi = async (req, res) => {
   try {
     const { id_skema, selected_persyaratan, dokumen_tambahan, tujuan_asesmen, tujuan_asesmen_lainnya, selected_units } = req.body;
     const files = req.files;
 
-    // Validasi dasar
     if (!id_skema || !tujuan_asesmen) {
       return response.error(res, "ID skema dan tujuan asesmen wajib diisi", 400);
     }
 
-    // Cek apakah pembayaran sudah "paid" untuk skema ini (asesi harus bayar dulu sebelum submit APL01)
     const pembayaran = await Pembayaran.findOne({
       include: [
         {
@@ -74,7 +67,6 @@ exports.submitAplikasi = async (req, res) => {
       return response.error(res, "Pembayaran untuk skema ini belum dilakukan atau belum dikonfirmasi. Selesaikan pembayaran terlebih dahulu.", 403);
     }
 
-    // Handle upload dokumen tambahan (jika ada)
     let dokumenPaths = [];
     if (files.dokumen_tambahan) {
       files.dokumen_tambahan.forEach((file, index) => {
@@ -86,13 +78,11 @@ exports.submitAplikasi = async (req, res) => {
       });
     }
 
-    // Handle tanda tangan
     let tandaTanganPath = null;
     if (files.tanda_tangan && files.tanda_tangan[0]) {
       tandaTanganPath = files.tanda_tangan[0].path;
     }
 
-    // Buat aplikasi
     const aplikasi = await AplikasiAsesmen.create({
       id_user: req.user.id_user,
       id_skema,
@@ -111,12 +101,11 @@ exports.submitAplikasi = async (req, res) => {
   }
 };
 
-// Get aplikasi asesi (untuk melihat status)
 exports.getAplikasi = async (req, res) => {
   try {
     const data = await AplikasiAsesmen.findAll({
       where: { id_user: req.user.id_user },
-      include: [{ model: Skema, as: "skema" }] // Include detail skema jika perlu
+      include: [{ model: Skema, as: "skema" }]
     });
     response.success(res, "Aplikasi asesi", data);
   } catch (err) {

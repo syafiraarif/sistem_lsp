@@ -14,7 +14,6 @@ exports.getAll = async (req, res) => {
   }
 };
 
-
 exports.approvePendaftaran = async (req, res) => {
   try {
     const pendaftaran = await Pendaftaran.findByPk(req.params.id);

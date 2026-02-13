@@ -15,7 +15,6 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    // Update data profil
     const [affectedRows] = await ProfileAsesi.update(req.body, {
       where: { id_user: req.user.id_user }
     });
@@ -24,7 +23,6 @@ exports.updateProfile = async (req, res) => {
       return response.error(res, "Tidak ada perubahan atau profil tidak ditemukan", 404);
     }
 
-    // Ambil data terbaru setelah update untuk dikembalikan
     const updatedData = await ProfileAsesi.findByPk(req.user.id_user);
     response.success(res, "Profil asesi diperbarui", updatedData);
   } catch (err) {
@@ -32,7 +30,6 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-// Fungsi untuk upload dokumen (ditambahkan berdasarkan konteks sebelumnya)
 exports.uploadDokumen = async (req, res) => {
   try {
     const files = req.files;
@@ -45,7 +42,6 @@ exports.uploadDokumen = async (req, res) => {
     if (files.kk) updateData.kk = files.kk[0].path;
     if (files.surat_kerja) updateData.surat_kerja = files.surat_kerja[0].path;
 
-    // Update database
     const [affectedRows] = await ProfileAsesi.update(updateData, {
       where: { id_user: req.user.id_user }
     });
@@ -54,7 +50,6 @@ exports.uploadDokumen = async (req, res) => {
       return response.error(res, "Upload gagal atau profil tidak ditemukan", 404);
     }
 
-    // Ambil data terbaru untuk dikembalikan
     const updatedData = await ProfileAsesi.findByPk(req.user.id_user);
     response.success(res, "Dokumen berhasil diupload", updatedData);
   } catch (err) {

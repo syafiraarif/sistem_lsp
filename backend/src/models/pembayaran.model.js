@@ -40,7 +40,7 @@ const Pembayaran = sequelize.define("pembayaran", {
     defaultValue: "pending"
   },
   bukti_bayar: {
-    type: DataTypes.STRING(255),  // Path ke file bukti bayar
+    type: DataTypes.STRING(255),  
     allowNull: true
   },
   created_at: {

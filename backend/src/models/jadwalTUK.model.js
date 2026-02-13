@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database'); // Sesuaikan path ke file konfigurasi database Anda
+const sequelize = require('../config/database');
 
 const JadwalTUK = sequelize.define('JadwalTUK', {
   id_jadwal: {
@@ -25,7 +25,7 @@ const JadwalTUK = sequelize.define('JadwalTUK', {
     allowNull: true,
   },
   Tgl_Awal_Pelaksanaan: {
-    type: DataTypes.DATEONLY, // DATE untuk tipe date
+    type: DataTypes.DATEONLY,
     allowNull: true,
   },
   Tgl_Akhir_Pelaksanaan: {
@@ -44,7 +44,7 @@ const JadwalTUK = sequelize.define('JadwalTUK', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'skema', // Nama tabel skema
+      model: 'skema', 
       key: 'id_skema',
     },
   },
@@ -52,7 +52,7 @@ const JadwalTUK = sequelize.define('JadwalTUK', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'tuk', // Nama tabel tuk
+      model: 'tuk', 
       key: 'id_tuk',
     },
   },
@@ -66,30 +66,29 @@ const JadwalTUK = sequelize.define('JadwalTUK', {
   },
   Instansi_Pemberi_Anggaran: {
     type: DataTypes.STRING(255),
-    allowNull: true, // Diasumsikan Yes Null berdasarkan struktur umum
+    allowNull: true, 
   },
-  status: { // Kolom tambahan untuk audit (aktif/nonaktif)
+  status: { 
     type: DataTypes.ENUM('aktif', 'nonaktif'),
     allowNull: true,
     defaultValue: 'aktif',
   },
-  created_at: { // Kolom tambahan untuk audit (timestamp pembuatan)
+  created_at: { 
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: DataTypes.NOW,
   },
 }, {
-  tableName: 'jadwal', // Diubah ke 'jadwal' untuk match SQL sebelumnya (jika tabel di DB adalah 'jadwal')
-  timestamps: false, // Tidak ada createdAt/updatedAt bawaan Sequelize
+  tableName: 'jadwal', 
+  timestamps: false, 
   indexes: [
-    { fields: ['Tahun'] }, // Index pada Tahun
-    { fields: ['Skema_Kompetensi'] }, // Index pada Skema_Kompetensi
-    { fields: ['TUK'] }, // Index pada TUK
-    { fields: ['status'] }, // Index tambahan pada status untuk performa
+    { fields: ['Tahun'] }, 
+    { fields: ['Skema_Kompetensi'] }, 
+    { fields: ['TUK'] }, 
+    { fields: ['status'] }, 
   ],
 });
 
-// Relasi
 JadwalTUK.associate = (models) => {
   JadwalTUK.belongsTo(models.Skema, { foreignKey: 'Skema_Kompetensi', as: 'skema' });
   JadwalTUK.belongsTo(models.Tuk, { foreignKey: 'TUK', as: 'tuk' });

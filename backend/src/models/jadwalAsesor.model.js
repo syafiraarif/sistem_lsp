@@ -12,7 +12,7 @@ const JadwalAsesor = sequelize.define('JadwalAsesor', {
     type: DataTypes.INTEGER,
     primaryKey: true,
     allowNull: false,
-    references: { model: 'users', key: 'id_user' },  // Match tabel 'users'
+    references: { model: 'users', key: 'id_user' },  
   },
   jenis_tugas: {
     type: DataTypes.ENUM(
@@ -38,11 +38,9 @@ const JadwalAsesor = sequelize.define('JadwalAsesor', {
   timestamps: false,
 });
 
-// Relasi
 JadwalAsesor.associate = (models) => {
   JadwalAsesor.belongsTo(models.JadwalTUK, { foreignKey: 'id_jadwal', as: 'jadwal' });
   JadwalAsesor.belongsTo(models.User, { foreignKey: 'id_user', as: 'user' });
-  // Jika perlu include profileAsesor, bisa ditambah di query
 };
 
 module.exports = JadwalAsesor;

@@ -1,21 +1,19 @@
-const JadwalTUK = require('../../models/JadwalTUK');
-const Tuk = require('../../models/Tuk');
-const JadwalAsesor = require('../../models/JadwalAsesor'); // Tambah import untuk manage asesor
-const User = require('../../models/User'); // Tambah import User
-const ProfileAsesor = require('../../models/ProfileAsesor'); // Tambah import ProfileAsesor untuk detail
-const { Op } = require('sequelize'); // Untuk query filter
+const JadwalTUK = require('../../models/jadwalTUK.model');
+const Tuk = require('../../models/tuk.model');
+const JadwalAsesor = require('../../models/jadwalAsesor.model'); 
+const User = require('../../models/user.model'); 
+const ProfileAsesor = require('../../models/profileAsesor.model'); 
+const { Op } = require('sequelize');
 
-// Create JadwalTUK (TUK diisi otomatis dari user login)
 const createJadwal = async (req, res) => {
   try {
-    const tukId = req.user.id_tuk; // Dari authMiddleware
+    const tukId = req.user.id_tuk; 
     if (!tukId) {
       return res.status(400).json({ message: 'ID TUK tidak ditemukan di token.' });
     }
 
     const { Nama_Judul_Kegiatan, Tahun, Periode, Gelombang_Grup, Tgl_Awal_Pelaksanaan, Tgl_Akhir_Pelaksanaan, Jam, Kuota, Skema_Kompetensi, Nomor_Surat_Tugas, Sumber_Anggaran, Instansi_Pemberi_Anggaran } = req.body;
 
-    // Validasi: Pastikan field wajib ada, tambah validasi tanggal dan kuota
     if (!Nama_Judul_Kegiatan || !Tahun || !Skema_Kompetensi || !Sumber_Anggaran) {
       return res.status(400).json({ message: 'Field wajib: Nama_Judul_Kegiatan, Tahun, Skema_Kompetensi, Sumber_Anggaran.' });
     }
@@ -36,7 +34,7 @@ const createJadwal = async (req, res) => {
       Jam,
       Kuota,
       Skema_Kompetensi,
-      TUK: tukId, // Otomatis dari user
+      TUK: tukId,
       Nomor_Surat_Tugas,
       Sumber_Anggaran,
       Instansi_Pemberi_Anggaran,
@@ -55,7 +53,6 @@ const createJadwal = async (req, res) => {
   }
 };
 
-// Get All Jadwal untuk TUK yang login (dengan filter opsional)
 const getAllJadwal = async (req, res) => {
   try {
     const tukId = req.user.id_tuk;
@@ -63,21 +60,19 @@ const getAllJadwal = async (req, res) => {
       return res.status(400).json({ message: 'ID TUK tidak ditemukan di token.' });
     }
 
-    // Filter opsional dari query params (misalnya ?tahun=2023&periode=Januari)
     const { tahun, periode, gelombang_grup, status } = req.query;
     const whereClause = { TUK: tukId };
     if (tahun) whereClause.Tahun = tahun;
-    if (periode) whereClause.Periode = { [Op.iLike]: `%${periode}%` }; // Case-insensitive search
+    if (periode) whereClause.Periode = { [Op.iLike]: `%${periode}%` }; 
     if (gelombang_grup) whereClause.Gelombang_Grup = { [Op.iLike]: `%${gelombang_grup}%` };
-    if (status) whereClause.status = status; // Jika ada kolom status di tabel
+    if (status) whereClause.status = status; 
 
     const jadwalList = await JadwalTUK.findAll({
       where: whereClause,
       include: [
-        { model: Tuk, as: 'tuk', attributes: ['nama_tuk', 'email'] }, // Include detail TUK
-        // Jika perlu include skema, tambahkan: { model: Skema, as: 'skema', attributes: ['judul_skema'] }
+        { model: Tuk, as: 'tuk', attributes: ['nama_tuk', 'email'] }, 
       ],
-      order: [['Tahun', 'DESC'], ['Tgl_Awal_Pelaksanaan', 'DESC']], // Urutkan berdasarkan tahun dan tanggal
+      order: [['Tahun', 'DESC'], ['Tgl_Awal_Pelaksanaan', 'DESC']], 
     });
 
     res.status(200).json({
@@ -90,7 +85,6 @@ const getAllJadwal = async (req, res) => {
   }
 };
 
-// Get One Jadwal by ID (hanya jika milik TUK)
 const getJadwalById = async (req, res) => {
   try {
     const tukId = req.user.id_tuk;
@@ -117,14 +111,12 @@ const getJadwalById = async (req, res) => {
   }
 };
 
-// Update Jadwal by ID (hanya jika milik TUK)
 const updateJadwal = async (req, res) => {
   try {
     const tukId = req.user.id_tuk;
     const { id } = req.params;
     const updates = req.body;
 
-    // Validasi update (mirip create)
     if (updates.Tgl_Awal_Pelaksanaan && updates.Tgl_Akhir_Pelaksanaan && new Date(updates.Tgl_Awal_Pelaksanaan) > new Date(updates.Tgl_Akhir_Pelaksanaan)) {
       return res.status(400).json({ message: 'Tanggal awal pelaksanaan harus sebelum atau sama dengan tanggal akhir.' });
     }
@@ -137,7 +129,6 @@ const updateJadwal = async (req, res) => {
       return res.status(404).json({ message: 'Jadwal tidak ditemukan atau tidak milik TUK ini.' });
     }
 
-    // Update hanya field yang dikirim
     await jadwal.update(updates);
 
     res.status(200).json({
@@ -153,7 +144,6 @@ const updateJadwal = async (req, res) => {
   }
 };
 
-// Delete Jadwal by ID (hanya jika milik TUK)
 const deleteJadwal = async (req, res) => {
   try {
     const tukId = req.user.id_tuk;
@@ -175,14 +165,12 @@ const deleteJadwal = async (req, res) => {
   }
 };
 
-// Tambah asesor ke jadwal (hanya jika jadwal milik TUK)
 const addAsesorToJadwal = async (req, res) => {
   try {
     const tukId = req.user.id_tuk;
-    const { id } = req.params; // id_jadwal
+    const { id } = req.params; 
     const { id_user, jenis_tugas } = req.body;
 
-    // Validasi jenis_tugas wajib
     const validJenis = [
       'jadwal Asesor penguji',
       'Verifikator TUK',
@@ -193,19 +181,16 @@ const addAsesorToJadwal = async (req, res) => {
       return res.status(400).json({ message: 'Jenis tugas tidak valid.' });
     }
 
-    // Cek jadwal milik TUK
     const jadwal = await JadwalTUK.findOne({ where: { id_jadwal: id, TUK: tukId } });
     if (!jadwal) {
       return res.status(404).json({ message: 'Jadwal tidak ditemukan atau tidak milik TUK ini.' });
     }
 
-    // Cek user ada
     const user = await User.findByPk(id_user);
     if (!user) {
       return res.status(404).json({ message: 'User tidak ditemukan.' });
     }
 
-    // Validasi khusus untuk tugas 'Peninjau Instrumen Asesmen': Tidak boleh sudah assigned tugas 'jadwal Asesor penguji' di jadwal ini
     if (jenis_tugas === 'Peninjau Instrumen Asesmen') {
       const tugas1Exists = await JadwalAsesor.findOne({
         where: {
@@ -219,13 +204,11 @@ const addAsesorToJadwal = async (req, res) => {
       }
     }
 
-    // Cek sudah assigned jenis_tugas yang sama atau belum (opsional, untuk hindari duplikat)
     const existing = await JadwalAsesor.findOne({ where: { id_jadwal: id, id_user, jenis_tugas } });
     if (existing) {
       return res.status(400).json({ message: 'User sudah assigned tugas ini di jadwal ini.' });
     }
 
-    // Tambah assignment
     await JadwalAsesor.create({ id_jadwal: id, id_user, jenis_tugas });
 
     res.status(201).json({ message: 'User berhasil ditambahkan ke jadwal dengan tugas tersebut.' });
@@ -235,19 +218,16 @@ const addAsesorToJadwal = async (req, res) => {
   }
 };
 
-// Hapus asesor dari jadwal (hanya jika jadwal milik TUK)
 const removeAsesorFromJadwal = async (req, res) => {
   try {
     const tukId = req.user.id_tuk;
-    const { id, userId } = req.params; // id_jadwal, id_user
+    const { id, userId } = req.params; 
 
-    // Cek jadwal milik TUK
     const jadwal = await JadwalTUK.findOne({ where: { id_jadwal: id, TUK: tukId } });
     if (!jadwal) {
       return res.status(404).json({ message: 'Jadwal tidak ditemukan atau tidak milik TUK ini.' });
     }
 
-    // Hapus assignment
     const deleted = await JadwalAsesor.destroy({ where: { id_jadwal: id, id_user: userId } });
     if (!deleted) {
       return res.status(404).json({ message: 'User tidak ditemukan di jadwal ini.' });
@@ -260,13 +240,11 @@ const removeAsesorFromJadwal = async (req, res) => {
   }
 };
 
-// Get asesor di jadwal (hanya jika jadwal milik TUK)
 const getAsesorInJadwal = async (req, res) => {
   try {
     const tukId = req.user.id_tuk;
     const { id } = req.params;
 
-    // Cek jadwal milik TUK
     const jadwal = await JadwalTUK.findOne({ where: { id_jadwal: id, TUK: tukId } });
     if (!jadwal) {
       return res.status(404).json({ message: 'Jadwal tidak ditemukan atau tidak milik TUK ini.' });
@@ -279,7 +257,7 @@ const getAsesorInJadwal = async (req, res) => {
           model: User, 
           as: 'user', 
           attributes: ['username', 'email'], 
-          include: [{ model: ProfileAsesor, as: 'profileAsesor', attributes: ['nama_lengkap', 'no_reg_asesor'] }]  // Include detail asesor
+          include: [{ model: ProfileAsesor, as: 'profileAsesor', attributes: ['nama_lengkap', 'no_reg_asesor'] }]  
         }
       ],
     });

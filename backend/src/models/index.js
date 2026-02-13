@@ -55,7 +55,6 @@ Persyaratan.belongsToMany(Skema, {
   foreignKey: "id_persyaratan"
 });
 
-/* SKEMA - PERSYARATAN TUK */
 Skema.belongsToMany(PersyaratanTuk, {
   through: SkemaPersyaratanTuk,
   foreignKey: "id_skema"
@@ -65,11 +64,9 @@ PersyaratanTuk.belongsToMany(Skema, {
   foreignKey: "id_persyaratan_tuk"
 });
 
-/* SKEMA - KELOMPOK PEKERJAAN */
 Skema.hasMany(KelompokPekerjaan, { foreignKey: "id_skema" });
 KelompokPekerjaan.belongsTo(Skema, { foreignKey: "id_skema" });
 
-/* SKEMA - TUK */
 Skema.belongsToMany(Tuk, {
   through: TukSkema,
   foreignKey: "id_skema"

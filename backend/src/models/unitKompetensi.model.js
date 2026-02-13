@@ -19,9 +19,8 @@ const UnitKompetensi = sequelize.define("unit_kompetensi", {
     type: DataTypes.STRING(255),
     allowNull: false
   },
-  // Elemen Kriteria: JSON untuk menyimpan struktur tanpa nomor (admin isi), nomor ditambahkan dinamis di APL02
   elemen_kriteria: {
-    type: DataTypes.JSON,  // Struktur: {"elemen_kompetensi": "string tanpa nomor", "kriteria_unjuk_kerja": ["array string tanpa nomor"]}
+    type: DataTypes.JSON,  
     allowNull: true,
     comment: "Struktur JSON: elemen_kompetensi sebagai string tanpa nomor, kriteria_unjuk_kerja sebagai array string tanpa nomor"
   }
@@ -30,7 +29,6 @@ const UnitKompetensi = sequelize.define("unit_kompetensi", {
   timestamps: false
 });
 
-// Relasi dengan Skkni (pastikan models/skkni.model.js sudah ada)
 const Skkni = require("./skkni.model");
 UnitKompetensi.belongsTo(Skkni, { foreignKey: "id_skkni" });
 Skkni.hasMany(UnitKompetensi, { foreignKey: "id_skkni" });

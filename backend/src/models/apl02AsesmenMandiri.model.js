@@ -15,13 +15,11 @@ const Apl02AsesmenMandiri = sequelize.define("apl02_asesmen_mandiri", {
     type: DataTypes.INTEGER,
     allowNull: false
   },
-  // Elemen Kompetensi: TEXT untuk menyimpan deskripsi lengkap dengan nomor dinamis (e.g., "1.1. Mengkomunikasikan informasi...")
   elemen_kompetensi: {
     type: DataTypes.TEXT,
     allowNull: false,
     comment: "Deskripsi lengkap Elemen Kompetensi dengan nomor dinamis"
   },
-  // Kriteria Unjuk Kerja: TEXT untuk menyimpan deskripsi lengkap dengan nomor dinamis (e.g., "1.1.1. Menggunakan Suatu pilihan teknik...")
   kriteria_unjuk_kerja: {
     type: DataTypes.TEXT,
     allowNull: false,
@@ -57,7 +55,7 @@ const Apl02AsesmenMandiri = sequelize.define("apl02_asesmen_mandiri", {
     allowNull: true
   },
   file_bukti: {
-    type: DataTypes.STRING(255), // Path ke file upload
+    type: DataTypes.STRING(255), 
     allowNull: true
   },
   catatan_bukti: {

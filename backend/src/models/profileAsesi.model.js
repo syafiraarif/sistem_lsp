@@ -5,12 +5,12 @@ const ProfileAsesi = sequelize.define("profile_asesi", {
   id_user: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true  // Ditambahkan untuk konsistensi dengan SQL table
+    autoIncrement: true  
   },
   nik: {
     type: DataTypes.CHAR(16),
     unique: true,
-    allowNull: true  // Sesuai dengan struktur tabel (nullable)
+    allowNull: true  
   },
   nama_lengkap: {
     type: DataTypes.STRING(100),
@@ -116,29 +116,28 @@ const ProfileAsesi = sequelize.define("profile_asesi", {
     type: DataTypes.STRING(255),
     allowNull: true
   },
-  // Field baru untuk dokumen persyaratan LSP (upload file scan)
   pas_foto: {
-    type: DataTypes.STRING(255),  // Path ke file pas foto
+    type: DataTypes.STRING(255),  
     allowNull: true
   },
   ktp: {
-    type: DataTypes.STRING(255),  // Path ke file KTP
+    type: DataTypes.STRING(255),  
     allowNull: true
   },
   ijazah: {
-    type: DataTypes.STRING(255),  // Path ke file ijazah terakhir
+    type: DataTypes.STRING(255),  
     allowNull: true
   },
   transkrip: {
-    type: DataTypes.STRING(255),  // Path ke file transkrip nilai/daftar nilai
+    type: DataTypes.STRING(255),  
     allowNull: true
   },
   kk: {
-    type: DataTypes.STRING(255),  // Path ke file kartu keluarga/KK
+    type: DataTypes.STRING(255),  
     allowNull: true
   },
   surat_kerja: {
-    type: DataTypes.STRING(255),  // Path ke file surat keterangan kerja/magang
+    type: DataTypes.STRING(255),  
     allowNull: true
   }
 }, {

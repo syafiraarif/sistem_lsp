@@ -16,11 +16,11 @@ const AplikasiAsesmen = sequelize.define("aplikasi_asesmen", {
     allowNull: false
   },
   selected_persyaratan: {
-    type: DataTypes.JSON, // Array JSON untuk persyaratan yang dipilih
+    type: DataTypes.JSON, 
     allowNull: true
   },
   dokumen_tambahan: {
-    type: DataTypes.JSON, // Array JSON untuk dokumen tambahan
+    type: DataTypes.JSON, 
     allowNull: true
   },
   tujuan_asesmen: {
@@ -32,11 +32,11 @@ const AplikasiAsesmen = sequelize.define("aplikasi_asesmen", {
     allowNull: true
   },
   selected_units: {
-    type: DataTypes.JSON, // Array JSON untuk unit kompetensi yang dipilih
+    type: DataTypes.JSON, 
     allowNull: true
   },
   tanda_tangan: {
-    type: DataTypes.STRING(255), // Path ke file tanda tangan
+    type: DataTypes.STRING(255), 
     allowNull: true
   },
   status: {
@@ -52,7 +52,6 @@ const AplikasiAsesmen = sequelize.define("aplikasi_asesmen", {
   timestamps: false
 });
 
-// Relasi dengan Skema (pastikan models/skema.model.js sudah ada)
 const Skema = require("./skema.model");
 AplikasiAsesmen.belongsTo(Skema, { foreignKey: "id_skema" });
 
