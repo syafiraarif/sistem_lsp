@@ -22,7 +22,11 @@ exports.create = async (req, res) => {
 exports.getAll = async (req, res) => {
   try {
     const data = await Skema.findAll({
-      include: [{ model: Skkni }]
+      include: [
+        { model: Skkni },
+        { model: Persyaratan } 
+      ],
+      order: [['id_skema', 'DESC']]
     });
     response.success(res, "List skema", data);
   } catch (err) {
