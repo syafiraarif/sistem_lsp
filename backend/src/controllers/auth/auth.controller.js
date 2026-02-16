@@ -4,14 +4,13 @@ const User = require("../../models/user.model");
 const Role = require("../../models/role.model");
 const { secret, expiresIn } = require("../../config/jwt");
 
-//prove
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
     const user = await User.findOne({
       where: { username },
-      include: Role  
+      include: Role
     });
 
     if (!user) {
