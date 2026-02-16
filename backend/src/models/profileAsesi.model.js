@@ -4,8 +4,7 @@ const sequelize = require("../config/database");
 const ProfileAsesi = sequelize.define("profile_asesi", {
   id_user: {
     type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true  
+    primaryKey: true
   },
   nik: {
     type: DataTypes.CHAR(16),

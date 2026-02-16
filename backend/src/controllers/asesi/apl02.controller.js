@@ -1,4 +1,4 @@
-const AplikasiAsesmen = require("../../models/aplikasiAsesmen.model");
+const AplikasiAsesmen = require("../../models/apl01Asesmen.model");
 const UnitKompetensi = require("../../models/unitKompetensi.model");
 const Apl02AsesmenMandiri = require("../../models/apl02AsesmenMandiri.model");
 const Pembayaran = require("../../models/pembayaran.model");

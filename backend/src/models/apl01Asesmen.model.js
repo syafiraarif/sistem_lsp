@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const AplikasiAsesmen = sequelize.define("aplikasi_asesmen", {
-  id_aplikasi: {
+const Apl01Asesmen = sequelize.define("apl01_asesmen", {
+  id_apl01: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
@@ -15,6 +15,10 @@ const AplikasiAsesmen = sequelize.define("aplikasi_asesmen", {
     type: DataTypes.INTEGER,
     allowNull: false
   },
+  id_jadwal: {
+  type: DataTypes.INTEGER,
+  allowNull: true
+  },
   selected_persyaratan: {
     type: DataTypes.JSON, 
     allowNull: true
@@ -24,7 +28,7 @@ const AplikasiAsesmen = sequelize.define("aplikasi_asesmen", {
     allowNull: true
   },
   tujuan_asesmen: {
-    type: DataTypes.ENUM("Sertifikasi", "Sertifikasi Ulang", "Pengakuan Kompetensi Terkini (PKT)", "Rekognisi Pembelajaran Lampau", "Lainnya"),
+    type: DataTypes.ENUM("sertifikasi", "sertifikasi_ulang", "pengakuan_kompetensi_terkini", "rekognisi_pembelajaran_lampau", "lainnya"),
     allowNull: false
   },
   tujuan_asesmen_lainnya: {
@@ -48,11 +52,8 @@ const AplikasiAsesmen = sequelize.define("aplikasi_asesmen", {
     defaultValue: DataTypes.NOW
   }
 }, {
-  tableName: "aplikasi_asesmen",
+  tableName: "apl01",
   timestamps: false
 });
 
-const Skema = require("./skema.model");
-AplikasiAsesmen.belongsTo(Skema, { foreignKey: "id_skema" });
-
-module.exports = AplikasiAsesmen;
+module.exports = Apl01Asesmen;

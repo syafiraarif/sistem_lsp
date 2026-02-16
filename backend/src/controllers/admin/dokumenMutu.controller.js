@@ -1,13 +1,29 @@
-const { DokumenMutu } = require("../../models");
+const DokumenMutu = require("../../models/dokumenMutu.model");
 
 const createDokumen = async (req, res) => {
   try {
-    const data = await DokumenMutu.create(req.body);
-    res.status(201).json({ message: "Dokumen berhasil ditambah", data });
+    const body = { ...req.body };
+
+    if (req.files?.file_dokumen) {
+      body.file_dokumen = req.files.file_dokumen[0].filename;
+    }
+
+    if (req.files?.file_pendukung) {
+      body.file_pendukung = req.files.file_pendukung[0].filename;
+    }
+
+    const data = await DokumenMutu.create(body);
+
+    res.status(201).json({
+      message: "Dokumen berhasil ditambah",
+      data
+    });
   } catch (err) {
-    res.status(500).json({ message: "Terjadi kesalahan server" });
+    console.error(err);
+    res.status(500).json({ message: err.message });
   }
 };
+
 
 const getAllDokumen = async (req, res) => {
   try {
@@ -29,10 +45,26 @@ const updateDokumen = async (req, res) => {
       return res.status(404).json({ message: "Dokumen tidak ditemukan" });
     }
 
-    await dok.update(req.body);
-    res.json({ message: "Dokumen berhasil diupdate", data: dok });
+    const body = { ...req.body };
+
+    // handle upload file baru
+    if (req.files?.file_dokumen) {
+      body.file_dokumen = req.files.file_dokumen[0].filename;
+    }
+
+    if (req.files?.file_pendukung) {
+      body.file_pendukung = req.files.file_pendukung[0].filename;
+    }
+
+    await dok.update(body);
+
+    res.json({
+      message: "Dokumen berhasil diupdate",
+      data: dok
+    });
   } catch (err) {
-    res.status(500).json({ message: "Terjadi kesalahan server" });
+    console.error(err);
+    res.status(500).json({ message: err.message });
   }
 };
 

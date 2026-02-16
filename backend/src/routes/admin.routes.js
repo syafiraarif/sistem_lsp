@@ -19,10 +19,23 @@ const adminProfile = require("../controllers/admin/profile.controller");
 const bandingController = require("../controllers/admin/banding.controller");
 const dokumenMutuController = require("../controllers/admin/dokumenMutu.controller");
 const pesertaJadwalController = require("../controllers/admin/pesertaJadwal.controller");
+const unitKompetensiController = require("../controllers/admin/unitKompetensi.controller");
+const upload = require("../middlewares/upload.middleware");
 
 router.get("/profile", adminProfile.getProfile);
 router.put("/profile", adminProfile.updateProfile);
 
+router.post(
+  "/dokumen-mutu",
+  upload,
+  dokumenMutuController.createDokumen
+);
+
+router.put(
+  "/dokumen-mutu/:id",
+  upload,
+  dokumenMutuController.updateDokumen
+);
 
 router.post("/asesor", asesorAdmin.createAsesor);
 router.post("/tuk-akun", tukAdmin.createTuk);
@@ -33,6 +46,8 @@ router.get("/dashboard", adminController.getDashboard);
 
 router.get("/pendaftaran", pendaftaranController.getAll);
 router.post("/pendaftaran/:id/approve", pendaftaranController.approvePendaftaran);
+router.post("/pendaftaran/:id/reject", pendaftaranController.rejectPendaftaran);
+
 
 router.get("/pengaduan", pengaduanController.getAll);
 router.put("/pengaduan/:id/status", pengaduanController.updateStatus);
@@ -98,6 +113,12 @@ router.get(
   "/jadwal/:id_jadwal/peserta",
   pesertaJadwalController.getPesertaByJadwal
 );
+
+router.post("/unit-kompetensi", unitKompetensiController.create);
+router.get("/unit-kompetensi", unitKompetensiController.getAll);
+router.get("/unit-kompetensi/:id", unitKompetensiController.getById);
+router.put("/unit-kompetensi/:id", unitKompetensiController.update);
+router.delete("/unit-kompetensi/:id", unitKompetensiController.delete);
 
 
 module.exports = router;

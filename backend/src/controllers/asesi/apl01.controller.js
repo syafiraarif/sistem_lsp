@@ -2,7 +2,7 @@ const Skema = require("../../models/skema.model");
 const SkemaPersyaratan = require("../../models/skemaPersyaratan.model");
 const Skkni = require("../../models/skkni.model");
 const UnitKompetensi = require("../../models/unitKompetensi.model");
-const AplikasiAsesmen = require("../../models/aplikasiAsesmen.model");
+const AplikasiAsesmen = require("../../models/apl01Asesmen.model");
 const Pembayaran = require("../../models/pembayaran.model");  
 const response = require("../../utils/response.util");
 

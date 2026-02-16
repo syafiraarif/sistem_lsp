@@ -9,7 +9,7 @@ const Pengaduan = sequelize.define("pengaduan", {
   },
   nama_pengadu: DataTypes.STRING(100),
   email_pengadu: DataTypes.STRING(100),
-  no_hp_pengadu: DataTypes.STRING(15),
+  no_hp_pengadu: DataTypes.STRING(20),
   sebagai_siapa: DataTypes.ENUM("asesi","asesor","masyarakat"),
   isi_pengaduan: DataTypes.TEXT,
   tanggal_pengaduan: DataTypes.DATE,

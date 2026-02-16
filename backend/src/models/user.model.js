@@ -9,30 +9,33 @@ const User = sequelize.define("users", {
   },
   username: {
     type: DataTypes.STRING(50),
+    allowNull: false,
     unique: true
   },
   password_hash: {
-    type: DataTypes.STRING(255)
+    type: DataTypes.STRING(255),
+    allowNull: false
   },
   id_role: {
-    type: DataTypes.INTEGER
+    type: DataTypes.INTEGER,
+    allowNull: false
   },
   email: {
-    type: DataTypes.STRING(100)
+    type: DataTypes.STRING(100),
+    allowNull: false
   },
   no_hp: {
-    type: DataTypes.STRING(15)
+    type: DataTypes.STRING(20)
   },
   status_user: {
     type: DataTypes.ENUM("aktif", "nonaktif"),
     defaultValue: "aktif"
-  },
-  created_at: {
-    type: DataTypes.DATE
   }
 }, {
   tableName: "users",
-  timestamps: false
+  timestamps: true,
+  createdAt: "created_at",
+  updatedAt: "updated_at"
 });
 
 module.exports = User;

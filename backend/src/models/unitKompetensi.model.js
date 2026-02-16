@@ -29,8 +29,4 @@ const UnitKompetensi = sequelize.define("unit_kompetensi", {
   timestamps: false
 });
 
-const Skkni = require("./skkni.model");
-UnitKompetensi.belongsTo(Skkni, { foreignKey: "id_skkni" });
-Skkni.hasMany(UnitKompetensi, { foreignKey: "id_skkni" });
-
 module.exports = UnitKompetensi;

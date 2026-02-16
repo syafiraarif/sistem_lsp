@@ -12,7 +12,11 @@ const Skkni = sequelize.define("skkni", {
     allowNull: false
   },
   no_skkni: DataTypes.STRING(100),
-  judul_skkni: DataTypes.STRING(255),
+  
+  judul_skkni: {
+  type: DataTypes.STRING(255),
+  allowNull: false
+  },
   legalitas: DataTypes.TEXT,
   sektor: DataTypes.STRING(150),
   sub_sektor: DataTypes.STRING(150),

@@ -8,70 +8,44 @@ const Jadwal = sequelize.define("jadwal", {
     autoIncrement: true
   },
 
-  Nama_Judul_Kegiatan: {
-    type: DataTypes.STRING(255),
-    allowNull: false
-  },
+  kode_jadwal: DataTypes.STRING(50),
 
-  Tahun: {
+  id_skema: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
 
-  Periode: {
-    type: DataTypes.STRING(50),
-    allowNull: true
-  },
-
-  Gelombang_Grup: {
-    type: DataTypes.STRING(50),
-    allowNull: true
-  },
-
-  Tgl_Awal_Pelaksanaan: {
-    type: DataTypes.DATEONLY,
-    allowNull: true
-  },
-
-  Tgl_Akhir_Pelaksanaan: {
-    type: DataTypes.DATEONLY,
-    allowNull: true
-  },
-
-  Jam: {
-    type: DataTypes.TIME,
-    allowNull: true
-  },
-
-  Kuota: {
+  id_tuk: {
     type: DataTypes.INTEGER,
-    allowNull: true
+    allowNull: false
   },
 
-  Skema_Kompetensi: {
-    type: DataTypes.INTEGER,
-    allowNull: true
-  },
-
-  TUK: {
-    type: DataTypes.INTEGER,
-    allowNull: true
-  },
-
-  Nomor_Surat_Tugas: {
-    type: DataTypes.STRING(100),
-    allowNull: true
-  },
-
-  Sumber_Anggaran: {
+  nama_kegiatan: {
     type: DataTypes.STRING(150),
-    allowNull: true
+    allowNull: false
   },
 
-  Instansi_Pemberi_Anggaran: {
-    type: DataTypes.STRING(150),
-    allowNull: true
-  }
+  tahun: DataTypes.INTEGER,
+  periode_bulan: DataTypes.STRING(20),
+  gelombang: DataTypes.STRING(20),
+
+  tgl_pra_asesmen: DataTypes.DATEONLY,
+  tgl_awal: DataTypes.DATEONLY,
+  tgl_akhir: DataTypes.DATEONLY,
+  jam: DataTypes.TIME,
+  kuota: DataTypes.INTEGER,
+
+  pelaksanaan_uji: DataTypes.ENUM("luring","daring","hybrid","onsite"),
+  url_agenda: DataTypes.STRING(255),
+
+  status: {
+    type: DataTypes.ENUM("draft","open","ongoing","selesai","arsip"),
+    defaultValue: "draft"
+  },
+
+  created_by: DataTypes.INTEGER,
+  created_at: DataTypes.DATE,
+  updated_at: DataTypes.DATE
 
 }, {
   tableName: "jadwal",

@@ -9,7 +9,8 @@ const Skema = sequelize.define("skema", {
   },
   kode_skema: {
     type: DataTypes.STRING(50),
-    allowNull: false
+    allowNull: false,
+    unique: true
   },
   judul_skema: {
     type: DataTypes.STRING(255),
@@ -18,7 +19,7 @@ const Skema = sequelize.define("skema", {
   judul_skema_en: DataTypes.STRING(255),
 
   jenis_skema: {
-    type: DataTypes.ENUM("Klaster", "KKNI", "Okupasi"),
+    type: DataTypes.ENUM("klaster", "kkni", "okupasi"),
     allowNull: false
   },
   level_kkni: DataTypes.TINYINT,
@@ -28,26 +29,20 @@ const Skema = sequelize.define("skema", {
   kode_kbli: DataTypes.STRING(50),
   kode_kbji: DataTypes.STRING(50),
 
-  skema_induk_id: {
-    type: DataTypes.INTEGER,
-    allowNull: true
-  },
-
   keterangan_bukti: DataTypes.TEXT,
   skor_min_ai05: DataTypes.INTEGER,
 
   kedalaman_bukti: DataTypes.ENUM(
-    "Elemen Kompetensi",
-    "Kriteria Unjuk Kerja"
+    "elemen_kompetensi",
+    "kriteria_unjuk_kerja"
   ),
 
   dokumen: DataTypes.STRING(255),
   status: {
-    type: DataTypes.ENUM("aktif", "nonaktif"),
-    defaultValue: "aktif"
-  },
+    type: DataTypes.ENUM("draft","aktif","nonaktif"),
+    defaultValue: "draft"
+  }
 
-  skkni_id: DataTypes.INTEGER
 }, {
   tableName: "skema",
   timestamps: false

@@ -10,7 +10,7 @@ const PendaftaranAsesi = sequelize.define("pendaftaran_asesi", {
   nik: DataTypes.CHAR(16),
   nama_lengkap: DataTypes.STRING(100),
   email: DataTypes.STRING(100),
-  no_hp: DataTypes.STRING(15),
+  no_hp: DataTypes.STRING(20),
 
   provinsi: DataTypes.STRING(50),
   kota: DataTypes.STRING(50),
@@ -20,7 +20,10 @@ const PendaftaranAsesi = sequelize.define("pendaftaran_asesi", {
   wilayah_rji: DataTypes.STRING(100),
   program_studi: DataTypes.STRING(100),
   kompetensi_keahlian: DataTypes.STRING(100),
-
+  status: {
+  type: DataTypes.ENUM("pending", "approved", "rejected"),
+  defaultValue: "pending"
+  },
   captcha_valid: DataTypes.BOOLEAN,
   tanggal_daftar: DataTypes.DATE
 }, {

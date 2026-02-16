@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const TujuanTransfer = sequelize.define("tujuan_transfer", {
+const TujuanPembayaran = sequelize.define("tujuan_pembayaran", {
   id_tujuan: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -24,8 +24,11 @@ const TujuanTransfer = sequelize.define("tujuan_transfer", {
     defaultValue: "aktif"
   }
 }, {
-  tableName: "tujuan_transfer",
-  timestamps: false
+  tableName: "tujuan_pembayaran",
+  timestamps: true,
+  createdAt: "created_at",
+  updatedAt: "updated_at"
+
 });
 
-module.exports = TujuanTransfer;
+module.exports = TujuanPembayaran;

@@ -1,54 +1,52 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const JadwalAsesor = sequelize.define('JadwalAsesor', {
+const JadwalAsesor = sequelize.define("jadwal_asesor", {
   id_jadwal: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    allowNull: false,
-    references: { model: 'jadwal', key: 'id_jadwal' },
+    allowNull: false
   },
+
   id_user: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    allowNull: false,
-    references: { model: 'users', key: 'id_user' },  
+    allowNull: false
   },
+
   jenis_tugas: {
     type: DataTypes.ENUM(
-      'jadwal Asesor penguji',
-      'Verifikator TUK',
-      'Validator MKVA',
-      'Peninjau Instrumen Asesmen'
+      "asesor_penguji",
+      "verifikator_tuk",
+      "validator_mkva",
+      "komite_teknis"
     ),
-    allowNull: false,
+    primaryKey: true,
+    allowNull: false
   },
+
   status: {
-    type: DataTypes.ENUM('aktif', 'nonaktif'),
-    allowNull: true,
-    defaultValue: 'aktif',
+    type: DataTypes.ENUM("aktif", "nonaktif"),
+    defaultValue: "aktif"
   },
+
+  catatan: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+
+  assigned_by: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+
   created_at: {
     type: DataTypes.DATE,
-    allowNull: true,
-    defaultValue: DataTypes.NOW,
-  },
+    defaultValue: DataTypes.NOW
+  }
 }, {
-  tableName: 'jadwal_asesor',
-  timestamps: false,
+  tableName: "jadwal_asesor",
+  timestamps: false
 });
-
-JadwalAsesor.associate = (models) => {
-  JadwalAsesor.belongsTo(models.Jadwal, {
-    foreignKey: "id_jadwal",
-    as: "jadwal"
-  });
-
-  JadwalAsesor.belongsTo(models.User, {
-    foreignKey: "id_user",
-    as: "user"
-  });
-};
-
 
 module.exports = JadwalAsesor;

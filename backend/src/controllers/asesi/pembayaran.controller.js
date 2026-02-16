@@ -1,6 +1,6 @@
-const AplikasiAsesmen = require("../../models/aplikasiAsesmen.model");
+const AplikasiAsesmen = require("../../models/apl01Asesmen.model");
 const Skema = require("../../models/skema.model");
-const TujuanTransfer = require("../../models/tujuanTransfer.model");
+const TujuanTransfer = require("../../models/tujuanPembayaran.model");
 const Pembayaran = require("../../models/pembayaran.model");
 const response = require("../../utils/response.util");
 

@@ -7,16 +7,16 @@ const Pembayaran = sequelize.define("pembayaran", {
     primaryKey: true,
     autoIncrement: true
   },
-  id_aplikasi: {
+  id_apl01: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
   metode_pembayaran: {
-    type: DataTypes.ENUM("Tunai", "Transfer Rekening"),
+    type: DataTypes.ENUM("tunai", "transfer_rekening"),
     allowNull: false
   },
   jalur_pembayaran: {
-    type: DataTypes.ENUM("Tunai", "M-banking", "ATM", "E-wallet"),
+    type: DataTypes.ENUM("tunai", "m-banking", "atm", "e-wallet"),
     allowNull: true
   },
   id_tujuan_transfer: {
@@ -52,10 +52,5 @@ const Pembayaran = sequelize.define("pembayaran", {
   timestamps: false
 });
 
-// Relasi
-const AplikasiAsesmen = require("./aplikasiAsesmen.model");
-const TujuanTransfer = require("./tujuanTransfer.model");
-Pembayaran.belongsTo(AplikasiAsesmen, { foreignKey: "id_aplikasi" });
-Pembayaran.belongsTo(TujuanTransfer, { foreignKey: "id_tujuan_transfer" });
 
 module.exports = Pembayaran;

@@ -4,27 +4,65 @@ const User = require("../../models/user.model");
 const Role = require("../../models/role.model");
 const { secret, expiresIn } = require("../../config/jwt");
 
-exports.login = async (req,res)=>{
-  const { username, password } = req.body;
+//prove
+exports.login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
 
-  const user = await User.findOne({
-    where:{ username },
-    include: Role
-  });
-  if(!user) return res.status(401).json({message:"User tidak ditemukan"});
+    const user = await User.findOne({
+      where: { username },
+      include: Role  
+    });
 
-  const valid = await bcrypt.compare(password, user.password_hash);
-  if(!valid) return res.status(401).json({message:"Password salah"});
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User tidak ditemukan"
+      });
+    }
 
-  const token = jwt.sign({
-    id_user: user.id_user,
-    role: user.role.role_name
-  }, secret, { expiresIn });
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({
+        success: false,
+        message: "Password salah"
+      });
+    }
 
-  res.json({ token });
+    const token = jwt.sign(
+      {
+        id_user: user.id_user,
+        role: user.role.role_name
+      },
+      secret,
+      { expiresIn }
+    );
+
+    return res.json({
+      success: true,
+      message: "Login berhasil",
+      data: {
+        token,
+        user: {
+          id: user.id_user,
+          username: user.username,
+          role: user.role.role_name
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Terjadi kesalahan server"
+    });
+  }
 };
 
-
 exports.logout = async (req, res) => {
-  res.json({ message: "Logout berhasil (client hapus token)" });
+  res.json({
+    success: true,
+    message: "Logout berhasil (client hapus token)"
+  });
 };

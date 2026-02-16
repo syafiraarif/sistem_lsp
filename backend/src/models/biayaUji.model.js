@@ -12,11 +12,11 @@ const BiayaUji = sequelize.define("biaya_uji", {
     allowNull: false
   },
   jenis_biaya: {
-    type: DataTypes.ENUM("Uji Kompetensi", "Pra Asesmen", "Lainnya"),
+    type: DataTypes.ENUM("uji_kompetensi", "pra_asesmen", "lainnya"),
     allowNull: false
   },
   metode_uji: {
-    type: DataTypes.ENUM("Luring", "Daring", "Hybrid"),
+    type: DataTypes.ENUM("luring", "daring", "hybrid"),
     allowNull: false
   },
   nominal: {

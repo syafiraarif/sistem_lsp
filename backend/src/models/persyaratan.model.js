@@ -12,7 +12,7 @@ const Persyaratan = sequelize.define("persyaratan", {
     allowNull: false
   },
   jenis_persyaratan: {
-    type: DataTypes.ENUM("Dasar", "Administratif"),
+    type: DataTypes.ENUM("dasar", "administratif"),
     allowNull: false
   },
   keterangan: DataTypes.TEXT

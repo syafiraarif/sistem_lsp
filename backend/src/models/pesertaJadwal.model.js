@@ -28,9 +28,12 @@ const PesertaJadwal = sequelize.define("peserta_jadwal", {
     ),
     defaultValue: "terdaftar"
   },
-
+  
   nilai_akhir: DataTypes.DECIMAL(5, 2),
   keterangan: DataTypes.TEXT,
+  nomor_peserta: DataTypes.STRING(50),
+  waktu_mulai: DataTypes.DATE,
+  waktu_selesai: DataTypes.DATE,
   created_at: DataTypes.DATE
 
 }, {

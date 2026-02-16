@@ -1,13 +1,13 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const Apl02AsesmenMandiri = sequelize.define("apl02_asesmen_mandiri", {
+const Apl02AsesmenMandiri = sequelize.define("apl02", {
   id_apl02: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  id_aplikasi: {
+  id_apl01: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
@@ -26,19 +26,19 @@ const Apl02AsesmenMandiri = sequelize.define("apl02_asesmen_mandiri", {
     comment: "Deskripsi lengkap Kriteria Unjuk Kerja dengan nomor dinamis"
   },
   jawaban: {
-    type: DataTypes.ENUM("K", "BK"),
+    type: DataTypes.ENUM("k", "bk"),
     allowNull: false
   },
   jenis_pengalaman: {
     type: DataTypes.ENUM(
-      "hasil karya atau produk",
-      "pengalaman pembuatan laporan",
-      "pengalaman magang",
-      "pengalaman menjadi narasumber",
-      "pengalaman kerja",
-      "pengalaman pendidikan",
-      "pengalaman proyek",
-      "pengalaman studi kasus"
+      "hasil_karya_atau_produk",
+      "pengalaman_pembuatan_laporan",
+      "pengalaman_magang",
+      "pengalaman_menjadi_narasumber",
+      "pengalaman_kerja",
+      "pengalaman_pendidikan",
+      "pengalaman_proyek",
+      "pengalaman_studi_kasus"
     ),
     allowNull: false
   },
@@ -67,14 +67,10 @@ const Apl02AsesmenMandiri = sequelize.define("apl02_asesmen_mandiri", {
     defaultValue: DataTypes.NOW
   }
 }, {
-  tableName: "apl02_asesmen_mandiri",
+  tableName: "apl02",
   timestamps: false
 });
 
-// Relasi
-const AplikasiAsesmen = require("./aplikasiAsesmen.model");
-const UnitKompetensi = require("./unitKompetensi.model");
-Apl02AsesmenMandiri.belongsTo(AplikasiAsesmen, { foreignKey: "id_aplikasi" });
-Apl02AsesmenMandiri.belongsTo(UnitKompetensi, { foreignKey: "id_unit" });
+
 
 module.exports = Apl02AsesmenMandiri;

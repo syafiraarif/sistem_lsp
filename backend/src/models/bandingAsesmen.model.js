@@ -42,9 +42,9 @@ const BandingAsesmen = sequelize.define("banding_asesmen", {
     type: DataTypes.ENUM(
       "diterima",
       "ditolak",
-      "belum_diputus"
+      "belum_diputuskan"
     ),
-    defaultValue: "belum_diputus"
+    defaultValue: "belum_diputuskan"
   },
 
   catatan_komite: DataTypes.TEXT,

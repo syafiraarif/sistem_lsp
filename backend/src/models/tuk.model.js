@@ -12,7 +12,7 @@ const Tuk = sequelize.define("tuk", {
     type: DataTypes.STRING(255),
     allowNull: false
   },
-  jenis_tuk: DataTypes.ENUM("mandiri", "sewaktu", "tempat kerja"),
+  jenis_tuk: DataTypes.ENUM("mandiri", "sewaktu", "tempat_kerja"),
 
   penanggung_jawab: DataTypes.STRING(150),
   institusi_induk: DataTypes.STRING(150),

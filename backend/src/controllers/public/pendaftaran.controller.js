@@ -1,10 +1,11 @@
 const Pendaftaran = require("../../models/pendaftaranAsesi.model");
+const response = require("../../utils/response.util");
 
 exports.create = async (req, res) => {
   try {
     const data = await Pendaftaran.create(req.body);
-    res.json({ message: "Pendaftaran berhasil", data });
+    response.success(res, "Pendaftaran berhasil", data);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    response.error(res, err.message);
   }
 };
