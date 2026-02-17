@@ -28,6 +28,7 @@ const TujuanPembayaran = require("./tujuanPembayaran.model");
 const Pembayaran = require("./pembayaran.model");
 const UnitKompetensi = require("./unitKompetensi.model");
 const SkemaSkkni = require("./skemaSkkni.model");
+const Surveillance = require("./surveillance.model");
 
 
 Role.hasMany(User, { foreignKey: "id_role" });
@@ -115,6 +116,12 @@ Skema.belongsToMany(Skkni, { through: SkemaSkkni, foreignKey: "id_skema"});
 
 Skkni.belongsToMany(Skema, { through: SkemaSkkni, foreignKey: "id_skkni"});
 
+User.hasMany(Surveillance, { foreignKey: "id_user" });
+Surveillance.belongsTo(User, { foreignKey: "id_user" });
+
+Skema.hasMany(Surveillance, { foreignKey: "id_skema" });
+Surveillance.belongsTo(Skema, { foreignKey: "id_skema" });
+
 module.exports = {
   User,
   Role,
@@ -145,5 +152,6 @@ module.exports = {
   TujuanPembayaran,
   Pembayaran,
   UnitKompetensi,
-  SkemaSkkni
+  SkemaSkkni,
+  Surveillance 
 };

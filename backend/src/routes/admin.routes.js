@@ -21,6 +21,12 @@ const dokumenMutuController = require("../controllers/admin/dokumenMutu.controll
 const pesertaJadwalController = require("../controllers/admin/pesertaJadwal.controller");
 const unitKompetensiController = require("../controllers/admin/unitKompetensi.controller");
 const upload = require("../middlewares/upload.middleware");
+const ctrl = require("../controllers/admin/surveillance.controller");
+
+router.get("/surveillance", authMiddleware, roleMiddleware.adminOnly, ctrl.getAllSurveillance);
+
+router.put("/surveillance/:id/status", authMiddleware, roleMiddleware.adminOnly, ctrl.updateStatusSurveillance);
+
 
 router.get("/profile", adminProfile.getProfile);
 router.put("/profile", adminProfile.updateProfile);

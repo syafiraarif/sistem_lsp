@@ -24,7 +24,6 @@ const PendaftaranAsesi = sequelize.define("pendaftaran_asesi", {
   type: DataTypes.ENUM("pending", "approved", "rejected"),
   defaultValue: "pending"
   },
-  captcha_valid: DataTypes.BOOLEAN,
   tanggal_daftar: DataTypes.DATE
 }, {
   tableName: "pendaftaran_asesi",
