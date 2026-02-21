@@ -71,6 +71,4 @@ const Apl02AsesmenMandiri = sequelize.define("apl02", {
   timestamps: false
 });
 
-
-
 module.exports = Apl02AsesmenMandiri;

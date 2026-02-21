@@ -52,5 +52,4 @@ const Pembayaran = sequelize.define("pembayaran", {
   timestamps: false
 });
 
-
 module.exports = Pembayaran;

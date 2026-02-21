@@ -1,4 +1,5 @@
 const { BandingAsesmen, User } = require("../../models");
+const response = require("../../utils/response.util");
 
 const getAllBanding = async (req, res) => {
   try {
@@ -7,9 +8,9 @@ const getAllBanding = async (req, res) => {
       order: [["tanggal_ajukan", "DESC"]]
     });
 
-    res.json({ data });
+    return response.success(res, "List banding", data);
   } catch (err) {
-    res.status(500).json({ message: "Terjadi kesalahan server" });
+    return response.error(res, err.message);
   }
 };
 
@@ -20,19 +21,20 @@ const updateStatusBanding = async (req, res) => {
 
     const banding = await BandingAsesmen.findByPk(id);
     if (!banding) {
-      return res.status(404).json({ message: "Banding tidak ditemukan" });
+      return response.error(res, "Banding tidak ditemukan", 404);
     }
 
     await banding.update({
       status_progress,
       keputusan,
       catatan_komite,
-      tanggal_putusan: keputusan !== "belum_diputus" ? new Date() : null
+      tanggal_putusan:
+        keputusan !== "belum_diputus" ? new Date() : null
     });
 
-    res.json({ message: "Banding berhasil diupdate", data: banding });
+    return response.success(res, "Banding berhasil diupdate", banding);
   } catch (err) {
-    res.status(500).json({ message: "Terjadi kesalahan server" });
+    return response.error(res, err.message);
   }
 };
 

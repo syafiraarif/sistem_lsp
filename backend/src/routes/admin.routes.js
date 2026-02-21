@@ -22,31 +22,27 @@ const pesertaJadwalController = require("../controllers/admin/pesertaJadwal.cont
 const unitKompetensiController = require("../controllers/admin/unitKompetensi.controller");
 const upload = require("../middlewares/upload.middleware");
 const ctrl = require("../controllers/admin/surveillance.controller");
+const mapaController = require("../controllers/admin/mapa.controller");
+const mapa01Controller = require("../controllers/admin/mapa01.controller");
+const mapa02Controller = require("../controllers/admin/mapa02.controller");
+const bankSoalController = require("../controllers/admin/bankSoal.controller");
+const bankSoalPGController = require("../controllers/admin/bankSoalPG.controller");
+const ia01Controller = require("../controllers/admin/ia01Observasi.controller");
+const ia03Controller = require("../controllers/admin/ia03Pertanyaan.controller");
 
-router.get("/surveillance", authMiddleware, roleMiddleware.adminOnly, ctrl.getAllSurveillance);
+router.use(authMiddleware, roleMiddleware.adminOnly);
 
-router.put("/surveillance/:id/status", authMiddleware, roleMiddleware.adminOnly, ctrl.updateStatusSurveillance);
-
+router.get("/surveillance", ctrl.getAllSurveillance);
+router.put("/surveillance/:id/status", ctrl.updateStatusSurveillance);
 
 router.get("/profile", adminProfile.getProfile);
 router.put("/profile", adminProfile.updateProfile);
 
-router.post(
-  "/dokumen-mutu",
-  upload,
-  dokumenMutuController.createDokumen
-);
-
-router.put(
-  "/dokumen-mutu/:id",
-  upload,
-  dokumenMutuController.updateDokumen
-);
+router.post( "/dokumen-mutu", upload, dokumenMutuController.createDokumen);
+router.put( "/dokumen-mutu/:id", upload, dokumenMutuController.updateDokumen);
 
 router.post("/asesor", asesorAdmin.createAsesor);
 router.post("/tuk-akun", tukAdmin.createTuk);
-
-router.use(authMiddleware, roleMiddleware.adminOnly);
 
 router.get("/dashboard", adminController.getDashboard);
 
@@ -83,16 +79,10 @@ router.get("/persyaratan", persyaratanController.getAll);
 router.post("/persyaratan-tuk", persyaratanTukController.create);
 router.get("/persyaratan-tuk", persyaratanTukController.getAll);
 router.post("/persyaratan-tuk/attach", persyaratanTukController.attachToSkema);
-router.delete(
-  "/persyaratan-tuk/detach/:id_skema/:id_persyaratan_tuk",
-  persyaratanTukController.detachFromSkema
-);
+router.delete( "/persyaratan-tuk/detach/:id_skema/:id_persyaratan_tuk", persyaratanTukController.detachFromSkema);
 
 router.post("/kelompok-pekerjaan", kelompokPekerjaanController.create);
-router.get(
-  "/kelompok-pekerjaan/skema/:id_skema",
-  kelompokPekerjaanController.getBySkema
-);
+router.get( "/kelompok-pekerjaan/skema/:id_skema", kelompokPekerjaanController.getBySkema);
 router.put("/kelompok-pekerjaan/:id", kelompokPekerjaanController.update);
 router.delete("/kelompok-pekerjaan/:id", kelompokPekerjaanController.delete);
 
@@ -102,23 +92,12 @@ router.put("/tuk-tempat/:id", tukTempatController.update);
 router.delete("/tuk-tempat/:id", tukTempatController.delete);
 
 router.post("/tuk-tempat/attach-skema", tukTempatController.attachSkema);
-router.delete(
-  "/tuk-tempat/detach-skema/:id_tuk/:id_skema",
-  tukTempatController.detachSkema
-);
+router.delete( "/tuk-tempat/detach-skema/:id_tuk/:id_skema", tukTempatController.detachSkema);
 
 router.get("/banding", bandingController.getAllBanding);
 router.put("/banding/:id", bandingController.updateStatusBanding);
 
-router.post("/dokumen-mutu", dokumenMutuController.createDokumen);
-router.get("/dokumen-mutu", dokumenMutuController.getAllDokumen);
-router.put("/dokumen-mutu/:id", dokumenMutuController.updateDokumen);
-router.delete("/dokumen-mutu/:id", dokumenMutuController.deleteDokumen);
-
-router.get(
-  "/jadwal/:id_jadwal/peserta",
-  pesertaJadwalController.getPesertaByJadwal
-);
+router.get( "/jadwal/:id_jadwal/peserta", pesertaJadwalController.getPesertaByJadwal);
 
 router.post("/unit-kompetensi", unitKompetensiController.create);
 router.get("/unit-kompetensi", unitKompetensiController.getAll);
@@ -126,5 +105,38 @@ router.get("/unit-kompetensi/:id", unitKompetensiController.getById);
 router.put("/unit-kompetensi/:id", unitKompetensiController.update);
 router.delete("/unit-kompetensi/:id", unitKompetensiController.delete);
 
+router.post("/mapa", mapaController.create);
+router.get("/mapa", mapaController.getAll);
+router.get("/mapa/:id", mapaController.getById);
+router.put("/mapa/:id", mapaController.update);
+router.delete("/mapa/:id", mapaController.delete);
+
+router.post("/mapa01", mapa01Controller.createOrUpdate);
+router.get("/mapa01/:id_mapa", mapa01Controller.getByMapa);
+
+router.post("/mapa02/mapping", mapa02Controller.addMapping);
+router.get("/mapa02/mapping/:id_mapa", mapa02Controller.getMappingByMapa);
+router.delete("/mapa02/mapping/:id", mapa02Controller.deleteMapping);
+
+router.post("/mapa02/metode", mapa02Controller.addMetode);
+router.get("/mapa02/metode/:id_mapping", mapa02Controller.getMetodeByMapping);
+router.delete("/mapa02/metode/:id", mapa02Controller.deleteMetode);
+
+router.post("/bank-soal", bankSoalController.create);
+router.get("/bank-soal", bankSoalController.getAll);
+router.put("/bank-soal/:id", bankSoalController.update);
+router.delete("/bank-soal/:id", bankSoalController.delete);
+
+router.post("/bank-soal-pg", bankSoalPGController.create);
+router.get("/bank-soal-pg/:id_soal", bankSoalPGController.getBySoal);
+router.delete("/bank-soal-pg/:id", bankSoalPGController.delete);
+
+router.post("/ia01-observasi", ia01Controller.create);
+router.get("/ia01-observasi/unit/:id_unit", ia01Controller.getByUnit);
+router.delete("/ia01-observasi/:id", ia01Controller.delete);
+
+router.post("/ia03-pertanyaan", ia03Controller.create);
+router.get("/ia03-pertanyaan/unit/:id_unit", ia03Controller.getByUnit);
+router.delete("/ia03-pertanyaan/:id", ia03Controller.delete);
 
 module.exports = router;

@@ -19,10 +19,6 @@ const Apl01Asesmen = sequelize.define("apl01_asesmen", {
   type: DataTypes.INTEGER,
   allowNull: true
   },
-  selected_persyaratan: {
-    type: DataTypes.JSON, 
-    allowNull: true
-  },
   dokumen_tambahan: {
     type: DataTypes.JSON, 
     allowNull: true
@@ -33,10 +29,6 @@ const Apl01Asesmen = sequelize.define("apl01_asesmen", {
   },
   tujuan_asesmen_lainnya: {
     type: DataTypes.STRING(255),
-    allowNull: true
-  },
-  selected_units: {
-    type: DataTypes.JSON, 
     allowNull: true
   },
   tanda_tangan: {

@@ -12,7 +12,6 @@ const Skkni = sequelize.define("skkni", {
     allowNull: false
   },
   no_skkni: DataTypes.STRING(100),
-  
   judul_skkni: {
   type: DataTypes.STRING(255),
   allowNull: false

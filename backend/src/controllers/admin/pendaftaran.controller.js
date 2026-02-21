@@ -40,7 +40,7 @@ exports.approvePendaftaran = async (req, res) => {
     });
 
     if (!roleAsesi) {
-      return response.error(res, "Role ASESI tidak ditemukan", 500);
+      return response.error(res, "Role asesi tidak ditemukan", 500);
     }
 
     const username = pendaftaran.nik;
