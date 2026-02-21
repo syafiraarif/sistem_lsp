@@ -1,4 +1,5 @@
 const { PesertaJadwal, User, Jadwal } = require("../../models");
+const response = require("../../utils/response.util");
 
 const getPesertaByJadwal = async (req, res) => {
   try {
@@ -12,10 +13,10 @@ const getPesertaByJadwal = async (req, res) => {
       ]
     });
 
-    res.json({ data });
+    return response.success(res, "List peserta jadwal", data);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Terjadi kesalahan server" });
+    return response.error(res, err.message);
   }
 };
 

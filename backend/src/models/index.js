@@ -29,7 +29,18 @@ const Pembayaran = require("./pembayaran.model");
 const UnitKompetensi = require("./unitKompetensi.model");
 const SkemaSkkni = require("./skemaSkkni.model");
 const Surveillance = require("./surveillance.model");
-
+const Apl01Unit = require("./apl01Unit.model");
+const Apl01Persyaratan = require("./apl01Persyaratan.model");
+const BankSoal = require("./bankSoal.model");
+const BankSoalPG = require("./bankSoalPG.model")
+const UnitElemen = require("./unitElemen.model")
+const UnitKuk = require("./unitKuk.model")
+const IA01Observasi = require("./ia01Observasi.model")
+const IA03Pertanyaan = require("./ia03Pertanyaan.model")
+const Mapa = require("./mapa.model");
+const Mapa01 = require("./mapa01.model");
+const Mapa02Mapping = require("./mapa02Mapping.model");
+const Mapa02Metode = require("./mapa02Metode.model");
 
 Role.hasMany(User, { foreignKey: "id_role" });
 User.belongsTo(Role, { foreignKey: "id_role" });
@@ -84,10 +95,9 @@ User.hasMany(JadwalAsesor, { foreignKey: "assigned_by" });
 JadwalAsesor.belongsTo(User, { foreignKey: "assigned_by", as: "assigner"});
 
 User.hasMany(PesertaJadwal, { foreignKey: "id_user" });
-PesertaJadwal.belongsTo(User, { foreignKey: "id_user" });
-
+PesertaJadwal.belongsTo(User, {foreignKey: "id_user", as: "user"});
 Jadwal.hasMany(PesertaJadwal, { foreignKey: "id_jadwal" });
-PesertaJadwal.belongsTo(Jadwal, { foreignKey: "id_jadwal" });
+PesertaJadwal.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal"});
 
 Apl01Asesmen.belongsTo(User, { foreignKey: "id_user" });
 Apl01Asesmen.belongsTo(Skema, { foreignKey: "id_skema" });
@@ -104,7 +114,7 @@ Apl01Asesmen.hasMany(Pembayaran, { foreignKey: "id_apl01" });
 Pembayaran.belongsTo(TujuanPembayaran, { foreignKey: "id_tujuan_transfer"});
 
 User.hasMany(BandingAsesmen, { foreignKey: "id_user" });
-BandingAsesmen.belongsTo(User, { foreignKey: "id_user" });
+BandingAsesmen.belongsTo(User, { foreignKey: "id_user", as: "user"});
 
 Jadwal.hasMany(BandingAsesmen, { foreignKey: "id_jadwal" });
 BandingAsesmen.belongsTo(Jadwal, { foreignKey: "id_jadwal" });
@@ -121,6 +131,56 @@ Surveillance.belongsTo(User, { foreignKey: "id_user" });
 
 Skema.hasMany(Surveillance, { foreignKey: "id_skema" });
 Surveillance.belongsTo(Skema, { foreignKey: "id_skema" });
+
+Apl01Asesmen.belongsToMany(Persyaratan, {through: Apl01Persyaratan, foreignKey: "id_apl01"});
+
+Persyaratan.belongsToMany(Apl01Asesmen, {through: Apl01Persyaratan, foreignKey: "id_persyaratan"});
+
+Apl01Asesmen.belongsToMany(UnitKompetensi, {through: Apl01Unit,foreignKey: "id_apl01"});
+
+UnitKompetensi.belongsToMany(Apl01Asesmen, {through: Apl01Unit, foreignKey: "id_unit"});
+UnitKompetensi.hasMany(IA01Observasi, { foreignKey: "id_unit"});
+UnitKuk.hasMany(IA01Observasi, { foreignKey: "id_kuk"});
+UnitKompetensi.hasMany(Apl02AsesmenMandiri, { foreignKey: "id_unit"});
+
+BankSoal.hasMany(BankSoalPG, { foreignKey: "id_soal" });
+BankSoalPG.belongsTo(BankSoal, { foreignKey: "id_soal" });
+
+UnitKompetensi.hasMany(UnitElemen, { foreignKey: "id_unit" });
+UnitElemen.belongsTo(UnitKompetensi, { foreignKey: "id_unit" });
+
+UnitElemen.hasMany(UnitKuk, { foreignKey: "id_elemen" });
+UnitKuk.belongsTo(UnitElemen, { foreignKey: "id_elemen" });
+
+IA01Observasi.belongsTo(UnitKompetensi, { foreignKey: "id_unit" });
+IA01Observasi.belongsTo(UnitKuk, { foreignKey: "id_kuk" });
+
+IA03Pertanyaan.belongsTo(UnitKompetensi, { foreignKey: "id_unit" });
+UnitKompetensi.hasMany(IA03Pertanyaan, { foreignKey: "id_unit" });
+
+BankSoal.belongsTo(UnitKompetensi, { foreignKey: "id_unit" });
+UnitKompetensi.hasMany(BankSoal, { foreignKey: "id_unit" });
+
+Skema.hasMany(Mapa, { foreignKey: "id_skema" });
+Mapa.belongsTo(Skema, { foreignKey: "id_skema" });
+
+User.hasMany(Mapa, { foreignKey: "created_by" });
+Mapa.belongsTo(User, {foreignKey: "created_by", as: "creator"});
+
+Mapa.hasOne(Mapa01, { foreignKey: "id_mapa" });
+Mapa01.belongsTo(Mapa, { foreignKey: "id_mapa" });
+
+Mapa.hasMany(Mapa02Mapping, { foreignKey: "id_mapa" });
+Mapa02Mapping.belongsTo(Mapa, { foreignKey: "id_mapa" });
+
+UnitKompetensi.hasMany(Mapa02Mapping, { foreignKey: "id_unit" });
+Mapa02Mapping.belongsTo(UnitKompetensi, { foreignKey: "id_unit" });
+
+KelompokPekerjaan.hasMany(Mapa02Mapping, { foreignKey: "id_kelompok"});
+Mapa02Mapping.belongsTo(KelompokPekerjaan, { foreignKey: "id_kelompok"});
+
+Mapa02Mapping.hasMany(Mapa02Metode, { foreignKey: "id_mapping"});
+Mapa02Metode.belongsTo(Mapa02Mapping, { foreignKey: "id_mapping"});
 
 module.exports = {
   User,
@@ -153,5 +213,17 @@ module.exports = {
   Pembayaran,
   UnitKompetensi,
   SkemaSkkni,
-  Surveillance 
+  Surveillance,
+  Apl01Unit,
+  Apl01Persyaratan,
+  BankSoal,
+  BankSoalPG,
+  UnitElemen,
+  UnitKuk,
+  IA01Observasi,
+  IA03Pertanyaan,
+  Mapa,
+  Mapa01,
+  Mapa02Mapping,
+  Mapa02Metode
 };

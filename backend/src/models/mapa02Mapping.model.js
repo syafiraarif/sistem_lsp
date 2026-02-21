@@ -1,27 +1,27 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const UnitKompetensi = sequelize.define("unit_kompetensi", {
-  id_unit: {
+const Mapa02Mapping = sequelize.define("mapa02_mapping", {
+  id_mapping: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  id_skkni: {
+  id_mapa: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
-  kode_unit: {
-    type: DataTypes.STRING(50),
+  id_unit: {
+    type: DataTypes.INTEGER,
     allowNull: false
   },
-  judul_unit: {
-    type: DataTypes.STRING(255),
+  id_kelompok: {
+    type: DataTypes.INTEGER,
     allowNull: false
   }
 }, {
-  tableName: "unit_kompetensi",
+  tableName: "mapa02_mapping",
   timestamps: false
 });
 
-module.exports = UnitKompetensi;
+module.exports = Mapa02Mapping;

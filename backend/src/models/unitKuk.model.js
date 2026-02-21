@@ -1,27 +1,27 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const UnitKompetensi = sequelize.define("unit_kompetensi", {
-  id_unit: {
+const UnitKuk = sequelize.define("unit_kuk", {
+  id_kuk: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  id_skkni: {
+  id_elemen: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
-  kode_unit: {
-    type: DataTypes.STRING(50),
+  kuk: {
+    type: DataTypes.TEXT,
     allowNull: false
   },
-  judul_unit: {
-    type: DataTypes.STRING(255),
+  urutan: {
+    type: DataTypes.INTEGER,
     allowNull: false
   }
 }, {
-  tableName: "unit_kompetensi",
+  tableName: "unit_kuk",
   timestamps: false
 });
 
-module.exports = UnitKompetensi;
+module.exports = UnitKuk;

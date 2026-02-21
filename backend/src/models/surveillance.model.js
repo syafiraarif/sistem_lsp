@@ -9,30 +9,24 @@ const Surveillance = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-
     id_user: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-
     id_skema: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-
     periode_surveillance: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-
     nomor_sertifikat: {
       type: DataTypes.STRING(100),
     },
-
     nomor_registrasi: {
       type: DataTypes.STRING(100),
     },
-
     sumber_dana: {
       type: DataTypes.ENUM(
         "apbn",
@@ -42,27 +36,21 @@ const Surveillance = sequelize.define(
       ),
       allowNull: false,
     },
-
     nama_perusahaan: {
       type: DataTypes.STRING(150),
     },
-
     alamat_perusahaan: {
       type: DataTypes.TEXT,
     },
-
     jabatan_pekerjaan: {
       type: DataTypes.STRING(150),
     },
-
     nama_proyek: {
       type: DataTypes.STRING(255),
     },
-
     jabatan_dalam_proyek: {
       type: DataTypes.STRING(150),
     },
-
     kesesuaian_kompetensi: {
       type: DataTypes.ENUM(
         "sesuai",
@@ -71,11 +59,9 @@ const Surveillance = sequelize.define(
       ),
       allowNull: false,
     },
-
     keterangan_lainnya: {
       type: DataTypes.STRING(255),
     },
-
     status_verifikasi: {
       type: DataTypes.ENUM(
         "submitted",
@@ -85,7 +71,6 @@ const Surveillance = sequelize.define(
       ),
       defaultValue: "submitted",
     },
-
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,

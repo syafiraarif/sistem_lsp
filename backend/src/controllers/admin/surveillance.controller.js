@@ -1,4 +1,5 @@
 const { Surveillance, User, Skema, ProfileAsesi } = require("../../models");
+const response = require("../../utils/response.util");
 
 exports.getAllSurveillance = async (req, res) => {
   try {
@@ -22,12 +23,10 @@ exports.getAllSurveillance = async (req, res) => {
       order: [["created_at", "DESC"]],
     });
 
-    return res.json(data);
+    return response.success(res, "List surveillance", data);
   } catch (err) {
     console.error("ADMIN GET SURVEILLANCE ERROR:", err);
-    return res.status(500).json({
-      message: "Gagal mengambil data surveillance",
-    });
+    return response.error(res, err.message);
   }
 };
 
@@ -39,29 +38,28 @@ exports.updateStatusSurveillance = async (req, res) => {
     const allowed = ["submitted", "review", "valid", "tidak_valid"];
 
     if (!allowed.includes(status_verifikasi)) {
-      return res.status(400).json({
-        message: "Status tidak valid",
-      });
+      return response.error(res, "Status tidak valid", 400);
     }
 
     const data = await Surveillance.findByPk(id);
 
     if (!data) {
-      return res.status(404).json({
-        message: "Data surveillance tidak ditemukan",
-      });
+      return response.error(
+        res,
+        "Data surveillance tidak ditemukan",
+        404
+      );
     }
 
     await data.update({ status_verifikasi });
 
-    return res.json({
-      message: "Status berhasil diupdate",
-      data,
-    });
+    return response.success(
+      res,
+      "Status berhasil diupdate",
+      data
+    );
   } catch (err) {
     console.error("UPDATE STATUS SURVEILLANCE ERROR:", err);
-    return res.status(500).json({
-      message: "Gagal update status",
-    });
+    return response.error(res, err.message);
   }
 };

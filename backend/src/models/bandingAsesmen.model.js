@@ -7,27 +7,22 @@ const BandingAsesmen = sequelize.define("banding_asesmen", {
     primaryKey: true,
     autoIncrement: true
   },
-
   id_user: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
-
   id_jadwal: {
     type: DataTypes.INTEGER,
     allowNull: true
   },
-
   id_skema: {
     type: DataTypes.INTEGER,
     allowNull: true
   },
-
   isi_banding: {
     type: DataTypes.TEXT,
     allowNull: false
   },
-
   status_progress: {
     type: DataTypes.ENUM(
       "diajukan",
@@ -37,7 +32,6 @@ const BandingAsesmen = sequelize.define("banding_asesmen", {
     ),
     defaultValue: "diajukan"
   },
-
   keputusan: {
     type: DataTypes.ENUM(
       "diterima",
@@ -46,12 +40,9 @@ const BandingAsesmen = sequelize.define("banding_asesmen", {
     ),
     defaultValue: "belum_diputuskan"
   },
-
   catatan_komite: DataTypes.TEXT,
-
   tanggal_ajukan: DataTypes.DATE,
   tanggal_putusan: DataTypes.DATE
-
 }, {
   tableName: "banding_asesmen",
   timestamps: false
