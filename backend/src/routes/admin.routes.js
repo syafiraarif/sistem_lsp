@@ -2,8 +2,10 @@ const router = require("express").Router();
 
 const authMiddleware = require("../middlewares/auth.middleware");
 const roleMiddleware = require("../middlewares/role.middleware");
+const uploadExcel = require("../middlewares/uploadExcel.middleware");
 const adminController = require("../controllers/admin/admin.controller");
 const pendaftaranController = require("../controllers/admin/pendaftaran.controller");
+const asesiAdmin = require("../controllers/admin/asesi.controller");
 const pengaduanController = require("../controllers/admin/pengaduan.controller");
 const notifikasiController = require("../controllers/admin/notifikasi.controller");
 const asesorAdmin = require("../controllers/admin/asesor.controller");
@@ -42,6 +44,8 @@ router.post( "/dokumen-mutu", upload, dokumenMutuController.createDokumen);
 router.put( "/dokumen-mutu/:id", upload, dokumenMutuController.updateDokumen);
 
 router.post("/asesor", asesorAdmin.createAsesor);
+router.post("/import-asesor", uploadExcel.single("file"), asesorAdmin.importAsesorExcel);
+router.post("/import-asesi", uploadExcel.single("file"), asesiAdmin.importAsesiExcel);
 router.post("/tuk-akun", tukAdmin.createTuk);
 
 router.get("/dashboard", adminController.getDashboard);
