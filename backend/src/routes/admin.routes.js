@@ -47,6 +47,7 @@ router.post("/asesor", asesorAdmin.createAsesor);
 router.post("/import-asesor", uploadExcel.single("file"), asesorAdmin.importAsesorExcel);
 router.post("/import-asesi", uploadExcel.single("file"), asesiAdmin.importAsesiExcel);
 router.post("/tuk-akun", tukAdmin.createTuk);
+router.post("/import-tuk", uploadExcel.single("file"), tukAdmin.importTukExcel);
 
 router.get("/dashboard", adminController.getDashboard);
 
