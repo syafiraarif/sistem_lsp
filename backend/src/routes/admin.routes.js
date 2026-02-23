@@ -44,10 +44,24 @@ router.post( "/dokumen-mutu", upload, dokumenMutuController.createDokumen);
 router.put( "/dokumen-mutu/:id", upload, dokumenMutuController.updateDokumen);
 
 router.post("/asesor", asesorAdmin.createAsesor);
+router.get("/asesor", asesorAdmin.getAll);
+router.get("/asesor/:id", asesorAdmin.getById);
+router.put("/asesor/:id", asesorAdmin.update);
+router.delete("/asesor/:id", asesorAdmin.delete);
 router.post("/import-asesor", uploadExcel.single("file"), asesorAdmin.importAsesorExcel);
+
 router.post("/import-asesi", uploadExcel.single("file"), asesiAdmin.importAsesiExcel);
+router.get("/asesi", asesiAdmin.getAll);
+router.get("/asesi/:id", asesiAdmin.getById);
+router.put("/asesi/:id", asesiAdmin.update);
+router.delete("/asesi/:id", asesiAdmin.delete);
+
 router.post("/tuk-akun", tukAdmin.createTuk);
 router.post("/import-tuk", uploadExcel.single("file"), tukAdmin.importTukExcel);
+router.get("/tuk", tukAdmin.getAll);
+router.get("/tuk/:id", tukAdmin.getById);
+router.put("/tuk/:id", tukAdmin.update);
+router.delete("/tuk/:id", tukAdmin.delete);
 
 router.get("/dashboard", adminController.getDashboard);
 
@@ -61,10 +75,10 @@ router.put("/pengaduan/:id/status", pengaduanController.updateStatus);
 
 router.get("/notifikasi", notifikasiController.getAll);
 
-router.post("/skkni", skkniController.create);
+router.post("/skkni", upload, skkniController.create);
+router.put("/skkni/:id", upload, skkniController.update);
 router.get("/skkni", skkniController.getAll);
 router.get("/skkni/:id", skkniController.getById);
-router.put("/skkni/:id", skkniController.update);
 router.delete("/skkni/:id", skkniController.delete);
 
 router.post("/skema", skemaController.create);
