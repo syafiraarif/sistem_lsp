@@ -112,3 +112,73 @@ exports.importTukExcel = async (req, res) => {
     return response.error(res, err.message);
   }
 };
+
+exports.getAll = async (req, res) => {
+  try {
+    const data = await ProfileTuk.findAll({
+      include: {
+        model: User,
+        attributes: ["id_user", "email", "no_hp", "status_user"]
+      }
+    });
+
+    return response.success(res, "List TUK", data);
+  } catch (err) {
+    return response.error(res, err.message);
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const data = await ProfileTuk.findByPk(req.params.id, {
+      include: User
+    });
+
+    if (!data) return response.error(res, "TUK tidak ditemukan", 404);
+
+    return response.success(res, "Detail TUK", data);
+  } catch (err) {
+    return response.error(res, err.message);
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+
+    const tuk = await ProfileTuk.findByPk(req.params.id);
+    if (!tuk) return response.error(res, "TUK tidak ditemukan", 404);
+
+    await tuk.update(req.body);
+
+    return response.success(res, "TUK berhasil diperbarui", tuk);
+
+  } catch (err) {
+    return response.error(res, err.message);
+  }
+};
+
+exports.delete = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+
+    const tuk = await ProfileTuk.findByPk(req.params.id, { transaction: t });
+    if (!tuk) {
+      await t.rollback();
+      return response.error(res, "TUK tidak ditemukan", 404);
+    }
+
+    await User.destroy({
+      where: { id_user: tuk.id_user },
+      transaction: t
+    });
+
+    await tuk.destroy({ transaction: t });
+
+    await t.commit();
+    return response.success(res, "TUK berhasil dihapus");
+
+  } catch (err) {
+    await t.rollback();
+    return response.error(res, err.message);
+  }
+};

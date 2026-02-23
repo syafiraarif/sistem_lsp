@@ -84,3 +84,73 @@ exports.importAsesiExcel = async (req, res) => {
     return response.error(res, err.message);
   }
 };
+
+exports.getAll = async (req, res) => {
+  try {
+    const data = await ProfileAsesi.findAll({
+      include: {
+        model: User,
+        attributes: ["id_user", "email", "no_hp", "status_user"]
+      }
+    });
+
+    return response.success(res, "List Asesi", data);
+  } catch (err) {
+    return response.error(res, err.message);
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const data = await ProfileAsesi.findByPk(req.params.id, {
+      include: User
+    });
+
+    if (!data) return response.error(res, "Asesi tidak ditemukan", 404);
+
+    return response.success(res, "Detail Asesi", data);
+  } catch (err) {
+    return response.error(res, err.message);
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+
+    const asesi = await ProfileAsesi.findByPk(req.params.id);
+    if (!asesi) return response.error(res, "Asesi tidak ditemukan", 404);
+
+    await asesi.update(req.body);
+
+    return response.success(res, "Asesi berhasil diperbarui", asesi);
+
+  } catch (err) {
+    return response.error(res, err.message);
+  }
+};
+
+exports.delete = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+
+    const asesi = await ProfileAsesi.findByPk(req.params.id, { transaction: t });
+    if (!asesi) {
+      await t.rollback();
+      return response.error(res, "Asesi tidak ditemukan", 404);
+    }
+
+    await User.destroy({
+      where: { id_user: asesi.id_user },
+      transaction: t
+    });
+
+    await asesi.destroy({ transaction: t });
+
+    await t.commit();
+    return response.success(res, "Asesi berhasil dihapus");
+
+  } catch (err) {
+    await t.rollback();
+    return response.error(res, err.message);
+  }
+};

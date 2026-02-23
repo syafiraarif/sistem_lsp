@@ -124,3 +124,73 @@ exports.importAsesorExcel = async (req, res) => {
     return response.error(res, err.message);
   }
 };
+
+exports.getAll = async (req, res) => {
+  try {
+    const data = await ProfileAsesor.findAll({
+      include: {
+        model: User,
+        attributes: ["id_user", "email", "no_hp", "status_user"]
+      }
+    });
+
+    return response.success(res, "List Asesor", data);
+  } catch (err) {
+    return response.error(res, err.message);
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const data = await ProfileAsesor.findByPk(req.params.id, {
+      include: User
+    });
+
+    if (!data) return response.error(res, "Asesor tidak ditemukan", 404);
+
+    return response.success(res, "Detail Asesor", data);
+  } catch (err) {
+    return response.error(res, err.message);
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+
+    const asesor = await ProfileAsesor.findByPk(req.params.id);
+    if (!asesor) return response.error(res, "Asesor tidak ditemukan", 404);
+
+    await asesor.update(req.body);
+
+    return response.success(res, "Asesor berhasil diperbarui", asesor);
+
+  } catch (err) {
+    return response.error(res, err.message);
+  }
+};
+
+exports.delete = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+
+    const asesor = await ProfileAsesor.findByPk(req.params.id, { transaction: t });
+    if (!asesor) {
+      await t.rollback();
+      return response.error(res, "Asesor tidak ditemukan", 404);
+    }
+
+    await User.destroy({
+      where: { id_user: asesor.id_user },
+      transaction: t
+    });
+
+    await asesor.destroy({ transaction: t });
+
+    await t.commit();
+    return response.success(res, "Asesor berhasil dihapus");
+
+  } catch (err) {
+    await t.rollback();
+    return response.error(res, err.message);
+  }
+};
