@@ -1,10 +1,14 @@
 const XLSX = require("xlsx");
-const bcrypt = require("bcryptjs");
-const { User, ProfileAsesi, Role } = require("../../models");
+const { ProfileAsesi, Role } = require("../../models");
 const response = require("../../utils/response.util");
+const { createUserWithNotification } = require("../../services/account.service");
+const { sendAccountEmail } = require("../../services/email.service");
+const sequelize = require("../../config/database");
 
 exports.importAsesiExcel = async (req, res) => {
+
   try {
+
     if (!req.file) {
       return response.error(res, "File tidak ditemukan", 400);
     }
@@ -19,25 +23,22 @@ exports.importAsesiExcel = async (req, res) => {
     });
 
     if (!role) {
-      return response.error(res, "Role asesi tidak ditemukan", 500);
+      return response.error(res, "Role ASESI tidak ditemukan", 500);
     }
 
     let totalSuccess = 0;
     let totalFailed = 0;
 
     for (const row of data) {
+      const t = await sequelize.transaction();
       try {
-        const username = row.nik;
-        const rawPassword = Math.random().toString(36).slice(-8);
-        const hash = await bcrypt.hash(rawPassword, 10);
-
-        const user = await User.create({
-          username,
-          password_hash: hash,
-          id_role: role.id_role,
-          email: row.email,
-          no_hp: row.no_hp
-        });
+        const { user, rawPassword, notifikasi } =
+          await createUserWithNotification({
+            username: row.nik,
+            email: row.email,
+            no_hp: row.no_hp,
+            id_role: role.id_role
+          }, { transaction: t });
 
         await ProfileAsesi.create({
           id_user: user.id_user,
@@ -66,11 +67,33 @@ exports.importAsesiExcel = async (req, res) => {
           telp_perusahaan: row.telp_perusahaan,
           fax_perusahaan: row.fax_perusahaan,
           email_perusahaan: row.email_perusahaan
-        });
+        }, { transaction: t });
+
+        await t.commit();
+        try {
+
+          await sendAccountEmail(row.email, row.nik, rawPassword);
+
+          await notifikasi.update({
+            status_kirim: "terkirim"
+          });
+
+        } catch (emailError) {
+
+          await notifikasi.update({
+            status_kirim: "gagal"
+          });
+
+          console.error("Email gagal:", emailError.message);
+        }
 
         totalSuccess++;
+
       } catch (err) {
+
+        await t.rollback();
         totalFailed++;
+
         console.error("Gagal import asesi:", row.nik, err.message);
       }
     }

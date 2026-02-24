@@ -1,51 +1,72 @@
 const XLSX = require("xlsx");
-const bcrypt = require("bcryptjs");
 const { User, ProfileTuk, Role } = require("../../models");
 const response = require("../../utils/response.util");
+const { createUserWithNotification } = require("../../services/account.service");
+const sequelize = require("../../config/database");
+const { sendAccountEmail } = require("../../services/email.service");
 
 exports.createTuk = async (req, res) => {
+
+  const t = await sequelize.transaction();
+
   try {
-    const {
-      kode_tuk,
-      email,
-      no_hp,
-      ...profile
-    } = req.body;
+    const { kode_tuk, email, no_hp, ...profile } = req.body;
 
     const role = await Role.findOne({
       where: { role_name: "TUK" }
     });
 
     if (!role) {
+      await t.rollback();
       return response.error(res, "Role TUK tidak ditemukan", 500);
     }
 
-    const username = kode_tuk;
-    const rawPassword = Math.random().toString(36).slice(-8);
-    const hash = await bcrypt.hash(rawPassword, 10);
-
-    const user = await User.create({
-      username,
-      password_hash: hash,
-      id_role: role.id_role,
-      email,
-      no_hp
-    });
+    const { user, rawPassword, notifikasi } =
+      await createUserWithNotification({
+        username: kode_tuk,
+        email,
+        no_hp,
+        id_role: role.id_role
+      }, { transaction: t });
 
     await ProfileTuk.create({
       id_user: user.id_user,
       kode_tuk,
       ...profile
-    });
+    }, { transaction: t });
+
+    await t.commit();
+
+    try {
+
+      await sendAccountEmail(email, kode_tuk, rawPassword);
+
+      await notifikasi.update({
+        status_kirim: "terkirim"
+      });
+
+    } catch (emailError) {
+
+      await notifikasi.update({
+        status_kirim: "gagal"
+      });
+
+      console.error("Email gagal:", emailError.message);
+    }
 
     return response.success(res, "Akun TUK berhasil dibuat");
+
   } catch (err) {
+
+    await t.rollback();
     return response.error(res, err.message);
   }
 };
 
 exports.importTukExcel = async (req, res) => {
+
   try {
+
     if (!req.file) {
       return response.error(res, "File tidak ditemukan", 400);
     }
@@ -67,18 +88,17 @@ exports.importTukExcel = async (req, res) => {
     let totalFailed = 0;
 
     for (const row of data) {
-      try {
-        const username = row.kode_tuk;
-        const rawPassword = Math.random().toString(36).slice(-8);
-        const hash = await bcrypt.hash(rawPassword, 10);
 
-        const user = await User.create({
-          username,
-          password_hash: hash,
-          id_role: role.id_role,
-          email: row.email,
-          no_hp: row.no_hp
-        });
+      const t = await sequelize.transaction();
+
+      try {
+        const { user, rawPassword, notifikasi } =
+          await createUserWithNotification({
+            username: row.kode_tuk,
+            email: row.email,
+            no_hp: row.no_hp,
+            id_role: role.id_role
+          }, { transaction: t });
 
         await ProfileTuk.create({
           id_user: user.id_user,
@@ -94,11 +114,34 @@ exports.importTukExcel = async (req, res) => {
           no_izin: row.no_izin,
           masa_berlaku: row.masa_berlaku,
           status_tuk: row.status_tuk
-        });
+        }, { transaction: t });
+
+        await t.commit();
+
+        try {
+
+          await sendAccountEmail(row.email, row.kode_tuk, rawPassword);
+
+          await notifikasi.update({
+            status_kirim: "terkirim"
+          });
+
+        } catch (emailError) {
+
+          await notifikasi.update({
+            status_kirim: "gagal"
+          });
+
+          console.error("Email gagal:", emailError.message);
+        }
 
         totalSuccess++;
+
       } catch (err) {
+
+        await t.rollback();
         totalFailed++;
+
         console.error("Gagal import TUK:", row.kode_tuk, err.message);
       }
     }
@@ -109,6 +152,7 @@ exports.importTukExcel = async (req, res) => {
     );
 
   } catch (err) {
+
     return response.error(res, err.message);
   }
 };
