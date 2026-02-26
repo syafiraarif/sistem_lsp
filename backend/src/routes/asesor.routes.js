@@ -9,6 +9,7 @@ const pesertaJadwalController = require("../controllers/asesor/pesertaJadwal.con
 const mkvaController = require("../controllers/asesor/mkva.controller");
 const frAk01Controller = require("../controllers/asesor/frAk01.controller");
 const frAk02Controller = require("../controllers/asesor/frAk02.controller");
+const ak05Controller = require("../controllers/asesor/frAk05.controller");
 
 router.use(authMiddleware, roleMiddleware.asesorOnly);
 
@@ -38,6 +39,13 @@ router.get("/fr-ak-02/form/:id_user", frAk02Controller.getFormData);
 router.post("/fr-ak-02/form/:id_user", frAk02Controller.submitForm);
 router.put("/fr-ak-02/:id_fr_ak_02", frAk02Controller.updateForm);
 router.get("/fr-ak-02/:id_fr_ak_02/pdf", frAk02Controller.downloadPdf);
+
+// Route FR.AK.05 
+router.get("/fr-ak-05/form/:id_jadwal_asesor", ak05Controller.getFormData); 
+router.post("/fr-ak-05/submit/:id_jadwal_asesor", ak05Controller.submitForm); 
+router.get("/fr-ak-05/my-form/:id_jadwal_asesor/:id_peserta", ak05Controller.getMyForm); 
+router.put("/fr-ak-05/my-form/:id_jadwal_asesor/:id_peserta", ak05Controller.getMyForm); 
+router.get("/fr-ak-05/download/:id_jadwal_asesor/:id_peserta", ak05Controller.downloadForm);
 
 // Route MKVA
 router.get("/mkva/jadwal", mkvaController.getJadwalAsesor);
