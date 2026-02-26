@@ -1,51 +1,57 @@
 const XLSX = require("xlsx");
-const bcrypt = require("bcryptjs");
-const { User, ProfileTuk, Role } = require("../../models");
+const { User, ProfileTuk, Role, Notifikasi } = require("../../models");
 const response = require("../../utils/response.util");
+const { createUser } = require("../../services/account.service");
+const sequelize = require("../../config/database");
 
 exports.createTuk = async (req, res) => {
+
+  const t = await sequelize.transaction();
+
   try {
-    const {
-      kode_tuk,
-      email,
-      no_hp,
-      ...profile
-    } = req.body;
+
+    const { kode_tuk, email, no_hp, ...profile } = req.body;
 
     const role = await Role.findOne({
       where: { role_name: "TUK" }
     });
 
     if (!role) {
+      await t.rollback();
       return response.error(res, "Role TUK tidak ditemukan", 500);
     }
 
-    const username = kode_tuk;
-    const rawPassword = Math.random().toString(36).slice(-8);
-    const hash = await bcrypt.hash(rawPassword, 10);
-
-    const user = await User.create({
-      username,
-      password_hash: hash,
-      id_role: role.id_role,
+    const { user } = await createUser({
+      username: kode_tuk,
       email,
-      no_hp
-    });
+      no_hp,
+      id_role: role.id_role
+    }, { transaction: t });
 
     await ProfileTuk.create({
       id_user: user.id_user,
       kode_tuk,
       ...profile
-    });
+    }, { transaction: t });
 
-    return response.success(res, "Akun TUK berhasil dibuat");
+    await t.commit();
+
+    return response.success(
+      res,
+      "Akun TUK berhasil dibuat. Email belum dikirim."
+    );
+
   } catch (err) {
+
+    await t.rollback();
     return response.error(res, err.message);
   }
 };
 
 exports.importTukExcel = async (req, res) => {
+
   try {
+
     if (!req.file) {
       return response.error(res, "File tidak ditemukan", 400);
     }
@@ -54,6 +60,10 @@ exports.importTukExcel = async (req, res) => {
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(sheet);
+
+    if (!data.length) {
+      return response.error(res, "File Excel kosong", 400);
+    }
 
     const role = await Role.findOne({
       where: { role_name: "TUK" }
@@ -67,18 +77,21 @@ exports.importTukExcel = async (req, res) => {
     let totalFailed = 0;
 
     for (const row of data) {
-      try {
-        const username = row.kode_tuk;
-        const rawPassword = Math.random().toString(36).slice(-8);
-        const hash = await bcrypt.hash(rawPassword, 10);
 
-        const user = await User.create({
-          username,
-          password_hash: hash,
-          id_role: role.id_role,
+      const t = await sequelize.transaction();
+
+      try {
+
+        if (!row.kode_tuk || !row.email) {
+          throw new Error("Kode TUK atau Email kosong");
+        }
+
+        const { user } = await createUser({
+          username: row.kode_tuk,
           email: row.email,
-          no_hp: row.no_hp
-        });
+          no_hp: row.no_hp || null,
+          id_role: role.id_role
+        }, { transaction: t });
 
         await ProfileTuk.create({
           id_user: user.id_user,
@@ -94,11 +107,16 @@ exports.importTukExcel = async (req, res) => {
           no_izin: row.no_izin,
           masa_berlaku: row.masa_berlaku,
           status_tuk: row.status_tuk
-        });
+        }, { transaction: t });
 
+        await t.commit();
         totalSuccess++;
+
       } catch (err) {
+
+        await t.rollback();
         totalFailed++;
+
         console.error("Gagal import TUK:", row.kode_tuk, err.message);
       }
     }
@@ -115,14 +133,25 @@ exports.importTukExcel = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
+
     const data = await ProfileTuk.findAll({
-      include: {
-        model: User,
-        attributes: ["id_user", "email", "no_hp", "status_user"]
-      }
+      include: [
+        {
+          model: User,
+          attributes: ["id_user", "email", "no_hp", "status_user"],
+          include: [
+            {
+              model: Notifikasi,
+              where: { ref_type: "akun" },
+              required: false
+            }
+          ]
+        }
+      ]
     });
 
     return response.success(res, "List TUK", data);
+
   } catch (err) {
     return response.error(res, err.message);
   }

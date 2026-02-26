@@ -31,6 +31,7 @@ const bankSoalController = require("../controllers/admin/bankSoal.controller");
 const bankSoalPGController = require("../controllers/admin/bankSoalPG.controller");
 const ia01Controller = require("../controllers/admin/ia01Observasi.controller");
 const ia03Controller = require("../controllers/admin/ia03Pertanyaan.controller");
+const accountController = require("../controllers/admin/account.controller");
 
 router.use(authMiddleware, roleMiddleware.adminOnly);
 
@@ -62,6 +63,8 @@ router.get("/tuk", tukAdmin.getAll);
 router.get("/tuk/:id", tukAdmin.getById);
 router.put("/tuk/:id", tukAdmin.update);
 router.delete("/tuk/:id", tukAdmin.delete);
+
+router.post("/send-email/:id", accountController.sendAccountEmailManual);
 
 router.get("/dashboard", adminController.getDashboard);
 
