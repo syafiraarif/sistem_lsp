@@ -32,9 +32,9 @@ const upload = multer({
 module.exports = upload.fields([
   { name: "file_dokumen", maxCount: 1 },
   { name: "file_pendukung", maxCount: 1 },
-
   { name: "dokumen_tambahan", maxCount: 10 },
   { name: "tanda_tangan", maxCount: 1 },
   { name: "file_bukti", maxCount: 1 },
-  { name: "bukti_bayar", maxCount: 1 }
+  { name: "bukti_bayar", maxCount: 1 },
+  { name: "ttd", maxCount: 1 }
 ]);

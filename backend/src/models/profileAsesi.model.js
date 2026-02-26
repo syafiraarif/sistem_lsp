@@ -138,6 +138,10 @@ const ProfileAsesi = sequelize.define("profile_asesi", {
   surat_kerja: {
     type: DataTypes.STRING(255),  
     allowNull: true
+  },
+  ttd_path: {
+    type: DataTypes.STRING(255),
+    allowNull: true
   }
 }, {
   tableName: "profile_asesi",
