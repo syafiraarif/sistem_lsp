@@ -17,6 +17,9 @@ router.get("/profile", profileController.getProfile);
 router.put("/profile", profileController.updateProfile);
 router.put("/profile/upload-dokumen", uploadMiddleware, profileController.uploadDokumen);
 
+// Route upload TTD
+router.put("/profile/upload-ttd", uploadMiddleware, profileController.uploadTTD);
+
 router.get("/skema", aplikasiController.getSkema);
 router.get("/skema/:id_skema/persyaratan", aplikasiController.getPersyaratanBySkema);
 router.get("/skkni", aplikasiController.getSkkni);
@@ -39,14 +42,7 @@ router.get("/jadwal-saya", pesertaJadwalController.getJadwalSaya);
 router.post("/banding", bandingController.ajukanBanding);
 router.get("/banding-saya", bandingController.getBandingSaya);
 
-router.get(
-  "/unit-kompetensi/skkni/:id_skkni",
-  unitKompetensiAsesi.getBySkkni
-);
-
-router.get(
-  "/unit-kompetensi/:id",
-  unitKompetensiAsesi.getDetail
-);
+router.get("/unit-kompetensi/skkni/:id_skkni", unitKompetensiAsesi.getBySkkni);
+router.get("/unit-kompetensi/:id", unitKompetensiAsesi.getDetail);
 
 module.exports = router;
