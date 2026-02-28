@@ -47,7 +47,6 @@ const updateDokumen = async (req, res) => {
 
     const body = { ...req.body };
 
-    // handle upload file baru
     if (req.files?.file_dokumen) {
       body.file_dokumen = req.files.file_dokumen[0].filename;
     }
