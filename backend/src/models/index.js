@@ -47,7 +47,7 @@ const FrAk02 = require("./frAk02.model");
 const FrAk05 = require("./frAk05.model");
 const FrAk06 = require("./frAk06.model");
 const FrAk07 = require("./frAk07.model");
-
+const Mapa02Peserta = require("./mapa02_peserta.model");
 
 Role.hasMany(User, { foreignKey: "id_role" });
 User.belongsTo(Role, { foreignKey: "id_role" });
@@ -262,6 +262,14 @@ User.hasMany(FrAk07, { foreignKey: "id_asesor" });
 
 FrAk07.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", as: "profileAsesor" });
 
+PesertaJadwal.hasMany(Mapa02Peserta, { foreignKey: "id_peserta" }); 
+Mapa02Peserta.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "pesertaJadwal" });
+
+Mapa.hasMany(Mapa02Peserta, { foreignKey: "id_mapa" }); 
+Mapa02Peserta.belongsTo(Mapa, { foreignKey: "id_mapa", as: "mapa" });
+
+Mapa02Mapping.hasMany(Mapa02Peserta, { foreignKey: "id_mapping" });
+Mapa02Peserta.belongsTo(Mapa02Mapping, { foreignKey: "id_mapping", as: "mapping" });
 
 
 module.exports = {
@@ -313,5 +321,6 @@ module.exports = {
   FrAk02,
   FrAk05,
   FrAk06,
-  FrAk07
+  FrAk07,
+  Mapa02Peserta
 };

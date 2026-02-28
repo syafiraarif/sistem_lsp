@@ -12,6 +12,7 @@ const frAk02Controller = require("../controllers/asesor/frAk02.controller");
 const ak05Controller = require("../controllers/asesor/frAk05.controller");
 const ak06Controller = require("../controllers/asesor/frAk06.controller"); 
 const frAk07Controller = require("../controllers/asesor/frAk07.controller"); 
+ const mapa02Controller = require("../controllers/asesor/mapa02.controller");
 
 
 router.use(authMiddleware, roleMiddleware.asesorOnly);
@@ -63,5 +64,9 @@ router.post("/fr-ak-07/form/:id_user", frAk07Controller.submitForm);
 router.put("/fr-ak-07/form/:id_user", frAk07Controller.submitForm); 
 router.get("/fr-ak-07/download/:id_user", frAk07Controller.downloadPdf);
 
+router.get("/fr-mapa-02/form", mapa02Controller.getFormData); 
+router.post("/fr-mapa-02/submit", mapa02Controller.submitForm); 
+router.put("/fr-mapa-02/update-score", mapa02Controller.updateScore); 
+router.get("/fr-mapa-02/download", mapa02Controller.downloadPDF);
 
 module.exports = router;
