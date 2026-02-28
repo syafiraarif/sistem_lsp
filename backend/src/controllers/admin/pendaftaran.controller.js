@@ -6,6 +6,7 @@ const User = require("../../models/user.model");
 const Notifikasi = require("../../models/notifikasi.model");
 const { sendAccountEmail } = require("../../services/email.service");
 const response = require("../../utils/response.util");
+const sequelize = require("../../config/database");
 
 exports.getAll = async (req, res) => {
   try {
@@ -20,40 +21,42 @@ exports.getAll = async (req, res) => {
 };
 
 exports.approvePendaftaran = async (req, res) => {
+
+  const t = await sequelize.transaction();
+
   try {
-    const pendaftaran = await Pendaftaran.findByPk(req.params.id);
+
+    const pendaftaran = await Pendaftaran.findByPk(req.params.id, { transaction: t });
 
     if (!pendaftaran) {
+      await t.rollback();
       return response.error(res, "Data tidak ditemukan", 404);
     }
 
-    if (pendaftaran.status === "approved") {
-      return response.error(
-        res,
-        "Pendaftaran sudah pernah di-approve",
-        400
-      );
+    if (pendaftaran.status !== "pending") {
+      await t.rollback();
+      return response.error(res, "Pendaftaran sudah diproses", 400);
     }
 
     const roleAsesi = await Role.findOne({
-      where: { role_name: "ASESI" }
+      where: { role_name: "ASESI" },
+      transaction: t
     });
 
     if (!roleAsesi) {
-      return response.error(res, "Role asesi tidak ditemukan", 500);
+      await t.rollback();
+      return response.error(res, "Role ASESI tidak ditemukan", 500);
     }
 
-    const username = pendaftaran.nik;
-    const rawPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+    const { createUser } = require("../../services/account.service");
 
-    const user = await User.create({
-      username,
-      password_hash: hashedPassword,
-      id_role: roleAsesi.id_role,
-      email: pendaftaran.email,
-      no_hp: pendaftaran.no_hp
-    });
+    const { user, rawPassword } =
+      await createUser({
+        username: pendaftaran.nik,
+        email: pendaftaran.email,
+        no_hp: pendaftaran.no_hp,
+        id_role: roleAsesi.id_role
+      }, { transaction: t });
 
     await ProfileAsesi.create({
       id_user: user.id_user,
@@ -63,41 +66,39 @@ exports.approvePendaftaran = async (req, res) => {
       kota: pendaftaran.kota,
       kecamatan: pendaftaran.kecamatan,
       kelurahan: pendaftaran.kelurahan
-    });
+    }, { transaction: t });
 
     await pendaftaran.update({
       status: "approved"
-    });
+    }, { transaction: t });
+
+    await t.commit();
 
     let statusKirim = "terkirim";
 
     try {
       await sendAccountEmail(
-        pendaftaran.email,
-        username,
+        user.email,
+        user.username,
         rawPassword
       );
-    } catch (e) {
-      console.error("Email gagal:", e.message);
+    } catch (err) {
       statusKirim = "gagal";
     }
 
-    await Notifikasi.create({
+    await createNotifikasi({
       channel: "email",
-      tujuan: pendaftaran.email,
-      pesan: `Akun asesi berhasil dibuat. Username: ${username}`,
-      waktu_kirim: new Date(),
+      tujuan: user.email,
+      pesan: `Akun asesi berhasil dibuat. Username: ${user.username}`,
       status_kirim: statusKirim,
       ref_type: "akun",
       ref_id: user.id_user
     });
 
-    return response.success(
-      res,
-      "Akun asesi berhasil dibuat & dikirim ke email"
-    );
+    return response.success(res, "Pendaftaran berhasil di-approve");
+
   } catch (err) {
-    console.error(err);
+    await t.rollback();
     return response.error(res, err.message);
   }
 };

@@ -2,7 +2,9 @@ const XLSX = require("xlsx");
 const { User, ProfileAsesor, Role, Notifikasi } = require("../../models");
 const response = require("../../utils/response.util");
 const { createUser  } = require("../../services/account.service");
+const { resetUserPassword } = require("../../services/account.service");
 const sequelize = require("../../config/database");
+
 
 exports.createAsesor = async (req, res) => {
 
@@ -13,7 +15,8 @@ exports.createAsesor = async (req, res) => {
     const { nik, email, no_hp, ...profile } = req.body;
 
     const role = await Role.findOne({
-      where: { role_name: "ASESOR" }
+      where: { role_name: "ASESOR" },
+        transaction: t
     });
 
     if (!role) {
@@ -216,10 +219,25 @@ exports.delete = async (req, res) => {
       return response.error(res, "Asesor tidak ditemukan", 404);
     }
 
+    const today = new Date();
+
+    if (asesor.masa_berlaku) {
+      const masaBerlaku = new Date(asesor.masa_berlaku);
+      if (masaBerlaku >= today) {
+        await t.rollback();
+        return response.error(
+          res,
+          "Asesor masih aktif dan tidak bisa dihapus",
+          400
+        );
+      }
+    }
+
     await User.destroy({
       where: { id_user: asesor.id_user },
       transaction: t
     });
+
 
     await asesor.destroy({ transaction: t });
 
@@ -228,6 +246,25 @@ exports.delete = async (req, res) => {
 
   } catch (err) {
     await t.rollback();
+    return response.error(res, err.message);
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+
+    if (!user)
+      return response.error(res, "User tidak ditemukan", 404);
+
+    const rawPassword = await resetUserPassword(user);
+
+    return response.success(res, "Password berhasil direset", {
+      username: user.username,
+      password: rawPassword
+    });
+
+  } catch (err) {
     return response.error(res, err.message);
   }
 };
