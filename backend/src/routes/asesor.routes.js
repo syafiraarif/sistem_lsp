@@ -10,7 +10,9 @@ const mkvaController = require("../controllers/asesor/mkva.controller");
 const frAk01Controller = require("../controllers/asesor/frAk01.controller");
 const frAk02Controller = require("../controllers/asesor/frAk02.controller");
 const ak05Controller = require("../controllers/asesor/frAk05.controller");
-const ak06Controller = require("../controllers/asesor/frAk06.controller"); // Ubah dari ak05Controller
+const ak06Controller = require("../controllers/asesor/frAk06.controller"); 
+const frAk07Controller = require("../controllers/asesor/frAk07.controller"); 
+
 
 router.use(authMiddleware, roleMiddleware.asesorOnly);
 
@@ -55,5 +57,11 @@ router.get("/mkva/form/:id_jadwal", mkvaController.getFormData);
 router.post("/mkva/form/:id_jadwal", mkvaController.submitForm);
 router.get("/mkva/download/:id_mkva", mkvaController.downloadForm);
 router.get("/mkva/surat-tugas/:id_jadwal", mkvaController.downloadSuratTugas);
+
+router.get("/fr-ak-07/form/:id_user", frAk07Controller.getFormData);
+router.post("/fr-ak-07/form/:id_user", frAk07Controller.submitForm);
+router.put("/fr-ak-07/form/:id_user", frAk07Controller.submitForm); 
+router.get("/fr-ak-07/download/:id_user", frAk07Controller.downloadPdf);
+
 
 module.exports = router;

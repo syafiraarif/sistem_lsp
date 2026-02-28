@@ -46,6 +46,7 @@ const FrAk01 = require("./frAk01.model");
 const FrAk02 = require("./frAk02.model");
 const FrAk05 = require("./frAk05.model");
 const FrAk06 = require("./frAk06.model");
+const FrAk07 = require("./frAk07.model");
 
 
 Role.hasMany(User, { foreignKey: "id_role" });
@@ -250,6 +251,14 @@ Tuk.hasMany(FrAk06, { foreignKey: "id_tuk", as: "frAk06" });
 
 FrAk06.belongsTo(ProfileAsesor, { foreignKey: "id_user", as: "profileAsesor" });
 
+FrAk07.belongsTo(PesertaJadwal, { foreignKey: "id_peserta_jadwal", as: "pesertaJadwal" }); 
+PesertaJadwal.hasMany(FrAk07, { foreignKey: "id_peserta_jadwal", as: "frAk07" });
+
+FrAk07.belongsTo(User, { foreignKey: "id_asesor", as: "asesor" }); 
+User.hasMany(FrAk07, { foreignKey: "id_asesor" });
+
+FrAk07.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", as: "profileAsesor" });
+
 
 module.exports = {
   User,
@@ -299,5 +308,6 @@ module.exports = {
   FrAk01,
   FrAk02,
   FrAk05,
-  FrAk06
+  FrAk06,
+  FrAk07
 };
