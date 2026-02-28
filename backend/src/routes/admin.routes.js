@@ -20,6 +20,8 @@ const tukTempatController = require("../controllers/admin/tukTempat.controller")
 const adminProfile = require("../controllers/admin/profile.controller");
 const bandingController = require("../controllers/admin/banding.controller");
 const dokumenMutuController = require("../controllers/admin/dokumenMutu.controller");
+const jadwalController = require("../controllers/admin/jadwal.controller");
+const jadwalAsesorController = require("../controllers/admin/jadwalAsesor.controller");
 const pesertaJadwalController = require("../controllers/admin/pesertaJadwal.controller");
 const unitKompetensiController = require("../controllers/admin/unitKompetensi.controller");
 const upload = require("../middlewares/upload.middleware");
@@ -37,12 +39,15 @@ router.use(authMiddleware, roleMiddleware.adminOnly);
 
 router.get("/surveillance", ctrl.getAllSurveillance);
 router.put("/surveillance/:id/status", ctrl.updateStatusSurveillance);
+router.get("/surveillance/export", ctrl.exportSurveillance);
 
 router.get("/profile", adminProfile.getProfile);
 router.put("/profile", adminProfile.updateProfile);
 
 router.post( "/dokumen-mutu", upload, dokumenMutuController.createDokumen);
 router.put( "/dokumen-mutu/:id", upload, dokumenMutuController.updateDokumen);
+router.get("/dokumen-mutu", dokumenMutuController.getAllDokumen);
+router.delete("/dokumen-mutu/:id", dokumenMutuController.deleteDokumen);
 
 router.post("/asesor", asesorAdmin.createAsesor);
 router.get("/asesor", asesorAdmin.getAll);
@@ -50,6 +55,7 @@ router.get("/asesor/:id", asesorAdmin.getById);
 router.put("/asesor/:id", asesorAdmin.update);
 router.delete("/asesor/:id", asesorAdmin.delete);
 router.post("/import-asesor", uploadExcel.single("file"), asesorAdmin.importAsesorExcel);
+router.post("/asesor/:id/reset-password", asesorAdmin.resetPassword);
 
 router.post("/import-asesi", uploadExcel.single("file"), asesiAdmin.importAsesiExcel);
 router.get("/asesi", asesiAdmin.getAll);
@@ -73,10 +79,22 @@ router.post("/pendaftaran/:id/approve", pendaftaranController.approvePendaftaran
 router.post("/pendaftaran/:id/reject", pendaftaranController.rejectPendaftaran);
 
 
-router.get("/pengaduan", pengaduanController.getAll);
-router.put("/pengaduan/:id/status", pengaduanController.updateStatus);
+router.get("/pengaduan", pengaduanController.getAllPengaduan);
+router.put("/pengaduan/:id/status", pengaduanController.updateStatusPengaduan);
 
 router.get("/notifikasi", notifikasiController.getAll);
+
+router.post("/jadwal", jadwalController.create);
+router.get("/jadwal", jadwalController.getAll);
+router.get("/jadwal/:id", jadwalController.getById);
+router.put("/jadwal/:id", jadwalController.update);
+router.put("/jadwal/:id/status", jadwalController.updateStatus);
+router.delete("/jadwal/:id", jadwalController.delete);
+
+router.post("/jadwal-asesor", jadwalAsesorController.assign);
+router.get("/jadwal-asesor/:id_jadwal", jadwalAsesorController.getByJadwal);
+router.put("/jadwal-asesor/:id_jadwal/:id_user/:jenis_tugas", jadwalAsesorController.updateStatus);
+router.delete("/jadwal-asesor/:id_jadwal/:id_user/:jenis_tugas", jadwalAsesorController.remove);
 
 router.post("/skkni", upload, skkniController.create);
 router.put("/skkni/:id", upload, skkniController.update);

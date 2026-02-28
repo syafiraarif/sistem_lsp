@@ -1,26 +1,55 @@
-const Pengaduan = require("../../models/pengaduan.model");
+const { Pengaduan } = require("../../models");
+const { Op } = require("sequelize");
 const response = require("../../utils/response.util");
 
-exports.getAll = async (req, res) => {
+const getAllPengaduan = async (req, res) => {
   try {
-    const data = await Pengaduan.findAll();
-    response.success(res, "List pengaduan", data);
+    const { search, status_pengaduan } = req.query;
+
+    const where = {};
+
+    if (status_pengaduan) {
+      where.status_pengaduan = status_pengaduan;
+    }
+
+    if (search) {
+      where[Op.or] = [
+        { nama_pengadu: { [Op.like]: `%${search}%` } },
+        { email_pengadu: { [Op.like]: `%${search}%` } },
+        { isi_pengaduan: { [Op.like]: `%${search}%` } }
+      ];
+    }
+
+    const data = await Pengaduan.findAll({
+      where,
+      order: [["tanggal_pengaduan", "DESC"]]
+    });
+
+    return response.success(res, "List pengaduan", data);
   } catch (err) {
-    response.error(res, err.message);
+    return response.error(res, err.message);
   }
 };
 
-exports.updateStatus = async (req, res) => {
+const updateStatusPengaduan = async (req, res) => {
   try {
-    const pengaduan = await Pengaduan.findByPk(req.params.id);
-    if (!pengaduan)
+    const { id } = req.params;
+    const { status_pengaduan } = req.body;
+
+    const pengaduan = await Pengaduan.findByPk(id);
+    if (!pengaduan) {
       return response.error(res, "Pengaduan tidak ditemukan", 404);
+    }
 
-    pengaduan.status_pengaduan = req.body.status_pengaduan;
-    await pengaduan.save();
+    await pengaduan.update({ status_pengaduan });
 
-    response.success(res, "Status pengaduan berhasil diperbarui");
+    return response.success(res, "Status berhasil diupdate", pengaduan);
   } catch (err) {
-    response.error(res, err.message);
+    return response.error(res, err.message);
   }
+};
+
+module.exports = {
+  getAllPengaduan,
+  updateStatusPengaduan
 };
