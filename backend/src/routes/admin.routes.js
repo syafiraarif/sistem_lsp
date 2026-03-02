@@ -62,6 +62,7 @@ router.get("/asesi", asesiAdmin.getAll);
 router.get("/asesi/:id", asesiAdmin.getById);
 router.put("/asesi/:id", asesiAdmin.update);
 router.delete("/asesi/:id", asesiAdmin.delete);
+router.post("/asesi/:id/reset-password", asesiAdmin.resetPassword);
 
 router.post("/tuk-akun", tukAdmin.createTuk);
 router.post("/import-tuk", uploadExcel.single("file"), tukAdmin.importTukExcel);
@@ -115,8 +116,12 @@ router.delete("/biaya-uji/:id", biayaUjiController.delete);
 
 router.post("/persyaratan", persyaratanController.create);
 router.get("/persyaratan", persyaratanController.getAll);
+router.get("/persyaratan/:id", persyaratanController.getById);
+router.put("/persyaratan/:id", persyaratanController.update);
+router.delete("/persyaratan/:id", persyaratanController.delete);
 
 router.post("/persyaratan-tuk", persyaratanTukController.create);
+router.put("/persyaratan-tuk/:id", persyaratanTukController.update);
 router.get("/persyaratan-tuk", persyaratanTukController.getAll);
 router.post("/persyaratan-tuk/attach", persyaratanTukController.attachToSkema);
 router.delete( "/persyaratan-tuk/detach/:id_skema/:id_persyaratan_tuk", persyaratanTukController.detachFromSkema);
@@ -168,14 +173,17 @@ router.put("/bank-soal/:id", bankSoalController.update);
 router.delete("/bank-soal/:id", bankSoalController.delete);
 
 router.post("/bank-soal-pg", bankSoalPGController.create);
+router.put("/bank-soal-pg/:id", bankSoalPGController.update);
 router.get("/bank-soal-pg/:id_soal", bankSoalPGController.getBySoal);
 router.delete("/bank-soal-pg/:id", bankSoalPGController.delete);
 
 router.post("/ia01-observasi", ia01Controller.create);
+router.put("/ia01-observasi/:id", ia01Controller.update);
 router.get("/ia01-observasi/unit/:id_unit", ia01Controller.getByUnit);
 router.delete("/ia01-observasi/:id", ia01Controller.delete);
 
 router.post("/ia03-pertanyaan", ia03Controller.create);
+router.put("/ia03-pertanyaan/:id", ia03Controller.update);
 router.get("/ia03-pertanyaan/unit/:id_unit", ia03Controller.getByUnit);
 router.delete("/ia03-pertanyaan/:id", ia03Controller.delete);
 
