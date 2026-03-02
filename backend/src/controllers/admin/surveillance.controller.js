@@ -3,7 +3,7 @@ const { Op } = require("sequelize");
 const response = require("../../utils/response.util");
 const ExcelJS = require("exceljs");
 
-const getAllSurveillance = async (req, res) => {
+exports.getAllSurveillance = async (req, res) => {
   try {
     const {
       search,
@@ -19,6 +19,13 @@ const getAllSurveillance = async (req, res) => {
     if (id_skema) where.id_skema = id_skema;
     if (status_verifikasi) where.status_verifikasi = status_verifikasi;
     if (sumber_dana) where.sumber_dana = sumber_dana;
+
+    if (search) {
+      where[Op.or] = [
+        { periode_surveillance: { [Op.like]: `%${search}%` } },
+        { sumber_dana: { [Op.like]: `%${search}%` } }
+      ];
+    }
 
     const data = await Surveillance.findAll({
       where,
@@ -41,7 +48,7 @@ const getAllSurveillance = async (req, res) => {
   }
 };
 
-const updateStatusSurveillance = async (req, res) => {
+exports.updateStatusSurveillance = async (req, res) => {
   try {
     const { id } = req.params;
     const { status_verifikasi } = req.body;
@@ -67,23 +74,36 @@ const updateStatusSurveillance = async (req, res) => {
   }
 };
 
-const exportSurveillance = async (req, res) => {
+exports.exportSurveillance = async (req, res) => {
   try {
-    const data = await Surveillance.findAll();
+    const data = await Surveillance.findAll({
+      include: [
+        { model: User, attributes: ["username", "email"] },
+        { model: Skema, attributes: ["judul_skema"] }
+      ]
+    });
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Surveillance");
 
     sheet.columns = [
-      { header: "User ID", key: "id_user" },
-      { header: "Skema ID", key: "id_skema" },
+      { header: "Username", key: "username" },
+      { header: "Email", key: "email" },
+      { header: "Judul Skema", key: "judul_skema" },
       { header: "Periode", key: "periode_surveillance" },
       { header: "Sumber Dana", key: "sumber_dana" },
       { header: "Status", key: "status_verifikasi" }
     ];
 
     data.forEach(item => {
-      sheet.addRow(item.toJSON());
+      sheet.addRow({
+        username: item.User?.username,
+        email: item.User?.email,
+        judul_skema: item.Skema?.judul_skema,
+        periode_surveillance: item.periode_surveillance,
+        sumber_dana: item.sumber_dana,
+        status_verifikasi: item.status_verifikasi
+      });
     });
 
     res.setHeader(
@@ -98,13 +118,8 @@ const exportSurveillance = async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
+
   } catch (err) {
     return response.error(res, err.message);
   }
-};
-
-module.exports = {
-  getAllSurveillance,
-  updateStatusSurveillance,
-  exportSurveillance
 };

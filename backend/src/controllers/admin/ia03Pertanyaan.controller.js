@@ -22,6 +22,23 @@ exports.getByUnit = async (req, res) => {
   }
 };
 
+exports.update = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const item = await IA03Pertanyaan.findByPk(id);
+    if (!item) {
+      return response.error(res, "Data tidak ditemukan", 404);
+    }
+
+    await item.update(req.body);
+
+    response.success(res, "Pertanyaan IA03 berhasil diperbarui", item);
+  } catch (err) {
+    response.error(res, err.message);
+  }
+};
+
 exports.delete = async (req, res) => {
   try {
     const item = await IA03Pertanyaan.findByPk(req.params.id);

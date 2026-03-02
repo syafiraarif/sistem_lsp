@@ -2,7 +2,7 @@ const { Pengaduan } = require("../../models");
 const { Op } = require("sequelize");
 const response = require("../../utils/response.util");
 
-const getAllPengaduan = async (req, res) => {
+exports.getAllPengaduan = async (req, res) => {
   try {
     const { search, status_pengaduan } = req.query;
 
@@ -31,14 +31,20 @@ const getAllPengaduan = async (req, res) => {
   }
 };
 
-const updateStatusPengaduan = async (req, res) => {
+exports.updateStatusPengaduan = async (req, res) => {
   try {
     const { id } = req.params;
     const { status_pengaduan } = req.body;
 
     const pengaduan = await Pengaduan.findByPk(id);
+
     if (!pengaduan) {
       return response.error(res, "Pengaduan tidak ditemukan", 404);
+    }
+
+    const allowedStatus = ["pending", "diproses", "selesai", "ditolak"];
+    if (!allowedStatus.includes(status_pengaduan)) {
+      return response.error(res, "Status tidak valid", 400);
     }
 
     await pengaduan.update({ status_pengaduan });
@@ -47,9 +53,4 @@ const updateStatusPengaduan = async (req, res) => {
   } catch (err) {
     return response.error(res, err.message);
   }
-};
-
-module.exports = {
-  getAllPengaduan,
-  updateStatusPengaduan
 };

@@ -1,7 +1,7 @@
 const { PesertaJadwal, User, Jadwal } = require("../../models");
 const response = require("../../utils/response.util");
 
-const getPesertaByJadwal = async (req, res) => {
+exports.getPesertaByJadwal = async (req, res) => {
   try {
     const { id_jadwal } = req.params;
 
@@ -18,8 +18,4 @@ const getPesertaByJadwal = async (req, res) => {
     console.error(err);
     return response.error(res, err.message);
   }
-};
-
-module.exports = {
-  getPesertaByJadwal
 };

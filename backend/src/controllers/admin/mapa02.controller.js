@@ -36,8 +36,6 @@ exports.deleteMapping = async (req, res) => {
   }
 };
 
-// ===== METODE =====
-
 exports.addMetode = async (req, res) => {
   try {
     const data = await Mapa02Metode.create(req.body);
