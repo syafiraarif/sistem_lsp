@@ -4,7 +4,7 @@ import Home from "../pages/public/Home";
 import Profile from "../pages/public/Profile";
 import About from "../pages/public/About";
 import Registration from "../pages/public/Registration";
-import Surveillance from "../pages/public/Surveillance";
+import SurveillancePage from "../pages/public/SurveillancePage";
 import Information from "../pages/public/Information";
 import FAQ from "../pages/public/FAQ";
 import Complaint from "../pages/public/Complaint";
@@ -19,7 +19,7 @@ export default function AppRoutes() {
       <Route path="/profil-kami" element={<Profile />} />
       <Route path="/tentang-aplikasi" element={<About />} />
       <Route path="/pendaftaran" element={<Registration />} />
-      <Route path="/surveillance" element={<Surveillance />} />
+      <Route path="/surveillance" element={<SurveillancePage />} />
       <Route path="/informasi" element={<Information />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/pengaduan" element={<Complaint />} />

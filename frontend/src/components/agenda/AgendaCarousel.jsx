@@ -1,30 +1,82 @@
 import React, { useRef, useState, useEffect } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Info } from "lucide-react";
+import axios from "axios";
 import AgendaCard from "./AgendaCard";
 
-const agendaList = [
-  { id: 1, title: "Uji Kompetensi Junior Web Developer", date: "20 Maret 2026", location: "TUK UMY", scheme: "Junior Web Developer", status: "Dibuka" },
-  { id: 2, title: "Uji Kompetensi Digital Marketing", date: "25 Maret 2026", location: "TUK AMIKOM", scheme: "Digital Marketing", status: "Dibuka" },
-  { id: 3, title: "Uji Kompetensi Data Analyst", date: "30 Maret 2026", location: "TUK Online (Daring)", scheme: "Data Analyst", status: "Ditutup" },
-];
+// Endpoint target (menunggu teman backend kamu selesai)
+const API_URL = "http://localhost:3000/api/public";
 
 export default function AgendaCarousel() {
   const sliderRef = useRef(null);
+  const [agendaList, setAgendaList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const CARD_WIDTH = 360;
   const GAP = 48; 
   const TOTAL_WIDTH = CARD_WIDTH + GAP;
-  const extendedList = [...agendaList, ...agendaList, ...agendaList, ...agendaList, ...agendaList];
-  const [activeIndex, setActiveIndex] = useState(agendaList.length * 2);
+  
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // FETCH DATA MURNI DARI BACKEND
+  useEffect(() => {
+    const fetchAgenda = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Menembak endpoint yang akan dibuat temanmu
+        const response = await axios.get(`${API_URL}/jadwal`);
+        
+        if (response.data.success && response.data.data.length > 0) {
+          // Format data backend agar sesuai dengan props AgendaCard kamu
+          const mappedData = response.data.data.map((item) => {
+            // Format tanggal (contoh: 2026-03-20 jadi 20 Maret 2026)
+            const dateObj = new Date(item.tanggal || item.tgl_awal);
+            const formattedDate = isNaN(dateObj.getTime()) 
+              ? (item.tanggal || "-") 
+              : dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            return {
+              id: item.id || item.id_jadwal,
+              title: item.skema?.judul_skema || item.nama_kegiatan || "Uji Kompetensi",
+              date: formattedDate,
+              location: item.tuk?.nama_tuk || item.tuk || "TUK Belum Ditentukan",
+              scheme: item.skema?.judul_skema || item.skema || "Skema Sertifikasi",
+              status: item.status === "open" ? "Dibuka" : (item.status === "ongoing" ? "Berjalan" : "Ditutup")
+            };
+          });
+          
+          setAgendaList(mappedData);
+          setActiveIndex(mappedData.length * 2); // Set active index awal untuk infinite scroll
+        } else {
+          setAgendaList([]);
+        }
+      } catch (err) {
+        console.error("Gagal load Agenda:", err);
+        setError("Jadwal asesmen belum tersedia saat ini.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAgenda();
+  }, []);
+
+  // INFINITE SCROLL ARRAY DUPLICATE (Hanya dirender jika data dari backend ada)
+  const extendedList = agendaList.length > 0 
+    ? [...agendaList, ...agendaList, ...agendaList, ...agendaList, ...agendaList] 
+    : [];
 
   useEffect(() => {
-    if (sliderRef.current) {
+    if (sliderRef.current && agendaList.length > 0) {
       sliderRef.current.style.scrollBehavior = 'auto';
       sliderRef.current.scrollLeft = (agendaList.length * 2) * TOTAL_WIDTH;
     }
-  }, []);
+  }, [agendaList, TOTAL_WIDTH]);
 
   const handleInfiniteScroll = () => {
-    if (!sliderRef.current) return;
+    if (!sliderRef.current || agendaList.length === 0) return;
 
     const scrollLeft = sliderRef.current.scrollLeft;
     const index = Math.round(scrollLeft / TOTAL_WIDTH);
@@ -35,7 +87,6 @@ export default function AgendaCarousel() {
       sliderRef.current.scrollLeft = (agendaList.length * 2) * TOTAL_WIDTH;
       sliderRef.current.offsetHeight; 
     } 
-
     else if (scrollLeft <= (agendaList.length * 1) * TOTAL_WIDTH) {
       sliderRef.current.style.scrollBehavior = 'auto';
       sliderRef.current.scrollLeft = (agendaList.length * 2) * TOTAL_WIDTH;
@@ -44,7 +95,7 @@ export default function AgendaCarousel() {
   };
 
   const scrollByStep = (direction) => {
-    if (!sliderRef.current) return;
+    if (!sliderRef.current || agendaList.length === 0) return;
     
     sliderRef.current.style.scrollBehavior = 'smooth';
     
@@ -52,6 +103,32 @@ export default function AgendaCarousel() {
     sliderRef.current.scrollLeft = targetIndex * TOTAL_WIDTH;
   };
 
+  // TAMPILAN SAAT LOADING
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-white/70">
+        <Loader2 className="animate-spin text-orange-500 mb-6" size={48} />
+        <p className="font-bold text-sm tracking-[0.2em] uppercase">Memuat Agenda Terbaru...</p>
+      </div>
+    );
+  }
+
+  // TAMPILAN SAAT ERROR / DATA KOSONG (Endpoint belum jadi / tidak ada jadwal)
+  if (error || agendaList.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6 mx-auto max-w-lg text-center border border-white/10 bg-white/5 rounded-[2.5rem] backdrop-blur-md">
+        <Info size={40} className="mb-4 text-orange-500/80" />
+        <p className="font-bold text-white tracking-widest uppercase text-sm mb-2">
+          {error || "Belum Ada Jadwal Tersedia"}
+        </p>
+        <p className="text-white/50 text-xs">
+          Silakan cek kembali nanti atau hubungi helpdesk kami.
+        </p>
+      </div>
+    );
+  }
+
+  // TAMPILAN CAROUSEL UTAMA JIKA DATA BACKEND TERSEDIA
   return (
     <div className="relative group/carousel">
       <button
