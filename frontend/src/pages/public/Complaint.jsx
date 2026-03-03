@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -13,7 +13,9 @@ import {
   Mail,
   Send,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  ShieldCheck
 } from "lucide-react";
 
 const API_URL = "http://localhost:3000/api/public";
@@ -21,15 +23,32 @@ const API_URL = "http://localhost:3000/api/public";
 export default function Complaint() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  
+  // Logic Captcha Kode Keamanan
+  const [captchaCode, setCaptchaCode] = useState("");
+  const [userCaptchaInput, setUserCaptchaInput] = useState("");
 
   const [formData, setFormData] = useState({
-    nama_pengadu: "",
-    email_pengadu: "",
-    no_hp_pengadu: "",
-    sebagai_siapa: "",
-    isi_pengaduan: "",
-    tanggal_pengaduan: new Date()
+    nama_pelapor: "", // Sesuai Database
+    email_pelapor: "", // Sesuai Database
+    no_hp: "",
+    subjek: "", // Sesuai Database
+    isi_pengaduan: "" // Sesuai Database
   });
+
+  // Generate Captcha saat pertama kali load
+  useEffect(() => {
+    generateCaptcha();
+  }, []);
+
+  const generateCaptcha = () => {
+    const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let code = "";
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(code);
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -39,24 +58,34 @@ export default function Complaint() {
   const prevStep = () => setStep(step - 1);
 
   const handleSubmit = async () => {
+    // Validasi Captcha
+    if (userCaptchaInput.toUpperCase() !== captchaCode) {
+      alert("Kode keamanan (Captcha) yang Anda masukkan salah!");
+      generateCaptcha();
+      setUserCaptchaInput("");
+      return;
+    }
+
     setLoading(true);
     try {
+      // POST ke endpoint sesuai backend
       await axios.post(`${API_URL}/pengaduan`, formData);
       
       alert("Pengaduan Anda telah terkirim dan akan segera diproses.");
       
       setStep(1);
       setFormData({
-        nama_pengadu: "",
-        email_pengadu: "",
-        no_hp_pengadu: "",
-        sebagai_siapa: "",
-        isi_pengaduan: "",
-        tanggal_pengaduan: new Date()
+        nama_pelapor: "",
+        email_pelapor: "",
+        no_hp: "",
+        subjek: "",
+        isi_pengaduan: ""
       });
+      setUserCaptchaInput("");
+      generateCaptcha();
     } catch (err) {
       console.error(err);
-      alert("Gagal mengirim pengaduan. Pastikan server backend dan database menyala.");
+      alert("Gagal mengirim pengaduan. Pastikan server backend menyala.");
     } finally {
       setLoading(false);
     }
@@ -79,7 +108,7 @@ export default function Complaint() {
                 Layanan <span className="text-orange-500">Pengaduan Masyarakat</span>
               </motion.h1>
               <p className="text-slate-500 font-medium leading-relaxed">
-                Sampaikan keluhan atau ketidaksesuaian pelayanan Lembaga Sertifikasi Kompetensi melalui kanal resmi SIMLSP.
+                Sampaikan keluhan atau ketidaksesuaian pelayanan LSP melalui kanal resmi SIMLSP.
               </p>
             </header>
 
@@ -116,36 +145,32 @@ export default function Complaint() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <InputGroup 
                         label="Nama Lengkap*" 
-                        name="nama_pengadu"
-                        value={formData.nama_pengadu}
+                        name="nama_pelapor"
+                        value={formData.nama_pelapor}
                         onChange={handleChange}
                         placeholder="Masukkan nama Anda" 
                       />
                       <InputGroup 
                         label="Alamat Email*" 
-                        name="email_pengadu"
-                        value={formData.email_pengadu}
+                        name="email_pelapor"
+                        value={formData.email_pelapor}
                         onChange={handleChange}
                         placeholder="nama@domain.com" 
                         type="email" 
                       />
                       <InputGroup 
-                        label="Nomor HP / WhatsApp*" 
-                        name="no_hp_pengadu"
-                        value={formData.no_hp_pengadu}
+                        label="Nomor WhatsApp*" 
+                        name="no_hp"
+                        value={formData.no_hp}
                         onChange={handleChange}
                         placeholder="0812xxxx" 
                       />
-                      <SelectGroup 
-                        label="Sebagai Siapa Anda?*" 
-                        name="sebagai_siapa"
-                        value={formData.sebagai_siapa}
+                      <InputGroup 
+                        label="Subjek Aduan*" 
+                        name="subjek"
+                        value={formData.subjek}
                         onChange={handleChange}
-                        options={[
-                          { label: "Peserta (Asesi)", value: "asesi" },
-                          { label: "Asesor", value: "asesor" },
-                          { label: "Masyarakat Umum", value: "masyarakat" }
-                        ]} 
+                        placeholder="Contoh: Masalah Login" 
                       />
                     </div>
                   </motion.div>
@@ -166,21 +191,40 @@ export default function Complaint() {
                       <h2 className="text-xl font-black text-[#071E3D]">Detail Aduan</h2>
                     </div>
                     <div className="flex flex-col gap-2.5">
-                      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">Pesan Aduan*</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">Isi Pengaduan*</label>
                       <textarea 
                         name="isi_pengaduan"
                         value={formData.isi_pengaduan}
                         onChange={handleChange}
-                        rows="6"
-                        placeholder="Tuliskan keluhan atau laporan Anda secara detail..."
+                        rows="5"
+                        placeholder="Tuliskan keluhan Anda secara lengkap..."
                         className="px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all text-sm font-bold text-[#071E3D] resize-none"
                       />
                     </div>
-                    <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl flex gap-4 mt-6">
-                      <AlertCircle className="text-emerald-500 shrink-0" size={24} />
-                      <p className="text-sm text-emerald-800 leading-relaxed font-bold">
-                        Aduan Anda akan kami rahasiakan dan diproses secara profesional oleh tim penanganan keluhan LSP.
-                      </p>
+
+                    {/* SEKSI CAPTCHA KODE KEAMANAN */}
+                    <div className="p-6 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">
+                       <div className="flex items-center gap-2 mb-4">
+                          <ShieldCheck size={16} className="text-orange-500" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Verifikasi Keamanan</span>
+                       </div>
+                       <div className="flex flex-col md:flex-row items-center gap-6">
+                          <div className="flex items-center gap-4">
+                             <div className="bg-[#071E3D] text-white px-6 py-3 rounded-xl font-black tracking-[0.3em] text-xl italic select-none line-through decoration-orange-500">
+                                {captchaCode}
+                             </div>
+                             <button type="button" onClick={generateCaptcha} className="p-2 hover:rotate-180 transition-transform duration-500 text-slate-400">
+                                <RefreshCw size={20} />
+                             </button>
+                          </div>
+                          <input 
+                            type="text"
+                            placeholder="Ketik kode di samping"
+                            value={userCaptchaInput}
+                            onChange={(e) => setUserCaptchaInput(e.target.value)}
+                            className="flex-1 px-6 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-bold text-center uppercase"
+                          />
+                       </div>
                     </div>
                   </motion.div>
                 )}
@@ -202,7 +246,7 @@ export default function Complaint() {
                 >
                   {loading ? "Mengirim..." : step === 2 ? (
                     <span className="flex items-center gap-2">Kirim Pengaduan <Send size={16} /></span>
-                  ) : "Lanjut Langkah Terakhir"}
+                  ) : "Lanjut ke Pesan"}
                 </button>
               </div>
             </div>
@@ -214,15 +258,16 @@ export default function Complaint() {
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-orange-500 shadow-sm">
                   <Info size={20} />
                 </div>
-                <h3 className="font-black uppercase tracking-widest text-xs">Anda Perlu Tahu</h3>
+                <h3 className="font-black uppercase tracking-widest text-xs">Penting</h3>
               </div>
               <div className="space-y-6">
-                <InfoItem icon={Mail} text="Periksa Inbox/Spam email Anda untuk menerima bukti pengaduan." />
-                <InfoItem icon={AlertCircle} text="Layanan ini ditujukan untuk ketidaksesuaian pelayanan LSP." />
-                <InfoItem icon={CheckCircle2} text="Tim kami akan memproses setiap laporan secara berkala." />
+                <InfoItem icon={Mail} text="Pastikan email aktif untuk menerima nomor registrasi aduan." />
+                <InfoItem icon={AlertCircle} text="Layanan ini hanya untuk keluhan terkait sertifikasi." />
+                <InfoItem icon={CheckCircle2} text="Identitas pelapor dijamin kerahasiaannya." />
               </div>
             </div>
 
+            {/* PUSAT BANTUAN SESUAI PERMINTAAN */}
             <Link to="/faq" className="group block relative">
               <motion.div 
                 whileHover={{ scale: 1.02 }}
@@ -244,12 +289,10 @@ export default function Complaint() {
                       <Sparkles size={14} />
                     </motion.div>
                   </div>
-                  <h4 className="text-white font-black uppercase tracking-[0.2em] text-sm mb-3">Butuh Bantuan?</h4>
-                  <p className="text-slate-400 text-[11px] leading-relaxed mb-8 px-4 font-medium">
-                    Lihat FAQ untuk pertanyaan umum seputar pendaftaran & sertifikasi.
-                  </p>
-                  <div className="w-full py-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 group-hover:bg-orange-500 group-hover:border-orange-500 transition-all duration-500">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Lihat FAQ</span>
+                  <h4 className="text-white font-black uppercase tracking-[0.2em] text-sm mb-3">Pusat Bantuan</h4>
+                  <p className="text-slate-400 text-[11px] leading-relaxed mb-8 px-4 font-medium">Bingung alur pendaftaran? Klik untuk panduan lengkap & FAQ.</p>
+                  <div className="w-full py-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 group-hover:bg-orange-500 transition-all duration-500">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Buka FAQ</span>
                     <ChevronRight size={16} className="text-orange-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
@@ -285,32 +328,6 @@ function InputGroup({ label, name, value, onChange, placeholder, type = "text" }
         placeholder={placeholder}
         className="px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all text-sm font-bold text-[#071E3D]"
       />
-    </div>
-  );
-}
-
-function SelectGroup({ label, name, value, onChange, options }) {
-  return (
-    <div className="flex flex-col gap-2.5">
-      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">{label}</label>
-      <div className="relative">
-        <select 
-          name={name}
-          value={value}
-          onChange={onChange}
-          className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D] appearance-none cursor-pointer"
-        >
-          <option value="">-- pilih --</option>
-          {options.map((opt, i) => (
-            <option key={i} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m6 9 6 6 6-6"/>
-          </svg>
-        </div>
-      </div>
     </div>
   );
 }

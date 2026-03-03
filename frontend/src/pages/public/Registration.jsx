@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import ReCAPTCHA from "react-google-recaptcha";
 import { 
   User, 
   MapPin, 
@@ -25,20 +26,39 @@ const API_URL = "http://localhost:3000/api/public";
 export default function Registration() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const recaptchaRef = useRef(null);
+
+  // DATA LIST UNTUK DROPDOWN SESUAI PERMINTAAN
+  const listWilayahRJI = [
+    "KAB.ACEH SELATAN", "KAB.TOBA SAMOSIR", "KOTA PADANG", "KOTA PEKANBARU", 
+    "KOTA ADM. JAKARTA PUSAT", "KOTA ADM. JAKARTA SELATAN", "KAB.PURWOREJO", 
+    "KAB. KUDUS", "KOTA SEMARANG", "KAB. BANTUL", "KAB. BLITAR", 
+    "KAB. MALANG", "KOTA PALOPO", "KOTA SORONG"
+  ];
+
+  const listProgramStudi = [
+    "Pendidikan PKN", "Pendidikan Ekonomi", "Pendidikan Geografi", 
+    "Pendidikan Sejarah", "Pendidikan Vokasional Teknik Mesin"
+  ];
 
   const [formData, setFormData] = useState({
     nik: "",
     nama_lengkap: "",
     email: "",
     no_hp: "",
-    provinsi: "",
-    kota: "",
-    kecamatan: "",
-    kelurahan: "",
+    provinsi_id: "",
+    provinsi_nama: "",
+    kota_id: "",
+    kota_nama: "",
+    kecamatan_id: "",
+    kecamatan_nama: "",
+    kelurahan_id: "",
+    kelurahan_nama: "",
     alamat: "",
     wilayah_rji: "",
     program_studi: "",
-    kompetensi_keahlian: ""
+    kompetensi_keahlian: "",
+    captchaToken: ""
   });
 
   const [provinsi, setProvinsi] = useState([]);
@@ -57,7 +77,14 @@ export default function Registration() {
     const id = selectedOption.dataset.id;
     const name = e.target.value;
 
-    setFormData({ ...formData, provinsi: name, kota: "", kecamatan: "", kelurahan: "" });
+    setFormData({ 
+      ...formData, 
+      provinsi_id: id, 
+      provinsi_nama: name, 
+      kota_id: "", kota_nama: "", 
+      kecamatan_id: "", kecamatan_nama: "", 
+      kelurahan_id: "", kelurahan_nama: "" 
+    });
     
     if (id) {
       try {
@@ -74,7 +101,13 @@ export default function Registration() {
     const id = selectedOption.dataset.id;
     const name = e.target.value;
 
-    setFormData({ ...formData, kota: name, kecamatan: "", kelurahan: "" });
+    setFormData({ 
+      ...formData, 
+      kota_id: id, 
+      kota_nama: name, 
+      kecamatan_id: "", kecamatan_nama: "", 
+      kelurahan_id: "", kelurahan_nama: "" 
+    });
     
     if (id) {
       try {
@@ -90,7 +123,12 @@ export default function Registration() {
     const id = selectedOption.dataset.id;
     const name = e.target.value;
 
-    setFormData({ ...formData, kecamatan: name, kelurahan: "" });
+    setFormData({ 
+      ...formData, 
+      kecamatan_id: id, 
+      kecamatan_nama: name, 
+      kelurahan_id: "", kelurahan_nama: "" 
+    });
     
     if (id) {
       try {
@@ -100,23 +138,60 @@ export default function Registration() {
     }
   };
 
+  const handleKelurahanChange = (e) => {
+    const selectedOption = e.target.selectedOptions[0];
+    const id = selectedOption.dataset.id;
+    const name = e.target.value;
+
+    setFormData({ 
+      ...formData, 
+      kelurahan_id: id, 
+      kelurahan_nama: name 
+    });
+  };
+
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const onCaptchaChange = (token) => {
+    setFormData({ ...formData, captchaToken: token });
+  };
 
   const nextStep = () => setStep(step + 1);
   const prevStep = () => setStep(step - 1);
 
   const handleSubmit = async () => {
+    if (!formData.captchaToken) {
+      alert("Silakan centang Verifikasi Keamanan (Captcha) terlebih dahulu!");
+      return;
+    }
+
     setLoading(true);
     try {
-      await submitPendaftaran({
-        ...formData,
-        captcha_valid: true,
-        tanggal_daftar: new Date()
-      });
-      alert("Pendaftaran berhasil!");
-    } catch {
-      alert("Gagal mendaftar. Pastikan backend menyala.");
+      const payload = {
+        nik: formData.nik,
+        nama_lengkap: formData.nama_lengkap,
+        email: formData.email,
+        no_hp: formData.no_hp,
+        provinsi: formData.provinsi_nama,
+        kota: formData.kota_nama,
+        kecamatan: formData.kecamatan_nama,
+        kelurahan: formData.kelurahan_nama,
+        alamat: formData.alamat,
+        wilayah_rji: formData.wilayah_rji,
+        program_studi: formData.program_studi,
+        kompetensi_keahlian: formData.kompetensi_keahlian,
+        captchaToken: formData.captchaToken
+      };
+
+      await submitPendaftaran(payload);
+      alert("Pendaftaran berhasil! Silakan cek email Anda.");
+      
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || "Gagal mendaftar. Pastikan backend menyala.";
+      alert(errorMsg);
+      if (recaptchaRef.current) recaptchaRef.current.reset();
+      setFormData({ ...formData, captchaToken: "" });
     } finally {
       setLoading(false);
     }
@@ -162,9 +237,7 @@ export default function Registration() {
                 {step === 1 && (
                   <motion.div 
                     key="step1"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                     className="space-y-6"
                   >
                     <div className="flex items-center gap-3 mb-8">
@@ -191,24 +264,24 @@ export default function Registration() {
                       <h2 className="text-xl font-black text-[#071E3D]">Domisili & Lokasi Uji</h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <SelectGroup label="Provinsi*" onChange={handleProvinsiChange} value={formData.provinsi}>
+                      <SelectGroup label="Provinsi*" onChange={handleProvinsiChange} value={formData.provinsi_nama}>
                         <option value="">Pilih Provinsi</option>
                         {provinsi.map(p => <option key={p.id} data-id={p.id} value={p.name}>{p.name}</option>)}
                       </SelectGroup>
-                      <SelectGroup label="Kota / Kabupaten*" onChange={handleKotaChange} value={formData.kota} disabled={!formData.provinsi}>
+                      <SelectGroup label="Kota / Kabupaten*" onChange={handleKotaChange} value={formData.kota_nama} disabled={!formData.provinsi_id}>
                         <option value="">Pilih Kota</option>
                         {kota.map(k => <option key={k.id} data-id={k.id} value={k.name}>{k.name}</option>)}
                       </SelectGroup>
-                      <SelectGroup label="Kecamatan*" onChange={handleKecamatanChange} value={formData.kecamatan} disabled={!formData.kota}>
+                      <SelectGroup label="Kecamatan*" onChange={handleKecamatanChange} value={formData.kecamatan_nama} disabled={!formData.kota_id}>
                         <option value="">Pilih Kecamatan</option>
                         {kecamatan.map(k => <option key={k.id} data-id={k.id} value={k.name}>{k.name}</option>)}
                       </SelectGroup>
-                      <SelectGroup label="Kelurahan*" name="kelurahan" onChange={handleChange} value={formData.kelurahan} disabled={!formData.kecamatan}>
+                      <SelectGroup label="Kelurahan*" onChange={handleKelurahanChange} value={formData.kelurahan_nama} disabled={!formData.kecamatan_id}>
                         <option value="">Pilih Kelurahan</option>
-                        {kelurahan.map(k => <option key={k.id} value={k.name}>{k.name}</option>)}
+                        {kelurahan.map(k => <option key={k.id} data-id={k.id} value={k.name}>{k.name}</option>)}
                       </SelectGroup>
                       <div className="md:col-span-2">
-                        <InputGroup label="Alamat Lengkap*" name="alamat" value={formData.alamat} onChange={handleChange} placeholder="Jalan, No. Rumah, RT/RW, Kelurahan, Kecamatan" />
+                        <InputGroup label="Alamat Lengkap*" name="alamat" value={formData.alamat} onChange={handleChange} placeholder="Jalan, No. Rumah, RT/RW" />
                       </div>
                     </div>
                   </motion.div>
@@ -222,18 +295,41 @@ export default function Registration() {
                   >
                     <div className="flex items-center gap-3 mb-8">
                       <div className="p-3 bg-orange-50 rounded-xl text-orange-500"><GraduationCap size={24} /></div>
-                      <h2 className="text-xl font-black text-[#071E3D]">Kompetensi Keahlian</h2>
+                      <h2 className="text-xl font-black text-[#071E3D]">Kompetensi & RJI</h2>
                     </div>
                     <div className="grid grid-cols-1 gap-6">
-                       <InputGroup label="Wilayah RJI*" name="wilayah_rji" value={formData.wilayah_rji} onChange={handleChange} placeholder="Contoh: Jawa Tengah" />
-                       <InputGroup label="Program Studi*" name="program_studi" value={formData.program_studi} onChange={handleChange} placeholder="Contoh: Teknik Informatika" />
-                       <InputGroup label="Kompetensi Keahlian*" name="kompetensi_keahlian" value={formData.kompetensi_keahlian} onChange={handleChange} placeholder="Contoh: Web Developer" />
+                      {/* UPGRADE: DROPDOWN WILAYAH RJI */}
+                      <SelectGroup label="Wilayah RJI*" name="wilayah_rji" value={formData.wilayah_rji} onChange={handleChange}>
+                        <option value="">Pilih Wilayah RJI</option>
+                        {listWilayahRJI.map(item => <option key={item} value={item}>{item}</option>)}
+                      </SelectGroup>
+
+                      {/* UPGRADE: DROPDOWN PROGRAM STUDI */}
+                      <SelectGroup label="Program Studi*" name="program_studi" value={formData.program_studi} onChange={handleChange}>
+                        <option value="">Pilih Program Studi</option>
+                        {listProgramStudi.map(item => <option key={item} value={item}>{item}</option>)}
+                      </SelectGroup>
+
+                      <InputGroup label="Kompetensi Keahlian*" name="kompetensi_keahlian" value={formData.kompetensi_keahlian} onChange={handleChange} placeholder="Contoh: Junior Web Developer" />
                     </div>
+                    
                     <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl flex gap-4 mt-6">
                       <ShieldCheck className="text-emerald-500 shrink-0" size={24} />
                       <p className="text-sm text-emerald-800 leading-relaxed font-bold">
                         Akun Anda hanya satu untuk satu NIK dan dapat digunakan untuk lebih dari satu skema uji.
                       </p>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-3 py-6 mt-6 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ShieldCheck size={16} className="text-orange-500" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Verifikasi Keamanan</span>
+                      </div>
+                      <ReCAPTCHA
+                        ref={recaptchaRef}
+                        sitekey="6LcrU3QsAAAAAAcNAI0nvz_ITfmPLTDZKTN4zA5X"
+                        onChange={onCaptchaChange}
+                      />
                     </div>
                   </motion.div>
                 )}
@@ -268,7 +364,7 @@ export default function Registration() {
               <div className="space-y-6">
                 <SidebarInfo icon={Mail} text="Cek Inbox/Spam email setelah mendaftar." />
                 <SidebarInfo icon={FileText} text="Siapkan KTP & Ijazah di profil asesi." />
-                <SidebarInfo icon={CreditCard} text="Verifikasi pembayaran dilakukan Admin." />
+                <SidebarInfo icon={CreditCard} text="Verifikasi dilakukan Admin RJI." />
               </div>
             </div>
 
@@ -285,13 +381,6 @@ export default function Registration() {
                     <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white shadow-lg group-hover:rotate-12 transition-transform duration-500">
                       <HelpCircle size={32} strokeWidth={2.5} />
                     </div>
-                    <motion.div 
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="absolute -top-2 -right-2 bg-white text-[#071E3D] p-1.5 rounded-lg shadow-xl"
-                    >
-                      <Sparkles size={14} />
-                    </motion.div>
                   </div>
                   <h4 className="text-white font-black uppercase tracking-[0.2em] text-sm mb-3">Pusat Bantuan</h4>
                   <p className="text-slate-400 text-[11px] leading-relaxed mb-8 px-4 font-medium">Bingung alur pendaftaran? Klik untuk panduan lengkap & FAQ.</p>
@@ -309,6 +398,7 @@ export default function Registration() {
   );
 }
 
+// COMPONENTS HELPER
 function SidebarInfo({ icon: Icon, text }) {
   return (
     <div className="flex gap-4 group/item">
