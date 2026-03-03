@@ -12,14 +12,17 @@ exports.createTuk = async (req, res) => {
 
     const { kode_tuk, email, no_hp, ...profile } = req.body;
 
-    const role = await Role.findOne({
+    // --- AUTO CREATE ROLE TUK JIKA BELUM ADA ---
+    let role = await Role.findOne({
       where: { role_name: "TUK" }
     });
 
     if (!role) {
-      await t.rollback();
-      return response.error(res, "Role TUK tidak ditemukan", 500);
+      role = await Role.create({
+        role_name: "TUK"
+      }, { transaction: t });
     }
+    // --------------------------------------------
 
     const { user } = await createUser({
       username: kode_tuk,
@@ -47,7 +50,6 @@ exports.createTuk = async (req, res) => {
     return response.error(res, err.message);
   }
 };
-
 exports.importTukExcel = async (req, res) => {
 
   try {

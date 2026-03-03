@@ -8,15 +8,30 @@ exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Username dan password wajib diisi"
+      });
+    }
+
     const user = await User.findOne({
       where: { username },
-      include: Role
+      include: [Role]
     });
 
     if (!user) {
       return res.status(401).json({
         success: false,
         message: "User tidak ditemukan"
+      });
+    }
+
+    // 🔒 Cek status akun
+    if (user.status_user !== "aktif") {
+      return res.status(403).json({
+        success: false,
+        message: "Akun tidak aktif"
       });
     }
 
@@ -28,10 +43,22 @@ exports.login = async (req, res) => {
       });
     }
 
+    // 🔥 Normalisasi role jadi lowercase
+    const roleName = user.role.role_name.toLowerCase();
+
+    let idTuk = null;
+
+    // Jika role TUK
+    if (roleName === "tuk") {
+      idTuk = user.id_user;
+    }
+
+    // 🔐 Generate JWT
     const token = jwt.sign(
       {
         id_user: user.id_user,
-        role: user.role.role_name
+        role: roleName,
+        id_tuk: idTuk
       },
       secret,
       { expiresIn }
@@ -43,15 +70,16 @@ exports.login = async (req, res) => {
       data: {
         token,
         user: {
-          id: user.id_user,
+          id_user: user.id_user,
           username: user.username,
-          role: user.role.role_name
+          role: roleName,
+          id_tuk: idTuk
         }
       }
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Login Error:", error);
     return res.status(500).json({
       success: false,
       message: "Terjadi kesalahan server"
@@ -60,8 +88,8 @@ exports.login = async (req, res) => {
 };
 
 exports.logout = async (req, res) => {
-  res.json({
+  return res.json({
     success: true,
-    message: "Logout berhasil (client hapus token)"
+    message: "Logout berhasil"
   });
 };

@@ -25,32 +25,79 @@ export default function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
     try {
-      setLoading(true);
-      setError(null);
       const res = await axios.post("http://localhost:3000/api/auth/login", formData);
 
-      if (res.data.success) {
+      // Cek apakah login berhasil dari backend
+      if (res.data && res.data.success) {
         const { token, user } = res.data.data;
+        
+        console.log("Data User dari Backend:", user); // DEBUG: Cek apakah id_tuk ada
+
+        // Validasi dasar data user
+        if (!user || !user.role) {
+          throw new Error("Data user tidak lengkap dari server");
+        }
+
+        // Simpan token
         localStorage.setItem("token", token);
+        
+        // Simpan data user lengkap ke localStorage
         localStorage.setItem("user", JSON.stringify(user));
+        
+        // Simpan role ke localStorage
+        const role = user.role.toLowerCase();
+        localStorage.setItem("role", role);
+
+        // ⭐ Simpan id_tuk jika ada (untuk user TUK)
+        // Pastikan backend sudah mengirimkan id_tuk di object user
+        if (user.id_tuk) {
+          localStorage.setItem("id_tuk", user.id_tuk);
+          console.log("ID TUK berhasil disimpan:", user.id_tuk);
+        } else {
+          console.warn("ID TUK tidak ditemukan di response user (atau null)");
+        }
+        
         setSuccess(true);
 
+        // Redirect setelah 1.2 detik
         setTimeout(() => {
-          const role = user.role.toLowerCase();
-          if (role === "admin") navigate("/admin/dashboard");
-          else if (role === "asesor") navigate("/asesor/dashboard");
-          else if (role === "tuk") navigate("/tuk/dashboard");
-          else navigate("/dashboard");
+          if (role === "admin") {
+            navigate("/admin/dashboard");
+          } else if (role === "asesor") {
+            navigate("/asesor/dashboard");
+          } else if (role === "tuk") {
+            navigate("/tuk/jadwal");
+          } else {
+            navigate("/dashboard");
+          }
         }, 1200);
+
+      } else {
+        // Jika res.data.success = false
+        setError(res.data.message || "Login gagal");
       }
+
     } catch (err) {
-      setError(err.response?.data?.message || "Server tidak merespon");
+      console.error("Login Error:", err);
+      // Tangani berbagai kemungkinan error axios
+      if (err.response) {
+        setError(err.response.data?.message || "Login gagal");
+      } else if (err.request) {
+        setError("Tidak ada respons dari server");
+      } else {
+        setError(err.message || "Terjadi kesalahan");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // ... (Bagian Variants & Render UI biarkan sama seperti aslinya) ...
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -66,6 +113,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen w-full flex bg-[#071E3D] font-sans selection:bg-orange-500/30">
+      {/* ... (Bagian UI visual tidak saya ubah) ... */}
       <div className="hidden lg:flex lg:w-3/5 relative flex-col justify-between p-16 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img 
@@ -86,7 +134,7 @@ export default function Login() {
             <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
               <ShieldCheck className="text-white" size={28} />
             </div>
-            <span className="text-2xl font-black text-white tracking-tighter uppercase">SIMLSP</span>
+            <span className=" font-black text-white tracking-tighter uppercasetext-2xl">SIMLSP</span>
           </div>
 
           <motion.div
