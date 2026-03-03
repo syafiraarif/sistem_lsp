@@ -5,7 +5,6 @@ const { createUser  } = require("../../services/account.service");
 const { resetUserPassword } = require("../../services/account.service");
 const sequelize = require("../../config/database");
 
-
 exports.createAsesor = async (req, res) => {
 
   const t = await sequelize.transaction();
@@ -59,7 +58,6 @@ exports.importAsesorExcel = async (req, res) => {
       return response.error(res, "File tidak ditemukan", 400);
     }
 
-    // 🔹 Baca file Excel
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -69,7 +67,6 @@ exports.importAsesorExcel = async (req, res) => {
       return response.error(res, "File Excel kosong", 400);
     }
 
-    // 🔹 Ambil Role ASESOR
     const role = await Role.findOne({
       where: { role_name: "ASESOR" }
     });
@@ -86,13 +83,9 @@ exports.importAsesorExcel = async (req, res) => {
       const t = await sequelize.transaction();
 
       try {
-
-        // 🔹 Validasi minimal
         if (!row.nik || !row.email) {
           throw new Error("NIK atau Email kosong");
         }
-
-        // 🔹 Buat User (TANPA NOTIFIKASI)
         const { user } = await createUser({
           username: row.nik,
           email: row.email,
@@ -100,7 +93,6 @@ exports.importAsesorExcel = async (req, res) => {
           id_role: role.id_role
         }, { transaction: t });
 
-        // 🔹 Buat Profile Asesor
         await ProfileAsesor.create({
           id_user: user.id_user,
           nik: row.nik,

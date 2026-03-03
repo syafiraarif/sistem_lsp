@@ -4,6 +4,7 @@ const ProfileAsesi = require("../../models/profileAsesi.model");
 const Role = require("../../models/role.model");
 const User = require("../../models/user.model");
 const Notifikasi = require("../../models/notifikasi.model");
+const { createNotifikasi } = require("../../services/notifikasi.service");
 const { sendAccountEmail } = require("../../services/email.service");
 const response = require("../../utils/response.util");
 const sequelize = require("../../config/database");
@@ -46,6 +47,41 @@ exports.approvePendaftaran = async (req, res) => {
     if (!roleAsesi) {
       await t.rollback();
       return response.error(res, "Role ASESI tidak ditemukan", 500);
+    }
+    
+    const { Op } = require("sequelize");
+
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [
+          { email: pendaftaran.email },
+          { username: pendaftaran.nik }
+        ]
+      },
+      transaction: t
+    });
+
+    if (existingUser) {
+      await t.rollback();
+      return response.error(
+        res,
+        "Email atau NIK sudah terdaftar sebagai user",
+        400
+      );
+    }
+
+    const existingProfile = await ProfileAsesi.findOne({
+      where: { nik: pendaftaran.nik },
+      transaction: t
+    });
+
+    if (existingProfile) {
+      await t.rollback();
+      return response.error(
+        res,
+        "Profile asesi dengan NIK ini sudah ada",
+        400
+      );
     }
 
     const { createUser } = require("../../services/account.service");

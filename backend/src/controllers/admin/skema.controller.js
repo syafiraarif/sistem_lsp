@@ -1,13 +1,4 @@
-const {
-  Skema,
-  Skkni,
-  BiayaUji,
-  Persyaratan,
-  PersyaratanTuk,
-  KelompokPekerjaan,
-  Tuk
-} = require("../../models");
-
+const {Skema,Skkni,BiayaUji,Persyaratan,PersyaratanTuk,KelompokPekerjaan,Tuk} = require("../../models");
 const response = require("../../utils/response.util");
 
 exports.create = async (req, res) => {

@@ -2,7 +2,7 @@ const { BandingAsesmen, User } = require("../../models");
 const { Op } = require("sequelize");
 const response = require("../../utils/response.util");
 
-const getAllBanding = async (req, res) => {
+exports.getAllBanding = async (req, res) => {
   try {
     const { status, search } = req.query;
 
@@ -31,7 +31,8 @@ const getAllBanding = async (req, res) => {
   }
 };
 
-const updateStatusBanding = async (req, res) => {
+
+exports.updateStatusBanding = async (req, res) => {
   try {
     const { id } = req.params;
     const { status_progress, keputusan, catatan_komite } = req.body;
@@ -56,9 +57,4 @@ const updateStatusBanding = async (req, res) => {
   } catch (err) {
     return response.error(res, err.message);
   }
-};
-
-module.exports = {
-  getAllBanding,
-  updateStatusBanding,
 };
