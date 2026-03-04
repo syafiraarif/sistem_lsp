@@ -68,10 +68,10 @@ export default function Login() {
         setTimeout(() => {
           if (role === "admin") {
             navigate("/admin/dashboard");
-          } else if (role === "asesor") {
-            navigate("/asesor/dashboard");
+          } else if (role === "asesi") {
+            navigate("/asesi");
           } else if (role === "tuk") {
-            navigate("/tuk/jadwal");
+            navigate("/tuk");
           } else {
             navigate("/dashboard");
           }

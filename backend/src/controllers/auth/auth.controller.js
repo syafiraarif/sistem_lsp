@@ -2,10 +2,12 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/user.model");
 const Role = require("../../models/role.model");
+const Tuk = require("../../models/tuk.model"); // ✅ TAMBAHKAN INI
 const { secret, expiresIn } = require("../../config/jwt");
 
 exports.login = async (req, res) => {
   try {
+
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -15,6 +17,7 @@ exports.login = async (req, res) => {
       });
     }
 
+    // 🔎 Cari user + role
     const user = await User.findOne({
       where: { username },
       include: [Role]
@@ -35,7 +38,9 @@ exports.login = async (req, res) => {
       });
     }
 
+    // 🔐 Validasi password
     const valid = await bcrypt.compare(password, user.password_hash);
+
     if (!valid) {
       return res.status(401).json({
         success: false,
@@ -43,14 +48,24 @@ exports.login = async (req, res) => {
       });
     }
 
-    // 🔥 Normalisasi role jadi lowercase
-    const roleName = user.role.role_name.toLowerCase();
+    // ✅ Ambil role
+    const roleName = user.role?.role_name?.toLowerCase() || null;
 
     let idTuk = null;
 
-    // Jika role TUK
+    // 🔥 Jika role = TUK → ambil id_tuk dari tabel tuk
     if (roleName === "tuk") {
-      idTuk = user.id_user;
+
+      const tukData = await Tuk.findOne({
+        where: {
+          kode_tuk: user.username
+        }
+      });
+
+      if (tukData) {
+        idTuk = tukData.id_tuk;
+      }
+
     }
 
     // 🔐 Generate JWT
@@ -79,7 +94,9 @@ exports.login = async (req, res) => {
     });
 
   } catch (error) {
+
     console.error("Login Error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Terjadi kesalahan server"

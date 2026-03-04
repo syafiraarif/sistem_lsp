@@ -9,7 +9,6 @@ const ProfileAdmin = require("../src/models/profileAdmin.model");
     await sequelize.authenticate();
     console.log("✅ Koneksi database berhasil");
 
-    // Cek dan buat role admin kalau belum ada
     let adminRole = await Role.findOne({ where: { role_name: "admin" } });
     
     if (!adminRole) {
@@ -22,14 +21,12 @@ const ProfileAdmin = require("../src/models/profileAdmin.model");
       console.log("ℹ️ Role 'admin' sudah ada");
     }
 
-    // Cek apakah user admin sudah ada
     const existingUser = await User.findOne({ where: { username: "adminlsp" } });
     if (existingUser) {
       console.log("⚠️ User 'adminlsp' sudah ada!");
       process.exit();
     }
 
-    // Hash password dan buat user
     const hash = await bcrypt.hash("adminlsp123", 10);
 
     const user = await User.create({
@@ -40,7 +37,6 @@ const ProfileAdmin = require("../src/models/profileAdmin.model");
       no_hp: "08123456789"
     });
 
-    // Buat profile admin
     await ProfileAdmin.create({
       id_user: user.id_user,
       nama_lengkap: "Super Admin LSP"

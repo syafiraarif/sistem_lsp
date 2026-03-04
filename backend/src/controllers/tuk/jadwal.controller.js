@@ -1,142 +1,232 @@
-const { Jadwal, Tuk, Skema } = require("../../models");
+const {
+  Jadwal,
+  Tuk,
+  Skema,
+  TukSkema,
+  User,
+  ProfileAsesor,
+  JadwalAsesor
+} = require("../../models");
+
 const { Op } = require("sequelize");
 
-/* =============================== */
+/* ===================================================== */
+/* GET SKEMA */
+/* ===================================================== */
 const getSkemaTuk = async (req, res) => {
   try {
+
     const tukId = req.user?.id_tuk;
 
     if (!tukId) {
-      return res.status(400).json({ message: "ID TUK tidak ditemukan di token." });
+      return res.status(400).json({
+        message: "ID TUK tidak ditemukan di token."
+      });
+    }
+
+    const tukExist = await Tuk.findByPk(tukId);
+    if (!tukExist) {
+      return res.status(404).json({
+        message: "TUK tidak valid"
+      });
     }
 
     const data = await Skema.findAll();
 
-    res.json({ data });
+    return res.json({ data });
 
   } catch (err) {
-    console.error("ERROR getSkemaTuk:", err);
-    res.status(500).json({ message: err.message || "Terjadi kesalahan server" });
+    return res.status(500).json({
+      message: err.message
+    });
   }
 };
-/* =============================== */
 
+/* ===================================================== */
+/* CREATE JADWAL + AUTO INSERT KE TUK_SKEMA */
+/* ===================================================== */
 const createJadwal = async (req, res) => {
-  try {
-    const tukId = req.user.id_tuk;
-    if (!tukId)
-      return res.status(400).json({ message: "ID TUK tidak ditemukan." });
 
-    const allowedTipe = ["luring","daring","hybrid","onsite"];
-    const allowedStatus = ["draft","open","ongoing","selesai","arsip"];
+  const transaction = await Jadwal.sequelize.transaction();
+
+  try {
+
+    const tukId = req.user?.id_tuk;
+    const idSkema = parseInt(req.body.id_skema);
+
+    if (!tukId) {
+      return res.status(400).json({
+        message: "ID TUK tidak ditemukan."
+      });
+    }
+
+    const tukExist = await Tuk.findByPk(tukId);
+    if (!tukExist) {
+      return res.status(404).json({
+        message: "TUK tidak ditemukan"
+      });
+    }
+
+    const allowedTipe = ["luring", "daring", "hybrid", "onsite"];
+    const allowedStatus = ["draft", "open", "ongoing", "selesai", "arsip"];
+
+    /* ================= CREATE JADWAL ================= */
 
     const data = await Jadwal.create({
-      ...req.body,
-      id_skema: parseInt(req.body.id_skema),
+      kode_jadwal: req.body.kode_jadwal,
+      id_skema: idSkema,
+      id_tuk: tukId,
+      nama_kegiatan: req.body.nama_kegiatan,
       tahun: parseInt(req.body.tahun),
-      kuota: parseInt(req.body.kuota),
+      periode_bulan: req.body.periode_bulan,
+      gelombang: req.body.gelombang,
+      tgl_pra_asesmen: req.body.tgl_pra_asesmen,
+      tgl_awal: req.body.tgl_awal,
+      tgl_akhir: req.body.tgl_akhir,
+      jam: req.body.jam,
+      kuota: parseInt(req.body.kuota) || 0,
       pelaksanaan_uji: allowedTipe.includes(req.body.pelaksanaan_uji)
         ? req.body.pelaksanaan_uji
         : "luring",
+      url_agenda: req.body.url_agenda || "",
       status: allowedStatus.includes(req.body.status)
         ? req.body.status
         : "draft",
-      id_tuk: tukId,
+      created_by: req.user?.id_user,
       created_at: new Date(),
       updated_at: new Date()
+    }, { transaction });
+
+    /* ================= AUTO INSERT KE TUK_SKEMA ================= */
+
+    await TukSkema.findOrCreate({
+      where: {
+        id_tuk: tukId,
+        id_skema: idSkema
+      },
+      defaults: {
+        id_tuk: tukId,
+        id_skema: idSkema
+      },
+      transaction
     });
 
-    res.status(201).json({ message: "Jadwal berhasil dibuat", data });
+    await transaction.commit();
+
+    return res.status(201).json({
+      message: "Jadwal berhasil dibuat & skema tersimpan ke TUK",
+      data
+    });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: err.message });
+
+    await transaction.rollback();
+
+    return res.status(500).json({
+      message: err.message
+    });
   }
 };
 
-/* =============================== */
+/* ===================================================== */
+/* GET ALL JADWAL */
+/* ===================================================== */
 const getAllJadwal = async (req, res) => {
-  try {
-    const tukId = req.user?.id_tuk;
 
-    if (!tukId) {
-      return res.status(400).json({ message: "ID TUK tidak ditemukan di token." });
-    }
+  try {
+
+    const tukId = req.user?.id_tuk;
 
     const data = await Jadwal.findAll({
       where: { id_tuk: tukId },
-
-      // SAFE INCLUDE (tidak error kalau relasi bermasalah)
       include: [
         {
           model: Tuk,
           as: "tuk",
-          attributes: ["nama_tuk", "email"],
-          required: false
+          attributes: ["nama_tuk", "email"]
         },
         {
           model: Skema,
           as: "skema",
-          attributes: ["kode_skema", "judul_skema", "jenis_skema"],
-          required: false
+          attributes: ["kode_skema", "judul_skema", "jenis_skema"]
         }
       ],
-
       order: [["tahun", "DESC"]]
     });
 
-    res.json({ data });
+    return res.json({ data });
 
   } catch (err) {
-    console.error("ERROR getAllJadwal:", err);
-    res.status(500).json({ message: err.message || "Terjadi kesalahan server" });
+    return res.status(500).json({
+      message: err.message
+    });
   }
 };
 
-/* =============================== */
+/* ===================================================== */
+/* GET BY ID */
+/* ===================================================== */
 const getJadwalById = async (req, res) => {
+
   try {
+
     const tukId = req.user?.id_tuk;
     const { id } = req.params;
 
     const data = await Jadwal.findOne({
-      where: { id_jadwal: id, id_tuk: tukId },
+      where: {
+        id_jadwal: id,
+        id_tuk: tukId
+      },
       include: [
-        { model: Tuk, as: "tuk", required: false },
-        { model: Skema, as: "skema", required: false }
+        { model: Tuk, as: "tuk" },
+        { model: Skema, as: "skema" }
       ]
     });
 
     if (!data) {
-      return res.status(404).json({ message: "Jadwal tidak ditemukan" });
+      return res.status(404).json({
+        message: "Jadwal tidak ditemukan"
+      });
     }
 
-    res.json({ data });
+    return res.json({ data });
 
   } catch (err) {
-    console.error("ERROR getJadwalById:", err);
-    res.status(500).json({ message: err.message || "Terjadi kesalahan server" });
+    return res.status(500).json({
+      message: err.message
+    });
   }
 };
 
-/* =============================== */
+/* ===================================================== */
+/* UPDATE JADWAL */
+/* ===================================================== */
 const updateJadwal = async (req, res) => {
+
   try {
+
     const tukId = req.user?.id_tuk;
     const { id } = req.params;
 
     const jadwal = await Jadwal.findOne({
-      where: { id_jadwal: id, id_tuk: tukId }
+      where: {
+        id_jadwal: id,
+        id_tuk: tukId
+      }
     });
 
     if (!jadwal) {
-      return res.status(404).json({ message: "Jadwal tidak ditemukan" });
+      return res.status(404).json({
+        message: "Jadwal tidak ditemukan"
+      });
     }
 
-    const allowedTipe = ["luring","daring","hybrid","onsite"];
-    const allowedStatus = ["draft","open","ongoing","selesai","arsip"];
+    const allowedTipe = ["luring", "daring", "hybrid", "onsite"];
+    const allowedStatus = ["draft", "open", "ongoing", "selesai", "arsip"];
 
-    const updateData = {
+    await jadwal.update({
+
       ...req.body,
 
       id_skema: req.body.id_skema
@@ -160,46 +250,146 @@ const updateJadwal = async (req, res) => {
         : jadwal.status,
 
       updated_at: new Date()
-    };
 
-    await jadwal.update(updateData);
+    });
 
-    res.json({
+    return res.json({
       message: "Jadwal berhasil diupdate",
       data: jadwal
     });
 
   } catch (err) {
-    console.error("ERROR UPDATE JADWAL:", err);
-    res.status(500).json({ message: err.message || "Terjadi kesalahan server" });
+
+    return res.status(500).json({
+      message: err.message
+    });
   }
 };
 
-/* =============================== */
+/* ===================================================== */
+/* DELETE JADWAL */
+/* ===================================================== */
 const deleteJadwal = async (req, res) => {
+
   try {
+
     const tukId = req.user?.id_tuk;
     const { id } = req.params;
 
     const jadwal = await Jadwal.findOne({
-      where: { id_jadwal: id, id_tuk: tukId }
+      where: {
+        id_jadwal: id,
+        id_tuk: tukId
+      }
     });
 
     if (!jadwal) {
-      return res.status(404).json({ message: "Jadwal tidak ditemukan" });
+      return res.status(404).json({
+        message: "Jadwal tidak ditemukan"
+      });
     }
 
     await jadwal.destroy();
 
-    res.json({ message: "Jadwal berhasil dihapus" });
+    return res.json({
+      message: "Jadwal berhasil dihapus"
+    });
 
   } catch (err) {
-    console.error("ERROR DELETE JADWAL:", err);
-    res.status(500).json({ message: err.message || "Terjadi kesalahan server" });
+
+    return res.status(500).json({
+      message: err.message
+    });
+  }
+};
+
+/* ===================================================== */
+/* DETAIL LENGKAP JADWAL */
+/* ===================================================== */
+const getDetailJadwalLengkap = async (req, res) => {
+
+  try {
+
+    const tukId = req.user?.id_tuk;
+    const { id } = req.params;
+
+    const data = await Jadwal.findOne({
+      where: {
+        id_jadwal: id,
+        id_tuk: tukId
+      },
+
+      include: [
+
+        /* ================= SKEMA ================= */
+        {
+          model: Skema,
+          as: "skema",
+          attributes: ["id_skema", "kode_skema", "judul_skema", "jenis_skema"]
+        },
+
+        /* ================= TUK ================= */
+        {
+          model: Tuk,
+          as: "tuk",
+          attributes: ["id_tuk", "nama_tuk", "email"]
+        },
+
+        /* ================= ASESO R YANG TERDAFTAR ================= */
+        {
+          model: JadwalAsesor,
+          as: "asesorList",
+          required: false,
+          include: [
+
+            /* USER ASESO R */
+            {
+              model: User,
+              as: "asesor",
+              attributes: [
+                "id_user",
+                "username",
+                "email",
+                "no_hp"
+              ]
+            },
+
+            /* PROFILE ASESO R */
+            {
+              model: ProfileAsesor,
+              as: "profileAsesor",
+              required: false
+            }
+
+          ]
+        }
+
+      ]
+    });
+
+    if (!data) {
+      return res.status(404).json({
+        message: "Jadwal tidak ditemukan"
+      });
+    }
+
+    return res.json({
+      data
+    });
+
+  } catch (err) {
+
+    console.error("ERROR DETAIL JADWAL:", err);
+
+    return res.status(500).json({
+      message: err.message || "Terjadi kesalahan server"
+    });
+
   }
 };
 
 module.exports = {
+  getDetailJadwalLengkap,
   getSkemaTuk,
   createJadwal,
   getAllJadwal,
