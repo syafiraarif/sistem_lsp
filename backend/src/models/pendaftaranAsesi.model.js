@@ -5,25 +5,66 @@ const PendaftaranAsesi = sequelize.define("pendaftaran_asesi", {
   id_pendaftaran: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true
+    autoIncrement: true,
+    allowNull: false
   },
-  nik: DataTypes.CHAR(16),
-  nama_lengkap: DataTypes.STRING(100),
-  email: DataTypes.STRING(100),
-  no_hp: DataTypes.STRING(20),
-  alamat_lengkap: DataTypes.STRING(255),
-  provinsi: DataTypes.STRING(50),
-  kota: DataTypes.STRING(50),
-  kecamatan: DataTypes.STRING(50),
-  kelurahan: DataTypes.STRING(50),
-  wilayah_rji: DataTypes.STRING(100),
-  program_studi: DataTypes.STRING(100),
-  kompetensi_keahlian: DataTypes.STRING(100),
+  nik: {
+    type: DataTypes.CHAR(16),
+    allowNull: false
+  },
+  nama_lengkap: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  email: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  no_hp: {
+    type: DataTypes.STRING(20),
+    allowNull: false
+  },
+  alamat_lengkap: {
+    type: DataTypes.STRING(255),
+    allowNull: false
+  },
+  provinsi: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  kota: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  kecamatan: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  kelurahan: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  wilayah_rji: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  program_studi: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  kompetensi_keahlian: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
   status: {
-  type: DataTypes.ENUM("pending", "approved", "rejected"),
-  defaultValue: "pending"
+    type: DataTypes.ENUM("pending", "approved", "rejected"),
+    allowNull: false,
+    defaultValue: "pending"
   },
-  tanggal_daftar: DataTypes.DATE
+  tanggal_daftar: {
+    type: DataTypes.DATE,
+    allowNull: false
+  }
 }, {
   tableName: "pendaftaran_asesi",
   timestamps: false
