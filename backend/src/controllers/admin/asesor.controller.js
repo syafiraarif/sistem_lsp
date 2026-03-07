@@ -1,51 +1,59 @@
 const XLSX = require("xlsx");
-const bcrypt = require("bcryptjs");
-const { User, ProfileAsesor, Role } = require("../../models");
+const { User, ProfileAsesor, Role, Notifikasi } = require("../../models");
 const response = require("../../utils/response.util");
+const { createUser  } = require("../../services/account.service");
+const { resetUserPassword } = require("../../services/account.service");
+const sequelize = require("../../config/database");
 
 exports.createAsesor = async (req, res) => {
+
+  const t = await sequelize.transaction();
+
   try {
-    const {
-      nik,
-      email,
-      no_hp,
-      ...profile
-    } = req.body;
+
+    const { nik, email, no_hp, ...profile } = req.body;
 
     const role = await Role.findOne({
-      where: { role_name: "ASESOR" }
+      where: { role_name: "ASESOR" },
+        transaction: t
     });
 
     if (!role) {
-      return response.error(res, "Role asesor tidak ditemukan", 500);
+      await t.rollback();
+      return response.error(res, "Role ASESOR tidak ditemukan", 500);
     }
 
-    const username = nik;
-    const rawPassword = Math.random().toString(36).slice(-8);
-    const hash = await bcrypt.hash(rawPassword, 10);
-
-    const user = await User.create({
-      username,
-      password_hash: hash,
-      id_role: role.id_role,
-      email,
-      no_hp
-    });
+    const { user } =
+      await createUser({
+        username: nik,
+        email,
+        no_hp,
+        id_role: role.id_role
+      }, { transaction: t });
 
     await ProfileAsesor.create({
       id_user: user.id_user,
       nik,
       ...profile
-    });
+    }, { transaction: t });
 
-    return response.success(res, "Asesor berhasil dibuat");
+    await t.commit();
+
+    return response.success(
+      res,
+      "Asesor berhasil dibuat. Email belum dikirim."
+    );
+
   } catch (err) {
+
+    await t.rollback();
     return response.error(res, err.message);
   }
 };
 
 exports.importAsesorExcel = async (req, res) => {
   try {
+
     if (!req.file) {
       return response.error(res, "File tidak ditemukan", 400);
     }
@@ -53,40 +61,44 @@ exports.importAsesorExcel = async (req, res) => {
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-
     const data = XLSX.utils.sheet_to_json(sheet);
+
+    if (!data.length) {
+      return response.error(res, "File Excel kosong", 400);
+    }
 
     const role = await Role.findOne({
       where: { role_name: "ASESOR" }
     });
 
     if (!role) {
-      return response.error(res, "Role asesor tidak ditemukan", 500);
+      return response.error(res, "Role ASESOR tidak ditemukan", 500);
     }
 
     let totalSuccess = 0;
     let totalFailed = 0;
 
     for (const row of data) {
-      try {
-        const username = row.nik;
-        const rawPassword = Math.random().toString(36).slice(-8);
-        const hash = await bcrypt.hash(rawPassword, 10);
 
-        const user = await User.create({
-          username,
-          password_hash: hash,
-          id_role: role.id_role,
+      const t = await sequelize.transaction();
+
+      try {
+        if (!row.nik || !row.email) {
+          throw new Error("NIK atau Email kosong");
+        }
+        const { user } = await createUser({
+          username: row.nik,
           email: row.email,
-          no_hp: row.no_hp
-        });
+          no_hp: row.no_hp || null,
+          id_role: role.id_role
+        }, { transaction: t });
 
         await ProfileAsesor.create({
           id_user: user.id_user,
           nik: row.nik,
-          gelar_depan: row.gelar_depan,
+          gelar_depan: row.gelar_depan || null,
           nama_lengkap: row.nama_lengkap,
-          gelar_belakang: row.gelar_belakang,
+          gelar_belakang: row.gelar_belakang || null,
           jenis_kelamin: row.jenis_kelamin,
           tempat_lahir: row.tempat_lahir,
           tanggal_lahir: row.tanggal_lahir,
@@ -107,12 +119,20 @@ exports.importAsesorExcel = async (req, res) => {
           no_lisensi: row.no_lisensi,
           masa_berlaku: row.masa_berlaku,
           status_asesor: row.status_asesor
-        });
+        }, { transaction: t });
 
+        await t.commit();
         totalSuccess++;
+
       } catch (err) {
+
+        await t.rollback();
         totalFailed++;
-        console.error("Gagal import:", row.nik, err.message);
+
+        console.error(
+          `Gagal import asesor NIK ${row.nik}:`,
+          err.message
+        );
       }
     }
 
@@ -120,6 +140,7 @@ exports.importAsesorExcel = async (req, res) => {
       res,
       `Import selesai. Berhasil: ${totalSuccess}, Gagal: ${totalFailed}`
     );
+
   } catch (err) {
     return response.error(res, err.message);
   }
@@ -127,14 +148,25 @@ exports.importAsesorExcel = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
+
     const data = await ProfileAsesor.findAll({
-      include: {
-        model: User,
-        attributes: ["id_user", "email", "no_hp", "status_user"]
-      }
+      include: [
+        {
+          model: User,
+          attributes: ["id_user", "email", "no_hp", "status_user"],
+          include: [
+            {
+              model: Notifikasi,
+              where: { ref_type: "akun" },
+              required: false
+            }
+          ]
+        }
+      ]
     });
 
     return response.success(res, "List Asesor", data);
+
   } catch (err) {
     return response.error(res, err.message);
   }
@@ -179,10 +211,25 @@ exports.delete = async (req, res) => {
       return response.error(res, "Asesor tidak ditemukan", 404);
     }
 
+    const today = new Date();
+
+    if (asesor.masa_berlaku) {
+      const masaBerlaku = new Date(asesor.masa_berlaku);
+      if (masaBerlaku >= today) {
+        await t.rollback();
+        return response.error(
+          res,
+          "Asesor masih aktif dan tidak bisa dihapus",
+          400
+        );
+      }
+    }
+
     await User.destroy({
       where: { id_user: asesor.id_user },
       transaction: t
     });
+
 
     await asesor.destroy({ transaction: t });
 
@@ -191,6 +238,25 @@ exports.delete = async (req, res) => {
 
   } catch (err) {
     await t.rollback();
+    return response.error(res, err.message);
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+
+    if (!user)
+      return response.error(res, "User tidak ditemukan", 404);
+
+    const rawPassword = await resetUserPassword(user);
+
+    return response.success(res, "Password berhasil direset", {
+      username: user.username,
+      password: rawPassword
+    });
+
+  } catch (err) {
     return response.error(res, err.message);
   }
 };

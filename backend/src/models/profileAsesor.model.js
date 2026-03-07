@@ -31,7 +31,9 @@ const ProfileAsesor = sequelize.define("profile_asesor", {
   no_lisensi: DataTypes.STRING(50),
   masa_berlaku: DataTypes.DATE,
 
-  status_asesor: DataTypes.ENUM("aktif","nonaktif")
+  status_asesor: DataTypes.ENUM("aktif","nonaktif"),
+
+  ttd_path: DataTypes.STRING(255)
 }, {
   tableName: "profile_asesor",
   timestamps: false

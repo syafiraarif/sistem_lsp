@@ -7,12 +7,24 @@ const Notifikasi = sequelize.define("notifikasi", {
     primaryKey: true,
     autoIncrement: true
   },
-  channel: DataTypes.ENUM("email","wa"),
-  tujuan: DataTypes.STRING(100),
+  channel: {
+    type: DataTypes.ENUM("email", "wa"),
+    allowNull: false
+  },
+  tujuan: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
   pesan: DataTypes.TEXT,
   waktu_kirim: DataTypes.DATE,
-  status_kirim: DataTypes.ENUM("terkirim","gagal"),
-  ref_type: DataTypes.ENUM("pendaftaran","pengaduan","akun"),
+  status_kirim: {
+    type: DataTypes.ENUM("terkirim", "gagal"),
+    allowNull: false
+  },
+  ref_type: {
+    type: DataTypes.ENUM("pendaftaran", "pengaduan", "akun"),
+    allowNull: false
+  },
   ref_id: DataTypes.INTEGER
 }, {
   tableName: "notifikasi",
