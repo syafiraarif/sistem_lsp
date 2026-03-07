@@ -1,6 +1,7 @@
 const DokumenMutu = require("../../models/dokumenMutu.model");
+const response = require("../../utils/response.util");
 
-const createDokumen = async (req, res) => {
+exports.createDokumen = async (req, res) => {
   try {
     const body = { ...req.body };
 
@@ -14,40 +15,38 @@ const createDokumen = async (req, res) => {
 
     const data = await DokumenMutu.create(body);
 
-    res.status(201).json({
-      message: "Dokumen berhasil ditambah",
-      data
-    });
+    response.success(res, "Dokumen berhasil ditambahkan", data);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    response.error(res, err.message);
   }
 };
 
 
-const getAllDokumen = async (req, res) => {
+exports.getAllDokumen = async (req, res) => {
   try {
     const data = await DokumenMutu.findAll({
-      order: [["created_at", "DESC"]]
+      order: [["created_at", "DESC"]],
     });
-    res.json({ data });
+
+    response.success(res, "List dokumen mutu", data);
   } catch (err) {
-    res.status(500).json({ message: "Terjadi kesalahan server" });
+    response.error(res, "Terjadi kesalahan server");
   }
 };
 
-const updateDokumen = async (req, res) => {
+
+exports.updateDokumen = async (req, res) => {
   try {
     const { id } = req.params;
-    const dok = await DokumenMutu.findByPk(id);
 
+    const dok = await DokumenMutu.findByPk(id);
     if (!dok) {
-      return res.status(404).json({ message: "Dokumen tidak ditemukan" });
+      return response.error(res, "Dokumen tidak ditemukan", 404);
     }
 
     const body = { ...req.body };
 
-    // handle upload file baru
     if (req.files?.file_dokumen) {
       body.file_dokumen = req.files.file_dokumen[0].filename;
     }
@@ -58,35 +57,27 @@ const updateDokumen = async (req, res) => {
 
     await dok.update(body);
 
-    res.json({
-      message: "Dokumen berhasil diupdate",
-      data: dok
-    });
+    response.success(res, "Dokumen berhasil diupdate", dok);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    response.error(res, err.message);
   }
 };
 
-const deleteDokumen = async (req, res) => {
+
+exports.deleteDokumen = async (req, res) => {
   try {
     const { id } = req.params;
-    const dok = await DokumenMutu.findByPk(id);
 
+    const dok = await DokumenMutu.findByPk(id);
     if (!dok) {
-      return res.status(404).json({ message: "Dokumen tidak ditemukan" });
+      return response.error(res, "Dokumen tidak ditemukan", 404);
     }
 
     await dok.destroy();
-    res.json({ message: "Dokumen berhasil dihapus" });
-  } catch (err) {
-    res.status(500).json({ message: "Terjadi kesalahan server" });
-  }
-};
 
-module.exports = {
-  createDokumen,
-  getAllDokumen,
-  updateDokumen,
-  deleteDokumen
+    response.success(res, "Dokumen berhasil dihapus");
+  } catch (err) {
+    response.error(res, "Terjadi kesalahan server");
+  }
 };

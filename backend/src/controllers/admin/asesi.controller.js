@@ -1,10 +1,12 @@
 const XLSX = require("xlsx");
-const bcrypt = require("bcryptjs");
-const { User, ProfileAsesi, Role } = require("../../models");
+const { ProfileAsesi, Role, User, Notifikasi } = require("../../models");
 const response = require("../../utils/response.util");
+const { createUser, resetUserPassword } = require("../../services/account.service");
+const sequelize = require("../../config/database");
 
 exports.importAsesiExcel = async (req, res) => {
   try {
+
     if (!req.file) {
       return response.error(res, "File tidak ditemukan", 400);
     }
@@ -14,30 +16,37 @@ exports.importAsesiExcel = async (req, res) => {
     const sheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(sheet);
 
+    if (!data.length) {
+      return response.error(res, "File Excel kosong", 400);
+    }
+
     const role = await Role.findOne({
       where: { role_name: "ASESI" }
     });
 
     if (!role) {
-      return response.error(res, "Role asesi tidak ditemukan", 500);
+      return response.error(res, "Role ASESI tidak ditemukan", 500);
     }
 
     let totalSuccess = 0;
     let totalFailed = 0;
 
     for (const row of data) {
-      try {
-        const username = row.nik;
-        const rawPassword = Math.random().toString(36).slice(-8);
-        const hash = await bcrypt.hash(rawPassword, 10);
 
-        const user = await User.create({
-          username,
-          password_hash: hash,
-          id_role: role.id_role,
+      const t = await sequelize.transaction();
+
+      try {
+
+        if (!row.nik || !row.email) {
+          throw new Error(`Data tidak lengkap untuk NIK ${row.nik}`);
+        }
+
+        const { user } = await createUser({
+          username: row.nik,
           email: row.email,
-          no_hp: row.no_hp
-        });
+          no_hp: row.no_hp || null,
+          id_role: role.id_role
+        }, { transaction: t });
 
         await ProfileAsesi.create({
           id_user: user.id_user,
@@ -66,12 +75,15 @@ exports.importAsesiExcel = async (req, res) => {
           telp_perusahaan: row.telp_perusahaan,
           fax_perusahaan: row.fax_perusahaan,
           email_perusahaan: row.email_perusahaan
-        });
+        }, { transaction: t });
 
+        await t.commit();
         totalSuccess++;
+
       } catch (err) {
+        await t.rollback();
         totalFailed++;
-        console.error("Gagal import asesi:", row.nik, err.message);
+        console.error(`Gagal import NIK ${row.nik}:`, err.message);
       }
     }
 
@@ -87,14 +99,26 @@ exports.importAsesiExcel = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
+
     const data = await ProfileAsesi.findAll({
-      include: {
-        model: User,
-        attributes: ["id_user", "email", "no_hp", "status_user"]
-      }
+      include: [
+        {
+          model: User,
+          attributes: ["id_user", "email", "no_hp", "status_user"],
+          include: [
+            {
+              model: Notifikasi,
+              where: { ref_type: "akun" },
+              required: false
+            }
+          ]
+        }
+      ],
+      order: [["created_at", "DESC"]]
     });
 
     return response.success(res, "List Asesi", data);
+
   } catch (err) {
     return response.error(res, err.message);
   }
@@ -102,13 +126,16 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
+
     const data = await ProfileAsesi.findByPk(req.params.id, {
       include: User
     });
 
-    if (!data) return response.error(res, "Asesi tidak ditemukan", 404);
+    if (!data)
+      return response.error(res, "Asesi tidak ditemukan", 404);
 
     return response.success(res, "Detail Asesi", data);
+
   } catch (err) {
     return response.error(res, err.message);
   }
@@ -118,7 +145,8 @@ exports.update = async (req, res) => {
   try {
 
     const asesi = await ProfileAsesi.findByPk(req.params.id);
-    if (!asesi) return response.error(res, "Asesi tidak ditemukan", 404);
+    if (!asesi)
+      return response.error(res, "Asesi tidak ditemukan", 404);
 
     await asesi.update(req.body);
 
@@ -130,10 +158,13 @@ exports.update = async (req, res) => {
 };
 
 exports.delete = async (req, res) => {
+
   const t = await sequelize.transaction();
+
   try {
 
     const asesi = await ProfileAsesi.findByPk(req.params.id, { transaction: t });
+
     if (!asesi) {
       await t.rollback();
       return response.error(res, "Asesi tidak ditemukan", 404);
@@ -147,10 +178,30 @@ exports.delete = async (req, res) => {
     await asesi.destroy({ transaction: t });
 
     await t.commit();
+
     return response.success(res, "Asesi berhasil dihapus");
 
   } catch (err) {
     await t.rollback();
+    return response.error(res, err.message);
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+
+    if (!user)
+      return response.error(res, "User tidak ditemukan", 404);
+
+    const rawPassword = await resetUserPassword(user);
+
+    return response.success(res, "Password berhasil direset", {
+      username: user.username,
+      password: rawPassword
+    });
+
+  } catch (err) {
     return response.error(res, err.message);
   }
 };

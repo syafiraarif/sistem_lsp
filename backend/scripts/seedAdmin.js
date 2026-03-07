@@ -5,25 +5,50 @@ const Role = require("../src/models/role.model");
 const ProfileAdmin = require("../src/models/profileAdmin.model");
 
 (async () => {
-  await sequelize.authenticate();
+  try {
+    await sequelize.authenticate();
+    console.log("✅ Koneksi database berhasil");
 
-  const adminRole = await Role.findOne({ where: { role_name: "admin" } });
+    let adminRole = await Role.findOne({ where: { role_name: "admin" } });
+    
+    if (!adminRole) {
+      adminRole = await Role.create({
+        role_name: "admin",
+        deskripsi: "Administrator"
+      });
+      console.log("✅ Role 'admin' berhasil dibuat");
+    } else {
+      console.log("ℹ️ Role 'admin' sudah ada");
+    }
 
-  const hash = await bcrypt.hash("adminlsp123", 10);
+    const existingUser = await User.findOne({ where: { username: "adminlsp" } });
+    if (existingUser) {
+      console.log("⚠️ User 'adminlsp' sudah ada!");
+      process.exit();
+    }
 
-  const user = await User.create({
-    username: "adminlsp",
-    password_hash: hash,
-    id_role: adminRole.id_role,
-    email: "admin@lsp.id",
-    no_hp: "08123456789"
-  });
+    const hash = await bcrypt.hash("adminlsp123", 10);
 
-  await ProfileAdmin.create({
-    id_user: user.id_user,
-    nama_lengkap: "Super Admin LSP"
-  });
+    const user = await User.create({
+      username: "adminlsp",
+      password_hash: hash,
+      id_role: adminRole.id_role,
+      email: "admin@lsp.id",
+      no_hp: "08123456789"
+    });
 
-  console.log("✅ Admin berhasil dibuat");
-  process.exit();
+    await ProfileAdmin.create({
+      id_user: user.id_user,
+      nama_lengkap: "Super Admin LSP"
+    });
+
+    console.log("✅ Admin berhasil dibuat!");
+    console.log("   Username: adminlsp");
+    console.log("   Password: adminlsp123");
+    
+    process.exit();
+  } catch (error) {
+    console.error("❌ Error:", error.message);
+    process.exit(1);
+  }
 })();

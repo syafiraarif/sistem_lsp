@@ -22,6 +22,23 @@ exports.getBySoal = async (req, res) => {
   }
 };
 
+exports.update = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const item = await BankSoalPG.findByPk(id);
+    if (!item) {
+      return response.error(res, "Opsi tidak ditemukan", 404);
+    }
+
+    await item.update(req.body);
+
+    response.success(res, "Opsi berhasil diperbarui", item);
+  } catch (err) {
+    response.error(res, err.message);
+  }
+};
+
 exports.delete = async (req, res) => {
   try {
     const item = await BankSoalPG.findByPk(req.params.id);
