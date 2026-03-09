@@ -3,7 +3,7 @@ import Swal from 'sweetalert2';
 import api from "../../services/api"; 
 import { getProvinsi, getKota, getKecamatan, getKelurahan } from "../../services/wilayah.service";
 import { 
-  Search, Plus, Eye, Edit2, Trash2, X, Save, 
+  Search, Eye, Edit2, Trash2, X, Save, 
   User as UserIcon, Loader2, Upload, FileSpreadsheet,
   GraduationCap, MapPin, Mail, CheckCircle, Send, Briefcase, Users
 } from 'lucide-react';
@@ -165,24 +165,23 @@ const TambahAsesi = () => {
         return Swal.fire('Peringatan', 'NIK, Email, dan Nama Lengkap wajib diisi!', 'warning');
     }
 
+    // Jika bukan edit mode, hentikan proses (karena create ditiadakan)
+    if (!isEditMode) return;
+
     try {
       Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
       const payload = { ...formData };
       if (payload.tanggal_lahir === "") payload.tanggal_lahir = null;
       payload.tahun_lulus = payload.tahun_lulus ? parseInt(payload.tahun_lulus) : null;
 
-      if (isEditMode) {
-        await api.put(`/admin/asesi/${currentId}`, payload);
-        Swal.fire('Sukses!', 'Data asesi berhasil diperbarui', 'success');
-      } else {
-        await api.post('/admin/asesi', payload);
-        Swal.fire('Sukses!', 'Data asesi berhasil ditambahkan', 'success');
-      }
+      await api.put(`/admin/asesi/${currentId}`, payload);
+      Swal.fire('Sukses!', 'Data asesi berhasil diperbarui', 'success');
+      
       setShowModal(false);
       fetchData(pagination.page);
       resetForm();
     } catch (error) {
-      Swal.fire('Error', error.response?.data?.message || 'Terjadi kesalahan', 'error');
+      Swal.fire('Error', error.response?.data?.message || 'Terjadi kesalahan saat memperbarui', 'error');
     }
   };
 
@@ -296,17 +295,12 @@ const TambahAsesi = () => {
           <p className="text-[14px] text-[#182D4A] m-0">Kelola data profil dan akun asesi.</p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <button 
-            className="flex-1 md:flex-none px-4 py-2.5 rounded-lg font-bold bg-[#FAFAFA] text-[#182D4A] border border-[#071E3D]/20 hover:bg-[#E2E8F0] transition-colors flex items-center justify-center gap-2 text-[13px]"
-            onClick={() => setShowImportModal(true)}
-          >
-            <FileSpreadsheet size={18} /> Import Excel
-          </button>
+          {/* Tombol Tambah Dihapus, Import Excel menjadi primary button */}
           <button 
             className="flex-1 md:flex-none px-4 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 text-[13px]"
-            onClick={() => { resetForm(); setShowModal(true); }}
+            onClick={() => setShowImportModal(true)}
           >
-            <Plus size={18} /> Tambah Asesi
+            <FileSpreadsheet size={18} /> Import Data Asesi (Excel)
           </button>
         </div>
       </div>
@@ -413,9 +407,9 @@ const TambahAsesi = () => {
                 </div>
                 <div>
                   <h3 className="text-[16px] font-bold text-[#071E3D] m-0">
-                    {isDetailMode ? 'Detail Data Asesi' : isEditMode ? 'Edit Data Asesi' : 'Tambah Asesi Baru'}
+                    {isDetailMode ? 'Detail Data Asesi' : 'Edit Data Asesi'}
                   </h3>
-                  <p className="text-[12px] text-[#182D4A]/70 m-0">Lengkapi informasi data diri, alamat, dan pendidikan.</p>
+                  <p className="text-[12px] text-[#182D4A]/70 m-0">Informasi data diri, alamat, dan pendidikan asesi.</p>
                 </div>
               </div>
               <button onClick={() => setShowModal(false)} className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors"><X size={20}/></button>
@@ -542,7 +536,7 @@ const TambahAsesi = () => {
                 <>
                   <button type="button" className="px-5 py-2.5 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] bg-[#FAFAFA] hover:bg-[#E2E8F0] transition-colors text-[13px]" onClick={() => setShowModal(false)}>Batal</button>
                   <button type="submit" form="asesiForm" className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm flex items-center gap-2 text-[13px]">
-                    <Save size={16} /> Simpan Data
+                    <Save size={16} /> Simpan Perubahan
                   </button>
                 </>
               )}
@@ -557,21 +551,21 @@ const TambahAsesi = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/40 backdrop-blur-sm">
           <div className="bg-white rounded-xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
-              <h3 className="text-[16px] font-bold text-[#071E3D]">Import Data Excel</h3>
+              <h3 className="text-[16px] font-bold text-[#071E3D]">Import Data Asesi Excel</h3>
               <button onClick={() => setShowImportModal(false)} className="text-[#182D4A] hover:text-[#CC6B27]"><X size={20}/></button>
             </div>
             <form onSubmit={handleImportExcel}>
               <div className="p-6 bg-white">
                 <div className="border-2 border-dashed border-[#CC6B27]/30 rounded-xl p-8 text-center bg-[#CC6B27]/5">
                   <Upload className="mx-auto text-[#CC6B27] mb-3" size={36} />
-                  <p className="text-[13px] font-bold text-[#071E3D] mb-4">Upload file template Excel (.xlsx)</p>
+                  <p className="text-[13px] font-bold text-[#071E3D] mb-4">Upload file Excel Asesi (.xlsx)</p>
                   <input type="file" accept=".xlsx, .xls" onChange={(e) => setFileExcel(e.target.files[0])} className="block w-full text-[12px] text-[#182D4A] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-[12px] file:font-bold file:bg-[#071E3D] file:text-white hover:file:bg-[#182D4A] file:cursor-pointer cursor-pointer transition-colors"/>
                 </div>
               </div>
               <div className="px-6 py-4 border-t border-[#071E3D]/10 bg-[#FAFAFA] flex justify-end gap-3">
                 <button type="button" className="px-5 py-2.5 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] bg-[#FAFAFA] hover:bg-[#E2E8F0] transition-colors text-[13px]" onClick={() => setShowImportModal(false)}>Batal</button>
                 <button type="submit" className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm flex items-center gap-2 text-[13px]">
-                  <Upload size={16}/> Upload
+                  <Upload size={16}/> Upload Data
                 </button>
               </div>
             </form>
