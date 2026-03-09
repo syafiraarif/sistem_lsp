@@ -12,6 +12,7 @@ import MainLayout from "./layouts/MainLayout";
 import AppRoutes from "./routes/AppRoutes";
 import TukRoutes from "./routes/TukRoutes";
 import AsesiRoutes from "./routes/AsesiRoutes";
+import AdminRoutes from "./routes/AdminRoutes";
 
 /* ========================
    PROTECTED TUK
@@ -41,9 +42,39 @@ function ProtectedAsesi({ children }) {
   return children;
 }
 
+/* ========================
+   PROTECTED ADMIN
+======================== */
+function ProtectedAdmin({ children }) {
+  const user = localStorage.getItem("user");
+
+  let parsedUser = null;
+  try {
+    parsedUser = user ? JSON.parse(user) : null;
+  } catch (err) {
+    parsedUser = null;
+  }
+
+  if (!parsedUser || parsedUser.role?.toLowerCase() !== "admin") {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
 function App() {
   return (
     <Routes>
+
+      {/* ROUTE ADMIN */}
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedAdmin>
+            <AdminRoutes />
+          </ProtectedAdmin>
+        }
+      />
 
       {/* ROUTE TUK */}
       <Route
@@ -74,6 +105,7 @@ function App() {
           </MainLayout>
         }
       />
+
     </Routes>
   );
 }

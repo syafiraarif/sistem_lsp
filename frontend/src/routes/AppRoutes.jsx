@@ -10,7 +10,7 @@ import FAQ from "../pages/public/FAQ";
 import Complaint from "../pages/public/Complaint";
 import Login from "../pages/public/Login";
 
-import DashboardAdmin from "../pages/admin/Dashboard";
+import DashboardAdmin from "../pages/admin/AdminDashboard";
 
 export default function AppRoutes() {
   return (
