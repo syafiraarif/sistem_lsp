@@ -48,6 +48,7 @@ const FrAk05 = require("./frAk05.model");
 const FrAk06 = require("./frAk06.model");
 const FrAk07 = require("./frAk07.model");
 const Mapa02Peserta = require("./mapa02_peserta.model");
+const PresensiPraAsesmen = require("./praAsesmen.model");
 
 Role.hasMany(User, { foreignKey: "id_role" });
 User.belongsTo(Role, { foreignKey: "id_role" });
@@ -95,6 +96,8 @@ Jadwal.belongsTo(Tuk, { foreignKey: "id_tuk", as: "tuk" });
 User.hasMany(Jadwal, { foreignKey: "created_by" });
 Jadwal.belongsTo(User, { foreignKey: "created_by", as: "creator" });
 
+
+
 Jadwal.hasMany(JadwalAsesor, { foreignKey: "id_jadwal" });
 JadwalAsesor.belongsTo(Jadwal, { foreignKey: "id_jadwal" });
 
@@ -103,6 +106,9 @@ JadwalAsesor.belongsTo(User, { foreignKey: "id_user", as: "asesor" });
 
 User.hasMany(JadwalAsesor, { foreignKey: "assigned_by" });
 JadwalAsesor.belongsTo(User, { foreignKey: "assigned_by", as: "assigner"});
+
+JadwalAsesor.hasOne(ProfileAsesor, {sourceKey: 'id_user', foreignKey: 'id_user',as: 'profileAsesor'});
+ProfileAsesor.belongsTo(JadwalAsesor, {foreignKey: 'id_user',targetKey: 'id_user',as: 'jadwalAsesor'});
 
 User.hasMany(PesertaJadwal, { foreignKey: "id_user" });
 PesertaJadwal.belongsTo(User, {foreignKey: "id_user", as: "user"});
@@ -271,6 +277,8 @@ Mapa02Peserta.belongsTo(Mapa, { foreignKey: "id_mapa", as: "mapa" });
 Mapa02Mapping.hasMany(Mapa02Peserta, { foreignKey: "id_mapping" });
 Mapa02Peserta.belongsTo(Mapa02Mapping, { foreignKey: "id_mapping", as: "mapping" });
 
+PesertaJadwal.hasMany(PresensiPraAsesmen, { foreignKey: "id_peserta" }); 
+PresensiPraAsesmen.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
 
 module.exports = {
   User,
@@ -322,5 +330,6 @@ module.exports = {
   FrAk05,
   FrAk06,
   FrAk07,
-  Mapa02Peserta
+  Mapa02Peserta,
+  PresensiPraAsesmen
 };
