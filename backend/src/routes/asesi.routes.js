@@ -19,6 +19,7 @@ router.put("/profile/upload-dokumen", uploadMiddleware, profileController.upload
 
 // Route upload TTD
 router.put("/profile/upload-ttd", uploadMiddleware, profileController.uploadTTD);
+router.get("/profile/files", profileController.getFiles);
 
 router.get("/skema", aplikasiController.getSkema);
 router.get("/skema/:id_skema/persyaratan", aplikasiController.getPersyaratanBySkema);

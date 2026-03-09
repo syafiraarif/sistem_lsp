@@ -39,16 +39,20 @@ exports.approvePendaftaran = async (req, res) => {
       return response.error(res, "Pendaftaran sudah diproses", 400);
     }
 
-    const roleAsesi = await Role.findOne({
+    // ==============================
+    // ROLE OTOMATIS (BUAT JIKA BELUM ADA)
+    // ==============================
+    let roleAsesi = await Role.findOne({
       where: { role_name: "ASESI" },
       transaction: t
     });
 
     if (!roleAsesi) {
-      await t.rollback();
-      return response.error(res, "Role ASESI tidak ditemukan", 500);
+      roleAsesi = await Role.create({
+        role_name: "ASESI"
+      }, { transaction: t });
     }
-    
+
     const { Op } = require("sequelize");
 
     const existingUser = await User.findOne({
