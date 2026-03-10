@@ -26,7 +26,8 @@ const PendaftaranAsesi = sequelize.define("pendaftaran_asesi", {
   },
   tanggal_daftar: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: false,
+    defaultValue: DataTypes.NOW
   }
 }, {
   tableName: "pendaftaran_asesi",
