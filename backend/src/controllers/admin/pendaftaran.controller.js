@@ -105,7 +105,8 @@ exports.approvePendaftaran = async (req, res) => {
       provinsi: pendaftaran.provinsi,
       kota: pendaftaran.kota,
       kecamatan: pendaftaran.kecamatan,
-      kelurahan: pendaftaran.kelurahan
+      kelurahan: pendaftaran.kelurahan,
+      alamat: pendaftaran.alamat_lengkap
     }, { transaction: t });
 
     await pendaftaran.update({

@@ -54,7 +54,7 @@ export default function Registration() {
     kecamatan_nama: "",
     kelurahan_id: "",
     kelurahan_nama: "",
-    alamat: "",
+    alamat_lengkap: "",
     wilayah_rji: "",
     program_studi: "",
     kompetensi_keahlian: "",
@@ -177,7 +177,7 @@ export default function Registration() {
         kota: formData.kota_nama,
         kecamatan: formData.kecamatan_nama,
         kelurahan: formData.kelurahan_nama,
-        alamat: formData.alamat,
+        alamat_lengkap: formData.alamat_lengkap,
         wilayah_rji: formData.wilayah_rji,
         program_studi: formData.program_studi,
         kompetensi_keahlian: formData.kompetensi_keahlian,
@@ -281,7 +281,7 @@ export default function Registration() {
                         {kelurahan.map(k => <option key={k.id} data-id={k.id} value={k.name}>{k.name}</option>)}
                       </SelectGroup>
                       <div className="md:col-span-2">
-                        <InputGroup label="Alamat Lengkap*" name="alamat" value={formData.alamat} onChange={handleChange} placeholder="Jalan, No. Rumah, RT/RW" />
+                        <InputGroup label="Alamat Lengkap*" name="alamat_lengkap" value={formData.alamat_lengkap} onChange={handleChange} placeholder="Jalan, No. Rumah, RT/RW" />
                       </div>
                     </div>
                   </motion.div>
@@ -327,7 +327,7 @@ export default function Registration() {
                       </div>
                       <ReCAPTCHA
                         ref={recaptchaRef}
-                        sitekey="6LcrU3QsAAAAAAcNAI0nvz_ITfmPLTDZKTN4zA5X"
+                        sitekey="6LdSGX4sAAAAAA7BAt1iY8OVxtnx_EFunFBQV-QF"
                         onChange={onCaptchaChange}
                       />
                     </div>
