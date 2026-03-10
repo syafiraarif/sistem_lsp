@@ -5,7 +5,8 @@ const PendaftaranAsesi = sequelize.define("pendaftaran_asesi", {
   id_pendaftaran: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true
+    autoIncrement: true,
+    allowNull: false
   },
   nik: DataTypes.CHAR(16),
   nama_lengkap: DataTypes.STRING(100),
@@ -19,10 +20,14 @@ const PendaftaranAsesi = sequelize.define("pendaftaran_asesi", {
   program_studi: DataTypes.STRING(100),
   kompetensi_keahlian: DataTypes.STRING(100),
   status: {
-  type: DataTypes.ENUM("pending", "approved", "rejected"),
-  defaultValue: "pending"
+    type: DataTypes.ENUM("pending", "approved", "rejected"),
+    allowNull: false,
+    defaultValue: "pending"
   },
-  tanggal_daftar: DataTypes.DATE
+  tanggal_daftar: {
+    type: DataTypes.DATE,
+    allowNull: false
+  }
 }, {
   tableName: "pendaftaran_asesi",
   timestamps: false
