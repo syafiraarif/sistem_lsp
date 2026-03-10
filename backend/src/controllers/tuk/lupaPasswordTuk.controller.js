@@ -1,5 +1,3 @@
-// backend/src/controllers/tuk/lupaPasswordTuk.controller.js
-
 const { User } = require("../../models");
 const response = require("../../utils/response.util");
 const bcrypt = require("bcrypt");

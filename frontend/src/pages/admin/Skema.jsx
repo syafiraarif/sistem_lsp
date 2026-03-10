@@ -3,7 +3,7 @@ import Swal from 'sweetalert2';
 import api from "../../services/api";
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Plus, Edit2, Trash2, X, Save, Loader2, FileText, Upload, BookOpen
+  Search, Plus, Edit2, Trash2, X, Save, Loader2, FileText, Upload, BookOpen, Eye, ArrowRight
 } from 'lucide-react';
 
 const Skema = () => {
@@ -17,6 +17,10 @@ const Skema = () => {
   const [showModal, setShowModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+
+  // Detail Modal State
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedSkema, setSelectedSkema] = useState(null);
 
   // --- STATE KHUSUS FILE ---
   const [selectedFile, setSelectedFile] = useState(null);
@@ -60,7 +64,6 @@ const Skema = () => {
   }, []);
 
   // --- HANDLERS ---
-  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -71,6 +74,11 @@ const Skema = () => {
     if (file) {
       setSelectedFile(file);
     }
+  };
+
+  const handleDetail = (item) => {
+    setSelectedSkema(item);
+    setShowDetailModal(true);
   };
 
   const handleEdit = (item) => {
@@ -127,13 +135,15 @@ const Skema = () => {
     const dataToSend = new FormData();
 
     Object.keys(formData).forEach(key => {
-      if (key !== 'dokumen' && formData[key] !== null && formData[key] !== undefined) {
+      // Abaikan 'dokumen' string, dan jangan kirim string kosong agar tidak error saat diinsert ke database untuk field numerik
+      if (key !== 'dokumen' && formData[key] !== null && formData[key] !== undefined && formData[key] !== '') {
         dataToSend.append(key, formData[key]);
       }
     });
 
+    // Gunakan 'file_dokumen' sesuai key yang di-expect backend
     if (selectedFile) {
-      dataToSend.append('dokumen', selectedFile);
+      dataToSend.append('file_dokumen', selectedFile);
     }
 
     const config = {
@@ -216,7 +226,7 @@ const Skema = () => {
                 <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27]">Judul Skema</th>
                 <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] w-24 text-center">Status</th>
                 <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-56">Kelola Persyaratan</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-24">Aksi</th>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-52">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -244,19 +254,6 @@ const Skema = () => {
                       <div className="text-[11px] font-bold text-[#182D4A]/60 mt-1 tracking-wide">
                         {item.jenis_skema.toUpperCase()} {item.level_kkni ? `• LEVEL ${item.level_kkni}` : ''}
                       </div>
-                      
-                      {item.dokumen && (
-                        <div className="mt-2">
-                           <a 
-                             href={`${import.meta.env.VITE_API_URL}${item.dokumen}`} 
-                             target="_blank" 
-                             rel="noreferrer" 
-                             className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#182D4A]/5 text-[#182D4A] hover:bg-[#182D4A]/10 rounded border border-[#182D4A]/20 text-[11px] font-bold transition-colors"
-                           >
-                             <FileText size={12} /> Buka Dokumen Skema
-                           </a>
-                        </div>
-                      )}
                     </td>
                     <td className="py-4 px-4 text-center">
                       <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold border capitalize
@@ -286,11 +283,38 @@ const Skema = () => {
                     </td>
 
                     <td className="py-4 px-4 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button onClick={() => handleEdit(item)} className="inline-flex p-2 rounded-lg text-[#CC6B27] bg-[#CC6B27]/10 hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm" title="Edit">
+                      <div className="flex items-center justify-center gap-2">
+                        {/* TOMBOL BIAYA */}
+                        <button 
+                          onClick={() => navigate(`/admin/skema/${item.id_skema}/biaya-uji`)} 
+                          className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-emerald-100 hover:border-transparent text-[11px] font-bold h-[34px]" 
+                          title="Atur Biaya Uji"
+                        >
+                          Biaya
+                        </button>
+
+                        {/* TOMBOL DETAIL */}
+                        <button 
+                          onClick={() => handleDetail(item)} 
+                          className="inline-flex items-center justify-center p-2 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all shadow-sm border border-blue-100 hover:border-transparent h-[34px] w-[34px]" 
+                          title="Detail Skema"
+                        >
+                          <Eye size={16} />
+                        </button>
+
+                        <button 
+                          onClick={() => handleEdit(item)} 
+                          className="inline-flex items-center justify-center p-2 rounded-lg text-[#CC6B27] bg-[#CC6B27]/10 hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm h-[34px] w-[34px]" 
+                          title="Edit"
+                        >
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => handleDelete(item.id_skema)} className="inline-flex p-2 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100 hover:border-transparent" title="Hapus">
+                        
+                        <button 
+                          onClick={() => handleDelete(item.id_skema)} 
+                          className="inline-flex items-center justify-center p-2 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100 hover:border-transparent h-[34px] w-[34px]" 
+                          title="Hapus"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -303,7 +327,163 @@ const Skema = () => {
         </div>
       </div>
 
-      {/* MODAL FORM */}
+      {/* MODAL DETAIL SKEMA */}
+      {showDetailModal && selectedSkema && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+            
+            {/* Header Detail */}
+            <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
+              <h3 className="text-[18px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
+                <BookOpen size={20} className="text-[#CC6B27]"/> Detail Skema Kompetensi
+              </h3>
+              <button onClick={() => setShowDetailModal(false)} className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors"><X size={20} /></button>
+            </div>
+            
+            {/* Body Detail */}
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+              
+              {/* Informasi Utama */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#FAFAFA] p-4 rounded-lg border border-[#071E3D]/10">
+                  <p className="text-[11px] font-bold text-[#182D4A]/60 uppercase tracking-wider mb-1">Kode Skema</p>
+                  <p className="text-[14px] font-mono font-bold text-[#CC6B27]">{selectedSkema.kode_skema}</p>
+                </div>
+                <div className="bg-[#FAFAFA] p-4 rounded-lg border border-[#071E3D]/10">
+                  <p className="text-[11px] font-bold text-[#182D4A]/60 uppercase tracking-wider mb-1">Status</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-[12px] font-bold border capitalize mt-1
+                    ${selectedSkema.status === 'aktif' ? 'bg-green-50 text-green-600 border-green-200' : 
+                      selectedSkema.status === 'nonaktif' ? 'bg-red-50 text-red-600 border-red-200' : 
+                      'bg-gray-100 text-gray-600 border-gray-200'
+                    }`}>
+                    {selectedSkema.status}
+                  </span>
+                </div>
+                <div className="bg-[#FAFAFA] p-4 rounded-lg border border-[#071E3D]/10 md:col-span-2">
+                  <p className="text-[11px] font-bold text-[#182D4A]/60 uppercase tracking-wider mb-1">Judul Skema</p>
+                  <p className="text-[15px] font-bold text-[#071E3D]">{selectedSkema.judul_skema}</p>
+                  {selectedSkema.judul_skema_en && (
+                    <p className="text-[13px] font-medium text-[#182D4A]/80 mt-1 italic">{selectedSkema.judul_skema_en}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Atribut Lengkap */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
+                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Jenis Skema</p>
+                  <p className="text-[13px] font-semibold text-[#071E3D] capitalize">{selectedSkema.jenis_skema}</p>
+                </div>
+                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
+                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Level KKNI</p>
+                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.level_kkni || '-'}</p>
+                </div>
+                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
+                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Bidang Okupasi</p>
+                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.bidang_okupasi || '-'}</p>
+                </div>
+                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
+                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Kedalaman Bukti</p>
+                  <p className="text-[13px] font-semibold text-[#071E3D] capitalize">{selectedSkema.kedalaman_bukti?.replace(/_/g, ' ') || '-'}</p>
+                </div>
+                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
+                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Kode Sektor</p>
+                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.kode_sektor || '-'}</p>
+                </div>
+                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
+                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Kode KBLI</p>
+                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.kode_kbli || '-'}</p>
+                </div>
+                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
+                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Kode KBJI</p>
+                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.kode_kbji || '-'}</p>
+                </div>
+                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
+                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Skor Min AI 05</p>
+                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.skor_min_ai05 || '-'}</p>
+                </div>
+              </div>
+
+              {selectedSkema.keterangan_bukti && (
+                <div className="border border-[#071E3D]/5 p-4 rounded-lg bg-[#FAFAFA]/50">
+                  <p className="text-[11px] font-bold text-[#182D4A]/60 uppercase mb-2">Keterangan Bukti</p>
+                  <p className="text-[13px] text-[#071E3D] leading-relaxed">{selectedSkema.keterangan_bukti}</p>
+                </div>
+              )}
+
+              {selectedSkema.dokumen && (
+                <div>
+                  <a 
+                    href={`${import.meta.env.VITE_API_URL}${selectedSkema.dokumen}`} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#182D4A]/5 text-[#182D4A] hover:bg-[#182D4A]/10 rounded-lg border border-[#182D4A]/20 text-[13px] font-bold transition-colors w-max"
+                  >
+                    <FileText size={16} /> Buka / Unduh Dokumen Skema
+                  </a>
+                </div>
+              )}
+
+              {/* SEPARATOR KHUSUS NAVIGASI FORMULIR (RUTE BERSARANG KE /admin/skema/:id/...) */}
+              <div className="border-t border-[#071E3D]/10 pt-6 mt-2">
+                <h4 className="text-[14px] font-bold text-[#071E3D] mb-4 flex items-center gap-2">
+                  Navigasi Instrumen & Asesmen
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <button 
+                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/ia01`)}
+                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
+                  >
+                    <span className="text-[12px] font-bold mb-1">FR.IA.01</span>
+                    <span className="text-[10px] font-medium opacity-80 mb-2">Observasi</span>
+                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+                  
+                  <button 
+                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/ia03`)}
+                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all shadow-sm group"
+                  >
+                    <span className="text-[12px] font-bold mb-1">FR.IA.03</span>
+                    <span className="text-[10px] font-medium opacity-80 mb-2">Pertanyaan</span>
+                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+                  
+                  <button 
+                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/mapa`)}
+                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-[#CC6B27]/30 bg-[#CC6B27]/5 text-[#CC6B27] hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm group"
+                  >
+                    <span className="text-[12px] font-bold mb-1">FR.MAPA</span>
+                    <span className="text-[10px] font-medium opacity-80 mb-2">Manajemen</span>
+                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+
+                  <button 
+                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/mapa01`)}
+                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-600 hover:text-white transition-all shadow-sm group"
+                  >
+                    <span className="text-[12px] font-bold mb-1">MAPA 01</span>
+                    <span className="text-[10px] font-medium opacity-80 mb-2">Perencanaan</span>
+                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+
+                  <button 
+                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/mapa02`)}
+                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-600 hover:text-white transition-all shadow-sm group"
+                  >
+                    <span className="text-[12px] font-bold mb-1">MAPA 02</span>
+                    <span className="text-[10px] font-medium opacity-80 mb-2">Peta Instrumen</span>
+                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* MODAL FORM TAMBAH/EDIT */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl w-full max-w-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">

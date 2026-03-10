@@ -42,7 +42,8 @@ exports.updateStatusPengaduan = async (req, res) => {
       return response.error(res, "Pengaduan tidak ditemukan", 404);
     }
 
-    const allowedStatus = ["pending", "diproses", "selesai", "ditolak"];
+    const allowedStatus = ["masuk", "tindak_lanjut", "selesai"];
+
     if (!allowedStatus.includes(status_pengaduan)) {
       return response.error(res, "Status tidak valid", 400);
     }
