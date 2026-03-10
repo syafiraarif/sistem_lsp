@@ -54,7 +54,6 @@ export default function Login() {
         localStorage.setItem("role", role);
 
         // ⭐ Simpan id_tuk jika ada (untuk user TUK)
-        // Pastikan backend sudah mengirimkan id_tuk di object user
         if (user.id_tuk) {
           localStorage.setItem("id_tuk", user.id_tuk);
           console.log("ID TUK berhasil disimpan:", user.id_tuk);
@@ -67,7 +66,7 @@ export default function Login() {
         // Redirect setelah 1.2 detik
         setTimeout(() => {
           if (role === "admin") {
-            navigate("/admin/dashboard");
+            navigate("/admin");
           } else if (role === "asesi") {
             navigate("/asesi");
           } else if (role === "tuk") {
@@ -78,13 +77,11 @@ export default function Login() {
         }, 1200);
 
       } else {
-        // Jika res.data.success = false
         setError(res.data.message || "Login gagal");
       }
 
     } catch (err) {
       console.error("Login Error:", err);
-      // Tangani berbagai kemungkinan error axios
       if (err.response) {
         setError(err.response.data?.message || "Login gagal");
       } else if (err.request) {
@@ -97,7 +94,6 @@ export default function Login() {
     }
   };
 
-  // ... (Bagian Variants & Render UI biarkan sama seperti aslinya) ...
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -113,7 +109,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen w-full flex bg-[#071E3D] font-sans selection:bg-orange-500/30">
-      {/* ... (Bagian UI visual tidak saya ubah) ... */}
       <div className="hidden lg:flex lg:w-3/5 relative flex-col justify-between p-16 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img 

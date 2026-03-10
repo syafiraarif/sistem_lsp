@@ -10,7 +10,7 @@ import FAQ from "../pages/public/FAQ";
 import Complaint from "../pages/public/Complaint";
 import Login from "../pages/public/Login";
 
-import DashboardAdmin from "../pages/admin/AdminDashboard";
+
 
 export default function AppRoutes() {
   return (
@@ -23,7 +23,6 @@ export default function AppRoutes() {
       <Route path="/informasi" element={<Information />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/pengaduan" element={<Complaint />} />
-      <Route path="/admin/dashboard" element={<DashboardAdmin />} />
       <Route path="/login" element={<Login />} />
     </Routes>
   );

@@ -27,10 +27,9 @@ const AdminDashboard = () => {
   ];
 
   return (
-    /* Container Utama dengan padding (p-6) agar tidak dempet dengan sidebar/navbar */
     <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
-      
-      {/* 1. STATS CARDS GRID */}
+
+      {/* STATS CARDS GRID */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
         {stats.map((item, index) => (
           <div key={index} className="bg-white rounded-xl p-5 border border-[#071E3D]/10 shadow-sm flex items-center gap-4">
@@ -45,10 +44,10 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* 2. CHARTS GRID (Tetap bersampingan: Kiri Bar Chart, Kanan Pie Chart) */}
+      {/* CHARTS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Bar Chart - Kiri (Porsi 2/3) */}
+
+        {/* Bar Chart */}
         <div className="md:col-span-2 bg-white rounded-xl p-6 border border-[#071E3D]/10 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h4 className="font-bold text-[#071E3D] text-[16px] m-0">Pendaftar dan Kandidat Tahun {currentYear}</h4>
@@ -72,7 +71,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Pie Chart - Kanan (Porsi 1/3) */}
+        {/* Pie Chart */}
         <div className="md:col-span-1 bg-white rounded-xl p-6 border border-[#071E3D]/10 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h4 className="font-bold text-[#071E3D] text-[16px] m-0">Persentase Kelulusan</h4>
@@ -99,10 +98,10 @@ const AdminDashboard = () => {
 
       </div>
 
-      {/* 3. TABLE & SCHEDULE GRID (Tetap bersampingan: Kiri Tabel, Kanan Jadwal) */}
+      {/* TABLE & SCHEDULE GRID */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Table - Kiri (Porsi 2/3) */}
+
+        {/* Table */}
         <div className="md:col-span-2 bg-white rounded-xl p-6 border border-[#071E3D]/10 shadow-sm overflow-hidden">
           <div className="flex justify-between items-center mb-6">
             <h4 className="font-bold text-[#071E3D] text-[16px] m-0">Pendaftaran Terbaru</h4>
@@ -112,10 +111,10 @@ const AdminDashboard = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="text-left text-[12px] text-[#FAFAFA] bg-[#071E3D] font-semibold pb-3 pt-3 px-3 border-b-4 border-[#CC6B27] uppercase">Nama Asesi</th>
-                  <th className="text-left text-[12px] text-[#FAFAFA] bg-[#071E3D] font-semibold pb-3 pt-3 px-3 border-b-4 border-[#CC6B27] uppercase">Skema</th>
-                  <th className="text-left text-[12px] text-[#FAFAFA] bg-[#071E3D] font-semibold pb-3 pt-3 px-3 border-b-4 border-[#CC6B27] uppercase">Tanggal</th>
-                  <th className="text-left text-[12px] text-[#FAFAFA] bg-[#071E3D] font-semibold pb-3 pt-3 px-3 border-b-4 border-[#CC6B27] uppercase">Status</th>
+                  <th scope="col" className="text-left text-[12px] text-[#FAFAFA] bg-[#071E3D] font-semibold pb-3 pt-3 px-3 border-b-4 border-[#CC6B27] uppercase">Nama Asesi</th>
+                  <th scope="col" className="text-left text-[12px] text-[#FAFAFA] bg-[#071E3D] font-semibold pb-3 pt-3 px-3 border-b-4 border-[#CC6B27] uppercase">Skema</th>
+                  <th scope="col" className="text-left text-[12px] text-[#FAFAFA] bg-[#071E3D] font-semibold pb-3 pt-3 px-3 border-b-4 border-[#CC6B27] uppercase">Tanggal</th>
+                  <th scope="col" className="text-left text-[12px] text-[#FAFAFA] bg-[#071E3D] font-semibold pb-3 pt-3 px-3 border-b-4 border-[#CC6B27] uppercase">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,7 +136,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Schedule - Kanan (Porsi 1/3) */}
+        {/* Schedule */}
         <div className="md:col-span-1 bg-white rounded-xl p-6 border border-[#071E3D]/10 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h4 className="font-bold text-[#071E3D] text-[16px] m-0">Jadwal Asesmen</h4>
