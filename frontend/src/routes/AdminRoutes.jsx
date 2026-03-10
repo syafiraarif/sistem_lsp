@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import AdminLayout from "../layouts/AdminLayout";
 
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import TambahAsesi from "../pages/admin/TambahAsesi";
@@ -24,7 +23,13 @@ import Mapa from "../pages/admin/Mapa";
 /* PROTECTED */
 const getUser = () => {
   const user = localStorage.getItem("user");
-  return user ? JSON.parse(user) : null;
+
+  try {
+    return user ? JSON.parse(user) : null;
+  } catch (error) {
+    console.error("User data rusak di localStorage");
+    return null;
+  }
 };
 
 const ProtectedAdmin = ({ children }) => {
@@ -39,28 +44,26 @@ export default function AdminRoutes() {
   return (
     <ProtectedAdmin>
       <Routes>
-        <Route element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="unit-kompetensi" element={<UnitKompetensi />} />
-          <Route path="skkni" element={<Skkni />} />
-          <Route path="skema" element={<Skema />} />
-          <Route path="skema/:id/persyaratan" element={<SkemaPersyaratan />} />
-          <Route path="skema/:id/persyaratan-tuk" element={<SkemaPersyaratanTuk />} />
-          <Route path="dokumen-mutu" element={<DokumenMutu />} />
-          <Route path="jadwal/uji-kompetensi" element={<JadwalUji />} />
-          <Route path="tuk" element={<TempatUji />} />
-          <Route path="verifikasi-pendaftaran" element={<VerifikasiPendaftaran />} />
-          <Route path="asesi/tambah" element={<TambahAsesi />} />
-          <Route path="asesi/ia01-observasi" element={<IA01Observasi />} />
-          <Route path="asesi/ia03-pertanyaan" element={<IA03Pertanyaan />} />
-          <Route path="asesor" element={<Asesor />} />
-          <Route path="notifikasi" element={<Notifikasi />} />
-          <Route path="pengaduan" element={<Pengaduan />} />
-          <Route path="profil-lsp" element={<ProfileAdmin />} />
-          <Route path="banding" element={<Banding />} />
-          <Route path="mapa" element={<Mapa />} />
-        </Route>
+        <Route index element={<AdminDashboard />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="unit-kompetensi" element={<UnitKompetensi />} />
+        <Route path="skkni" element={<Skkni />} />
+        <Route path="skema" element={<Skema />} />
+        <Route path="skema/:id/persyaratan" element={<SkemaPersyaratan />} />
+        <Route path="skema/:id/persyaratan-tuk" element={<SkemaPersyaratanTuk />} />
+        <Route path="dokumen-mutu" element={<DokumenMutu />} />
+        <Route path="jadwal/uji-kompetensi" element={<JadwalUji />} />
+        <Route path="tuk" element={<TempatUji />} />
+        <Route path="verifikasi-pendaftaran" element={<VerifikasiPendaftaran />} />
+        <Route path="asesi/tambah" element={<TambahAsesi />} />
+        <Route path="asesi/ia01-observasi" element={<IA01Observasi />} />
+        <Route path="asesi/ia03-pertanyaan" element={<IA03Pertanyaan />} />
+        <Route path="asesor" element={<Asesor />} />
+        <Route path="notifikasi" element={<Notifikasi />} />
+        <Route path="pengaduan" element={<Pengaduan />} />
+        <Route path="profil-lsp" element={<ProfileAdmin />} />
+        <Route path="banding" element={<Banding />} />
+        <Route path="mapa" element={<Mapa />} />
       </Routes>
     </ProtectedAdmin>
   );

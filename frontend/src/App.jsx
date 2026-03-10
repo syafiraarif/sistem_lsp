@@ -1,12 +1,6 @@
 // src/App.jsx
-
 import React from "react";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import MainLayout from "./layouts/MainLayout";
 import AppRoutes from "./routes/AppRoutes";
@@ -14,59 +8,37 @@ import TukRoutes from "./routes/TukRoutes";
 import AsesiRoutes from "./routes/AsesiRoutes";
 import AdminRoutes from "./routes/AdminRoutes";
 
-/* ========================
-   PROTECTED TUK
-======================== */
+/* Protected Route Helpers */
 function ProtectedTuk({ children }) {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
-
-  if (!token || role !== "tuk") {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!token || role !== "tuk") return <Navigate to="/login" replace />;
   return children;
 }
 
-/* ========================
-   PROTECTED ASESI
-======================== */
 function ProtectedAsesi({ children }) {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
-
-  if (!token || role !== "asesi") {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!token || role !== "asesi") return <Navigate to="/login" replace />;
   return children;
 }
 
-/* ========================
-   PROTECTED ADMIN
-======================== */
 function ProtectedAdmin({ children }) {
   const user = localStorage.getItem("user");
-
   let parsedUser = null;
   try {
     parsedUser = user ? JSON.parse(user) : null;
   } catch (err) {
     parsedUser = null;
   }
-
-  if (!parsedUser || parsedUser.role?.toLowerCase() !== "admin") {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!parsedUser || parsedUser.role?.toLowerCase() !== "admin") return <Navigate to="/login" replace />;
   return children;
 }
 
 function App() {
   return (
     <Routes>
-
-      {/* ROUTE ADMIN */}
+      {/* ADMIN */}
       <Route
         path="/admin/*"
         element={
@@ -76,7 +48,7 @@ function App() {
         }
       />
 
-      {/* ROUTE TUK */}
+      {/* TUK */}
       <Route
         path="/tuk/*"
         element={
@@ -86,7 +58,7 @@ function App() {
         }
       />
 
-      {/* ROUTE ASESI */}
+      {/* ASESI */}
       <Route
         path="/asesi/*"
         element={
@@ -96,7 +68,7 @@ function App() {
         }
       />
 
-      {/* ROUTE PUBLIC */}
+      {/* PUBLIC */}
       <Route
         path="/*"
         element={
@@ -105,7 +77,6 @@ function App() {
           </MainLayout>
         }
       />
-
     </Routes>
   );
 }
