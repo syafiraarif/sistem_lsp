@@ -14,12 +14,28 @@ const Asesor = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // State untuk melacak ID Asesor yang sudah dikirimi email (Disimpan di localStorage)
+  const [emailSentIds, setEmailSentIds] = useState(() => {
+    const saved = localStorage.getItem('emailSentAsesor');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  // Simpan ke localStorage setiap kali ada perubahan pada emailSentIds
+  useEffect(() => {
+    localStorage.setItem('emailSentAsesor', JSON.stringify(Array.from(emailSentIds)));
+  }, [emailSentIds]);
+
+  const [sendingEmailId, setSendingEmailId] = useState(null);
+  
   // Modal State
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [isDetailMode, setIsDetailMode] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+  
+  // State File Excel
+  const [fileExcel, setFileExcel] = useState(null);
   
   // Pagination
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
@@ -159,7 +175,7 @@ const Asesor = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // --- SUBMIT HANDLER ---
+  // --- SUBMIT HANDLER UNTUK FORM MANUAL ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if(!formData.nik || !formData.email || !formData.nama_lengkap) {
@@ -205,12 +221,16 @@ const Asesor = () => {
     });
 
     if (confirm.isConfirmed) {
+      setSendingEmailId(id_user);
       try {
-        Swal.fire({ title: 'Mengirim Email...', text: 'Harap tunggu sebentar', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         await api.post(`/admin/send-email/${id_user}`);
+        // Tandai id ini sudah dikirim ke dalam state (yang juga akan men-trigger useEffect untuk nyimpan ke localStorage)
+        setEmailSentIds(prev => new Set(prev).add(id_user)); 
         Swal.fire('Terkirim!', 'Informasi akun berhasil dikirim ke email asesor.', 'success');
       } catch (error) {
         Swal.fire('Gagal', error.response?.data?.message || 'Terjadi kesalahan saat mengirim email.', 'error');
+      } finally {
+        setSendingEmailId(null);
       }
     }
   };
@@ -252,6 +272,28 @@ const Asesor = () => {
       } catch (error) {
         Swal.fire('Gagal', 'Tidak bisa menghapus data.', 'error');
       }
+    }
+  };
+
+  // --- HANDLER IMPORT EXCEL ---
+  const handleImportExcel = async (e) => {
+    e.preventDefault();
+    if (!fileExcel) return Swal.fire('Peringatan', 'Pilih file Excel terlebih dahulu', 'warning');
+
+    const formUpload = new FormData();
+    formUpload.append("file", fileExcel);
+
+    try {
+      Swal.fire({ title: 'Proses Import...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      await api.post('/admin/import-asesor', formUpload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      Swal.fire('Sukses', 'Data Asesor berhasil diimport', 'success');
+      setShowImportModal(false);
+      setFileExcel(null);
+      fetchData(pagination.page); 
+    } catch (error) {
+      Swal.fire('Error', error.response?.data?.message || 'Gagal import excel', 'error');
     }
   };
 
@@ -353,7 +395,21 @@ const Asesor = () => {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex justify-center gap-1.5">
-                        <button onClick={() => handleSendAccount(item.id_user)} className="p-1.5 text-green-600 bg-green-50 rounded hover:bg-green-600 hover:text-white border border-green-100 transition-colors" title="Kirim Akun via Email"><Mail size={16} /></button>
+                        
+                        {/* TOMBOL SEND EMAIL */}
+                        <button 
+                          onClick={() => handleSendAccount(item.id_user)} 
+                          disabled={emailSentIds.has(item.id_user) || sendingEmailId === item.id_user}
+                          className={`p-1.5 rounded transition-colors border flex items-center justify-center ${
+                            emailSentIds.has(item.id_user)
+                              ? 'bg-green-50 text-green-600 border-green-200 opacity-50 cursor-not-allowed'
+                              : 'text-green-600 bg-green-50 hover:bg-green-600 hover:text-white border-green-100'
+                          }`} 
+                          title={emailSentIds.has(item.id_user) ? "Email Sudah Terkirim" : "Kirim Akun via Email"}
+                        >
+                          {sendingEmailId === item.id_user ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+                        </button>
+
                         <button onClick={() => { handleEdit(item); setIsDetailMode(true); }} className="p-1.5 text-[#182D4A] bg-[#182D4A]/10 rounded hover:bg-[#182D4A] hover:text-white transition-colors" title="Detail"><Eye size={16} /></button>
                         <button onClick={() => handleEdit(item)} className="p-1.5 text-[#CC6B27] bg-[#CC6B27]/10 rounded hover:bg-[#CC6B27] hover:text-white transition-colors" title="Edit"><Edit2 size={16} /></button>
                         <button onClick={() => handleDelete(item.id_user || item.id)} className="p-1.5 text-red-600 bg-red-50 rounded hover:bg-red-600 hover:text-white border border-red-100 transition-colors" title="Hapus"><Trash2 size={16} /></button>
@@ -367,7 +423,7 @@ const Asesor = () => {
         </div>
       </div>
 
-      {/* --- MODAL FORM --- */}
+      {/* --- MODAL FORM MANUAL --- */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/40 backdrop-blur-sm">
           <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[95vh] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
@@ -527,7 +583,7 @@ const Asesor = () => {
         </div>
       )}
 
-      {/* IMPORT MODAL */}
+      {/* --- IMPORT MODAL --- */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/40 backdrop-blur-sm">
           <div className="bg-white rounded-xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
@@ -535,17 +591,30 @@ const Asesor = () => {
               <h3 className="text-[16px] font-bold text-[#071E3D]">Import Data Excel</h3>
               <button onClick={() => setShowImportModal(false)} className="text-[#182D4A] hover:text-[#CC6B27]"><X size={20}/></button>
             </div>
-            <div className="p-6 bg-white">
-              <div className="border-2 border-dashed border-[#CC6B27]/30 rounded-xl p-8 text-center bg-[#CC6B27]/5">
-                <Upload className="mx-auto text-[#CC6B27] mb-3" size={36} />
-                <p className="text-[13px] font-bold text-[#071E3D] mb-4">Upload file template Excel (.xlsx)</p>
-                <input type="file" className="block w-full text-[12px] text-[#182D4A] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-[12px] file:font-bold file:bg-[#071E3D] file:text-white hover:file:bg-[#182D4A] file:cursor-pointer cursor-pointer transition-colors"/>
+            
+            <form onSubmit={handleImportExcel}>
+              <div className="p-6 bg-white">
+                <div className="border-2 border-dashed border-[#CC6B27]/30 rounded-xl p-8 text-center bg-[#CC6B27]/5">
+                  <Upload className="mx-auto text-[#CC6B27] mb-3" size={36} />
+                  <p className="text-[13px] font-bold text-[#071E3D] mb-4">Upload file template Excel (.xlsx)</p>
+                  <input 
+                    type="file" 
+                    accept=".xlsx, .xls"
+                    onChange={(e) => setFileExcel(e.target.files[0])}
+                    className="block w-full text-[12px] text-[#182D4A] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-[12px] file:font-bold file:bg-[#071E3D] file:text-white hover:file:bg-[#182D4A] file:cursor-pointer cursor-pointer transition-colors"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="px-6 py-4 border-t border-[#071E3D]/10 bg-[#FAFAFA] flex justify-end gap-3">
-              <button className="px-5 py-2.5 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] hover:bg-[#E2E8F0] transition-colors text-[13px]" onClick={() => setShowImportModal(false)}>Batal</button>
-              <button className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm text-[13px]">Upload</button>
-            </div>
+              <div className="px-6 py-4 border-t border-[#071E3D]/10 bg-[#FAFAFA] flex justify-end gap-3">
+                <button type="button" className="px-5 py-2.5 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] hover:bg-[#E2E8F0] transition-colors text-[13px]" onClick={() => setShowImportModal(false)}>
+                  Batal
+                </button>
+                <button type="submit" className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm text-[13px]">
+                  Upload
+                </button>
+              </div>
+            </form>
+
           </div>
         </div>
       )}

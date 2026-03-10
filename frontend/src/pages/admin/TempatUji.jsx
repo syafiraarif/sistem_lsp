@@ -30,21 +30,21 @@ const TempatUji = () => {
   const [kelurahanList, setKelurahanList] = useState([]);
 
   // --- FORM DATA ---
+  // Disesuaikan dengan tuk.model.js dan controller
   const initialFormState = {
-    // Data Akun (User)
+    // Data Akun (User) & TUK
     email: '',
-    no_hp: '',
+    no_hp: '', // di backend diproses menjadi telepon TUK
 
     // Data Profile TUK
     kode_tuk: '',
     nama_tuk: '',
-    jenis_tuk: 'sewaktu',
-    profil_singkat: '',
+    jenis_tuk: 'sewaktu', // "mandiri", "sewaktu", "tempat_kerja"
+    penanggung_jawab: '',
+    institusi_induk: '',
     
     // Alamat
     alamat: '',
-    rt: '',
-    rw: '',
     provinsi: '',
     kota: '',
     kecamatan: '',
@@ -54,7 +54,7 @@ const TempatUji = () => {
     // Legalitas
     no_lisensi: '',
     masa_berlaku_lisensi: '',
-    status_tuk: 'aktif'
+    status: 'aktif' // enum "aktif", "nonaktif"
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -148,15 +148,14 @@ const TempatUji = () => {
       const toDateInput = (dateStr) => dateStr ? new Date(dateStr).toISOString().split('T')[0] : '';
 
       setFormData({
-        email: item.User?.email || '',
-        no_hp: item.User?.no_hp || '',
-        kode_tuk: item.kode_tuk,
-        nama_tuk: item.nama_tuk,
+        email: item.User?.email || item.email || '',
+        no_hp: item.User?.no_hp || item.telepon || '',
+        kode_tuk: item.kode_tuk || '',
+        nama_tuk: item.nama_tuk || '',
         jenis_tuk: item.jenis_tuk || 'sewaktu',
-        profil_singkat: item.profil_singkat || '',
+        penanggung_jawab: item.penanggung_jawab || '',
+        institusi_induk: item.institusi_induk || '',
         alamat: item.alamat || '',
-        rt: item.rt || '',
-        rw: item.rw || '',
         provinsi: item.provinsi || '',
         kota: item.kota || '',
         kecamatan: item.kecamatan || '',
@@ -164,7 +163,7 @@ const TempatUji = () => {
         kode_pos: item.kode_pos || '',
         no_lisensi: item.no_lisensi || '',
         masa_berlaku_lisensi: toDateInput(item.masa_berlaku_lisensi),
-        status_tuk: item.status_tuk || 'aktif'
+        status: item.status || 'aktif'
       });
       return true;
     } catch (error) {
@@ -177,7 +176,7 @@ const TempatUji = () => {
     resetForm();
     const success = await fetchDetail(id);
     if (success) {
-      setCurrentId(id);
+      setCurrentId(id); // id_tuk
       setIsEditMode(true);
       setShowModal(true);
     }
@@ -204,9 +203,11 @@ const TempatUji = () => {
 
     try {
       if (isEditMode) {
+        // Update data via PUT /admin/tuk/:id
         await api.put(`/admin/tuk/${currentId}`, payload);
         Swal.fire({title: 'Sukses', text: 'Data TUK berhasil diperbarui', icon: 'success', confirmButtonColor: '#CC6B27'});
       } else {
+        // Create akun user & TUK
         await api.post('/admin/tuk-akun', payload);
         Swal.fire({title: 'Sukses', text: 'TUK baru berhasil dibuat.', icon: 'success', confirmButtonColor: '#CC6B27'});
       }
@@ -322,7 +323,7 @@ const TempatUji = () => {
                 </tr>
               ) : data.length > 0 ? (
                 data.map((item, idx) => (
-                  <tr key={item.id_user || idx} className="hover:bg-[#CC6B27]/5 transition-colors">
+                  <tr key={item.id_tuk || idx} className="hover:bg-[#CC6B27]/5 transition-colors">
                     <td className="py-4 px-4 text-center font-bold text-[#071E3D] text-[13.5px]">{(pagination.page - 1) * pagination.limit + idx + 1}</td>
                     <td className="py-4 px-4">
                         <span className="px-2.5 py-1 bg-[#FAFAFA] border border-[#071E3D]/10 rounded-md font-mono font-medium text-[13px] text-[#182D4A]">{item.kode_tuk}</span>
@@ -330,7 +331,7 @@ const TempatUji = () => {
                     <td className="py-4 px-4">
                       <div className="font-bold text-[#071E3D] text-[13.5px] max-w-sm truncate">{item.nama_tuk}</div>
                       <div className="text-[12px] text-[#182D4A]/70 font-medium flex items-center gap-1 mt-0.5">
-                        <MapPin size={12}/> {item.kota}, {item.provinsi}
+                        <MapPin size={12}/> {item.kota || '-'}, {item.provinsi || '-'}
                       </div>
                     </td>
                     <td className="py-4 px-4">
@@ -338,16 +339,16 @@ const TempatUji = () => {
                     </td>
                     <td className="py-4 px-4 text-center">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border capitalize ${
-                        item.status_tuk === 'aktif' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
+                        item.status === 'aktif' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
                       }`}>
-                        {item.status_tuk}
+                        {item.status}
                       </span>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex justify-center gap-1.5">
-                        <button onClick={() => openDetailModal(item.id_user)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 transition-colors" title="Detail"><Eye size={18}/></button>
-                        <button onClick={() => openEditModal(item.id_user)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10 transition-colors" title="Edit"><Edit2 size={18}/></button>
-                        <button onClick={() => handleDelete(item.id_user)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus"><Trash2 size={18}/></button>
+                        <button onClick={() => openDetailModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 transition-colors" title="Detail"><Eye size={18}/></button>
+                        <button onClick={() => openEditModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10 transition-colors" title="Edit"><Edit2 size={18}/></button>
+                        <button onClick={() => handleDelete(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus"><Trash2 size={18}/></button>
                       </div>
                     </td>
                   </tr>
@@ -384,12 +385,12 @@ const TempatUji = () => {
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Email {isEditMode && <span className="text-red-500 font-normal">(Tidak bisa diubah)</span>}</label>
+                            <label className="text-[13px] font-bold text-[#071E3D]">Email {isEditMode && <span className="text-[#182D4A]/50 font-normal">(Tidak bisa diubah)</span>}</label>
                             <input type="email" name="email" value={formData.email} onChange={handleInputChange} disabled={isEditMode || isDetailMode} required={!isEditMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="Email login TUK..."/>
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <label className="text-[13px] font-bold text-[#071E3D]">No Handphone / Telp</label>
-                            <input type="text" name="no_hp" value={formData.no_hp} onChange={handleInputChange} disabled={isEditMode || isDetailMode} required={!isEditMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="08..."/>
+                            <input type="text" name="no_hp" value={formData.no_hp} onChange={handleInputChange} disabled={isDetailMode} required={!isEditMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="08..."/>
                         </div>
                     </div>
                 </div>
@@ -416,9 +417,13 @@ const TempatUji = () => {
                                 <option value="mandiri">TUK Mandiri</option>
                             </select>
                         </div>
-                        <div className="flex flex-col gap-1.5 md:col-span-2">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Profil Singkat</label>
-                            <textarea name="profil_singkat" rows="2" value={formData.profil_singkat} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-3 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 resize-none"></textarea>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Penanggung Jawab</label>
+                            <input type="text" name="penanggung_jawab" value={formData.penanggung_jawab} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="Nama penanggung jawab..."/>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Institusi Induk</label>
+                            <input type="text" name="institusi_induk" value={formData.institusi_induk} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="Nama instansi/perusahaan..."/>
                         </div>
                     </div>
                 </div>
@@ -472,19 +477,9 @@ const TempatUji = () => {
                         </div>
                         )}
                         
-                        <div className="grid grid-cols-3 gap-5 md:col-span-2">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#071E3D]">RT</label>
-                                <input type="text" name="rt" value={formData.rt} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"/>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#071E3D]">RW</label>
-                                <input type="text" name="rw" value={formData.rw} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"/>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#071E3D]">Kode Pos</label>
-                                <input type="text" name="kode_pos" value={formData.kode_pos} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"/>
-                            </div>
+                        <div className="flex flex-col gap-1.5 md:col-span-2">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Kode Pos</label>
+                            <input type="text" name="kode_pos" value={formData.kode_pos} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 w-full md:w-1/2"/>
                         </div>
                     </div>
                 </div>
@@ -505,7 +500,7 @@ const TempatUji = () => {
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <label className="text-[13px] font-bold text-[#071E3D]">Status TUK</label>
-                            <select name="status_tuk" value={formData.status_tuk} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
+                            <select name="status" value={formData.status} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
                                 <option value="aktif">Aktif</option>
                                 <option value="nonaktif">Nonaktif</option>
                             </select>
