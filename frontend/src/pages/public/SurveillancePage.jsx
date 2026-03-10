@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
 import ReCAPTCHA from "react-google-recaptcha";
 import { 
   ShieldCheck, 
@@ -14,7 +13,6 @@ import {
   Search,
   HelpCircle,
   Database,
-  Sparkles,
   Calendar,
   ClipboardList
 } from "lucide-react";
@@ -28,20 +26,20 @@ export default function SurveillancePage() {
   const [loading, setLoading] = useState(false);
   const recaptchaRef = useRef(null);
 
-  // State Form disesuaikan dengan kolom tabel 'surveillance' di database
+  // State Form selaras dengan Surveillance.model.js
   const [form, setForm] = useState({
-    nik: "", 
+    nik: "", // Akan dikonversi ke id_user di backend berdasarkan NIK
     id_skema: "",
     periode_surveillance: "",
     nomor_sertifikat: "",
     nomor_registrasi: "",
-    sumber_dana: "", // Match DB: 'pribadi' | 'perusahaan'
+    sumber_dana: "", // Match model: 'apbn', 'apbd', 'perusahaan', 'mandiri'
     nama_perusahaan: "",
     alamat_perusahaan: "",
     jabatan_pekerjaan: "",
     nama_proyek: "",
     jabatan_dalam_proyek: "",
-    kesesuaian_kompetensi: "", // Match DB: 'sesuai' | 'tidak_sesuai'
+    kesesuaian_kompetensi: "", // Match model: 'sesuai', 'tidak_sesuai', 'lainnya'
     keterangan_lainnya: "",
     captchaToken: "", 
   });
@@ -74,7 +72,6 @@ export default function SurveillancePage() {
       await createSurveillance(form);
       alert("Laporan Surveillance berhasil dikirim!");
       
-      // Reset Form
       setStep(1);
       setForm({
         nik: "", id_skema: "", periode_surveillance: "", nomor_sertifikat: "",
@@ -116,7 +113,6 @@ export default function SurveillancePage() {
               </p>
             </header>
 
-            {/* Stepper Baru (3 Bagian) */}
             <div className="flex items-center gap-4 mb-12">
               {[1, 2, 3].map((num) => (
                 <div key={num} className="flex items-center gap-2">
@@ -147,6 +143,7 @@ export default function SurveillancePage() {
                       <InputGroup label="NIK Pemegang Sertifikat*" name="nik" value={form.nik} onChange={handleChange} placeholder="Masukkan NIK Anda" />
                       <SelectGroup label="Periode Surveillance*" name="periode_surveillance" value={form.periode_surveillance} onChange={handleChange}>
                         <option value="">Pilih Tahun</option>
+                        {/* Value disesuaikan dengan tipe Integer di model */}
                         <option value="2024">2024</option>
                         <option value="2025">2025</option>
                         <option value="2026">2026</option>
@@ -173,8 +170,10 @@ export default function SurveillancePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <SelectGroup label="Sumber Dana*" name="sumber_dana" value={form.sumber_dana} onChange={handleChange}>
                         <option value="">Pilih Sumber Dana</option>
-                        <option value="pribadi">Mandiri / Pribadi</option>
+                        <option value="apbn">APBN</option>
+                        <option value="apbd">APBD</option>
                         <option value="perusahaan">Instansi / Perusahaan</option>
+                        <option value="mandiri">Mandiri / Pribadi</option>
                       </SelectGroup>
                       <InputGroup label="Nama Perusahaan*" name="nama_perusahaan" value={form.nama_perusahaan} onChange={handleChange} placeholder="Nama Kantor" />
                       <InputGroup label="Jabatan Struktural*" name="jabatan_pekerjaan" value={form.jabatan_pekerjaan} onChange={handleChange} placeholder="Contoh: Manager" />
@@ -204,6 +203,7 @@ export default function SurveillancePage() {
                           <option value="">Apakah pekerjaan sesuai skema sertifikasi?</option>
                           <option value="sesuai">Sesuai</option>
                           <option value="tidak_sesuai">Tidak Sesuai</option>
+                          <option value="lainnya">Lainnya</option>
                         </SelectGroup>
                       </div>
                       <div className="md:col-span-2">
@@ -212,12 +212,12 @@ export default function SurveillancePage() {
                           name="keterangan_lainnya"
                           value={form.keterangan_lainnya}
                           onChange={handleChange}
+                          placeholder="Jelaskan jika memilih opsi Lainnya atau berikan catatan tambahan"
                           className="w-full mt-2 px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 transition-all text-sm font-bold text-[#071E3D] min-h-[100px]"
                         />
                       </div>
                     </div>
 
-                    {/* Google ReCAPTCHA di Step Terakhir */}
                     <div className="flex flex-col items-center gap-3 py-6 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">
                       <div className="flex items-center gap-2 mb-1">
                         <ShieldCheck size={16} className="text-orange-500" />
@@ -225,7 +225,7 @@ export default function SurveillancePage() {
                       </div>
                       <ReCAPTCHA
                         ref={recaptchaRef}
-                        sitekey="6LcrU3QsAAAAAAcNAI0nvz_ITfmPLTDZKTN4zA5X" 
+                        sitekey="6LdSGX4sAAAAAA7BAt1iY8OVxtnx_EFunFBQV-QF" 
                         onChange={onCaptchaChange}
                       />
                     </div>
@@ -266,7 +266,6 @@ export default function SurveillancePage() {
               </div>
             </div>
 
-            {/* Pusat Bantuan (Sesuai Permintaan Regina) */}
             <Link to="/faq" className="group block relative">
               <motion.div 
                 whileHover={{ scale: 1.02 }}
@@ -297,7 +296,7 @@ export default function SurveillancePage() {
   );
 }
 
-// ================= HELPER COMPONENTS =================
+// ================= HELPER COMPONENTS (Unchanged) =================
 function SidebarInfo({ icon: Icon, text }) {
   return (
     <div className="flex gap-4 group/item">

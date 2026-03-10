@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import ReCAPTCHA from "react-google-recaptcha"; // Menggunakan Google ReCAPTCHA sesuai Controller
 import { 
   User, 
   MessageSquare, 
@@ -14,8 +15,8 @@ import {
   Send,
   AlertCircle,
   Sparkles,
-  RefreshCw,
-  ShieldCheck
+  ShieldCheck,
+  Briefcase
 } from "lucide-react";
 
 const API_URL = "http://localhost:3000/api/public";
@@ -23,69 +24,63 @@ const API_URL = "http://localhost:3000/api/public";
 export default function Complaint() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const recaptchaRef = useRef(null);
   
-  // Logic Captcha Kode Keamanan
-  const [captchaCode, setCaptchaCode] = useState("");
-  const [userCaptchaInput, setUserCaptchaInput] = useState("");
-
+  // State Form disesuaikan dengan pengaduan.model.js
   const [formData, setFormData] = useState({
-    nama_pelapor: "", // Sesuai Database
-    email_pelapor: "", // Sesuai Database
-    no_hp: "",
-    subjek: "", // Sesuai Database
-    isi_pengaduan: "" // Sesuai Database
+    nama_pengadu: "",    // Sesuai DB: nama_pengadu
+    email_pengadu: "",   // Sesuai DB: email_pengadu
+    no_hp_pengadu: "",   // Sesuai DB: no_hp_pengadu
+    sebagai_siapa: "",   // Sesuai DB: ENUM("asesi","asesor","masyarakat")
+    isi_pengaduan: "",   // Sesuai DB: isi_pengaduan
+    captchaToken: ""     // Diperlukan oleh Controller
   });
-
-  // Generate Captcha saat pertama kali load
-  useEffect(() => {
-    generateCaptcha();
-  }, []);
-
-  const generateCaptcha = () => {
-    const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    let code = "";
-    for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setCaptchaCode(code);
-  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const onCaptchaChange = (token) => {
+    setFormData({ ...formData, captchaToken: token });
   };
 
   const nextStep = () => setStep(step + 1);
   const prevStep = () => setStep(step - 1);
 
   const handleSubmit = async () => {
-    // Validasi Captcha
-    if (userCaptchaInput.toUpperCase() !== captchaCode) {
-      alert("Kode keamanan (Captcha) yang Anda masukkan salah!");
-      generateCaptcha();
-      setUserCaptchaInput("");
+    if (!formData.captchaToken) {
+      alert("Silakan centang Captcha terlebih dahulu!");
       return;
     }
 
     setLoading(true);
     try {
-      // POST ke endpoint sesuai backend
-      await axios.post(`${API_URL}/pengaduan`, formData);
+      // Menambahkan tanggal_pengaduan secara otomatis jika backend tidak menghandle default NOW
+      const payload = {
+        ...formData,
+        tanggal_pengaduan: new Date().toISOString()
+      };
+
+      await axios.post(`${API_URL}/pengaduan`, payload);
       
       alert("Pengaduan Anda telah terkirim dan akan segera diproses.");
       
+      // Reset Form
       setStep(1);
       setFormData({
-        nama_pelapor: "",
-        email_pelapor: "",
-        no_hp: "",
-        subjek: "",
-        isi_pengaduan: ""
+        nama_pengadu: "",
+        email_pengadu: "",
+        no_hp_pengadu: "",
+        sebagai_siapa: "",
+        isi_pengaduan: "",
+        captchaToken: ""
       });
-      setUserCaptchaInput("");
-      generateCaptcha();
+      if (recaptchaRef.current) recaptchaRef.current.reset();
     } catch (err) {
       console.error(err);
-      alert("Gagal mengirim pengaduan. Pastikan server backend menyala.");
+      const errorMsg = err.response?.data?.message || "Gagal mengirim pengaduan. Pastikan server terhubung.";
+      alert(errorMsg);
+      if (recaptchaRef.current) recaptchaRef.current.reset();
     } finally {
       setLoading(false);
     }
@@ -145,33 +140,37 @@ export default function Complaint() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <InputGroup 
                         label="Nama Lengkap*" 
-                        name="nama_pelapor"
-                        value={formData.nama_pelapor}
+                        name="nama_pengadu"
+                        value={formData.nama_pengadu}
                         onChange={handleChange}
                         placeholder="Masukkan nama Anda" 
                       />
                       <InputGroup 
                         label="Alamat Email*" 
-                        name="email_pelapor"
-                        value={formData.email_pelapor}
+                        name="email_pengadu"
+                        value={formData.email_pengadu}
                         onChange={handleChange}
                         placeholder="nama@domain.com" 
                         type="email" 
                       />
                       <InputGroup 
                         label="Nomor WhatsApp*" 
-                        name="no_hp"
-                        value={formData.no_hp}
+                        name="no_hp_pengadu"
+                        value={formData.no_hp_pengadu}
                         onChange={handleChange}
                         placeholder="0812xxxx" 
                       />
-                      <InputGroup 
-                        label="Subjek Aduan*" 
-                        name="subjek"
-                        value={formData.subjek}
+                      <SelectGroup 
+                        label="Bertindak Sebagai*" 
+                        name="sebagai_siapa"
+                        value={formData.sebagai_siapa}
                         onChange={handleChange}
-                        placeholder="Contoh: Masalah Login" 
-                      />
+                      >
+                        <option value="">Pilih Kategori</option>
+                        <option value="asesi">Asesi (Peserta)</option>
+                        <option value="asesor">Asesor (Penguji)</option>
+                        <option value="masyarakat">Masyarakat Umum</option>
+                      </SelectGroup>
                     </div>
                   </motion.div>
                 )}
@@ -202,29 +201,17 @@ export default function Complaint() {
                       />
                     </div>
 
-                    {/* SEKSI CAPTCHA KODE KEAMANAN */}
-                    <div className="p-6 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">
+                    {/* GOOGLE RECAPTCHA - Menggantikan Captcha Manual agar sinkron dengan Backend */}
+                    <div className="p-6 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200 flex flex-col items-center">
                        <div className="flex items-center gap-2 mb-4">
                           <ShieldCheck size={16} className="text-orange-500" />
                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Verifikasi Keamanan</span>
                        </div>
-                       <div className="flex flex-col md:flex-row items-center gap-6">
-                          <div className="flex items-center gap-4">
-                             <div className="bg-[#071E3D] text-white px-6 py-3 rounded-xl font-black tracking-[0.3em] text-xl italic select-none line-through decoration-orange-500">
-                                {captchaCode}
-                             </div>
-                             <button type="button" onClick={generateCaptcha} className="p-2 hover:rotate-180 transition-transform duration-500 text-slate-400">
-                                <RefreshCw size={20} />
-                             </button>
-                          </div>
-                          <input 
-                            type="text"
-                            placeholder="Ketik kode di samping"
-                            value={userCaptchaInput}
-                            onChange={(e) => setUserCaptchaInput(e.target.value)}
-                            className="flex-1 px-6 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-bold text-center uppercase"
-                          />
-                       </div>
+                       <ReCAPTCHA
+                          ref={recaptchaRef}
+                          sitekey="6LdSGX4sAAAAAA7BAt1iY8OVxtnx_EFunFBQV-QF" 
+                          onChange={onCaptchaChange}
+                        />
                     </div>
                   </motion.div>
                 )}
@@ -261,13 +248,12 @@ export default function Complaint() {
                 <h3 className="font-black uppercase tracking-widest text-xs">Penting</h3>
               </div>
               <div className="space-y-6">
-                <InfoItem icon={Mail} text="Pastikan email aktif untuk menerima nomor registrasi aduan." />
+                <InfoItem icon={Mail} text="Pastikan email aktif untuk koordinasi lebih lanjut." />
                 <InfoItem icon={AlertCircle} text="Layanan ini hanya untuk keluhan terkait sertifikasi." />
                 <InfoItem icon={CheckCircle2} text="Identitas pelapor dijamin kerahasiaannya." />
               </div>
             </div>
 
-            {/* PUSAT BANTUAN SESUAI PERMINTAAN */}
             <Link to="/faq" className="group block relative">
               <motion.div 
                 whileHover={{ scale: 1.02 }}
@@ -290,7 +276,7 @@ export default function Complaint() {
                     </motion.div>
                   </div>
                   <h4 className="text-white font-black uppercase tracking-[0.2em] text-sm mb-3">Pusat Bantuan</h4>
-                  <p className="text-slate-400 text-[11px] leading-relaxed mb-8 px-4 font-medium">Bingung alur pendaftaran? Klik untuk panduan lengkap & FAQ.</p>
+                  <p className="text-slate-400 text-[11px] leading-relaxed mb-8 px-4 font-medium">Bingung alur pengaduan? Klik untuk panduan lengkap & FAQ.</p>
                   <div className="w-full py-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 group-hover:bg-orange-500 transition-all duration-500">
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Buka FAQ</span>
                     <ChevronRight size={16} className="text-orange-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
@@ -305,6 +291,7 @@ export default function Complaint() {
   );
 }
 
+// ================= HELPER COMPONENTS =================
 function InfoItem({ icon: Icon, text }) {
   return (
     <div className="flex gap-4 group/item">
@@ -328,6 +315,27 @@ function InputGroup({ label, name, value, onChange, placeholder, type = "text" }
         placeholder={placeholder}
         className="px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all text-sm font-bold text-[#071E3D]"
       />
+    </div>
+  );
+}
+
+function SelectGroup({ label, children, onChange, value, name }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">{label}</label>
+      <div className="relative">
+        <select 
+          name={name} 
+          value={value} 
+          onChange={onChange}
+          className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D] appearance-none"
+        >
+          {children}
+        </select>
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+      </div>
     </div>
   );
 }

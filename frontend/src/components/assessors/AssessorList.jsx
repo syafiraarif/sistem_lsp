@@ -155,7 +155,7 @@ export default function AssessorList() {
         </motion.div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes blob {
           0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 40%; transform: rotate(0deg); }
           50% { border-radius: 60% 40% 30% 70% / 50% 30% 70% 50%; transform: rotate(180deg); }
