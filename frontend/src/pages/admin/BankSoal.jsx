@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../services/api";
 import Swal from "sweetalert2";
-import { Database, Plus, Edit2, Trash2, X, Save, Loader2, Filter, Settings, FileText } from 'lucide-react';
+import { Database, Plus, Edit2, Trash2, X, Save, Loader2, Filter, Settings, FileText, List, ArrowLeft } from 'lucide-react';
 
 const BankSoal = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const unitQuery = searchParams.get('unit'); // Tangkap parameter ?unit=ID dari URL
+
   const [soalList, setSoalList] = useState([]);
   const [unitList, setUnitList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
-  // State form mengikut model bank_soal
+  // State form mengikuti model bank_soal
   const [formData, setFormData] = useState({
     id_unit: "",
     jenis: "IA05_pg",
@@ -19,8 +24,16 @@ const BankSoal = () => {
     status: "aktif",
   });
 
-  const [filterUnit, setFilterUnit] = useState("");
+  // Jika URL membawa unitQuery, jadikan nilai awal filter
+  const [filterUnit, setFilterUnit] = useState(unitQuery || "");
   const [filterJenis, setFilterJenis] = useState("");
+
+  // Update filter otomatis jika URL query berubah
+  useEffect(() => {
+    if (unitQuery) {
+      setFilterUnit(unitQuery);
+    }
+  }, [unitQuery]);
 
   useEffect(() => {
     fetchSoal();
@@ -34,7 +47,7 @@ const BankSoal = () => {
       const res = await api.get('/admin/bank-soal');
       setSoalList(res.data?.data || res.data || []);
     } catch (error) {
-      Swal.fire({ title: "Ralat", text: "Gagal mengambil data soal", icon: "error" });
+      Swal.fire({ title: "Error", text: "Gagal mengambil data soal", icon: "error" });
     } finally {
       setLoading(false);
     }
@@ -49,255 +62,326 @@ const BankSoal = () => {
     }
   };
 
+  // --- FILTERING ---
+  const filteredSoal = soalList.filter(s => {
+    const matchUnit = filterUnit ? String(s.id_unit) === String(filterUnit) : true;
+    const matchJenis = filterJenis ? s.jenis === filterJenis : true;
+    return matchUnit && matchJenis;
+  });
+
+  // Cari detail unit yang sedang aktif (jika masuk lewat mode khusus / ada unitQuery)
+  const activeUnitInfo = unitList.find(u => String(u.id_unit) === String(unitQuery));
+
   // --- HANDLERS ---
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const openModal = (soal = null) => {
-    if (soal) {
-      setEditingId(soal.id_soal);
-      setFormData({
-        id_unit: soal.id_unit,
-        jenis: soal.jenis,
-        pertanyaan: soal.pertanyaan,
-        tingkat_kesulitan: soal.tingkat_kesulitan,
-        status: soal.status,
-      });
-    } else {
-      setEditingId(null);
-      setFormData({
-        id_unit: unitList.length > 0 ? unitList[0].id_unit : "",
-        jenis: "IA05_pg",
-        pertanyaan: "",
-        tingkat_kesulitan: "sedang",
-        status: "aktif",
-      });
-    }
+  const openModal = () => {
+    setEditingId(null);
+    setFormData({
+      id_unit: unitQuery || filterUnit || "", // Otomatis terisi unit yang sedang aktif
+      jenis: "IA05_pg",
+      pertanyaan: "",
+      tingkat_kesulitan: "sedang",
+      status: "aktif",
+    });
     setModalOpen(true);
   };
 
-  const closeModal = () => {
-    setModalOpen(false);
-    setEditingId(null);
+  const closeModal = () => setModalOpen(false);
+
+  const handleEdit = (soal) => {
+    setEditingId(soal.id_soal);
+    setFormData({
+      id_unit: soal.id_unit || "",
+      jenis: soal.jenis || "IA05_pg",
+      pertanyaan: soal.pertanyaan || "",
+      tingkat_kesulitan: soal.tingkat_kesulitan || "sedang",
+      status: soal.status || "aktif",
+    });
+    setModalOpen(true);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.id_unit || !formData.pertanyaan) {
-      return Swal.fire("Amaran", "Sila lengkapkan semua ruang yang wajib", "warning");
+  // ==========================================
+  // --- BLOK FUNGSI VALIDASI ---
+  // ==========================================
+  const validateForm = () => {
+    if (!formData.id_unit) {
+      return "Silakan pilih Unit Kompetensi terlebih dahulu!";
+    }
+    
+    const tanya = String(formData.pertanyaan).trim();
+    if (!tanya || tanya.length < 4) {
+      return `Teks pertanyaan terlalu pendek. Minimal harus 4 karakter!`;
     }
 
+    return null; 
+  };
+
+  // ==========================================
+  // --- BLOK FUNGSI SIMPAN & KONFIRMASI ---
+  // ==========================================
+  const handleSave = async (e) => {
+    e.preventDefault();
+
+    // 1. Jalankan Validasi
+    const errorMsg = validateForm();
+    if (errorMsg) {
+      return Swal.fire("Validasi Gagal", errorMsg, "warning");
+    }
+
+    // 2. Tampilkan Konfirmasi SweetAlert
+    const confirmResult = await Swal.fire({
+      title: "Konfirmasi Simpan",
+      text: `Yakin ingin ${editingId ? 'menyimpan perubahan' : 'menambahkan'} data Bank Soal ini?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#CC6B27", 
+      cancelButtonColor: "#182D4A",
+      confirmButtonText: "Ya, Simpan!",
+      cancelButtonText: "Batal"
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
+    setLoading(true);
     try {
-      setLoading(true);
       if (editingId) {
         await api.put(`/admin/bank-soal/${editingId}`, formData);
-        Swal.fire("Berjaya", "Soal berjaya dikemas kini", "success");
+        Swal.fire({ title: "Berhasil", text: "Soal berhasil diperbarui", icon: "success", timer: 1500 });
       } else {
         await api.post('/admin/bank-soal', formData);
-        Swal.fire("Berjaya", "Soal baharu berjaya ditambah", "success");
+        Swal.fire({ title: "Berhasil", text: "Soal berhasil ditambahkan", icon: "success", timer: 1500 });
       }
       closeModal();
       fetchSoal();
     } catch (error) {
-      Swal.fire("Ralat", error.response?.data?.message || "Berlaku ralat sistem", "error");
+      Swal.fire({ title: "Error", text: "Gagal menyimpan soal", icon: "error" });
     } finally {
       setLoading(false);
     }
   };
 
+  // ==========================================
+  // --- BLOK FUNGSI HAPUS & KONFIRMASI ---
+  // ==========================================
   const handleDelete = async (id) => {
-    const confirm = await Swal.fire({
-      title: "Hapus Soal?",
-      text: "Data ini tidak boleh dikembalikan!",
+    const confirmResult = await Swal.fire({
+      title: "Konfirmasi Hapus",
+      text: "Yakin ingin menghapus data Soal ini? Aksi ini tidak dapat dibatalkan!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Ya, Hapus!"
+      cancelButtonColor: "#182D4A",
+      confirmButtonText: "Ya, Hapus!",
+      cancelButtonText: "Batal"
     });
 
-    if (confirm.isConfirmed) {
-      try {
-        setLoading(true);
-        await api.delete(`/admin/bank-soal/${id}`);
-        Swal.fire("Dihapus!", "Soal berjaya dihapuskan.", "success");
-        fetchSoal();
-      } catch (error) {
-        Swal.fire("Ralat", "Gagal menghapus soal", "error");
-      } finally {
-        setLoading(false);
-      }
+    if (!confirmResult.isConfirmed) return;
+
+    try {
+      await api.delete(`/admin/bank-soal/${id}`);
+      Swal.fire({ title: "Terhapus", text: "Soal berhasil dihapus", icon: "success", timer: 1500 });
+      fetchSoal();
+    } catch (error) {
+      Swal.fire({ title: "Error", text: "Gagal menghapus soal", icon: "error" });
     }
   };
 
-  // --- FILTERING ---
-  const filteredSoal = soalList.filter(soal => {
-    const matchUnit = filterUnit ? soal.id_unit.toString() === filterUnit : true;
-    const matchJenis = filterJenis ? soal.jenis === filterJenis : true;
-    return matchUnit && matchJenis;
-  });
-
   return (
-    <div className="p-6 bg-slate-50 min-h-screen">
-      {/* HEADER */}
-      <div className="bg-[#071E3D] rounded-2xl shadow-lg p-6 mb-6 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="bg-white/10 p-3 rounded-xl border border-white/20">
-              <Database className="text-[#CC6B27]" size={28} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black mb-1">Bank Soal Uji</h1>
-              <p className="text-[#FAFAFA]/70 text-sm">Kelola data pertanyaan untuk ujian (Pilihan Ganda, Esei, Lisan, Wawancara)</p>
-            </div>
-          </div>
+    <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
+      
+      {/* HEADER DENGAN TOMBOL KEMBALI JIKA DIAKSES DARI UNIT KOMPETENSI */}
+      <div className="flex items-center gap-4">
+        {unitQuery && (
           <button 
-            onClick={() => openModal()}
-            className="flex items-center gap-2 bg-[#CC6B27] hover:bg-[#a8561f] px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-[#CC6B27]/30"
+            onClick={() => navigate('/admin/unit-kompetensi')} 
+            className="p-2.5 rounded-lg bg-white border border-[#071E3D]/20 text-[#182D4A] hover:text-[#CC6B27] hover:border-[#CC6B27]/30 transition-all shadow-sm"
+            title="Kembali ke Unit Kompetensi"
           >
-            <Plus size={18} /> Tambah Soal
+            <ArrowLeft size={20} />
           </button>
+        )}
+        <div>
+          <h2 className="text-[22px] font-bold text-[#071E3D] m-0 mb-1 flex items-center gap-2">
+            <Database className="text-[#CC6B27]" size={24}/>
+            Bank Soal Ujian
+          </h2>
+          <p className="text-[14px] text-[#182D4A] m-0">
+            {unitQuery && activeUnitInfo 
+              ? `Mengelola bank soal khusus untuk unit: ${activeUnitInfo.kode_unit}` 
+              : "Pengelolaan bank soal untuk ujian tertulis dan lisan asesi."}
+          </p>
         </div>
       </div>
 
-      {/* FILTER */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex flex-col md:flex-row gap-4 items-center">
-        <div className="flex items-center gap-2 text-slate-500 font-medium">
-          <Filter size={18} /> <span className="text-sm">Filter:</span>
+      {/* FILTER & ACTIONS */}
+      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        
+        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+          <div className={`flex items-center gap-2 border px-3 py-2 rounded-lg transition-colors ${unitQuery ? 'bg-gray-100 border-gray-200' : 'bg-[#FAFAFA] border-[#071E3D]/20'}`}>
+            <Filter size={16} className={unitQuery ? "text-gray-400" : "text-[#CC6B27]"} />
+            <select 
+              className={`bg-transparent text-[13px] font-medium focus:outline-none w-40 ${unitQuery ? 'text-gray-500 cursor-not-allowed' : 'text-[#071E3D]'}`}
+              value={filterUnit}
+              disabled={!!unitQuery} // Kunci dropdown filter jika sedang berada dalam mode "Per Unit"
+              onChange={(e) => setFilterUnit(e.target.value)}
+            >
+              <option value="">Semua Unit Kompetensi</option>
+              {unitList.map(u => (
+                <option key={u.id_unit} value={u.id_unit}>{u.kode_unit}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 bg-[#FAFAFA] border border-[#071E3D]/20 px-3 py-2 rounded-lg">
+            <Settings size={16} className="text-[#CC6B27]" />
+            <select 
+              className="bg-transparent text-[13px] font-medium text-[#071E3D] focus:outline-none w-40"
+              value={filterJenis}
+              onChange={(e) => setFilterJenis(e.target.value)}
+            >
+              <option value="">Semua Jenis Soal</option>
+              <option value="IA05_pg">Pilihan Ganda (PG)</option>
+              <option value="IA06_essay">Ujian Esai</option>
+              <option value="IA07_lisan">Ujian Lisan</option>
+              <option value="IA09_wawancara">Wawancara</option>
+            </select>
+          </div>
         </div>
-        <select 
-          className="w-full md:w-auto p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#CC6B27]"
-          value={filterUnit}
-          onChange={(e) => setFilterUnit(e.target.value)}
-        >
-          <option value="">Semua Unit Kompetensi</option>
-          {unitList.map(u => (
-            <option key={u.id_unit} value={u.id_unit}>{u.kode_unit} - {u.judul_unit}</option>
-          ))}
-        </select>
-        <select 
-          className="w-full md:w-auto p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#CC6B27]"
-          value={filterJenis}
-          onChange={(e) => setFilterJenis(e.target.value)}
-        >
-          <option value="">Semua Jenis Soal</option>
-          <option value="IA05_pg">IA.05 Pilihan Ganda</option>
-          <option value="IA06_essay">IA.06 Esei</option>
-          <option value="IA07_lisan">IA.07 Lisan</option>
-          <option value="IA09_wawancara">IA.09 Wawancara</option>
-        </select>
+
+        <button onClick={openModal} className="w-full md:w-auto px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm flex items-center justify-center gap-2 text-[13px] transition-all">
+          <Plus size={16} /> Tambah Soal
+        </button>
+
       </div>
 
-      {/* LIST SOAL */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <Loader2 className="animate-spin text-[#CC6B27]" size={40} />
-          </div>
-        ) : filteredSoal.length === 0 ? (
-          <div className="text-center py-20 text-slate-500 flex flex-col items-center">
-            <FileText size={48} className="text-slate-300 mb-4" />
-            <p>Belum ada data soal ujian.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="p-4 text-xs font-bold text-slate-500 uppercase">ID</th>
-                  <th className="p-4 text-xs font-bold text-slate-500 uppercase">Unit</th>
-                  <th className="p-4 text-xs font-bold text-slate-500 uppercase">Jenis & Kesulitan</th>
-                  <th className="p-4 text-xs font-bold text-slate-500 uppercase">Pertanyaan</th>
-                  <th className="p-4 text-xs font-bold text-slate-500 uppercase">Status</th>
-                  <th className="p-4 text-xs font-bold text-slate-500 uppercase text-center">Aksi</th>
+      {/* TABLE LIST */}
+      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] w-12 text-center">No</th>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27]">Unit</th>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27]">Jenis Soal</th>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] w-1/3">Pertanyaan</th>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center">Kesulitan</th>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="py-16 text-center">
+                    <Loader2 className="animate-spin mx-auto text-[#CC6B27] mb-3" size={32} />
+                    <p className="text-[#182D4A] font-medium text-[14px]">Memuat data...</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredSoal.map((soal) => (
-                  <tr key={soal.id_soal} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-4 text-sm font-medium text-slate-700">#{soal.id_soal}</td>
-                    <td className="p-4 text-sm text-slate-600 max-w-[200px] truncate" title={soal.unit_kompetensi?.judul_unit}>
-                      {soal.unit_kompetensi ? soal.unit_kompetensi.kode_unit : soal.id_unit}
+              ) : filteredSoal.length > 0 ? (
+                filteredSoal.map((item, idx) => (
+                  <tr key={item.id_soal} className="border-b border-[#071E3D]/5 hover:bg-[#CC6B27]/5 transition-colors text-[13.5px]">
+                    <td className="py-4 px-4 text-center font-semibold text-[#071E3D]">{idx + 1}</td>
+                    <td className="py-4 px-4 font-bold text-[#CC6B27]">
+                      {item.unit_kompetensi?.kode_unit || item.id_unit}
                     </td>
-                    <td className="p-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-bold text-[#071E3D] bg-blue-50 py-1 px-2 rounded-md inline-block w-max">
-                          {soal.jenis.replace('_', ' ').toUpperCase()}
-                        </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-max ${
-                          soal.tingkat_kesulitan === 'mudah' ? 'bg-green-100 text-green-700' :
-                          soal.tingkat_kesulitan === 'sedang' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          {soal.tingkat_kesulitan.toUpperCase()}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm text-slate-700 max-w-md">
-                      <div className="line-clamp-2">{soal.pertanyaan}</div>
-                    </td>
-                    <td className="p-4">
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${soal.status === 'aktif' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                        {soal.status}
+                    <td className="py-4 px-4">
+                      <span className="inline-flex px-2 py-1 rounded bg-[#071E3D]/10 text-[#071E3D] text-[11px] font-bold uppercase">
+                        {item.jenis === 'IA05_pg' ? 'PILIHAN GANDA' : 
+                         item.jenis === 'IA06_essay' ? 'ESAI' : 
+                         item.jenis === 'IA07_lisan' ? 'LISAN' : 
+                         item.jenis === 'IA09_wawancara' ? 'WAWANCARA' : item.jenis}
                       </span>
                     </td>
-                    <td className="p-4 text-center">
+                    <td className="py-4 px-4 text-[#182D4A]">
+                      <div className="line-clamp-2" title={item.pertanyaan}>{item.pertanyaan}</div>
+                    </td>
+                    <td className="py-4 px-4 text-center capitalize font-medium text-[#182D4A]">{item.tingkat_kesulitan?.replace('_', ' ')}</td>
+                    <td className="py-4 px-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => openModal(soal)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                        
+                        {/* TOMBOL KELOLA OPSI KHUSUS PG */}
+                        {item.jenis === 'IA05_pg' && (
+                          <button 
+                            onClick={() => navigate(`/admin/bank-soal-pg?id=${item.id_soal}`)} 
+                            className="p-2 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all shadow-sm border border-blue-100" 
+                            title="Kelola Opsi Pilihan Ganda"
+                          >
+                            <List size={16} />
+                          </button>
+                        )}
+
+                        <button onClick={() => handleEdit(item)} className="p-2 rounded-lg text-[#CC6B27] bg-[#CC6B27]/10 hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm" title="Edit Soal">
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => handleDelete(soal.id_soal)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
+                        <button onClick={() => handleDelete(item.id_soal)} className="p-2 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100" title="Hapus Soal">
                           <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="py-16 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <FileText size={48} className="text-[#071E3D]/20 mb-3"/>
+                      <p className="text-[#182D4A] font-medium text-[14px]">Belum ada data soal ditemukan.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* MODAL FORM */}
+      {/* MODAL FORM CREATE/EDIT SOAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-            <div className="bg-[#071E3D] p-5 flex justify-between items-center">
-              <h2 className="text-white font-bold text-lg flex items-center gap-2">
-                {editingId ? <Edit2 size={18}/> : <Plus size={18}/>} 
-                {editingId ? "Edit Bank Soal" : "Tambah Bank Soal"}
-              </h2>
-              <button onClick={closeModal} className="text-white/60 hover:text-white transition-colors">
-                <X size={24} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            
+            <div className="px-6 py-4 border-b border-[#071E3D]/10 bg-[#FAFAFA] flex justify-between items-center">
+              <div className="flex items-center gap-2 text-[#182D4A]">
+                {editingId ? <Edit2 size={20} className="text-[#CC6B27]" /> : <Plus size={20} className="text-[#CC6B27]" />}
+                <h3 className="font-bold text-[16px]">{editingId ? "Edit Bank Soal" : "Tambah Bank Soal Baru"}</h3>
+              </div>
+              <button onClick={closeModal} className="text-[#182D4A]/50 hover:text-red-500 p-1 rounded-lg transition-colors">
+                <X size={20}/>
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto custom-scrollbar">
-              <form id="soalForm" onSubmit={handleSubmit} className="space-y-5">
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              <form id="soalForm" onSubmit={handleSave} className="flex flex-col gap-4">
                 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-bold text-[#071E3D]">Unit Kompetensi</label>
+                <div>
+                  <label className="text-[13px] font-bold text-[#071E3D] mb-1.5 block">
+                    Pilih Unit Kompetensi {unitQuery && <span className="text-red-500 font-normal italic">(Terkunci)</span>}
+                  </label>
                   <select
                     name="id_unit"
                     value={formData.id_unit}
                     onChange={handleInputChange}
-                    className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px]"
-                    required
+                    disabled={!!unitQuery} // Input disable jika sedang mode spesifik per unit
+                    className={`w-full p-2.5 border border-[#071E3D]/20 rounded-lg font-medium text-[13px] transition-all ${
+                      unitQuery 
+                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300' 
+                        : 'text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10'
+                    }`}
                   >
-                    <option value="">-- Pilih Unit Kompetensi --</option>
-                    {unitList.map(u => (
-                      <option key={u.id_unit} value={u.id_unit}>{u.kode_unit} - {u.judul_unit}</option>
+                    <option value="">-- Silakan Pilih --</option>
+                    {unitList.map((u) => (
+                      <option key={u.id_unit} value={u.id_unit}>
+                        {u.kode_unit} - {u.judul_unit}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-bold text-[#071E3D]">Jenis Soal</label>
+                  <div>
+                    <label className="text-[13px] font-bold text-[#071E3D] mb-1.5 block">Jenis Soal</label>
                     <select
                       name="jenis"
                       value={formData.jenis}
@@ -305,13 +389,13 @@ const BankSoal = () => {
                       className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px]"
                     >
                       <option value="IA05_pg">IA.05 Pilihan Ganda</option>
-                      <option value="IA06_essay">IA.06 Esei</option>
+                      <option value="IA06_essay">IA.06 Esai</option>
                       <option value="IA07_lisan">IA.07 Lisan</option>
                       <option value="IA09_wawancara">IA.09 Wawancara</option>
                     </select>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-bold text-[#071E3D]">Tingkat Kesulitan</label>
+                  <div>
+                    <label className="text-[13px] font-bold text-[#071E3D] mb-1.5 block">Tingkat Kesulitan</label>
                     <select
                       name="tingkat_kesulitan"
                       value={formData.tingkat_kesulitan}
@@ -325,21 +409,20 @@ const BankSoal = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-bold text-[#071E3D]">Pertanyaan</label>
+                <div>
+                  <label className="text-[13px] font-bold text-[#071E3D] mb-1.5 block">Isi Pertanyaan</label>
                   <textarea
                     name="pertanyaan"
+                    rows="4"
                     value={formData.pertanyaan}
                     onChange={handleInputChange}
-                    required
-                    rows="4"
-                    className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]"
-                    placeholder="Taip pertanyaan di sini..."
-                  />
+                    placeholder="Contoh: Apa yang dimaksud dengan..."
+                    className="w-full p-3 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] resize-none"
+                  ></textarea>
                 </div>
 
-                <div className="flex flex-col gap-1.5 w-1/2">
-                  <label className="text-[13px] font-bold text-[#071E3D]">Status</label>
+                <div>
+                  <label className="text-[13px] font-bold text-[#071E3D] mb-1.5 block">Status</label>
                   <select
                     name="status"
                     value={formData.status}
@@ -355,10 +438,12 @@ const BankSoal = () => {
 
             <div className="mt-auto pt-4 border-t border-[#071E3D]/10 bg-[#FAFAFA] flex justify-end gap-3 px-6 pb-4">
               <button type="button" onClick={closeModal} className="px-5 py-2.5 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] bg-white hover:bg-[#E2E8F0] transition-colors text-[13px]">Batal</button>
-              <button type="submit" form="soalForm" disabled={loading} className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm flex items-center gap-2 text-[13px] disabled:opacity-70">
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Simpan
+              <button type="submit" form="soalForm" disabled={loading} className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm flex items-center gap-2 text-[13px] disabled:opacity-70 transition-colors">
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
+                {editingId ? "Simpan Perubahan" : "Simpan Data"}
               </button>
             </div>
+
           </div>
         </div>
       )}
