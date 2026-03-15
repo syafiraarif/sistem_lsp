@@ -146,6 +146,7 @@ router.delete( "/tuk-tempat/detach-skema/:id_tuk/:id_skema", tukTempatController
 router.get("/banding", bandingController.getAllBanding);
 router.put("/banding/:id", bandingController.updateStatusBanding);
 
+router.get("/peserta-jadwal/global", pesertaJadwalController.getAllPesertaGlobal);
 router.get( "/jadwal/:id_jadwal/peserta", pesertaJadwalController.getPesertaByJadwal);
 
 router.post("/unit-kompetensi", unitKompetensiController.create);

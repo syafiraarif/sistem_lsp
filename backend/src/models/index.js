@@ -280,6 +280,12 @@ Mapa02Peserta.belongsTo(Mapa02Mapping, { foreignKey: "id_mapping", as: "mapping"
 PesertaJadwal.hasMany(PresensiPraAsesmen, { foreignKey: "id_peserta" }); 
 PresensiPraAsesmen.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
 
+User.hasMany(Tuk, { foreignKey: "id_penanggung_jawab" });
+Tuk.belongsTo(User, { 
+  foreignKey: "id_penanggung_jawab",
+  as: "penanggungJawab"
+});
+
 module.exports = {
   User,
   Role,

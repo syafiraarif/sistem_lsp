@@ -1,8 +1,10 @@
 const XLSX = require("xlsx");
-const { User, Role, Notifikasi, Tuk } = require("../../models");
+const { User, Role, Tuk, ProfileTuk } = require("../../models");
+const { createNotifikasi } = require("../../services/notifikasi.service");
 const response = require("../../utils/response.util");
 const { createUser } = require("../../services/account.service");
 const sequelize = require("../../config/database");
+const { Op } = require("sequelize");
 
 exports.createTuk = async (req, res) => {
 
@@ -10,10 +12,26 @@ exports.createTuk = async (req, res) => {
 
   try {
 
-    const { kode_tuk, email, no_hp, ...data } = req.body;
+    const {
+      kode_tuk,
+      nama_tuk,
+      jenis_tuk,
+      institusi_induk,
+      telepon,
+      email,
+      alamat,
+      provinsi,
+      kota,
+      kecamatan,
+      kelurahan,
+      kode_pos,
+      no_lisensi,
+      masa_berlaku_lisensi
+    } = req.body;
 
     let role = await Role.findOne({
-      where: { role_name: "TUK" }
+      where: { role_name: "TUK" },
+      transaction: t
     });
 
     if (!role) {
@@ -23,41 +41,69 @@ exports.createTuk = async (req, res) => {
       );
     }
 
-    const { user } = await createUser(
+    const { user, rawPassword } = await createUser(
       {
         username: kode_tuk,
         email,
-        no_hp,
+        no_hp: telepon,
         id_role: role.id_role
       },
       { transaction: t }
     );
 
-    await Tuk.create(
+    const tuk = await Tuk.create(
       {
         kode_tuk,
-        nama_tuk: data.nama_tuk,
-        jenis_tuk: data.jenis_tuk,
-        penanggung_jawab: data.penanggung_jawab,
-        institusi_induk: data.institusi_induk,
-        telepon: no_hp,
-        email: email,
-        alamat: data.alamat,
-        provinsi: data.provinsi,
-        kota: data.kota,
-        kecamatan: data.kecamatan,
-        kelurahan: data.kelurahan,
-        kode_pos: data.kode_pos,
-        no_lisensi: data.no_lisensi,
-        masa_berlaku_lisensi: data.masa_berlaku_lisensi,
-        status: "nonaktif"
+        nama_tuk,
+        jenis_tuk,
+        institusi_induk,
+        telepon,
+        email,
+        alamat,
+        provinsi,
+        kota,
+        kecamatan,
+        kelurahan,
+        kode_pos,
+        no_lisensi,
+        masa_berlaku_lisensi,
+        status: "aktif",
+        id_penanggung_jawab: req.user.id_user
       },
       { transaction: t }
     );
 
+    await ProfileTuk.create(
+      {
+        id_user: user.id_user,
+        nama_lengkap: nama_tuk,
+        alamat,
+        provinsi,
+        kota,
+        kecamatan,
+        kelurahan,
+        kode_pos
+      },
+      { transaction: t }
+    );
+
+    await createNotifikasi({
+      channel: "email",
+      tujuan: email,
+      pesan: `Akun TUK berhasil dibuat.
+Username: ${kode_tuk}
+Password: ${rawPassword}`,
+      status_kirim: "terkirim",
+      ref_type: "akun",
+      ref_id: user.id_user
+    });
+
     await t.commit();
 
-    return response.success(res, "TUK berhasil dibuat");
+    return response.success(res, "Akun TUK berhasil dibuat", {
+      username: kode_tuk,
+      password: rawPassword
+    });
 
   } catch (err) {
 
@@ -76,67 +122,111 @@ exports.importTukExcel = async (req, res) => {
 
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(sheet);
+    const rows = XLSX.utils.sheet_to_json(sheet);
 
-    if (!data.length) {
+    if (!rows.length) {
       return response.error(res, "File Excel kosong", 400);
     }
 
-    let totalSuccess = 0;
-    let totalFailed = 0;
+    let success = 0;
+    let failed = 0;
 
-    for (const row of data) {
+    for (const row of rows) {
 
       const t = await sequelize.transaction();
 
       try {
 
-        await Tuk.create(
+        let role = await Role.findOne({
+          where: { role_name: "TUK" }
+        });
+
+        if (!role) {
+          role = await Role.create(
+            { role_name: "TUK" },
+            { transaction: t }
+          );
+        }
+
+        const { user, rawPassword } = await createUser(
           {
-            kode_tuk: row.kode_tuk,
-            nama_tuk: row.nama_tuk,
-            jenis_tuk: row.jenis_tuk,
-            penanggung_jawab: row.penanggung_jawab,
-            institusi_induk: row.institusi_induk,
-            telepon: row.telepon,
+            username: row.kode_tuk,
             email: row.email,
-            alamat: row.alamat,
-            provinsi: row.provinsi,
-            kota: row.kota,
-            kecamatan: row.kecamatan,
-            kelurahan: row.kelurahan,
-            kode_pos: row.kode_pos,
-            no_lisensi: row.no_lisensi,
-            masa_berlaku_lisensi: row.masa_berlaku_lisensi,
-            status: row.status || "nonaktif"
+            no_hp: row.telepon,
+            id_role: role.id_role
           },
           { transaction: t }
         );
 
+        await Tuk.create({
+          kode_tuk: row.kode_tuk,
+          nama_tuk: row.nama_tuk,
+          jenis_tuk: row.jenis_tuk,
+          institusi_induk: row.institusi_induk,
+          telepon: row.telepon,
+          email: row.email,
+          alamat: row.alamat,
+          provinsi: row.provinsi,
+          kota: row.kota,
+          kecamatan: row.kecamatan,
+          kelurahan: row.kelurahan,
+          kode_pos: row.kode_pos,
+          no_lisensi: row.no_lisensi,
+          masa_berlaku_lisensi: row.masa_berlaku_lisensi,
+          status: "nonaktif",
+          id_penanggung_jawab: req.user.id_user
+        }, { transaction: t });
+
+        await ProfileTuk.create({
+          id_user: user.id_user,
+          nama_lengkap: row.nama_tuk,
+          alamat: row.alamat,
+          provinsi: row.provinsi,
+          kota: row.kota,
+          kecamatan: row.kecamatan,
+          kelurahan: row.kelurahan,
+          kode_pos: row.kode_pos
+        }, { transaction: t });
+
+        await createNotifikasi({
+          channel: "email",
+          tujuan: row.email,
+          pesan: `Akun TUK berhasil dibuat.
+Username: ${row.kode_tuk}
+Password: ${rawPassword}`,
+          status_kirim: "terkirim",
+          ref_type: "akun",
+          ref_id: user.id_user
+        });
+
         await t.commit();
-        totalSuccess++;
+        success++;
 
       } catch (err) {
 
         await t.rollback();
-        totalFailed++;
-        console.error("Import gagal:", err.message);
+        failed++;
+        console.log("Import gagal:", err.message);
+
       }
     }
 
     return response.success(
       res,
-      `Import selesai. Berhasil: ${totalSuccess}, Gagal: ${totalFailed}`
+      `Import selesai. Berhasil: ${success}, Gagal: ${failed}`
     );
 
   } catch (err) {
 
     return response.error(res, err.message);
+
   }
 };
 
 exports.getAll = async (req, res) => {
+
   try {
+
     const page = parseInt(req.query.page);
     const limit = parseInt(req.query.limit);
     const search = req.query.search || "";
@@ -149,32 +239,61 @@ exports.getAll = async (req, res) => {
     } : {};
 
     if (page && limit) {
+
       const offset = (page - 1) * limit;
+
       const data = await Tuk.findAndCountAll({
         where: whereClause,
-        limit: limit,
-        offset: offset,
-        order: [['id_tuk', 'DESC']] 
+        limit,
+        offset,
+        include: [
+          {
+            model: User,
+            as: "penanggungJawab",
+            attributes: ["id_user", "username", "email"]
+          }
+        ],
+        order: [['id_tuk', 'DESC']]
       });
+
       return response.success(res, "List TUK Pagination", data);
     }
 
     const data = await Tuk.findAll({
       where: whereClause,
-      order: [['nama_tuk', 'ASC']] 
+      include: [
+        {
+          model: User,
+          as: "penanggungJawab",
+          attributes: ["id_user", "username", "email"]
+        }
+      ],
+      order: [['nama_tuk', 'ASC']]
     });
-    
+
     return response.success(res, "List Semua TUK", data);
 
   } catch (err) {
+
     console.error("Error Get All TUK:", err);
     return response.error(res, err.message);
+
   }
 };
 
 exports.getById = async (req, res) => {
+
   try {
-    const data = await Tuk.findByPk(req.params.id);
+
+    const data = await Tuk.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          as: "penanggungJawab",
+          attributes: ["id_user", "username", "email"]
+        }
+      ]
+    });
 
     if (!data) {
       return response.error(res, "TUK tidak ditemukan", 404);
@@ -183,6 +302,7 @@ exports.getById = async (req, res) => {
     return response.success(res, "Detail TUK", data);
 
   } catch (err) {
+
     return response.error(res, err.message);
   }
 };
