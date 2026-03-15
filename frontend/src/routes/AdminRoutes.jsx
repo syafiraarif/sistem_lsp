@@ -22,13 +22,22 @@ import Banding from "../pages/admin/Banding";
 import BankSoal from "../pages/admin/BankSoal";
 import BankSoalPG from "../pages/admin/BankSoalPG";
 import Surveillance from "../pages/admin/Surveillance";
-
-// Rute Instrumen & Asesmen
+import CariAsesi from "../pages/admin/CariAsesi";
+import StatistikWilayah from "../pages/admin/StatistikWilayah";
 import IA01Observasi from "../pages/admin/IA01Observasi";
 import IA03Pertanyaan from "../pages/admin/IA03Pertanyaan";
 import Mapa from "../pages/admin/Mapa";
 import Mapa01 from "../pages/admin/Mapa01";
 import Mapa02 from "../pages/admin/Mapa02";
+import AsesiTerjadwal from "../pages/admin/AsesiTerjadwal";
+import AsesiKompeten from "../pages/admin/AsesiKompeten";
+import PesertaJadwal from "../pages/admin/PesertaJadwal";
+import KelompokPekerjaan from "../pages/admin/KelompokPekerjaan";
+import AsesiBelumKompeten from "../pages/admin/AsesiBelumKompeten";
+
+// IMPORT LAPORAN SERTIFIKASI (MENGGANTIKAN LAPORAN UMUM)
+import LaporanSertifikasi from "../pages/admin/LaporanSertifikasi";
+
 
 /* PROTECTED */
 const getUser = () => {
@@ -64,8 +73,9 @@ export default function AdminRoutes() {
           <Route path="skema/:id/ia01" element={<IA01Observasi />} />
           <Route path="skema/:id/ia03" element={<IA03Pertanyaan />} />
           <Route path="skema/:id/mapa" element={<Mapa />} />
-          <Route path="skema/:id/mapa01" element={<Mapa01 />} />
-          <Route path="skema/:id/mapa02" element={<Mapa02 />} />
+          <Route path="mapa" element={<Mapa />} />
+          <Route path="mapa01/:id" element={<Mapa01 />} /> 
+          <Route path="mapa02/:id" element={<Mapa02 />} />
 
           {/* RUTE LAINNYA */}
           <Route path="dokumen-mutu" element={<DokumenMutu />} />
@@ -83,6 +93,18 @@ export default function AdminRoutes() {
           <Route path="bank-soal" element={<BankSoal />} />
           <Route path="bank-soal-pg" element={<BankSoalPG />} />
           <Route path="surveillance" element={<Surveillance />} />
+          <Route path="asesi/cari" element={<CariAsesi />} />
+
+          <Route path="asesi/terjadwal" element={<AsesiTerjadwal />} />
+          <Route path="asesi/kompeten" element={<AsesiKompeten />} />
+          <Route path="asesi/belum-kompeten" element={<AsesiBelumKompeten />} />
+
+          <Route path="asesor/statistik" element={<StatistikWilayah />} />
+          <Route path="jadwal/:id_jadwal/peserta" element={<PesertaJadwal />} />
+          <Route path="skema/:id/kelompok-pekerjaan" element={<KelompokPekerjaan />} />
+
+          {/* RUTE LAPORAN SERTIFIKASI (PATH DIUBAH DI SINI) */}
+          <Route path="laporan-sertifikasi" element={<LaporanSertifikasi />} />
         </Route>
       </Routes>
     </ProtectedAdmin>
