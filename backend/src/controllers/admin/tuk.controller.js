@@ -1,5 +1,5 @@
 const XLSX = require("xlsx");
-const { User, Role, Tuk, ProfileTuk } = require("../../models");
+const { User, Role, Tuk, ProfileTuk, TukSkema } = require("../../models");
 const { createNotifikasi } = require("../../services/notifikasi.service");
 const response = require("../../utils/response.util");
 const { createUser } = require("../../services/account.service");
@@ -349,6 +349,88 @@ exports.delete = async (req, res) => {
   } catch (err) {
 
     await t.rollback();
+    return response.error(res, err.message);
+  }
+};
+
+exports.attachSkema = async (req, res) => {
+  try {
+
+    const { id_tuk, id_skema } = req.body;
+
+    const tuk = await Tuk.findByPk(id_tuk);
+
+    if (!tuk)
+      return response.error(res, "TUK tidak ditemukan", 404);
+
+    const data = await TukSkema.create({
+      id_tuk,
+      id_skema
+    });
+
+    return response.success(res, "Skema berhasil dikaitkan ke TUK", data);
+
+  } catch (err) {
+
+    return response.error(res, err.message);
+
+  }
+};
+
+exports.detachSkema = async (req, res) => {
+  try {
+
+    const { id_tuk, id_skema } = req.params;
+
+    const deleted = await TukSkema.destroy({
+      where: { id_tuk, id_skema }
+    });
+
+    if (!deleted)
+      return response.error(res, "Relasi tidak ditemukan", 404);
+
+    return response.success(res, "Skema dilepas dari TUK");
+
+  } catch (err) {
+
+    return response.error(res, err.message);
+
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+
+    if (!user)
+      return response.error(res, "User tidak ditemukan", 404);
+
+    const rawPassword = await resetUserPassword(user);
+
+    try {
+       await sendAccountEmail(user.email, user.username, rawPassword);
+    } catch (emailErr) {
+       console.error("Gagal mengirim email reset password:", emailErr);
+    }
+
+    try {
+      await createNotifikasi({
+        channel: "email",
+        tujuan: user.email || user.username,
+        pesan: `Password untuk NIK ${user.username} berhasil direset dan dikirim ke email.`,
+        status_kirim: "terkirim",
+        ref_type: "akun",
+        ref_id: user.id_user
+      });
+    } catch (notifErr) {
+      console.error("Gagal membuat notif reset password:", notifErr);
+    }
+
+    return response.success(res, "Password berhasil direset dan dikirim ke email", {
+      username: user.username
+    });
+
+  } catch (err) {
     return response.error(res, err.message);
   }
 };
