@@ -63,8 +63,8 @@ ProfileAsesor.belongsTo(User, { foreignKey: "id_user" });
 ProfileAdmin.belongsTo(User, { foreignKey: "id_user" });
 ProfileTuk.belongsTo(User, { foreignKey: "id_user" });
 
-User.hasMany(Notifikasi, { foreignKey: "ref_id", constraints: false });
-Notifikasi.belongsTo(User, { foreignKey: "ref_id", constraints: false });
+User.hasMany(Notifikasi, { foreignKey: "id_user" });
+Notifikasi.belongsTo(User, { foreignKey: "id_user" });
 
 Skkni.hasMany(UnitKompetensi, { foreignKey: "id_skkni" });
 UnitKompetensi.belongsTo(Skkni, { foreignKey: "id_skkni" });
@@ -96,8 +96,6 @@ Jadwal.belongsTo(Tuk, { foreignKey: "id_tuk", as: "tuk" });
 User.hasMany(Jadwal, { foreignKey: "created_by" });
 Jadwal.belongsTo(User, { foreignKey: "created_by", as: "creator" });
 
-
-
 Jadwal.hasMany(JadwalAsesor, { foreignKey: "id_jadwal" });
 JadwalAsesor.belongsTo(Jadwal, { foreignKey: "id_jadwal" });
 
@@ -107,6 +105,7 @@ JadwalAsesor.belongsTo(User, { foreignKey: "id_user", as: "asesor" });
 User.hasMany(JadwalAsesor, { foreignKey: "assigned_by" });
 JadwalAsesor.belongsTo(User, { foreignKey: "assigned_by", as: "assigner"});
 
+//2 ini katanya baiknya di hapus
 JadwalAsesor.hasOne(ProfileAsesor, {sourceKey: 'id_user', foreignKey: 'id_user',as: 'profileAsesor'});
 ProfileAsesor.belongsTo(JadwalAsesor, {foreignKey: 'id_user',targetKey: 'id_user',as: 'jadwalAsesor'});
 
@@ -119,6 +118,7 @@ Apl01Asesmen.belongsTo(User, { foreignKey: "id_user" });
 Apl01Asesmen.belongsTo(Skema, { foreignKey: "id_skema" });
 Apl01Asesmen.belongsTo(Jadwal, { foreignKey: "id_jadwal" });
 
+User.hasMany(Apl01Asesmen, { foreignKey: "id_user" });
 Apl01Asesmen.hasMany(Apl02AsesmenMandiri, { foreignKey: "id_apl01" });
 Apl02AsesmenMandiri.belongsTo(Apl01Asesmen, { foreignKey: "id_apl01" });
 

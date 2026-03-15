@@ -1,11 +1,10 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("../../models/user.model");
-const Role = require("../../models/role.model");
-const Tuk = require("../../models/tuk.model");
+const { User, Role, Tuk } = require("../../models");
 const { secret, expiresIn } = require("../../config/jwt");
 
 exports.login = async (req, res) => {
+
   try {
 
     const { username, password } = req.body;
@@ -36,9 +35,12 @@ exports.login = async (req, res) => {
       });
     }
 
-    const valid = await bcrypt.compare(password, user.password_hash);
+    const validPassword = await bcrypt.compare(
+      password,
+      user.password_hash
+    );
 
-    if (!valid) {
+    if (!validPassword) {
       return res.status(401).json({
         success: false,
         message: "Password salah"
@@ -53,7 +55,7 @@ exports.login = async (req, res) => {
 
       const tukData = await Tuk.findOne({
         where: {
-          kode_tuk: user.username
+          id_penanggung_jawab: user.id_user
         }
       });
 
@@ -95,7 +97,9 @@ exports.login = async (req, res) => {
       success: false,
       message: "Terjadi kesalahan server"
     });
+
   }
+
 };
 
 exports.logout = async (req, res) => {
