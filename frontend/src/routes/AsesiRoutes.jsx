@@ -11,6 +11,7 @@ import ProfileDokumen from "../pages/asesi/ProfileDokumen";
 
 /* Jadwal & Skema */
 import JadwalAsesi from "../pages/asesi/JadwalAsesi";
+import JadwalSaya from "../pages/asesi/JadwalSaya"; // import baru
 
 export default function AsesiRoutes() {
   return (
@@ -25,6 +26,7 @@ export default function AsesiRoutes() {
 
       {/* JADWAL & SKEMA */}
       <Route path="jadwal" element={<JadwalAsesi />} />
+      <Route path="jadwal-saya" element={<JadwalSaya />} /> {/* route baru */}
     </Routes>
   );
 }

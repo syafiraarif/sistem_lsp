@@ -43,6 +43,7 @@ router.get("/surveillance/export", ctrl.exportSurveillance);
 
 router.get("/profile", adminProfile.getProfile);
 router.put("/profile", adminProfile.updateProfile);
+router.put("/profile", adminProfile.updateProfile);
 
 router.post( "/dokumen-mutu", upload, dokumenMutuController.createDokumen);
 router.put( "/dokumen-mutu/:id", upload, dokumenMutuController.updateDokumen);
@@ -74,6 +75,7 @@ router.delete("/tuk/:id", tukAdmin.delete);
 router.post("/send-email/:id", accountController.sendAccountEmailManual);
 
 router.get("/dashboard", adminController.getDashboard);
+router.post("/admin/:id/reset-password", adminController.resetPassword);
 
 router.get("/pendaftaran", pendaftaranController.getAll);
 router.post("/pendaftaran/:id/approve", pendaftaranController.approvePendaftaran);
@@ -119,6 +121,8 @@ router.get("/persyaratan", persyaratanController.getAll);
 router.get("/persyaratan/:id", persyaratanController.getById);
 router.put("/persyaratan/:id", persyaratanController.update);
 router.delete("/persyaratan/:id", persyaratanController.delete);
+router.post("/persyaratan/attach", persyaratanController.attachToSkema);
+router.delete("/persyaratan/detach/:id_skema/:id_persyaratan", persyaratanController.detachFromSkema);
 
 router.post("/persyaratan-tuk", persyaratanTukController.create);
 router.put("/persyaratan-tuk/:id", persyaratanTukController.update);

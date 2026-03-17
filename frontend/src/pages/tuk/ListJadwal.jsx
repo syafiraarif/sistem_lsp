@@ -3,19 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import {
-  Calendar,
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Eye,
-} from "lucide-react";
+import { Calendar, Plus, Search } from "lucide-react";
+
 import SidebarTUK from "../../components/sidebar/SidebarTuk";
 
-const API = "http://localhost:3000/api/tuk/jadwal";
+const API = `${import.meta.env.VITE_API_BASE}/tuk/jadwal`;
 
 const ListJadwal = () => {
+
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -24,98 +19,158 @@ const ListJadwal = () => {
   const [search, setSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  /* ================= MODAL DELETE ================= */
   const [showModal, setShowModal] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   /* ================= FETCH DATA ================= */
+
   const fetchJadwal = async () => {
     try {
+
+      setLoading(true);
+
       const res = await axios.get(API, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      setJadwal(res.data.data || []);
+      setJadwal(res.data?.data || []);
+
     } catch (err) {
-      console.error("Gagal load jadwal", err);
+
+      console.error("Gagal mengambil jadwal:", err);
+      setJadwal([]);
+
     } finally {
+
       setLoading(false);
+
     }
   };
 
   useEffect(() => {
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
     fetchJadwal();
+
   }, []);
 
   /* ================= DELETE ================= */
+
+  const handleDeleteClick = (id) => {
+
+    setDeleteId(id);
+    setShowModal(true);
+
+  };
+
   const handleDelete = async () => {
+
     try {
+
       setDeleting(true);
 
       await axios.delete(`${API}/${deleteId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       setShowModal(false);
       setDeleteId(null);
-      fetchJadwal();
-    } catch (err) {
-      alert(err.response?.data?.message || "Gagal menghapus");
-    } finally {
-      setDeleting(false);
-    }
-  };
 
-  const handleDeleteClick = (id) => {
-    setDeleteId(id);
-    setShowModal(true);
+      fetchJadwal();
+
+    } catch (err) {
+
+      alert(err.response?.data?.message || "Gagal menghapus jadwal");
+
+    } finally {
+
+      setDeleting(false);
+
+    }
+
   };
 
   /* ================= FILTER ================= */
-  const filteredJadwal = jadwal.filter(
-    (j) =>
-      j.nama_kegiatan?.toLowerCase().includes(search.toLowerCase()) ||
-      j.kode_jadwal?.toLowerCase().includes(search.toLowerCase())
-  );
+
+  const filteredJadwal = jadwal.filter((j) => {
+
+    const keyword = search.toLowerCase();
+
+    return (
+      j.nama_kegiatan?.toLowerCase().includes(keyword) ||
+      j.kode_jadwal?.toLowerCase().includes(keyword)
+    );
+
+  });
+
+  /* ================= FORMAT DATE ================= */
 
   const formatDate = (date) => {
+
     if (!date) return "-";
+
     return new Date(date).toLocaleDateString("id-ID", {
       day: "2-digit",
       month: "short",
-      year: "numeric",
+      year: "numeric"
     });
+
   };
+
+  /* ================= STATUS BADGE ================= */
 
   const getStatusBadge = (status) => {
-    const colors = {
-      draft: "bg-gray-100 text-gray-600",
-      open: "bg-blue-100 text-blue-600",
-      ongoing: "bg-orange-100 text-orange-600",
-      selesai: "bg-green-100 text-green-600",
-      arsip: "bg-slate-100 text-slate-600",
-    };
+
+    if (status === "draft") {
+      return (
+        <span className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded">
+          Draft
+        </span>
+      );
+    }
+
+    if (status === "menunggu") {
+      return (
+        <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded">
+          Menunggu
+        </span>
+      );
+    }
+
+    if (status === "open") {
+      return (
+        <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded">
+          Open
+        </span>
+      );
+    }
 
     return (
-      <span
-        className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${
-          colors[status] || colors.draft
-        }`}
-      >
-        {status}
+      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
+        {status || "-"}
       </span>
     );
+
   };
+
+  /* ================= LOGOUT ================= */
 
   const handleLogout = () => {
+
     localStorage.clear();
     navigate("/login");
+
   };
 
-  /* ================= UI ================= */
   return (
+
     <div className="min-h-screen bg-slate-50 flex">
+
       <SidebarTUK
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
@@ -125,157 +180,239 @@ const ListJadwal = () => {
       <div className="flex-1 lg:ml-20 p-6 lg:p-8">
 
         {/* HEADER */}
+
         <div className="flex justify-between items-center mb-6">
+
           <div className="flex items-center gap-3">
-            <Calendar className="text-orange-500" size={28} />
+            <Calendar className="text-orange-500" size={28}/>
             <h1 className="text-2xl font-bold">
-              Daftar Jadwal
+              Daftar Jadwal Sertifikasi
             </h1>
           </div>
 
           <button
             onClick={() => navigate("/tuk/jadwal/buat")}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
           >
-            <Plus size={16} />
+            <Plus size={16}/>
             Buat Jadwal
           </button>
+
         </div>
 
         {/* SEARCH */}
+
         <div className="mb-5">
+
           <div className="relative">
+
             <Search
               size={18}
               className="absolute left-3 top-3 text-gray-400"
             />
+
             <input
               type="text"
-              placeholder="Cari kode atau nama kegiatan..."
+              placeholder="Cari jadwal..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e)=>setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
             />
+
           </div>
+
         </div>
 
         {/* TABLE */}
+
         <div className="bg-white rounded-xl shadow overflow-x-auto">
 
           {loading ? (
+
             <div className="p-8 text-center text-gray-500">
-              Loading...
+              Loading data jadwal...
             </div>
+
           ) : filteredJadwal.length === 0 ? (
+
             <div className="p-8 text-center text-gray-500">
-              Tidak ada jadwal
+              Tidak ada jadwal ditemukan
             </div>
+
           ) : (
+
             <table className="w-full">
+
               <thead className="bg-gray-100 text-sm">
+
                 <tr>
-                  <th className="p-3 text-left">Kode</th>
-                  <th className="p-3 text-left">Nama</th>
-                  <th className="p-3 text-left">Tanggal</th>
-                  <th className="p-3 text-left">Kuota</th>
+                  <th className="p-3 text-left">Nama / Tanggal</th>
+                  <th className="p-3 text-left">Skema / Kuota</th>
+                  <th className="p-3 text-left">Asesor</th>
                   <th className="p-3 text-left">Status</th>
                   <th className="p-3 text-right">Aksi</th>
                 </tr>
+
               </thead>
 
               <tbody>
-                {filteredJadwal.map((item) => (
+
+                {filteredJadwal.map((item)=> (
+
                   <tr
                     key={item.id_jadwal}
-                    className="border-t hover:bg-gray-50 transition"
+                    className="border-t hover:bg-gray-50"
                   >
-                    <td className="p-3">{item.kode_jadwal}</td>
+
+                    {/* Nama + Tanggal */}
 
                     <td className="p-3">
-                      <div className="font-semibold">
+
+                      <div className="font-semibold text-gray-800">
                         {item.nama_kegiatan}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {item.periode_bulan} {item.tahun}
+
+                      <div className="text-sm text-gray-500">
+                        {formatDate(item.tgl_awal)} - {formatDate(item.tgl_akhir)}
                       </div>
+
                     </td>
 
-                    <td className="p-3">
-                      {formatDate(item.tgl_awal)} -{" "}
-                      {formatDate(item.tgl_akhir)}
-                    </td>
+                    {/* Skema */}
 
                     <td className="p-3">
-                      {item.kuota} Orang
+
+                      <div className="font-medium">
+                        {item.skema?.judul_skema || "-"}
+                      </div>
+
+                      <div className="text-xs text-gray-500">
+                        {item.skema?.kode_skema}
+                      </div>
+
+                      <div className="text-sm text-gray-600 mt-1">
+                        Kuota: {item.kuota || 0} Orang
+                      </div>
+
                     </td>
+
+                    {/* Asesor */}
+
+                    <td className="p-3">
+
+                      {item.asesorList?.length ? (
+
+                        item.asesorList.map((a,i)=>(
+                          <div key={i} className="text-sm">
+                            {a.asesor?.username || "-"}
+                          </div>
+                        ))
+
+                      ) : (
+
+                        <span className="text-gray-400 text-sm">
+                          Belum ada asesor
+                        </span>
+
+                      )}
+
+                    </td>
+
+                    {/* STATUS */}
 
                     <td className="p-3">
                       {getStatusBadge(item.status)}
                     </td>
 
-                    {/* ACTION */}
+                    {/* AKSI */}
+
                     <td className="p-3">
-                      <div className="flex justify-end gap-2">
 
-                        <button
-                          onClick={() =>
-                            navigate(
-                              `/tuk/jadwal/${item.id_jadwal}/detail`
-                            )
-                          }
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                        >
-                          <Eye size={18} />
-                        </button>
+                      {item.status === "draft" || item.status === "menunggu" ? (
 
-                        <button
-                          onClick={() =>
-                            navigate(
-                              `/tuk/jadwal/${item.id_jadwal}/edit`
-                            )
-                          }
-                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg"
-                        >
-                          <Edit size={18} />
-                        </button>
+                        <span className="text-sm text-gray-400 italic">
+                          Belum di ACC Admin
+                        </span>
 
-                        <button
-                          onClick={() =>
-                            handleDeleteClick(item.id_jadwal)
-                          }
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                      ) : (
 
-                      </div>
+                        <div className="grid grid-cols-2 gap-2 w-56 ml-auto">
+
+                          <button
+                            onClick={()=>navigate(`/tuk/jadwal/${item.id_jadwal}/edit`)}
+                            className="px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600"
+                          >
+                            Ubah Jadwal
+                          </button>
+
+                          <button
+                            onClick={()=>handleDeleteClick(item.id_jadwal)}
+                            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                          >
+                            Hapus
+                          </button>
+
+                          <button
+                            onClick={()=>navigate(`/tuk/jadwal/${item.id_jadwal}/asesor`)}
+                            className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                          >
+                            Asesor
+                          </button>
+
+                          <button
+                            onClick={()=>navigate(`/tuk/jadwal/${item.id_jadwal}/verifikasi`)}
+                            className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                          >
+                            Verifikasi TUK
+                          </button>
+
+                          <button
+                            onClick={()=>navigate(`/tuk/jadwal/${item.id_jadwal}/validator`)}
+                            className="col-span-2 px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
+                          >
+                            Validator MKVA
+                          </button>
+
+                        </div>
+
+                      )}
+
                     </td>
 
                   </tr>
+
                 ))}
+
               </tbody>
+
             </table>
+
           )}
+
         </div>
+
       </div>
 
-      {/* ================= MODAL DELETE ================= */}
+      {/* MODAL DELETE */}
+
       {showModal && (
+
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-96">
+
+          <div className="bg-white rounded-xl p-6 w-96">
 
             <h2 className="text-lg font-bold mb-3">
               Konfirmasi Hapus
             </h2>
 
             <p className="text-gray-600 mb-6">
-              Jadwal ini akan dihapus permanen.
+              Jadwal ini akan dihapus permanen
             </p>
 
             <div className="flex justify-end gap-3">
 
               <button
-                onClick={() => {
+                onClick={()=>{
                   setShowModal(false);
                   setDeleteId(null);
                 }}
@@ -287,17 +424,23 @@ const ListJadwal = () => {
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg"
               >
                 {deleting ? "Menghapus..." : "Hapus"}
               </button>
 
             </div>
+
           </div>
+
         </div>
+
       )}
+
     </div>
+
   );
+
 };
 
 export default ListJadwal;
