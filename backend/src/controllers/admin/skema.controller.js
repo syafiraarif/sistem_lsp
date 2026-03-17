@@ -3,8 +3,15 @@ const response = require("../../utils/response.util");
 
 exports.create = async (req, res) => {
   try {
+
+    if (req.files?.file_dokumen) {
+      req.body.dokumen = req.files.file_dokumen[0].filename;
+    }
+
     const data = await Skema.create(req.body);
+
     response.success(res, "Skema berhasil dibuat", data);
+
   } catch (err) {
     response.error(res, err.message);
   }
@@ -48,10 +55,19 @@ exports.getDetail = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const skema = await Skema.findByPk(req.params.id);
-    if (!skema) return response.error(res, "Skema tidak ditemukan", 404);
+
+    if (!skema) {
+      return response.error(res, "Skema tidak ditemukan", 404);
+    }
+
+    if (req.files?.file_dokumen) {
+      req.body.dokumen = req.files.file_dokumen[0].filename;
+    }
 
     await skema.update(req.body);
+
     response.success(res, "Skema berhasil diperbarui", skema);
+
   } catch (err) {
     response.error(res, err.message);
   }

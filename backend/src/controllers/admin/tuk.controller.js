@@ -12,7 +12,6 @@ exports.createTuk = async (req, res) => {
 
     const { kode_tuk, email, no_hp, ...data } = req.body;
 
-    // --- AUTO CREATE ROLE TUK JIKA BELUM ADA ---
     let role = await Role.findOne({
       where: { role_name: "TUK" }
     });
@@ -23,9 +22,7 @@ exports.createTuk = async (req, res) => {
         { transaction: t }
       );
     }
-    // --------------------------------------------
 
-    // Buat akun user
     const { user } = await createUser(
       {
         username: kode_tuk,
@@ -36,7 +33,6 @@ exports.createTuk = async (req, res) => {
       { transaction: t }
     );
 
-    // ✅ LANGSUNG MASUK TABEL TUK
     await Tuk.create(
       {
         kode_tuk,
@@ -140,33 +136,45 @@ exports.importTukExcel = async (req, res) => {
 };
 
 exports.getAll = async (req, res) => {
-
   try {
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
+    const search = req.query.search || "";
+
+    const whereClause = search ? {
+      [Op.or]: [
+        { kode_tuk: { [Op.like]: `%${search}%` } },
+        { nama_tuk: { [Op.like]: `%${search}%` } }
+      ]
+    } : {};
+
+    if (page && limit) {
+      const offset = (page - 1) * limit;
+      const data = await Tuk.findAndCountAll({
+        where: whereClause,
+        limit: limit,
+        offset: offset,
+        order: [['id_tuk', 'DESC']] 
+      });
+      return response.success(res, "List TUK Pagination", data);
+    }
 
     const data = await Tuk.findAll({
-      include: [
-        {
-          model: User,
-          required: false
-        }
-      ]
+      where: whereClause,
+      order: [['nama_tuk', 'ASC']] 
     });
-
-    return response.success(res, "List TUK", data);
+    
+    return response.success(res, "List Semua TUK", data);
 
   } catch (err) {
-
+    console.error("Error Get All TUK:", err);
     return response.error(res, err.message);
   }
 };
 
 exports.getById = async (req, res) => {
-
   try {
-
-    const data = await Tuk.findByPk(req.params.id, {
-      include: User
-    });
+    const data = await Tuk.findByPk(req.params.id);
 
     if (!data) {
       return response.error(res, "TUK tidak ditemukan", 404);
@@ -175,7 +183,6 @@ exports.getById = async (req, res) => {
     return response.success(res, "Detail TUK", data);
 
   } catch (err) {
-
     return response.error(res, err.message);
   }
 };
@@ -225,4 +232,3 @@ exports.delete = async (req, res) => {
     return response.error(res, err.message);
   }
 };
-
