@@ -195,11 +195,11 @@ const Banding = () => {
                       <td className="py-4 px-4 whitespace-nowrap">{getKeputusanBadge(item.keputusan)}</td>
                       <td className="py-4 px-4 text-center">
                         <button 
-                          className="inline-flex p-2 rounded-lg text-[#CC6B27] bg-[#CC6B27]/10 hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm" 
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-white bg-[#071E3D] hover:bg-[#182D4A] transition-all shadow-sm text-[13px] font-medium" 
                           onClick={() => handleDetailClick(item)}
-                          title="Proses & Detail"
+                          title="Lihat Detail"
                         >
-                          <Gavel size={18} />
+                          <Eye size={16} /> Detail
                         </button>
                       </td>
                     </tr>

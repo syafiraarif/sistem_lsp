@@ -3,7 +3,7 @@ import Swal from 'sweetalert2';
 import api from "../../services/api";
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Plus, Edit2, Trash2, X, Save, Loader2, FileText, Upload, BookOpen, Eye, ArrowRight
+  Search, Plus, Edit2, Trash2, X, Save, Loader2, FileText, Upload, BookOpen, Eye, ArrowRight, Filter
 } from 'lucide-react';
 
 const Skema = () => {
@@ -12,6 +12,7 @@ const Skema = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState(''); // Tambahan State Filter Status
   
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -22,8 +23,11 @@ const Skema = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedSkema, setSelectedSkema] = useState(null);
 
-  // --- STATE KHUSUS FILE ---
+  // --- STATE KHUSUS FILE & VALIDASI ---
   const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [showFullPreview, setShowFullPreview] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // State Form (Default)
   const initialFormState = {
@@ -63,16 +67,61 @@ const Skema = () => {
     fetchData();
   }, []);
 
+  // --- HELPER UNTUK URL DAN PREVIEW FILE ---
+  const buildFileUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('blob:') || path.startsWith('http')) return path;
+    const cleanPath = path.replace(/^(\/?uploads\/|\/)/, '');
+    return `http://localhost:3000/uploads/${cleanPath}`;
+  };
+
+  const isPdfFile = (filename) => {
+    const checkName = selectedFile ? selectedFile.name : filename;
+    return checkName && /\.(pdf)$/i.test(checkName);
+  };
+  
+  const isImageFile = (filename) => {
+    const checkName = selectedFile ? selectedFile.name : filename;
+    return checkName && /\.(jpg|jpeg|png|gif|webp)$/i.test(checkName);
+  };
+
+  const isPreviewable = (filename) => isPdfFile(filename) || isImageFile(filename);
+
+  // --- VALIDASI MANUAL ---
+  const validateInput = (name, value) => {
+    let errorMsg = '';
+    
+    // Pengecualian karakter untuk Level KKNI & Skor (Hanya wajib diisi)
+    if (name === 'level_kkni' || name === 'skor_min_ai05') {
+      if (value === null || value === '') {
+        errorMsg = 'Tidak boleh kosong.';
+      }
+    } else if (['kode_sektor', 'kode_kbli', 'kode_kbji'].includes(name)) {
+      // Abaikan aturan 4 karakter untuk kode angka yang pendek
+    } else {
+      // Aturan default: minimal 4 karakter
+      if (typeof value === 'string' && value.trim().length > 0 && value.trim().length <= 3) {
+        errorMsg = 'Terlalu pendek (minimal 4 karakter).';
+      }
+    }
+
+    setErrors(prev => ({ ...prev, [name]: errorMsg }));
+    return errorMsg === '';
+  };
+
   // --- HANDLERS ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    validateInput(name, value);
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setSelectedFile(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
     }
   };
 
@@ -85,6 +134,8 @@ const Skema = () => {
     setIsEditMode(true);
     setCurrentId(item.id_skema);
     setSelectedFile(null); 
+    setErrors({});
+    setShowFullPreview(false);
     
     setFormData({
       kode_skema: item.kode_skema || '',
@@ -102,6 +153,8 @@ const Skema = () => {
       dokumen: item.dokumen || '', 
       status: item.status || 'draft'
     });
+
+    setPreviewUrl(item.dokumen || null);
     setShowModal(true);
   };
 
@@ -132,16 +185,38 @@ const Skema = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Pengecekan Validasi Keseluruhan
+    let isValid = true;
+    Object.keys(formData).forEach(key => {
+      if (!validateInput(key, formData[key])) isValid = false;
+    });
+
+    if (!isValid) {
+      Swal.fire('Peringatan', 'Silakan perbaiki isian yang masih kosong/kurang tepat!', 'warning');
+      return;
+    }
+
+    const actionText = isEditMode ? 'menyimpan perubahan pada' : 'menambahkan';
+    const confirm = await Swal.fire({
+      title: 'Konfirmasi',
+      text: `Apakah Anda yakin ingin ${actionText} skema ini?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#CC6B27',
+      cancelButtonColor: '#182D4A',
+      confirmButtonText: 'Ya, Simpan'
+    });
+
+    if (!confirm.isConfirmed) return;
+
     const dataToSend = new FormData();
 
     Object.keys(formData).forEach(key => {
-      // Abaikan 'dokumen' string, dan jangan kirim string kosong agar tidak error saat diinsert ke database untuk field numerik
       if (key !== 'dokumen' && formData[key] !== null && formData[key] !== undefined && formData[key] !== '') {
         dataToSend.append(key, formData[key]);
       }
     });
 
-    // Gunakan 'file_dokumen' sesuai key yang di-expect backend
     if (selectedFile) {
       dataToSend.append('file_dokumen', selectedFile);
     }
@@ -168,11 +243,18 @@ const Skema = () => {
     }
   };
 
+  // Helper Input Class
+  const inputClass = (name) => `w-full p-2.5 border rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 placeholder:text-[#182D4A]/40
+    ${errors[name] ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-[#071E3D]/20 focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10'}
+  `;
+
   // --- FILTER ---
-  const filteredData = data.filter(item => 
-    (item.judul_skema && item.judul_skema.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (item.kode_skema && item.kode_skema.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredData = data.filter(item => {
+    const matchSearch = (item.judul_skema && item.judul_skema.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                        (item.kode_skema && item.kode_skema.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchStatus = filterStatus ? item.status === filterStatus : true;
+    return matchSearch && matchStatus;
+  });
 
   return (
     <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
@@ -188,6 +270,9 @@ const Skema = () => {
           onClick={() => {
             setFormData(initialFormState);
             setSelectedFile(null);
+            setPreviewUrl(null);
+            setShowFullPreview(false);
+            setErrors({});
             setIsEditMode(false);
             setShowModal(true);
           }}
@@ -199,20 +284,37 @@ const Skema = () => {
       {/* TABLE SECTION */}
       <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6">
         
-        {/* Search Bar */}
+        {/* Search Bar & Filter */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <h4 className="text-[16px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
             <BookOpen size={18} className="text-[#CC6B27]"/> Daftar Skema
           </h4>
-          <div className="w-full md:w-80 relative group">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Cari kode atau judul skema..." 
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+            <div className="relative group w-full md:w-80">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Cari kode atau judul skema..." 
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            {/* MODIFIKASI: Tambahan dropdown filter status */}
+            <div className="relative w-full md:w-48">
+              <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors z-10" />
+              <select 
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-medium appearance-none cursor-pointer"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="">Semua Status</option>
+                <option value="aktif">Aktif</option>
+                <option value="nonaktif">Non-Aktif</option>
+                <option value="draft">Draft</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -411,25 +513,45 @@ const Skema = () => {
                 </div>
               )}
 
+              {/* TAMPILAN PREVIEW PDF DI DETAIL MODAL */}
               {selectedSkema.dokumen && (
-                <div>
-                  <a 
-                    href={`${import.meta.env.VITE_API_URL}${selectedSkema.dokumen}`} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#182D4A]/5 text-[#182D4A] hover:bg-[#182D4A]/10 rounded-lg border border-[#182D4A]/20 text-[13px] font-bold transition-colors w-max"
-                  >
-                    <FileText size={16} /> Buka / Unduh Dokumen Skema
-                  </a>
-                </div>
+                  <div className="border border-[#071E3D]/20 rounded-lg flex flex-col overflow-hidden min-h-[350px]">
+                      <div className="bg-gray-100 px-3 py-2 text-[11px] font-bold text-[#182D4A] flex justify-between items-center border-b border-[#071E3D]/20">
+                          <span>Preview Dokumen Skema</span>
+                          {isPreviewable(selectedSkema.dokumen) && (
+                          <button type="button" onClick={() => setShowFullPreview(!showFullPreview)} className="text-[#CC6B27] hover:underline cursor-pointer">
+                              {showFullPreview ? 'Perkecil' : 'Perbesar Tampilan'}
+                          </button>
+                          )}
+                      </div>
+                      
+                      <div className={`relative flex-1 transition-all duration-300 ${showFullPreview ? 'h-[600px]' : 'h-full bg-white'}`}>
+                          {isPreviewable(selectedSkema.dokumen) ? (
+                              isImageFile(selectedSkema.dokumen) ? (
+                                  <div className="w-full h-full overflow-auto absolute inset-0 flex justify-center items-start bg-gray-50 p-2">
+                                      <img src={buildFileUrl(selectedSkema.dokumen)} alt="Preview" className="max-w-full object-contain" />
+                                  </div>
+                              ) : (
+                                  <iframe src={`${buildFileUrl(selectedSkema.dokumen)}#toolbar=0&navpanes=0`} className="w-full h-full border-0 absolute inset-0" title="Preview PDF" />
+                              )
+                          ) : (
+                              <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6 text-center absolute inset-0 bg-gray-50">
+                                  <FileText size={42} className="mb-2 text-blue-400" />
+                                  <p className="text-[12px] font-bold mb-1">Preview tidak tersedia</p>
+                                  <p className="text-[11px]">Format file ini tidak dapat dipratinjau.</p>
+                                  <a href={buildFileUrl(selectedSkema.dokumen)} target="_blank" rel="noreferrer" className="mt-3 px-3 py-1.5 bg-blue-100 text-blue-700 rounded text-[11px] font-bold hover:bg-blue-200">Unduh File</a>
+                              </div>
+                          )}
+                      </div>
+                  </div>
               )}
 
-              {/* SEPARATOR KHUSUS NAVIGASI FORMULIR (RUTE BERSARANG KE /admin/skema/:id/...) */}
+              {/* SEPARATOR KHUSUS NAVIGASI FORMULIR */}
               <div className="border-t border-[#071E3D]/10 pt-6 mt-2">
                 <h4 className="text-[14px] font-bold text-[#071E3D] mb-4 flex items-center gap-2">
                   Navigasi Instrumen & Asesmen
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <button 
                     onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/ia01`)}
                     className="flex flex-col items-center justify-center p-3 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
@@ -448,6 +570,7 @@ const Skema = () => {
                     <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                   
+                  {/* TOMBOL PINTAR: Mengarah ke route /admin/skema/:id/mapa */}
                   <button 
                     onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/mapa`)}
                     className="flex flex-col items-center justify-center p-3 rounded-xl border border-[#CC6B27]/30 bg-[#CC6B27]/5 text-[#CC6B27] hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm group"
@@ -458,20 +581,11 @@ const Skema = () => {
                   </button>
 
                   <button 
-                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/mapa01`)}
-                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-600 hover:text-white transition-all shadow-sm group"
+                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/kelompok-pekerjaan`)}
+                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-600 hover:text-white transition-all shadow-sm group"
                   >
-                    <span className="text-[12px] font-bold mb-1">MAPA 01</span>
-                    <span className="text-[10px] font-medium opacity-80 mb-2">Perencanaan</span>
-                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-
-                  <button 
-                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/mapa02`)}
-                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-600 hover:text-white transition-all shadow-sm group"
-                  >
-                    <span className="text-[12px] font-bold mb-1">MAPA 02</span>
-                    <span className="text-[10px] font-medium opacity-80 mb-2">Peta Instrumen</span>
+                    <span className="text-[12px] font-bold mb-1">Kelompok</span>
+                    <span className="text-[10px] font-medium opacity-80 mb-2">Pekerjaan</span>
                     <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
@@ -486,7 +600,7 @@ const Skema = () => {
       {/* MODAL FORM TAMBAH/EDIT */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             
             <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
               <h3 className="text-[18px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
@@ -499,127 +613,167 @@ const Skema = () => {
             <div className="flex-1 overflow-y-auto p-6">
               <form id="skemaForm" onSubmit={handleSubmit} className="flex flex-col gap-4">
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode Skema</label>
-                    <input type="text" name="kode_skema" value={formData.kode_skema} onChange={handleInputChange} required 
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-mono" />
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Status Skema</label>
-                    <select name="status" value={formData.status} onChange={handleInputChange}
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px]">
-                      <option value="draft">Draft</option>
-                      <option value="aktif">Aktif</option>
-                      <option value="nonaktif">Non-Aktif</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Judul Skema (Indonesia)</label>
-                    <input type="text" name="judul_skema" value={formData.judul_skema} onChange={handleInputChange} required 
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]"/>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Judul Skema (Inggris)</label>
-                    <input type="text" name="judul_skema_en" value={formData.judul_skema_en} onChange={handleInputChange} 
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]"/>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-[#071E3D]/10 pt-4 mt-2">
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Jenis Skema</label>
-                    <select name="jenis_skema" value={formData.jenis_skema} onChange={handleInputChange}
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px]">
-                      <option value="kkni">KKNI</option>
-                      <option value="okupasi">Okupasi</option>
-                      <option value="klaster">Klaster</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Level KKNI</label>
-                    <select name="level_kkni" value={formData.level_kkni} onChange={handleInputChange}
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px]">
-                      <option value="">-- Pilih Level --</option>
-                      {[1,2,3,4,5,6,7,8,9].map(num => <option key={num} value={num}>Level {num}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Bidang Okupasi</label>
-                    <input type="text" name="bidang_okupasi" value={formData.bidang_okupasi} onChange={handleInputChange} 
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode Sektor</label>
-                    <input type="text" name="kode_sektor" value={formData.kode_sektor} onChange={handleInputChange} 
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-mono" />
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode KBLI</label>
-                    <input type="text" name="kode_kbli" value={formData.kode_kbli} onChange={handleInputChange} 
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-mono" />
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode KBJI</label>
-                    <input type="text" name="kode_kbji" value={formData.kode_kbji} onChange={handleInputChange} 
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-mono" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-[#071E3D]/10 pt-4 mt-2">
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kedalaman Bukti</label>
-                    <select name="kedalaman_bukti" value={formData.kedalaman_bukti} onChange={handleInputChange}
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px]">
-                      <option value="elemen_kompetensi">Elemen Kompetensi</option>
-                      <option value="kriteria_unjuk_kerja">Kriteria Unjuk Kerja</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Skor Min. Penilaian (AI 05)</label>
-                    <input type="number" name="skor_min_ai05" value={formData.skor_min_ai05} onChange={handleInputChange} 
-                      className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Keterangan Bukti</label>
-                  <textarea name="keterangan_bukti" rows="2" value={formData.keterangan_bukti} onChange={handleInputChange} 
-                    className="w-full p-3 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] resize-none"></textarea>
-                </div>
-                
-                {/* --- INPUT FILE DOKUMEN --- */}
-                <div className="bg-[#182D4A]/5 p-5 rounded-lg border border-[#182D4A]/20 mt-2">
-                  <label className="block text-[13px] font-bold text-[#071E3D] mb-2 flex items-center gap-2">
-                    <Upload size={16} className="text-[#CC6B27]"/> Unggah Dokumen Skema (PDF/DOC)
-                  </label>
+                {/* Form Inputs (Dibuat Grid Kiri Kanan) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   
-                  <input 
-                    type="file" 
-                    name="dokumen" 
-                    onChange={handleFileChange} 
-                    accept=".pdf,.doc,.docx"
-                    className="block w-full text-[12px] text-[#182D4A]
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-md file:border-0
-                      file:text-[12px] file:font-bold
-                      file:bg-[#071E3D] file:text-white
-                      hover:file:bg-[#182D4A] file:cursor-pointer file:transition-colors
-                      cursor-pointer"
-                  />
-                  
-                  {isEditMode && formData.dokumen && !selectedFile && (
-                    <div className="flex items-center gap-2 mt-3 text-[11px] text-[#CC6B27] font-bold bg-[#CC6B27]/10 p-2 rounded-md w-fit border border-[#CC6B27]/20">
-                      <FileText size={14} />
-                      <span>File Tersimpan: {formData.dokumen.split('/').pop()}</span>
+                  {/* Kolom Kiri */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode Skema <span className="text-red-500">*</span></label>
+                        <input type="text" name="kode_skema" value={formData.kode_skema} onChange={handleInputChange} required 
+                          className={inputClass('kode_skema') + " font-mono"} />
+                          {errors.kode_skema && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.kode_skema}</span>}
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Status Skema</label>
+                        <select name="status" value={formData.status} onChange={handleInputChange} className={inputClass('status')}>
+                          <option value="draft">Draft</option>
+                          <option value="aktif">Aktif</option>
+                          <option value="nonaktif">Non-Aktif</option>
+                        </select>
+                      </div>
                     </div>
-                  )}
+
+                    <div>
+                      <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Judul Skema (Indonesia) <span className="text-red-500">*</span></label>
+                      <input type="text" name="judul_skema" value={formData.judul_skema} onChange={handleInputChange} required className={inputClass('judul_skema')}/>
+                      {errors.judul_skema && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.judul_skema}</span>}
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Judul Skema (Inggris)</label>
+                      <input type="text" name="judul_skema_en" value={formData.judul_skema_en} onChange={handleInputChange} className={inputClass('judul_skema_en')}/>
+                      {errors.judul_skema_en && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.judul_skema_en}</span>}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Jenis Skema</label>
+                            <select name="jenis_skema" value={formData.jenis_skema} onChange={handleInputChange} className={inputClass('jenis_skema')}>
+                            <option value="kkni">KKNI</option>
+                            <option value="okupasi">Okupasi</option>
+                            <option value="klaster">Klaster</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Level KKNI <span className="text-red-500">*</span></label>
+                            <select name="level_kkni" value={formData.level_kkni} onChange={handleInputChange} className={inputClass('level_kkni')} required>
+                            <option value="">-- Pilih Level --</option>
+                            {[1,2,3,4,5,6,7,8,9].map(num => <option key={num} value={num}>Level {num}</option>)}
+                            </select>
+                            {errors.level_kkni && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.level_kkni}</span>}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Bidang Okupasi</label>
+                        <input type="text" name="bidang_okupasi" value={formData.bidang_okupasi} onChange={handleInputChange} className={inputClass('bidang_okupasi')} />
+                        {errors.bidang_okupasi && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.bidang_okupasi}</span>}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode Sektor</label>
+                        <input type="text" name="kode_sektor" value={formData.kode_sektor} onChange={handleInputChange} className={inputClass('kode_sektor') + " font-mono"} />
+                        {errors.kode_sektor && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.kode_sektor}</span>}
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode KBLI</label>
+                        <input type="text" name="kode_kbli" value={formData.kode_kbli} onChange={handleInputChange} className={inputClass('kode_kbli') + " font-mono"} />
+                        {errors.kode_kbli && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.kode_kbli}</span>}
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode KBJI</label>
+                        <input type="text" name="kode_kbji" value={formData.kode_kbji} onChange={handleInputChange} className={inputClass('kode_kbji') + " font-mono"} />
+                        {errors.kode_kbji && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.kode_kbji}</span>}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kedalaman Bukti</label>
+                        <select name="kedalaman_bukti" value={formData.kedalaman_bukti} onChange={handleInputChange} className={inputClass('kedalaman_bukti')}>
+                          <option value="elemen_kompetensi">Elemen Kompetensi</option>
+                          <option value="kriteria_unjuk_kerja">Kriteria Unjuk Kerja</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Skor Min. (AI 05) <span className="text-red-500">*</span></label>
+                        <input type="number" name="skor_min_ai05" value={formData.skor_min_ai05} onChange={handleInputChange} className={inputClass('skor_min_ai05')} required />
+                        {errors.skor_min_ai05 && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.skor_min_ai05}</span>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Keterangan Bukti</label>
+                      <textarea name="keterangan_bukti" rows="2" value={formData.keterangan_bukti} onChange={handleInputChange} className={inputClass('keterangan_bukti') + " resize-none"}></textarea>
+                      {errors.keterangan_bukti && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.keterangan_bukti}</span>}
+                    </div>
+                  </div>
+
+                  {/* Kolom Kanan: File & Preview */}
+                  <div className="flex flex-col gap-4 border-t lg:border-t-0 lg:border-l border-[#071E3D]/10 pt-4 lg:pt-0 lg:pl-6">
+                      <div className="bg-[#182D4A]/5 p-5 rounded-lg border border-[#182D4A]/20">
+                          <label className="block text-[13px] font-bold text-[#071E3D] mb-2 flex items-center gap-2">
+                              <Upload size={16} className="text-[#CC6B27]"/> Unggah Dokumen Skema (PDF)
+                          </label>
+                          
+                          {/* MODIFIKASI: accept input file hanya mengizinkan PDF */}
+                          <input 
+                              type="file" 
+                              name="file_dokumen" 
+                              onChange={handleFileChange} 
+                              accept=".pdf"
+                              className="block w-full text-[12px] text-[#182D4A] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-[12px] file:font-bold file:bg-[#071E3D] file:text-white hover:file:bg-[#182D4A] file:cursor-pointer file:transition-colors cursor-pointer bg-white border border-[#071E3D]/20 rounded-lg p-1"
+                          />
+                          
+                          {isEditMode && formData.dokumen && !selectedFile && (
+                              <div className="flex items-center gap-2 mt-3 text-[11px] text-[#CC6B27] font-bold bg-[#CC6B27]/10 p-2 rounded-md w-fit border border-[#CC6B27]/20">
+                              <FileText size={14} />
+                              <span>Tersimpan: <a href={buildFileUrl(formData.dokumen)} target="_blank" rel="noreferrer" className="hover:underline">{formData.dokumen.split('/').pop()}</a></span>
+                              </div>
+                          )}
+                      </div>
+
+                      {/* AREA PREVIEW PDF */}
+                      <div className="border border-[#071E3D]/20 rounded-lg flex flex-col flex-1 overflow-hidden min-h-[350px]">
+                          <div className="bg-gray-100 px-3 py-2 text-[11px] font-bold text-[#182D4A] flex justify-between items-center border-b border-[#071E3D]/20">
+                              <span>Pratinjau Dokumen</span>
+                              {previewUrl && isPreviewable(previewUrl) && (
+                              <button type="button" onClick={() => setShowFullPreview(!showFullPreview)} className="text-[#CC6B27] hover:underline cursor-pointer">
+                                  {showFullPreview ? 'Perkecil' : 'Perbesar Tampilan'}
+                              </button>
+                              )}
+                          </div>
+                          
+                          <div className={`relative flex-1 transition-all duration-300 ${showFullPreview ? 'h-[500px]' : 'h-full bg-white'}`}>
+                              {previewUrl ? (
+                                  isPreviewable(previewUrl) ? (
+                                      isImageFile(previewUrl) ? (
+                                          <div className="w-full h-full overflow-auto absolute inset-0 flex justify-center items-start bg-gray-50 p-2">
+                                              <img src={buildFileUrl(previewUrl)} alt="Preview" className="max-w-full object-contain" />
+                                          </div>
+                                      ) : (
+                                          <iframe src={`${buildFileUrl(previewUrl)}#toolbar=0&navpanes=0`} className="w-full h-full border-0 absolute inset-0" title="Preview PDF" />
+                                      )
+                                  ) : (
+                                      <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6 text-center absolute inset-0 bg-gray-50">
+                                          <FileText size={42} className="mb-2 text-blue-400" />
+                                          <p className="text-[12px] font-bold mb-1">Preview tidak tersedia</p>
+                                          <p className="text-[11px]">Format file ini tidak dapat dipratinjau.</p>
+                                      </div>
+                                  )
+                              ) : (
+                                  <div className="flex flex-col items-center justify-center h-full text-gray-400 p-6 text-center absolute inset-0">
+                                      <FileText size={42} className="mb-2 opacity-30" />
+                                      <p className="text-[11px]">Pilih file skema (PDF) untuk melihat pratinjau.</p>
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+
+                  </div>
                 </div>
 
               </form>

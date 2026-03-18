@@ -24,75 +24,68 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
+  setSuccess(false);
 
-    try {
-      const res = await axios.post("http://localhost:3000/api/auth/login", formData);
+  try {
+    const res = await axios.post("http://localhost:3000/api/auth/login", formData);
 
-      // Cek apakah login berhasil dari backend
-      if (res.data && res.data.success) {
-        const { token, user } = res.data.data;
-        
-        console.log("Data User dari Backend:", user); // DEBUG: Cek apakah id_tuk ada
+    if (res.data && res.data.success) {
+      const { token, user } = res.data.data;
+      
+      console.log("🔍 Data User dari Backend:", user); // DEBUG
 
-        // Validasi dasar data user
-        if (!user || !user.role) {
-          throw new Error("Data user tidak lengkap dari server");
-        }
+      // Validasi dasar
+      if (!user || !user.id_user) {
+        throw new Error("Data user tidak lengkap dari server");
+      }
 
-        // Simpan token
-        localStorage.setItem("token", token);
-        
-        // Simpan data user lengkap ke localStorage
-        localStorage.setItem("user", JSON.stringify(user));
-        
-        // Simpan role ke localStorage
-        const role = user.role.toLowerCase();
-        localStorage.setItem("role", role);
+      // 🔥 SIMPAN SEMUA DATA USER LENGKAP (termasuk id_tuk)
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user)); // ✅ user lengkap {id_user, role, id_tuk}
+      
+      // Legacy support (tetap simpan role terpisah)
+      localStorage.setItem("role", user.role);
+      localStorage.setItem("id_tuk", user.id_tuk?.toString() || null);
+      
+      console.log("✅ ID TUK disimpan:", user.id_tuk || "null");
+      console.log("✅ User data:", user);
+      
+      setSuccess(true);
 
-        // ⭐ Simpan id_tuk jika ada (untuk user TUK)
-        if (user.id_tuk) {
-          localStorage.setItem("id_tuk", user.id_tuk);
-          console.log("ID TUK berhasil disimpan:", user.id_tuk);
+      // Redirect berdasarkan role
+      setTimeout(() => {
+        const role = user.role;
+        if (role === "admin") {
+          navigate("/admin");
+        } else if (role === "asesi") {
+          navigate("/asesi");
+        } else if (role === "tuk") {
+          navigate("/tuk");
         } else {
-          console.warn("ID TUK tidak ditemukan di response user (atau null)");
+          navigate("/dashboard");
         }
-        
-        setSuccess(true);
+      }, 1200);
 
-        // Redirect setelah 1.2 detik
-        setTimeout(() => {
-          if (role === "admin") {
-            navigate("/admin");
-          } else if (role === "asesi") {
-            navigate("/asesi");
-          } else if (role === "tuk") {
-            navigate("/tuk");
-          } else {
-            navigate("/dashboard");
-          }
-        }, 1200);
-
-      } else {
-        setError(res.data.message || "Login gagal");
-      }
-
-    } catch (err) {
-      console.error("Login Error:", err);
-      if (err.response) {
-        setError(err.response.data?.message || "Login gagal");
-      } else if (err.request) {
-        setError("Tidak ada respons dari server");
-      } else {
-        setError(err.message || "Terjadi kesalahan");
-      }
-    } finally {
-      setLoading(false);
+    } else {
+      setError(res.data.message || "Login gagal");
     }
-  };
+
+  } catch (err) {
+    console.error("❌ Login Error:", err);
+    if (err.response) {
+      setError(err.response.data?.message || "Login gagal");
+    } else if (err.request) {
+      setError("Tidak ada respons dari server");
+    } else {
+      setError(err.message || "Terjadi kesalahan");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   const containerVariants = {
     hidden: { opacity: 0 },

@@ -14,13 +14,9 @@ const Sidebar = () => {
 
   // State untuk Dropdown Menu
   const [openMenus, setOpenMenus] = useState({
-    laporan: false,
     standar: false,
-    biaya: false,
-    event: false,
     asesi: false,
-    asesor: false,
-    persuratan: false
+    asesor: false
   });
 
   // 1. AUTO-OPEN MENU INDUK JIKA ANAKNYA SEDANG AKTIF
@@ -30,14 +26,11 @@ const Sidebar = () => {
       const newState = { ...prev };
       const isPathActive = (pathsArray) => pathsArray.some(p => path.startsWith(p));
 
-      newState.laporan = isPathActive(['/admin/laporan']);
-      // Ditambahkan path bank-soal agar dropdown standar terbuka saat di halaman bank soal
+      // '/admin/bank-soal' & '/admin/bank-soal-pg' tetap dipertahankan di sini agar menu Standar Kompetensi 
+      // tetap terbuka & menyala (highlight) ketika user sedang mengelola soal dari halaman unit kompetensi
       newState.standar = isPathActive(['/admin/unit-kompetensi', '/admin/skkni', '/admin/bank-soal', '/admin/bank-soal-pg']);
-      newState.biaya = isPathActive(['/admin/biaya']);
-      newState.event = isPathActive(['/admin/jadwal']);
-      newState.asesi = isPathActive(['/admin/asesi', '/admin/verifikasi-pendaftaran']);
+      newState.asesi = isPathActive(['/admin/asesi', '/admin/verifikasi-pendaftaran', '/admin/asesi/belum-kompeten']);
       newState.asesor = isPathActive(['/admin/asesor']);
-      newState.persuratan = isPathActive(['/admin/surat']);
 
       return newState;
     });
@@ -56,8 +49,17 @@ const Sidebar = () => {
     sessionStorage.setItem("sidebarScrollPosition", e.target.scrollTop);
   };
 
+  // FUNGSI TOGGLE MENU (ACCORDION STYLE)
   const toggleMenu = (key) => {
-    setOpenMenus((prev) => ({ ...prev, [key]: !prev[key] }));
+    setOpenMenus((prev) => {
+      const newState = {
+        standar: false,
+        asesi: false,
+        asesor: false
+      };
+      newState[key] = !prev[key];
+      return newState;
+    });
   };
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`);
@@ -74,7 +76,6 @@ const Sidebar = () => {
   };
 
   // --- HELPER UNTUK KELAS TAILWIND ---
-  // Menggunakan #071E3D (Background Utama), #182D4A (Secondary), #CC6B27 (Highlight), #FAFAFA (Text)
   
   const getNavItemClass = (active) =>
     `w-full flex items-center justify-between px-3 py-2.5 mb-1 rounded-lg text-sm transition-all duration-200 outline-none ${
@@ -151,35 +152,13 @@ const Sidebar = () => {
         {/* REPORTING */}
         <SectionLabel>Reporting</SectionLabel>
         
-        <button className={getNavItemClass(isActive('/admin/laporan'))} onClick={() => toggleMenu('laporan')}>
+        {/* MENU LAPORAN SERTIFIKASI (PATH DIUBAH DI SINI) */}
+        <button className={getNavItemClass(isActive('/admin/laporan-sertifikasi'))} onClick={() => handleNav('/admin/laporan-sertifikasi')}>
           <div className="flex items-center flex-1">
             <FaChartBar className="text-lg mr-3" />
             <span className="text-left">Laporan Sertifikasi</span>
           </div>
-          {openMenus.laporan ? <FaChevronDown className="text-xs" /> : <FaChevronRight className="text-xs" />}
         </button>
-        {openMenus.laporan && (
-          <div className="flex flex-col mb-1 mt-1 bg-[#071E3D]">
-            <button className={getSubItemClass(isActive('/admin/laporan/umum'))} onClick={() => handleNav('/admin/laporan/umum')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/laporan/umum') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Laporan Umum
-            </button>
-            <button className={getSubItemClass(isActive('/admin/laporan/bulanan'))} onClick={() => handleNav('/admin/laporan/bulanan')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/laporan/bulanan') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Laporan Bulanan
-            </button>
-            <button className={getSubItemClass(isActive('/admin/laporan/tahunan'))} onClick={() => handleNav('/admin/laporan/tahunan')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/laporan/tahunan') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Laporan Tahunan
-            </button>
-            <button className={getSubItemClass(isActive('/admin/laporan/kinerja-asesor'))} onClick={() => handleNav('/admin/laporan/kinerja-asesor')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/laporan/kinerja-asesor') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Kinerja Asesor
-            </button>
-            <button className={getSubItemClass(isActive('/admin/laporan/kinerja-tuk'))} onClick={() => handleNav('/admin/laporan/kinerja-tuk')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/laporan/kinerja-tuk') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Kinerja TUK
-            </button>
-            <button className={getSubItemClass(isActive('/admin/laporan/feedback'))} onClick={() => handleNav('/admin/laporan/feedback')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/laporan/feedback') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Umpan Balik
-            </button>
-          </div>
-        )}
 
         {/* MASTER DATA */}
         <SectionLabel>Master Data</SectionLabel>
@@ -206,12 +185,6 @@ const Sidebar = () => {
             <button className={getSubItemClass(isActive('/admin/skkni'))} onClick={() => handleNav('/admin/skkni')}>
               <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/skkni') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Data SKKNI
             </button>
-            <button className={getSubItemClass(isActive('/admin/bank-soal'))} onClick={() => handleNav('/admin/bank-soal')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/bank-soal') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Bank Soal
-            </button>
-            <button className={getSubItemClass(isActive('/admin/bank-soal-pg'))} onClick={() => handleNav('/admin/bank-soal-pg')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/bank-soal-pg') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Bank Soal PG
-            </button>
           </div>
         )}
 
@@ -222,50 +195,15 @@ const Sidebar = () => {
           </div>
         </button>
 
-        <button className={getNavItemClass(isActive('/admin/biaya'))} onClick={() => toggleMenu('biaya')}>
-          <div className="flex items-center flex-1">
-            <FaMoneyBillWave className="text-lg mr-3" />
-            <span className="text-left">Biaya & Rekening</span>
-          </div>
-          {openMenus.biaya ? <FaChevronDown className="text-xs" /> : <FaChevronRight className="text-xs" />}
-        </button>
-        {openMenus.biaya && (
-          <div className="flex flex-col mb-1 mt-1">
-            <button className={getSubItemClass(isActive('/admin/biaya/rekening'))} onClick={() => handleNav('/admin/biaya/rekening')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/biaya/rekening') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Rekening Bank
-            </button>
-            <button className={getSubItemClass(isActive('/admin/biaya/komponen'))} onClick={() => handleNav('/admin/biaya/komponen')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/biaya/komponen') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Komponen Biaya
-            </button>
-          </div>
-        )}
-
         {/* OPERASIONAL */}
         <SectionLabel>Operasional</SectionLabel>
 
-        <button className={getNavItemClass(isActive('/admin/jadwal'))} onClick={() => toggleMenu('event')}>
+        <button className={getNavItemClass(isActive('/admin/jadwal/uji-kompetensi'))} onClick={() => handleNav('/admin/jadwal/uji-kompetensi')}>
           <div className="flex items-center flex-1">
             <FaCalendarAlt className="text-lg mr-3" />
-            <span className="text-left">Event & Jadwal</span>
+            <span className="text-left">Jadwal Uji Kompetensi</span>
           </div>
-          {openMenus.event ? <FaChevronDown className="text-xs" /> : <FaChevronRight className="text-xs" />}
         </button>
-        {openMenus.event && (
-          <div className="flex flex-col mb-1 mt-1">
-            <button className={getSubItemClass(isActive('/admin/jadwal/cari'))} onClick={() => handleNav('/admin/jadwal/cari')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/jadwal/cari') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Cari Jadwal
-            </button>
-            <button className={getSubItemClass(isActive('/admin/jadwal/uji-kompetensi'))} onClick={() => handleNav('/admin/jadwal/uji-kompetensi')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/jadwal/uji-kompetensi') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Jadwal Uji Kompetensi
-            </button>
-            <button className={getSubItemClass(isActive('/admin/jadwal/event-uji'))} onClick={() => handleNav('/admin/jadwal/event-uji')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/jadwal/event-uji') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Event Uji Kompetensi
-            </button>
-            <button className={getSubItemClass(isActive('/admin/jadwal/arsip'))} onClick={() => handleNav('/admin/jadwal/arsip')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/jadwal/arsip') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Arsip Jadwal
-            </button>
-          </div>
-        )}
 
         <button className={getNavItemClass(isActive('/admin/tuk'))} onClick={() => handleNav('/admin/tuk')}>
           <div className="flex items-center flex-1">
@@ -286,24 +224,17 @@ const Sidebar = () => {
             <button className={getSubItemClass(isActive('/admin/asesi/tambah'))} onClick={() => handleNav('/admin/asesi/tambah')}>
               <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/tambah') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Tambah Asesi
             </button>
-            <button className={getSubItemClass(isActive('/admin/asesi/cari'))} onClick={() => handleNav('/admin/asesi/cari')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/cari') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Pencarian Asesi
-            </button>
             <button className={getSubItemClass(isActive('/admin/verifikasi-pendaftaran'))} onClick={() => handleNav('/admin/verifikasi-pendaftaran')}>
               <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/verifikasi-pendaftaran') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Pendaftar Baru
             </button>
-            
             <button className={getSubItemClass(isActive('/admin/asesi/terjadwal'))} onClick={() => handleNav('/admin/asesi/terjadwal')}>
               <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/terjadwal') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Terjadwal
             </button>
             <button className={getSubItemClass(isActive('/admin/asesi/kompeten'))} onClick={() => handleNav('/admin/asesi/kompeten')}>
               <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/kompeten') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Kompeten
             </button>
-            <button className={getSubItemClass(isActive('/admin/asesi/belum-sertifikat'))} onClick={() => handleNav('/admin/asesi/belum-sertifikat')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/belum-sertifikat') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Belum Sertifikat
-            </button>
-            <button className={getSubItemClass(isActive('/admin/asesi/blokir'))} onClick={() => handleNav('/admin/asesi/blokir')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/blokir') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Diblokir
+            <button className={getSubItemClass(isActive('/admin/asesi/belum-kompeten'))} onClick={() => handleNav('/admin/asesi/belum-kompeten')}>
+              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/belum-kompeten') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Belum Kompeten
             </button>
           </div>
         )}
@@ -339,44 +270,10 @@ const Sidebar = () => {
         {/* KEUANGAN & ADMIN */}
         <SectionLabel>Keuangan & Admin</SectionLabel>
 
-        <button className={getNavItemClass(isActive('/admin/surat'))} onClick={() => toggleMenu('persuratan')}>
-          <div className="flex items-center flex-1">
-            <FaEnvelopeOpenText className="text-lg mr-3" />
-            <span className="text-left">Persuratan</span>
-          </div>
-          {openMenus.persuratan ? <FaChevronDown className="text-xs" /> : <FaChevronRight className="text-xs" />}
-        </button>
-        {openMenus.persuratan && (
-          <div className="flex flex-col mb-1 mt-1">
-            <button className={getSubItemClass(isActive('/admin/surat/sk'))} onClick={() => handleNav('/admin/surat/sk')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/surat/sk') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>SK & Tugas
-            </button>
-            <button className={getSubItemClass(isActive('/admin/surat/masuk'))} onClick={() => handleNav('/admin/surat/masuk')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/surat/masuk') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Surat Masuk
-            </button>
-            <button className={getSubItemClass(isActive('/admin/surat/keluar'))} onClick={() => handleNav('/admin/surat/keluar')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/surat/keluar') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Surat Keluar
-            </button>
-            <button className={getSubItemClass(isActive('/admin/surat/mou'))} onClick={() => handleNav('/admin/surat/mou')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/surat/mou') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>MoU / MoA
-            </button>
-          </div>
-        )}
-
         <button className={getNavItemClass(isActive('/admin/surveillance'))} onClick={() => handleNav('/admin/surveillance')}>
           <div className="flex items-center flex-1">
             <FaEye className="text-lg mr-3" />
             <span className="text-left">Surveillance</span>
-          </div>
-        </button>
-
-        {/* AKUN */}
-        <SectionLabel>Akun</SectionLabel>
-        
-        <button className={getNavItemClass(isActive('/admin/ubah-sandi'))} onClick={() => handleNav('/admin/ubah-sandi')}>
-          <div className="flex items-center flex-1">
-            <FaLock className="text-lg mr-3" />
-            <span className="text-left">Ubah Sandi</span>
           </div>
         </button>
 
