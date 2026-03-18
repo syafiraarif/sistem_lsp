@@ -4,8 +4,7 @@ import Swal from 'sweetalert2';
 import api from "../../services/api";
 import { 
   Search, Plus, Edit2, Trash2, X, Save, 
-  Calendar, Loader2, Clock, MapPin, Layers, Link as LinkIcon, CalendarDays, ClipboardList,
-  Users 
+  Calendar, Loader2, Clock, MapPin, Layers, Link as LinkIcon, CalendarDays, ClipboardList
 } from 'lucide-react';
 
 const JadwalUji = () => {
@@ -257,20 +256,22 @@ const JadwalUji = () => {
                 <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] w-48">Waktu Pelaksanaan</th>
                 <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-20">Kuota</th>
                 <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-28">Status</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-36">Aksi</th>
+                {/* Kolom Baru untuk Kelola Asesor & Peserta */}
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-44">Kelola</th>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-24">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="py-16 text-center">
+                  <td colSpan="8" className="py-16 text-center">
                     <Loader2 className="animate-spin text-[#CC6B27] mx-auto mb-3" size={36} />
                     <p className="text-[#182D4A] font-medium text-[14px]">Memuat jadwal...</p>
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="py-16 text-center">
+                  <td colSpan="8" className="py-16 text-center">
                     <CalendarDays size={48} className="text-[#071E3D]/20 mx-auto mb-3"/>
                     <p className="text-[#182D4A] font-medium text-[14px]">Belum ada jadwal uji kompetensi.</p>
                   </td>
@@ -345,22 +346,31 @@ const JadwalUji = () => {
                         </span>
                       </td>
                       
+                      {/* Kolom Kelola (Teks Saja) */}
+                      <td className="py-4 px-4 text-center">
+                        <div className="flex flex-col gap-1.5 items-center justify-center">
+                          <button 
+                            onClick={() => navigate(`/admin/jadwal/${item.id_jadwal}/asesor`)} 
+                            className="w-full max-w-[90px] px-2 py-1.5 text-blue-700 bg-blue-50 hover:bg-blue-600 hover:text-white border border-blue-200 rounded-md transition-all text-[11px] font-bold tracking-wide uppercase shadow-sm"
+                          >
+                            Asesor
+                          </button>
+                          <button 
+                            onClick={() => navigate(`/admin/jadwal/${item.id_jadwal}/peserta`)} 
+                            className="w-full max-w-[90px] px-2 py-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 rounded-md transition-all text-[11px] font-bold tracking-wide uppercase shadow-sm"
+                          >
+                            Peserta
+                          </button>
+                        </div>
+                      </td>
+
                       {/* Aksi */}
                       <td className="py-4 px-4 text-center">
                         <div className="flex justify-center gap-1.5">
-                          {/* Tombol Atur Asesor */}
-                          <button 
-                            onClick={() => navigate(`/admin/jadwal/${item.id_jadwal}/asesor`)} 
-                            className="p-1.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-600 hover:text-white border border-blue-100 transition-colors" 
-                            title="Atur Asesor"
-                          >
-                            <Users size={16} />
-                          </button>
-                          
-                          <button onClick={() => handleEdit(item)} className="p-1.5 text-[#CC6B27] bg-[#CC6B27]/10 rounded hover:bg-[#CC6B27] hover:text-white transition-colors" title="Edit">
+                          <button onClick={() => handleEdit(item)} className="p-1.5 text-[#CC6B27] bg-[#CC6B27]/10 rounded hover:bg-[#CC6B27] hover:text-white transition-colors" title="Edit Jadwal">
                             <Edit2 size={16} />
                           </button>
-                          <button onClick={() => handleDelete(item.id_jadwal)} className="p-1.5 text-red-600 bg-red-50 rounded hover:bg-red-600 hover:text-white border border-red-100 transition-colors" title="Hapus">
+                          <button onClick={() => handleDelete(item.id_jadwal)} className="p-1.5 text-red-600 bg-red-50 rounded hover:bg-red-600 hover:text-white border border-red-100 transition-colors" title="Hapus Jadwal">
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -523,7 +533,6 @@ const JadwalUji = () => {
                       </select>
                     </div>
                     
-                    {/* BAGIAN INI YANG SEBELUMNYA BERMASALAH KARENA TAG SELECT TIDAK TERTUTUP */}
                     <div>
                       <label className={labelClass}>Status Pendaftaran</label>
                       <select name="status" value={formData.status} onChange={handleInputChange} className={inputClass}>
@@ -534,7 +543,6 @@ const JadwalUji = () => {
                         <option value="arsip">Arsip</option>
                       </select>
                     </div>
-                    {/* ======================================================================= */}
                     
                     <div>
                       <label className={labelClass}>URL Meeting / Group</label>

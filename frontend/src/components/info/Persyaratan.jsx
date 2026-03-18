@@ -22,19 +22,22 @@ export default function Persyaratan() {
       setLoading(true);
       setError(null);
       
+      // Temukan data dari endpoint skema publik
       const res = await axios.get(`${API_URL}/skema`); 
       const finalData = res.data.data || [];
       setSkemaList(finalData);
     } catch (err) {
-      console.error("Gagal mengambil data:", err);
-      setError("Endpoint API tidak ditemukan (404). Pastikan server backend sudah running.");
+      console.error("Gagal mengambil data persyaratan:", err);
+      // Jika endpoint belum siap (404), tampilkan pesan ramah asesi
+      setError("Daftar persyaratan sedang dalam proses update oleh sistem.");
     } finally {
       setLoading(false);
     }
   };
 
+  // MATCHING: Menggunakan judul_skema sesuai kolom database
   const filteredData = skemaList.filter((item) =>
-    (item.nama_skema || "").toLowerCase().includes(searchTerm.toLowerCase())
+    (item.judul_skema || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -64,7 +67,7 @@ export default function Persyaratan() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Ketik nama skema (contoh: Teknik Listrik, Gedung, Web)..."
+            placeholder="Cari skema untuk lihat syarat (contoh: Web, Digital, Network)..."
             className="w-full pl-16 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 focus:bg-white transition-all text-[#071E3D] font-bold shadow-sm"
           />
         </div>
@@ -72,7 +75,7 @@ export default function Persyaratan() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
             <Loader2 className="animate-spin mb-4" size={40} />
-            <p className="font-bold uppercase text-[10px] tracking-widest">Memuat Data...</p>
+            <p className="font-bold uppercase text-[10px] tracking-widest">Memuat Data Skema & Syarat...</p>
           </div>
         ) : error ? (
           <div className="text-center p-12 bg-red-50 rounded-[3rem] border border-red-100">
@@ -105,7 +108,7 @@ export default function Persyaratan() {
                         <span className={`font-black text-xs md:text-sm tracking-tight leading-tight uppercase max-w-[80%] ${
                           openIndex === index ? "text-[#071E3D]" : "text-slate-600"
                         }`}>
-                          {item.nama_skema}
+                          {item.judul_skema}
                         </span>
                       </div>
                       <ChevronDown className={`transition-transform duration-300 shrink-0 ${openIndex === index ? "rotate-180 text-orange-500" : "text-slate-400"}`} size={20} />
@@ -126,8 +129,9 @@ export default function Persyaratan() {
                                       <span className="text-xs font-bold text-[#071E3D] uppercase leading-tight">
                                         {syarat.nama_persyaratan}
                                       </span>
+                                      {/* Jenis Persyaratan opsional */}
                                       <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">
-                                        Kategori: {syarat.jenis_persyaratan}
+                                        Wajib Dilampirkan
                                       </span>
                                     </div>
                                   </li>
@@ -151,7 +155,7 @@ export default function Persyaratan() {
             ) : (
               <div className="text-center py-20 bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
                 <Search size={48} className="mx-auto text-slate-300 mb-4 opacity-20" />
-                <p className="text-slate-400 font-bold tracking-tight uppercase text-xs tracking-[0.2em]">
+                <p className="text-slate-500 font-bold tracking-tight uppercase text-xs">
                   Skema sertifikasi tidak ditemukan.
                 </p>
               </div>

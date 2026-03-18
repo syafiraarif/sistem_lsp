@@ -13,15 +13,17 @@ exports.createAsesor = async (req, res) => {
 
     const { nik, email, no_hp, ...profile } = req.body;
 
-    const role = await Role.findOne({
-      where: { role_name: "ASESOR" },
-        transaction: t
-    });
+    let role = await Role.findOne({
+  where: { role_name: "ASESOR" },
+  transaction: t
+});
 
-    if (!role) {
-      await t.rollback();
-      return response.error(res, "Role ASESOR tidak ditemukan", 500);
-    }
+// AUTO CREATE ROLE
+if (!role) {
+  role = await Role.create({
+    role_name: "ASESOR"
+  }, { transaction: t });
+}
 
     const { user } =
       await createUser({
@@ -67,13 +69,16 @@ exports.importAsesorExcel = async (req, res) => {
       return response.error(res, "File Excel kosong", 400);
     }
 
-    const role = await Role.findOne({
-      where: { role_name: "ASESOR" }
-    });
+    let role = await Role.findOne({
+  where: { role_name: "ASESOR" }
+});
 
-    if (!role) {
-      return response.error(res, "Role ASESOR tidak ditemukan", 500);
-    }
+// AUTO CREATE ROLE
+if (!role) {
+  role = await Role.create({
+    role_name: "ASESOR"
+  });
+}
 
     let totalSuccess = 0;
     let totalFailed = 0;
@@ -251,9 +256,27 @@ exports.resetPassword = async (req, res) => {
 
     const rawPassword = await resetUserPassword(user);
 
-    return response.success(res, "Password berhasil direset", {
-      username: user.username,
-      password: rawPassword
+    try {
+       await sendAccountEmail(user.email, user.username, rawPassword);
+    } catch (emailErr) {
+       console.error("Gagal mengirim email reset password:", emailErr);
+    }
+
+    try {
+      await createNotifikasi({
+        channel: "email",
+        tujuan: user.email || user.username,
+        pesan: `Password untuk NIK ${user.username} berhasil direset dan dikirim ke email.`,
+        status_kirim: "terkirim",
+        ref_type: "akun",
+        ref_id: user.id_user
+      });
+    } catch (notifErr) {
+      console.error("Gagal membuat notif reset password:", notifErr);
+    }
+
+    return response.success(res, "Password berhasil direset dan dikirim ke email", {
+      username: user.username
     });
 
   } catch (err) {

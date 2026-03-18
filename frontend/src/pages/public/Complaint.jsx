@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import ReCAPTCHA from "react-google-recaptcha"; // Menggunakan Google ReCAPTCHA sesuai Controller
 import { 
   User, 
   MessageSquare, 
@@ -13,7 +14,9 @@ import {
   Mail,
   Send,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  ShieldCheck,
+  Briefcase
 } from "lucide-react";
 
 const API_URL = "http://localhost:3000/api/public";
@@ -21,30 +24,48 @@ const API_URL = "http://localhost:3000/api/public";
 export default function Complaint() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-
+  const recaptchaRef = useRef(null);
+  
+  // State Form disesuaikan dengan pengaduan.model.js
   const [formData, setFormData] = useState({
-    nama_pengadu: "",
-    email_pengadu: "",
-    no_hp_pengadu: "",
-    sebagai_siapa: "",
-    isi_pengaduan: "",
-    tanggal_pengaduan: new Date()
+    nama_pengadu: "",    // Sesuai DB: nama_pengadu
+    email_pengadu: "",   // Sesuai DB: email_pengadu
+    no_hp_pengadu: "",   // Sesuai DB: no_hp_pengadu
+    sebagai_siapa: "",   // Sesuai DB: ENUM("asesi","asesor","masyarakat")
+    isi_pengaduan: "",   // Sesuai DB: isi_pengaduan
+    captchaToken: ""     // Diperlukan oleh Controller
   });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const onCaptchaChange = (token) => {
+    setFormData({ ...formData, captchaToken: token });
+  };
+
   const nextStep = () => setStep(step + 1);
   const prevStep = () => setStep(step - 1);
 
   const handleSubmit = async () => {
+    if (!formData.captchaToken) {
+      alert("Silakan centang Captcha terlebih dahulu!");
+      return;
+    }
+
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/pengaduan`, formData);
+      // Menambahkan tanggal_pengaduan secara otomatis jika backend tidak menghandle default NOW
+      const payload = {
+        ...formData,
+        tanggal_pengaduan: new Date().toISOString()
+      };
+
+      await axios.post(`${API_URL}/pengaduan`, payload);
       
       alert("Pengaduan Anda telah terkirim dan akan segera diproses.");
       
+      // Reset Form
       setStep(1);
       setFormData({
         nama_pengadu: "",
@@ -52,11 +73,14 @@ export default function Complaint() {
         no_hp_pengadu: "",
         sebagai_siapa: "",
         isi_pengaduan: "",
-        tanggal_pengaduan: new Date()
+        captchaToken: ""
       });
+      if (recaptchaRef.current) recaptchaRef.current.reset();
     } catch (err) {
       console.error(err);
-      alert("Gagal mengirim pengaduan. Pastikan server backend dan database menyala.");
+      const errorMsg = err.response?.data?.message || "Gagal mengirim pengaduan. Pastikan server terhubung.";
+      alert(errorMsg);
+      if (recaptchaRef.current) recaptchaRef.current.reset();
     } finally {
       setLoading(false);
     }
@@ -79,7 +103,7 @@ export default function Complaint() {
                 Layanan <span className="text-orange-500">Pengaduan Masyarakat</span>
               </motion.h1>
               <p className="text-slate-500 font-medium leading-relaxed">
-                Sampaikan keluhan atau ketidaksesuaian pelayanan Lembaga Sertifikasi Kompetensi melalui kanal resmi SIMLSP.
+                Sampaikan keluhan atau ketidaksesuaian pelayanan LSP melalui kanal resmi SIMLSP.
               </p>
             </header>
 
@@ -130,23 +154,23 @@ export default function Complaint() {
                         type="email" 
                       />
                       <InputGroup 
-                        label="Nomor HP / WhatsApp*" 
+                        label="Nomor WhatsApp*" 
                         name="no_hp_pengadu"
                         value={formData.no_hp_pengadu}
                         onChange={handleChange}
                         placeholder="0812xxxx" 
                       />
                       <SelectGroup 
-                        label="Sebagai Siapa Anda?*" 
+                        label="Bertindak Sebagai*" 
                         name="sebagai_siapa"
                         value={formData.sebagai_siapa}
                         onChange={handleChange}
-                        options={[
-                          { label: "Peserta (Asesi)", value: "asesi" },
-                          { label: "Asesor", value: "asesor" },
-                          { label: "Masyarakat Umum", value: "masyarakat" }
-                        ]} 
-                      />
+                      >
+                        <option value="">Pilih Kategori</option>
+                        <option value="asesi">Asesi (Peserta)</option>
+                        <option value="asesor">Asesor (Penguji)</option>
+                        <option value="masyarakat">Masyarakat Umum</option>
+                      </SelectGroup>
                     </div>
                   </motion.div>
                 )}
@@ -166,21 +190,28 @@ export default function Complaint() {
                       <h2 className="text-xl font-black text-[#071E3D]">Detail Aduan</h2>
                     </div>
                     <div className="flex flex-col gap-2.5">
-                      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">Pesan Aduan*</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">Isi Pengaduan*</label>
                       <textarea 
                         name="isi_pengaduan"
                         value={formData.isi_pengaduan}
                         onChange={handleChange}
-                        rows="6"
-                        placeholder="Tuliskan keluhan atau laporan Anda secara detail..."
+                        rows="5"
+                        placeholder="Tuliskan keluhan Anda secara lengkap..."
                         className="px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all text-sm font-bold text-[#071E3D] resize-none"
                       />
                     </div>
-                    <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl flex gap-4 mt-6">
-                      <AlertCircle className="text-emerald-500 shrink-0" size={24} />
-                      <p className="text-sm text-emerald-800 leading-relaxed font-bold">
-                        Aduan Anda akan kami rahasiakan dan diproses secara profesional oleh tim penanganan keluhan LSP.
-                      </p>
+
+                    {/* GOOGLE RECAPTCHA - Menggantikan Captcha Manual agar sinkron dengan Backend */}
+                    <div className="p-6 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200 flex flex-col items-center">
+                       <div className="flex items-center gap-2 mb-4">
+                          <ShieldCheck size={16} className="text-orange-500" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Verifikasi Keamanan</span>
+                       </div>
+                       <ReCAPTCHA
+                          ref={recaptchaRef}
+                          sitekey="6LdSGX4sAAAAAA7BAt1iY8OVxtnx_EFunFBQV-QF" 
+                          onChange={onCaptchaChange}
+                        />
                     </div>
                   </motion.div>
                 )}
@@ -202,7 +233,7 @@ export default function Complaint() {
                 >
                   {loading ? "Mengirim..." : step === 2 ? (
                     <span className="flex items-center gap-2">Kirim Pengaduan <Send size={16} /></span>
-                  ) : "Lanjut Langkah Terakhir"}
+                  ) : "Lanjut ke Pesan"}
                 </button>
               </div>
             </div>
@@ -214,12 +245,12 @@ export default function Complaint() {
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-orange-500 shadow-sm">
                   <Info size={20} />
                 </div>
-                <h3 className="font-black uppercase tracking-widest text-xs">Anda Perlu Tahu</h3>
+                <h3 className="font-black uppercase tracking-widest text-xs">Penting</h3>
               </div>
               <div className="space-y-6">
-                <InfoItem icon={Mail} text="Periksa Inbox/Spam email Anda untuk menerima bukti pengaduan." />
-                <InfoItem icon={AlertCircle} text="Layanan ini ditujukan untuk ketidaksesuaian pelayanan LSP." />
-                <InfoItem icon={CheckCircle2} text="Tim kami akan memproses setiap laporan secara berkala." />
+                <InfoItem icon={Mail} text="Pastikan email aktif untuk koordinasi lebih lanjut." />
+                <InfoItem icon={AlertCircle} text="Layanan ini hanya untuk keluhan terkait sertifikasi." />
+                <InfoItem icon={CheckCircle2} text="Identitas pelapor dijamin kerahasiaannya." />
               </div>
             </div>
 
@@ -244,12 +275,10 @@ export default function Complaint() {
                       <Sparkles size={14} />
                     </motion.div>
                   </div>
-                  <h4 className="text-white font-black uppercase tracking-[0.2em] text-sm mb-3">Butuh Bantuan?</h4>
-                  <p className="text-slate-400 text-[11px] leading-relaxed mb-8 px-4 font-medium">
-                    Lihat FAQ untuk pertanyaan umum seputar pendaftaran & sertifikasi.
-                  </p>
-                  <div className="w-full py-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 group-hover:bg-orange-500 group-hover:border-orange-500 transition-all duration-500">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Lihat FAQ</span>
+                  <h4 className="text-white font-black uppercase tracking-[0.2em] text-sm mb-3">Pusat Bantuan</h4>
+                  <p className="text-slate-400 text-[11px] leading-relaxed mb-8 px-4 font-medium">Bingung alur pengaduan? Klik untuk panduan lengkap & FAQ.</p>
+                  <div className="w-full py-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 group-hover:bg-orange-500 transition-all duration-500">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Buka FAQ</span>
                     <ChevronRight size={16} className="text-orange-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
@@ -262,6 +291,7 @@ export default function Complaint() {
   );
 }
 
+// ================= HELPER COMPONENTS =================
 function InfoItem({ icon: Icon, text }) {
   return (
     <div className="flex gap-4 group/item">
@@ -289,26 +319,21 @@ function InputGroup({ label, name, value, onChange, placeholder, type = "text" }
   );
 }
 
-function SelectGroup({ label, name, value, onChange, options }) {
+function SelectGroup({ label, children, onChange, value, name }) {
   return (
     <div className="flex flex-col gap-2.5">
       <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">{label}</label>
       <div className="relative">
         <select 
-          name={name}
-          value={value}
+          name={name} 
+          value={value} 
           onChange={onChange}
-          className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D] appearance-none cursor-pointer"
+          className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D] appearance-none"
         >
-          <option value="">-- pilih --</option>
-          {options.map((opt, i) => (
-            <option key={i} value={opt.value}>{opt.label}</option>
-          ))}
+          {children}
         </select>
         <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m6 9 6 6 6-6"/>
-          </svg>
+           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </div>
       </div>
     </div>

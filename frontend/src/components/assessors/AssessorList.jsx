@@ -1,35 +1,55 @@
-import React from "react";
-import { motion } from "framer-motion";
-import { Users, ArrowRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
+import { Users, ArrowRight, Loader2, Info } from "lucide-react";
 import AssessorCard from "./AssessorCard";
 
+// Target Endpoint (Menunggu Backend Temanmu)
+const API_URL = "http://localhost:3000/api/public";
+
 export default function AssessorList() {
-  const assessorData = [
-    {
-      id: 1,
-      name: "Ahmad Fauzi, S.Kom",
-      competency: "Junior Web Developer",
-      institution: "LSP Teknologi Informasi",
-      status: "Aktif",
-    },
-    {
-      id: 2,
-      name: "Siti Rahmawati, M.Kom",
-      competency: "Digital Marketing",
-      institution: "LSP Teknologi Informasi",
-      status: "Aktif",
-    },
-    {
-      id: 3,
-      name: "Budi Santoso, S.T",
-      competency: "Data Analyst",
-      institution: "LSP Teknologi Informasi",
-      status: "Tidak Aktif",
-    },
-  ];
+  const [assessors, setAssessors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // FETCH DATA DARI API
+  useEffect(() => {
+    const fetchAssessors = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Mencoba mengambil data asli
+        const response = await axios.get(`${API_URL}/asesor`);
+
+        if (response.data.success && response.data.data.length > 0) {
+          // Mapping data dari backend agar cocok dengan props AssessorCard kamu
+          const formattedData = response.data.data.map(item => ({
+            id: item.id_user || item.id,
+            name: item.nama_lengkap || item.username || "Asesor LSP",
+            competency: item.kompetensi_teknis || "Asesor Kompetensi", 
+            institution: item.institusi_induk || "LSP Teknologi Informasi",
+            status: item.status || "Aktif",
+            image: item.foto_profil || null // Jika ada foto
+          }));
+          setAssessors(formattedData);
+        } else {
+          setAssessors([]);
+        }
+      } catch (err) {
+        console.error("Gagal load Asesor:", err);
+        setError("Data asesor belum tersedia saat ini.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssessors();
+  }, []);
 
   return (
     <section className="relative py-32 bg-white overflow-hidden">
+      {/* --- ORNAMEN BACKGROUND (TAMPILAN ASLI KAMU) --- */}
       <div className="absolute top-0 right-[-10%] w-[800px] h-[800px] bg-orange-500/[0.03] rounded-full blur-[150px] pointer-events-none" />
       <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-[#071E3D]/[0.04] rounded-full blur-[130px] pointer-events-none" />
       <div className="absolute top-20 left-10 w-64 h-64 border-[1px] border-[#071E3D]/5 rounded-[40%_60%_70%_30%/40%_50%_60%_40%] animate-[blob_20s_infinite_linear] pointer-events-none" />
@@ -77,23 +97,40 @@ export default function AssessorList() {
           </motion.p>
         </div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={{
-            hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: { staggerChildren: 0.15 },
-            },
-          }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10"
-        >
-          {assessorData.map((assessor) => (
-            <AssessorCard key={assessor.id} {...assessor} />
-          ))}
-        </motion.div>
+        {/* --- LOGIC RENDER DATA --- */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="animate-spin text-orange-500 mb-4" size={40} />
+            <p className="text-slate-400 font-bold text-sm tracking-widest uppercase">Sedang memuat data asesor...</p>
+          </div>
+        ) : error || assessors.length === 0 ? (
+          <div className="text-center py-20 px-6 rounded-[3rem] border border-dashed border-slate-200 bg-white/50 backdrop-blur-sm">
+            <Info size={48} className="mx-auto text-slate-300 mb-4" />
+            <p className="text-slate-500 font-bold">
+              {error || "Belum ada data asesor yang ditampilkan."}
+            </p>
+          </div>
+        ) : (
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.15 },
+              },
+            }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10"
+          >
+            <AnimatePresence>
+              {assessors.map((assessor) => (
+                <AssessorCard key={assessor.id} {...assessor} />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -118,8 +155,7 @@ export default function AssessorList() {
         </motion.div>
       </div>
 
-  
-      <style jsx>{`
+      <style>{`
         @keyframes blob {
           0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 40%; transform: rotate(0deg); }
           50% { border-radius: 60% 40% 30% 70% / 50% 30% 70% 50%; transform: rotate(180deg); }

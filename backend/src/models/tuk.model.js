@@ -7,28 +7,59 @@ const Tuk = sequelize.define("tuk", {
     primaryKey: true,
     autoIncrement: true
   },
-  kode_tuk: DataTypes.STRING(50),
+
+  kode_tuk: {
+    type: DataTypes.STRING(50),
+    unique: true
+  },
+
   nama_tuk: {
     type: DataTypes.STRING(255),
     allowNull: false
   },
-  jenis_tuk: DataTypes.ENUM("mandiri", "sewaktu", "tempat_kerja"),
-  penanggung_jawab: DataTypes.STRING(150),
+
+  jenis_tuk: DataTypes.ENUM("mandiri","sewaktu","tempat_kerja"),
+
   institusi_induk: DataTypes.STRING(150),
+
   telepon: DataTypes.STRING(20),
+
   email: DataTypes.STRING(100),
+
   alamat: DataTypes.TEXT,
+
   provinsi: DataTypes.STRING(50),
+
   kota: DataTypes.STRING(50),
+
   kecamatan: DataTypes.STRING(50),
+
   kelurahan: DataTypes.STRING(50),
+
   kode_pos: DataTypes.STRING(10),
+
   no_lisensi: DataTypes.STRING(100),
+
   masa_berlaku_lisensi: DataTypes.DATE,
+
   status: {
-    type: DataTypes.ENUM("aktif", "nonaktif"),
+    type: DataTypes.ENUM("aktif","nonaktif"),
     defaultValue: "aktif"
+  },
+
+  id_penanggung_jawab: {
+    type: DataTypes.INTEGER
+  },
+
+  created_at: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  },
+
+  updated_at: {
+    type: DataTypes.DATE
   }
+
 }, {
   tableName: "tuk",
   timestamps: false

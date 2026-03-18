@@ -1,63 +1,83 @@
-// frontend/src/pages/tuk/ProfileTUK.jsx
-
+// frontend/src/pages/tuk/ProfileTUK.jsx - VERSI FINAL & PERFECT ✅ BACKEND READY + POPUP CONFIRMATION
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { Save } from "lucide-react";
+import { Save, Phone, Mail, MapPin, FileText, User, Calendar, Hash, CheckCircle, XCircle } from "lucide-react";
 import axios from "axios";
 import SidebarTUK from "../../components/sidebar/SidebarTuk";
 
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_BASE;
 
 export default function ProfileTUK() {
-
   const token = localStorage.getItem("token");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // ✅ POPUP STATE - BARU DITAMBAH
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
 
   const [formData, setFormData] = useState({
-    kode_tuk: "",
-    nama_tuk: "",
-    jenis_tuk: "mandiri",
-    penanggung_jawab: "",
+    // ✅ FIELD SESUAI DB profile_tuk YANG BISA DIUBAH
+    nik: "",
+    jenis_kelamin: "",
+    tempat_lahir: "",
+    tanggal_lahir: "",
     alamat: "",
     provinsi: "",
     kota: "",
     kecamatan: "",
     kelurahan: "",
-    rt: "",
-    rw: "",
     kode_pos: "",
+    
+    // TUK READ ONLY (dari tabel tuk)
+    kode_tuk: "",
+    nama_tuk: "",
     telepon: "",
-    email_tuk: "",
-    institusi_induk: "",
-    no_lisensi: "",
-    masa_berlaku_lisensi: "",
+    email: "",
     status: "aktif"
   });
 
-  /* =============================== */
-  /* FETCH PROFILE */
-  /* =============================== */
+  /* ====================================== */
+  /* FETCH PROFILE - BACKEND READY */
+  /* ====================================== */
   const fetchProfile = async () => {
     try {
-
+      setLoading(true);
       const res = await axios.get(`${API}/tuk/profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (res.data?.data) {
-        setFormData(res.data.data);
-      }
+      const data = res.data?.data || {};
+      const profile_tuk = data.profile_tuk || {};
+      const tuk = data.tuk || {};
 
+      setFormData({
+        // ✅ SEMUA FIELD DARI profile_tuk
+        nik: profile_tuk.nik || "",
+        jenis_kelamin: profile_tuk.jenis_kelamin || "",
+        tempat_lahir: profile_tuk.tempat_lahir || "",
+        tanggal_lahir: profile_tuk.tanggal_lahir || "",
+        alamat: profile_tuk.alamat || "",
+        provinsi: profile_tuk.provinsi || "",
+        kota: profile_tuk.kota || "",
+        kecamatan: profile_tuk.kecamatan || "",
+        kelurahan: profile_tuk.kelurahan || "",
+        kode_pos: profile_tuk.kode_pos || "",
+        
+        // TUK data (read only)
+        kode_tuk: tuk.kode_tuk || "",
+        nama_tuk: tuk.nama_tuk || "",
+        telepon: tuk.telepon || "",
+        email: tuk.email || "",
+        status: tuk.status || "aktif"
+      });
+      
     } catch (err) {
-      toast.error(
-        err.response?.data?.message ||
-        "Gagal mengambil data profil"
-      );
+      console.error("❌ Profile error:", err.response?.status);
+      toast.error("Gagal memuat profil");
     } finally {
       setLoading(false);
     }
@@ -67,266 +87,389 @@ export default function ProfileTUK() {
     fetchProfile();
   }, []);
 
-  /* =============================== */
-  /* HANDLE INPUT */
-  /* =============================== */
+  /* ====================================== */
+  /* HANDLE INPUT - SEMUA FIELD profile_tuk */
+  /* ====================================== */
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
   };
 
-  /* =============================== */
-  /* HANDLE SAVE */
-  /* =============================== */
+  /* ====================================== */
+  /* ✅ HANDLE SAVE - SESUAI BACKEND + POPUP */
+  /* ====================================== */
   const handleSubmit = async (e) => {
-
     e.preventDefault();
     setSaving(true);
 
     try {
+      const profileData = {
+        nik: formData.nik.trim(),
+        jenis_kelamin: formData.jenis_kelamin.trim(),
+        tempat_lahir: formData.tempat_lahir.trim(),
+        tanggal_lahir: formData.tanggal_lahir,
+        alamat: formData.alamat.trim(),
+        provinsi: formData.provinsi.trim(),
+        kota: formData.kota.trim(),
+        kecamatan: formData.kecamatan.trim(),
+        kelurahan: formData.kelurahan.trim(),
+        kode_pos: formData.kode_pos.trim(),
+      };
 
-      const res = await axios.put(
-        `${API}/tuk/profile`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      // ✅ VALIDASI SESUAI BACKEND
+      if (!profileData.alamat) {
+        toast.error("Alamat wajib diisi!");
+        setSaving(false);
+        return;
+      }
 
-      toast.success(res.data?.message || "Profil berhasil diperbarui");
+      // ✅ KIRIM SESUAI BACKEND (tidak perlu validasi kosong karena backend handle)
+      const res = await axios.put(`${API}/tuk/profile`, profileData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-      // 🔥 Refresh data setelah update
-      fetchProfile();
+      // ✅ SHOW SUCCESS POPUP
+      setPopupMessage("✅ Profil TUK berhasil diperbarui!");
+      setShowSuccessPopup(true);
+      
+      // Refresh data setelah 1 detik
+      setTimeout(() => {
+        fetchProfile();
+        setShowSuccessPopup(false);
+      }, 2000);
 
     } catch (err) {
-
-      toast.error(
-        err.response?.data?.message ||
-        "Gagal menyimpan profil"
-      );
-
+      console.error("💥 Save error:", err.response?.data);
+      
+      // ✅ SHOW ERROR POPUP
+      const errorMsg = err.response?.data?.message || "Gagal menyimpan profil";
+      setPopupMessage(errorMsg);
+      setShowErrorPopup(true);
+      
+      setTimeout(() => {
+        setShowErrorPopup(false);
+      }, 3000);
     } finally {
       setSaving(false);
     }
   };
-
-  /* =============================== */
 
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = "/login";
   };
 
-  if (loading) return <div className="p-6 text-center">Loading...</div>;
-
-  return (
-    <div className="flex min-h-screen bg-gray-50">
-
-      {/* Sidebar */}
-      <SidebarTUK
-        isOpen={sidebarOpen}
-        setIsOpen={setSidebarOpen}
-        onLogout={handleLogout}
-      />
-
-      {/* Content */}
-      <div className="flex-1 lg:ml-20 p-6">
-
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-xl font-bold text-[#071E3D]">
-            Profile TUK
-          </h1>
-
-          <button
-            onClick={handleSubmit}
-            disabled={saving}
-            className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 disabled:opacity-50"
-          >
-            <Save size={18} />
-            {saving ? "Menyimpan..." : "Simpan"}
-          </button>
+  /* ====================================== */
+  /* ✅ POPUP COMPONENTS */
+  /* ====================================== */
+  const SuccessPopup = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-green-200 max-w-md w-full mx-4 transform animate-bounce">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center shadow-xl">
+            <CheckCircle size={36} className="text-white" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-2xl font-bold text-green-800">Berhasil Disimpan!</h3>
+            <p className="text-green-700 font-medium">{popupMessage}</p>
+          </div>
         </div>
-
-        {/* FORM */}
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-
-          {/* ===== IDENTITAS ===== */}
-          <div className="md:col-span-2 font-semibold border-b pb-1">
-            Identitas
-          </div>
-
-          <input
-            name="kode_tuk"
-            value={formData.kode_tuk || ""}
-            disabled
-            className="p-2 border rounded-lg bg-gray-100"
-            placeholder="Kode TUK"
-          />
-
-          <input
-            name="nama_tuk"
-            value={formData.nama_tuk || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="Nama TUK"
-          />
-
-          <select
-            name="jenis_tuk"
-            value={formData.jenis_tuk}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-          >
-            <option value="mandiri">Mandiri</option>
-            <option value="sewaktu">Sewaktu</option>
-            <option value="tempat_kerja">Tempat Kerja</option>
-          </select>
-
-          <input
-            name="penanggung_jawab"
-            value={formData.penanggung_jawab || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="Penanggung Jawab"
-          />
-
-          <input
-            name="institusi_induk"
-            value={formData.institusi_induk || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="Institusi Induk"
-          />
-
-          <input
-            name="status"
-            value={formData.status}
-            disabled
-            className="p-2 border rounded-lg bg-gray-100"
-          />
-
-          {/* ===== ALAMAT ===== */}
-          <div className="md:col-span-2 font-semibold border-b pb-1 mt-2">
-            Alamat
-          </div>
-
-          <textarea
-            name="alamat"
-            value={formData.alamat || ""}
-            onChange={handleChange}
-            rows={2}
-            className="md:col-span-2 p-2 border rounded-lg"
-            placeholder="Alamat"
-          />
-
-          <input
-            name="provinsi"
-            value={formData.provinsi || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="Provinsi"
-          />
-
-          <input
-            name="kota"
-            value={formData.kota || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="Kota"
-          />
-
-          <input
-            name="kecamatan"
-            value={formData.kecamatan || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="Kecamatan"
-          />
-
-          <input
-            name="kelurahan"
-            value={formData.kelurahan || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="Kelurahan"
-          />
-
-          <div className="flex gap-2">
-            <input
-              name="rt"
-              value={formData.rt || ""}
-              onChange={handleChange}
-              className="p-2 border rounded-lg w-1/2"
-              placeholder="RT"
-            />
-
-            <input
-              name="rw"
-              value={formData.rw || ""}
-              onChange={handleChange}
-              className="p-2 border rounded-lg w-1/2"
-              placeholder="RW"
-            />
-          </div>
-
-          <input
-            name="kode_pos"
-            value={formData.kode_pos || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="Kode Pos"
-          />
-
-          {/* ===== KONTAK ===== */}
-          <div className="md:col-span-2 font-semibold border-b pb-1 mt-2">
-            Kontak & Legalitas
-          </div>
-
-          <input
-            name="telepon"
-            value={formData.telepon || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="Telepon"
-          />
-
-          <input
-            name="email_tuk"
-            value={formData.email_tuk || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="Email TUK"
-          />
-
-          <input
-            name="no_lisensi"
-            value={formData.no_lisensi || ""}
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-            placeholder="No Lisensi"
-          />
-
-          <input
-            type="date"
-            name="masa_berlaku_lisensi"
-            value={
-              formData.masa_berlaku_lisensi
-                ? formData.masa_berlaku_lisensi.split("T")[0]
-                : ""
-            }
-            onChange={handleChange}
-            className="p-2 border rounded-lg"
-          />
-
-        </form>
       </div>
     </div>
   );
+
+  const ErrorPopup = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-red-200 max-w-md w-full mx-4 transform animate-pulse">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="w-20 h-20 bg-gradient-to-r from-red-400 to-rose-500 rounded-2xl flex items-center justify-center shadow-xl">
+            <XCircle size={36} className="text-white" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-2xl font-bold text-red-800">Gagal Menyimpan!</h3>
+            <p className="text-red-700 font-medium">{popupMessage}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-orange-50 to-blue-50 items-center justify-center p-8">
+        <div className="text-center max-w-md mx-auto">
+          <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-6"></div>
+          <div className="text-xl font-semibold text-gray-700 mb-2 animate-pulse">Memuat profil TUK...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* ✅ SUCCESS POPUP */}
+      {showSuccessPopup && <SuccessPopup />}
+      
+      {/* ✅ ERROR POPUP */}
+      {showErrorPopup && <ErrorPopup />}
+
+      <div className="flex min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
+        <SidebarTUK isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onLogout={handleLogout} />
+
+        <div className="flex-1 lg:ml-20 p-4 md:p-6 lg:p-8">
+          {/* Header */}
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6 mb-8">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#071E3D] to-orange-600 bg-clip-text text-transparent">
+                Profil TUK
+              </h1>
+              <p className="text-gray-600 mt-2 text-lg">Kelola data profil lengkap Tempat Uji Kompetensi</p>
+            </div>
+
+            <button
+              onClick={handleSubmit}
+              disabled={saving}
+              className="group flex items-center gap-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-4 rounded-2xl 
+                         hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed 
+                         font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+            >
+              <Save size={22} />
+              <span>{saving ? "Menyimpan..." : "Simpan Semua Perubahan"}</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            {/* IDENTITAS TUK - READ ONLY */}
+            <div className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-white/60">
+              <div className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-100">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center">
+                  <FileText size={20} className="text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-[#071E3D]">Identitas TUK</h3>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wide">Kode TUK</label>
+                    <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl font-bold text-2xl text-[#071E3D]">
+                      {formData.kode_tuk || "TUK001"}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wide">Status</label>
+                    <div className={`p-6 rounded-2xl font-bold text-xl shadow-inner ${
+                      formData.status === 'aktif' 
+                        ? 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-900 border-2 border-emerald-200' 
+                        : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700'
+                    }`}>
+                      AKTIF
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wide">Nama TUK</label>
+                  <div className="p-6 bg-gradient-to-r from-orange-50 to-orange-100 rounded-2xl font-bold text-xl text-[#071E3D]">
+                    {formData.nama_tuk || "TUK Pelatihan"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* DATA PRIBADI - EDITABLE */}
+            <div className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-white/60">
+              <div className="flex items-center gap-3 mb-8 pb-6 border-b border-orange-100">
+                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center">
+                  <User size={20} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-[#071E3D]">Data Pribadi</h3>
+                  <p className="text-sm text-orange-600 font-medium mt-1">NIK, Kelamin, Tempat/Tgl Lahir</p>
+                </div>
+              </div>
+              
+              <div className="space-y-5">
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">NIK</label>
+                    <input
+                      name="nik"
+                      value={formData.nik}
+                      onChange={handleChange}
+                      className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
+                      placeholder="Masukkan NIK"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Jenis Kelamin</label>
+                    <select
+                      name="jenis_kelamin"
+                      value={formData.jenis_kelamin}
+                      onChange={handleChange}
+                      className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
+                    >
+                      <option value="">Pilih Jenis Kelamin</option>
+                      <option value="Laki-laki">Laki-laki</option>
+                      <option value="Perempuan">Perempuan</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Tempat Lahir</label>
+                    <input
+                      name="tempat_lahir"
+                      value={formData.tempat_lahir}
+                      onChange={handleChange}
+                      className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
+                      placeholder="Contoh: Yogyakarta"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Tanggal Lahir</label>
+                    <input
+                      name="tanggal_lahir"
+                      type="date"
+                      value={formData.tanggal_lahir}
+                      onChange={handleChange}
+                      className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ALAMAT & LOKASI */}
+          <div className="mt-8 bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-white/60">
+            <div className="flex items-center gap-3 mb-8 pb-6 border-b border-orange-100">
+              <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center">
+                <MapPin size={20} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-[#071E3D]">Alamat Lengkap</h3>
+                <p className="text-sm text-orange-600 font-medium mt-1">Provinsi, Kota, Kecamatan, Kelurahan</p>
+              </div>
+            </div>
+            
+            <div className="space-y-5">
+              <div className="grid sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Provinsi</label>
+                  <input
+                    name="provinsi"
+                    value={formData.provinsi}
+                    onChange={handleChange}
+                    className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
+                    placeholder="Contoh: DI Yogyakarta"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Kode Pos</label>
+                  <input
+                    name="kode_pos"
+                    value={formData.kode_pos}
+                    onChange={handleChange}
+                    className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
+                    placeholder="55183"
+                  />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Kota/Kabupaten</label>
+                  <input
+                    name="kota"
+                    value={formData.kota}
+                    onChange={handleChange}
+                    className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
+                  />
+                </div>
+                                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Kecamatan</label>
+                  <input
+                    name="kecamatan"
+                    value={formData.kecamatan}
+                    onChange={handleChange}
+                    className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Kelurahan/Desa</label>
+                <input
+                  name="kelurahan"
+                  value={formData.kelurahan}
+                  onChange={handleChange}
+                  className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Alamat Lengkap</label>
+                <textarea
+                  name="alamat"
+                  value={formData.alamat}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50 resize-vertical"
+                  placeholder="Contoh: Jl. Contoh No. 123, RT 05 RW 02"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* KONTAK TUK */}
+          {(formData.telepon || formData.email) && (
+            <div className="mt-8 bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-white/60">
+              <div className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-100">
+                <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center">
+                  <Phone size={20} className="text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-[#071E3D]">Kontak TUK</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {formData.telepon && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <Phone size={16} className="text-blue-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-500 uppercase">Telepon</span>
+                    </div>
+                    <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100 font-semibold text-blue-900">
+                      {formData.telepon}
+                    </div>
+                  </div>
+                )}
+                
+                {formData.email && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center">
+                        <Mail size={16} className="text-emerald-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-500 uppercase">Email</span>
+                    </div>
+                    <div className="p-5 bg-emerald-50 rounded-2xl border border-emerald-100 font-semibold text-emerald-900">
+                      {formData.email}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
 }
+                   

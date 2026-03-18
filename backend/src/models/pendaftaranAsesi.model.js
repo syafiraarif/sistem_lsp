@@ -16,6 +16,7 @@ const PendaftaranAsesi = sequelize.define("pendaftaran_asesi", {
   kota: DataTypes.STRING(50),
   kecamatan: DataTypes.STRING(50),
   kelurahan: DataTypes.STRING(50),
+  alamat_lengkap: DataTypes.STRING(255),
   wilayah_rji: DataTypes.STRING(100),
   program_studi: DataTypes.STRING(100),
   kompetensi_keahlian: DataTypes.STRING(100),
@@ -26,7 +27,8 @@ const PendaftaranAsesi = sequelize.define("pendaftaran_asesi", {
   },
   tanggal_daftar: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: false,
+    defaultValue: DataTypes.NOW
   }
 }, {
   tableName: "pendaftaran_asesi",
