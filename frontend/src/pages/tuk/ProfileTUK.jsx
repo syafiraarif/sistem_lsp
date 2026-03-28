@@ -1,4 +1,4 @@
-// frontend/src/pages/tuk/ProfileTUK.jsx - VERSI FINAL & PERFECT ✅ BACKEND READY + POPUP CONFIRMATION
+// frontend/src/pages/tuk/ProfileTUK.jsx - VERSI FINAL & PERFECT ✅ WILAYAH CASCADE FIXED
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { Save, Phone, Mail, MapPin, FileText, User, Calendar, Hash, CheckCircle, XCircle } from "lucide-react";
@@ -14,13 +14,29 @@ export default function ProfileTUK() {
   const [saving, setSaving] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // ✅ POPUP STATE - BARU DITAMBAH
+  // ✅ POPUP STATE
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState("");
 
+  // ✅ WILAYAH STATE - FULL CASCADE SYSTEM
+  const [provinsiList, setProvinsiList] = useState([]);
+  const [kotaList, setKotaList] = useState([]);
+  const [kecamatanList, setKecamatanList] = useState([]);
+  const [kelurahanList, setKelurahanList] = useState([]);
+
+  const [provinsiLoading, setProvinsiLoading] = useState(false);
+  const [kotaLoading, setKotaLoading] = useState(false);
+  const [kecamatanLoading, setKecamatanLoading] = useState(false);
+  const [kelurahanLoading, setKelurahanLoading] = useState(false);
+
+  // ✅ WILAYAH ID STATE - PENTING UNTUK CASCADE
+  const [provinsiId, setProvinsiId] = useState("");
+  const [kotaId, setKotaId] = useState("");
+  const [kecamatanId, setKecamatanId] = useState("");
+  const [kelurahanId, setKelurahanId] = useState("");
+
   const [formData, setFormData] = useState({
-    // ✅ FIELD SESUAI DB profile_tuk YANG BISA DIUBAH
     nik: "",
     jenis_kelamin: "",
     tempat_lahir: "",
@@ -31,8 +47,6 @@ export default function ProfileTUK() {
     kecamatan: "",
     kelurahan: "",
     kode_pos: "",
-    
-    // TUK READ ONLY (dari tabel tuk)
     kode_tuk: "",
     nama_tuk: "",
     telepon: "",
@@ -41,9 +55,113 @@ export default function ProfileTUK() {
   });
 
   /* ====================================== */
-  /* FETCH PROFILE - BACKEND READY */
+  /* FETCH WILAYAH DATA - WITH AUTH HEADER */
+  /* ====================================== */
+  const fetchProvinsi = async () => {
+    if (!token) return;
+    try {
+      setProvinsiLoading(true);
+      const res = await axios.get(`${API}/tuk/wilayah/provinsi`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProvinsiList(res.data);
+    } catch (error) {
+      console.error("❌ Error fetch provinsi:", error);
+      toast.error("Gagal memuat provinsi");
+    } finally {
+      setProvinsiLoading(false);
+    }
+  };
+
+  const fetchKota = async (provId) => {
+    if (!provId || !token) {
+      setKotaList([]);
+      setKotaId("");
+      setKecamatanId("");
+      setKelurahanId("");
+      setKelurahanList([]);
+      setFormData(prev => ({ 
+        ...prev, 
+        kota: "", 
+        kecamatan: "", 
+        kelurahan: ""
+      }));
+      return;
+    }
+    try {
+      setKotaLoading(true);
+      const res = await axios.get(`${API}/tuk/wilayah/kota/${provId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setKotaList(res.data);
+    } catch (error) {
+      console.error("❌ Error fetch kota:", error);
+      toast.error("Gagal memuat kota");
+    } finally {
+      setKotaLoading(false);
+    }
+  };
+
+  const fetchKecamatan = async (kotaIdParam) => {
+    if (!kotaIdParam || !token) {
+      setKecamatanList([]);
+      setKecamatanId("");
+      setKelurahanId("");
+      setKelurahanList([]);
+      setFormData(prev => ({ 
+        ...prev, 
+        kecamatan: "", 
+        kelurahan: ""
+      }));
+      return;
+    }
+    try {
+      setKecamatanLoading(true);
+      const res = await axios.get(`${API}/tuk/wilayah/kecamatan/${kotaIdParam}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setKecamatanList(res.data);
+    } catch (error) {
+      console.error("❌ Error fetch kecamatan:", error);
+      toast.error("Gagal memuat kecamatan");
+    } finally {
+      setKecamatanLoading(false);
+    }
+  };
+
+  const fetchKelurahan = async (kecId) => {
+    if (!kecId || !token) {
+      setKelurahanList([]);
+      setKelurahanId("");
+      setFormData(prev => ({ 
+        ...prev, 
+        kelurahan: ""
+      }));
+      return;
+    }
+    try {
+      setKelurahanLoading(true);
+      const res = await axios.get(`${API}/tuk/wilayah/kelurahan/${kecId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setKelurahanList(res.data);
+    } catch (error) {
+      console.error("❌ Error fetch kelurahan:", error);
+      toast.error("Gagal memuat kelurahan");
+    } finally {
+      setKelurahanLoading(false);
+    }
+  };
+
+  /* ====================================== */
+  /* FETCH PROFILE - WITH WILAYAH CASCADE */
   /* ====================================== */
   const fetchProfile = async () => {
+    if (!token) {
+      toast.error("Token tidak ditemukan. Silakan login ulang.");
+      return;
+    }
+    
     try {
       setLoading(true);
       const res = await axios.get(`${API}/tuk/profile`, {
@@ -54,8 +172,8 @@ export default function ProfileTUK() {
       const profile_tuk = data.profile_tuk || {};
       const tuk = data.tuk || {};
 
-      setFormData({
-        // ✅ SEMUA FIELD DARI profile_tuk
+      // Set form data
+      const newFormData = {
         nik: profile_tuk.nik || "",
         jenis_kelamin: profile_tuk.jenis_kelamin || "",
         tempat_lahir: profile_tuk.tempat_lahir || "",
@@ -66,43 +184,124 @@ export default function ProfileTUK() {
         kecamatan: profile_tuk.kecamatan || "",
         kelurahan: profile_tuk.kelurahan || "",
         kode_pos: profile_tuk.kode_pos || "",
-        
-        // TUK data (read only)
         kode_tuk: tuk.kode_tuk || "",
         nama_tuk: tuk.nama_tuk || "",
         telepon: tuk.telepon || "",
         email: tuk.email || "",
         status: tuk.status || "aktif"
-      });
-      
+      };
+
+      setFormData(newFormData);
+
+      // Set wilayah IDs untuk cascade (harus dilakukan setelah provinsi list loaded)
+      setTimeout(() => {
+        if (newFormData.provinsi) {
+          const selectedProv = provinsiList.find(p => p.name === newFormData.provinsi);
+          if (selectedProv) {
+            setProvinsiId(selectedProv.id);
+          }
+        }
+      }, 500);
+
     } catch (err) {
-      console.error("❌ Profile error:", err.response?.status);
+      console.error("❌ Profile error:", err.response?.status, err.response?.data);
       toast.error("Gagal memuat profil");
     } finally {
       setLoading(false);
     }
   };
 
+  // Initial load
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    if (token) {
+      fetchProvinsi();
+      fetchProfile();
+    }
+  }, [token]);
+
+  // ✅ CASCADE EFFECTS - WILAYAH HIERARCHY
+  useEffect(() => {
+    if (provinsiId && token) {
+      fetchKota(provinsiId);
+    }
+  }, [provinsiId, token]);
+
+  useEffect(() => {
+    if (kotaId && token) {
+      fetchKecamatan(kotaId);
+    }
+  }, [kotaId, token]);
+
+  useEffect(() => {
+    if (kecamatanId && token) {
+      fetchKelurahan(kecamatanId);
+    }
+  }, [kecamatanId, token]);
 
   /* ====================================== */
-  /* HANDLE INPUT - SEMUA FIELD profile_tuk */
+  /* HANDLE INPUT CHANGE - CASCADE WILAYAH */
   /* ====================================== */
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    
+    if (name === "provinsi") {
+      const selectedProv = provinsiList.find(p => p.id == value);
+      setProvinsiId(value);
+      setKotaId("");
+      setKecamatanId("");
+      setKelurahanId("");
+      setFormData({
+        ...formData,
+        provinsi: selectedProv?.name || "",
+        kota: "",
+        kecamatan: "",
+        kelurahan: ""
+      });
+    } else if (name === "kota") {
+      const selectedKota = kotaList.find(k => k.id == value);
+      setKotaId(value);
+      setKecamatanId("");
+      setKelurahanId("");
+      setFormData({
+        ...formData,
+        kota: selectedKota?.name || "",
+        kecamatan: "",
+        kelurahan: ""
+      });
+    } else if (name === "kecamatan") {
+      const selectedKec = kecamatanList.find(k => k.id == value);
+      setKecamatanId(value);
+      setKelurahanId("");
+      setFormData({
+        ...formData,
+        kecamatan: selectedKec?.name || "",
+        kelurahan: ""
+      });
+    } else if (name === "kelurahan") {
+      const selectedKel = kelurahanList.find(k => k.id == value);
+      setKelurahanId(value);
+      setFormData({
+        ...formData,
+        kelurahan: selectedKel?.name || ""
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
   /* ====================================== */
-  /* ✅ HANDLE SAVE - SESUAI BACKEND + POPUP */
+  /* HANDLE SAVE */
   /* ====================================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!token) {
+      toast.error("Token tidak ditemukan. Silakan login ulang.");
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -119,23 +318,25 @@ export default function ProfileTUK() {
         kode_pos: formData.kode_pos.trim(),
       };
 
-      // ✅ VALIDASI SESUAI BACKEND
       if (!profileData.alamat) {
         toast.error("Alamat wajib diisi!");
         setSaving(false);
         return;
       }
 
-      // ✅ KIRIM SESUAI BACKEND (tidak perlu validasi kosong karena backend handle)
+      if (!profileData.provinsi || !profileData.kota || !profileData.kecamatan || !profileData.kelurahan) {
+        toast.error("Lengkapi data wilayah lengkap!");
+        setSaving(false);
+        return;
+      }
+
       const res = await axios.put(`${API}/tuk/profile`, profileData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // ✅ SHOW SUCCESS POPUP
       setPopupMessage("✅ Profil TUK berhasil diperbarui!");
       setShowSuccessPopup(true);
       
-      // Refresh data setelah 1 detik
       setTimeout(() => {
         fetchProfile();
         setShowSuccessPopup(false);
@@ -143,15 +344,13 @@ export default function ProfileTUK() {
 
     } catch (err) {
       console.error("💥 Save error:", err.response?.data);
-      
-      // ✅ SHOW ERROR POPUP
       const errorMsg = err.response?.data?.message || "Gagal menyimpan profil";
       setPopupMessage(errorMsg);
       setShowErrorPopup(true);
       
       setTimeout(() => {
         setShowErrorPopup(false);
-      }, 3000);
+      }, 4000);
     } finally {
       setSaving(false);
     }
@@ -163,7 +362,7 @@ export default function ProfileTUK() {
   };
 
   /* ====================================== */
-  /* ✅ POPUP COMPONENTS */
+  /* POPUP COMPONENTS */
   /* ====================================== */
   const SuccessPopup = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
@@ -210,10 +409,7 @@ export default function ProfileTUK() {
 
   return (
     <>
-      {/* ✅ SUCCESS POPUP */}
       {showSuccessPopup && <SuccessPopup />}
-      
-      {/* ✅ ERROR POPUP */}
       {showErrorPopup && <ErrorPopup />}
 
       <div className="flex min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
@@ -231,7 +427,7 @@ export default function ProfileTUK() {
 
             <button
               onClick={handleSubmit}
-              disabled={saving}
+              disabled={saving || !provinsiId || !kotaId || !kecamatanId || !kelurahanId}
               className="group flex items-center gap-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-4 rounded-2xl 
                          hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed 
                          font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
@@ -242,7 +438,7 @@ export default function ProfileTUK() {
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            {/* IDENTITAS TUK - READ ONLY */}
+                        {/* IDENTITAS TUK - READ ONLY */}
             <div className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-white/60">
               <div className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-100">
                 <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center">
@@ -345,7 +541,7 @@ export default function ProfileTUK() {
             </div>
           </div>
 
-          {/* ALAMAT & LOKASI */}
+          {/* ✅ ALAMAT & LOKASI - WILAYAH DROPDOWN CASCADE PERFECT */}
           <div className="mt-8 bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-white/60">
             <div className="flex items-center gap-3 mb-8 pb-6 border-b border-orange-100">
               <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center">
@@ -353,7 +549,7 @@ export default function ProfileTUK() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-[#071E3D]">Alamat Lengkap</h3>
-                <p className="text-sm text-orange-600 font-medium mt-1">Provinsi, Kota, Kecamatan, Kelurahan</p>
+                <p className="text-sm text-orange-600 font-medium mt-1">Provinsi → Kota → Kecamatan → Kelurahan</p>
               </div>
             </div>
             
@@ -361,13 +557,26 @@ export default function ProfileTUK() {
               <div className="grid sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">Provinsi</label>
-                  <input
+                  <select
                     name="provinsi"
-                    value={formData.provinsi}
+                    value={provinsiId}
                     onChange={handleChange}
-                    className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
-                    placeholder="Contoh: DI Yogyakarta"
-                  />
+                    disabled={provinsiLoading}
+                    className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">📍 Pilih Provinsi</option>
+                    {provinsiList.map((prov) => (
+                      <option key={prov.id} value={prov.id}>
+                        {prov.name}
+                      </option>
+                    ))}
+                  </select>
+                  {provinsiLoading && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
+                      <div className="w-4 h-4 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+                      Memuat provinsi...
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">Kode Pos</label>
@@ -384,32 +593,80 @@ export default function ProfileTUK() {
               <div className="grid sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">Kota/Kabupaten</label>
-                  <input
+                  <select
                     name="kota"
-                    value={formData.kota}
+                    value={kotaId}
                     onChange={handleChange}
-                    className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
-                  />
+                    disabled={kotaLoading || !provinsiId}
+                    className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">
+                      {!provinsiId ? "Pilih provinsi dulu" : kotaLoading ? "Memuat..." : "📍 Pilih Kota/Kabupaten"}
+                    </option>
+                    {kotaList.map((kota) => (
+                      <option key={kota.id} value={kota.id}>
+                        {kota.name}
+                      </option>
+                    ))}
+                  </select>
+                  {kotaLoading && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
+                      <div className="w-4 h-4 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+                      Memuat kota...
+                    </div>
+                  )}
                 </div>
-                                <div>
+                <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">Kecamatan</label>
-                  <input
+                  <select
                     name="kecamatan"
-                    value={formData.kecamatan}
+                    value={kecamatanId}
                     onChange={handleChange}
-                    className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
-                  />
+                    disabled={kecamatanLoading || !kotaId}
+                    className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">
+                      {!kotaId ? "Pilih kota dulu" : kecamatanLoading ? "Memuat..." : "📍 Pilih Kecamatan"}
+                    </option>
+                    {kecamatanList.map((kec) => (
+                      <option key={kec.id} value={kec.id}>
+                        {kec.name}
+                      </option>
+                    ))}
+                  </select>
+                  {kecamatanLoading && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
+                      <div className="w-4 h-4 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+                      Memuat kecamatan...
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">Kelurahan/Desa</label>
-                <input
+                <select
                   name="kelurahan"
-                  value={formData.kelurahan}
+                  value={kelurahanId}
                   onChange={handleChange}
-                  className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50"
-                />
+                  disabled={kelurahanLoading || !kecamatanId}
+                  className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all bg-white/50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {!kecamatanId ? "Pilih kecamatan dulu" : kelurahanLoading ? "Memuat..." : "📍 Pilih Kelurahan/Desa"}
+                  </option>
+                  {kelurahanList.map((kel) => (
+                    <option key={kel.id} value={kel.id}>
+                      {kel.name}
+                    </option>
+                  ))}
+                </select>
+                {kelurahanLoading && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
+                    <div className="w-4 h-4 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+                    Memuat kelurahan...
+                  </div>
+                )}
               </div>
 
               <div>
@@ -469,7 +726,16 @@ export default function ProfileTUK() {
           )}
         </div>
       </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
     </>
   );
 }
-                   
