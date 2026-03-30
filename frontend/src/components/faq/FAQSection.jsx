@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { HelpCircle } from "lucide-react";
 import FAQItem from "./FAQItem";
 
 export default function FAQSection() {
+  // State untuk menyimpan ID yang sedang terbuka
+  const [activeId, setActiveId] = useState(null);
+
   const faqList = [
     {
       id: 1,
@@ -33,9 +36,14 @@ export default function FAQSection() {
       id: 5,
       question: "Di mana lokasi Tempat Uji Kompetensi (TUK)?",
       answer:
-        "TUK dapat dilaksanakan secara luring di lokasi mitra atau secara daring sesuai ketentuan.",
+        "TUK dapat dilaksanakan secara luring di lokasi yang ditentukan atau secara daring sesuai kebijakan.",
     },
   ];
+
+  // Fungsi untuk handle klik
+  const toggleFAQ = (id) => {
+    setActiveId(activeId === id ? null : id);
+  };
 
   return (
     <section className="relative py-32 bg-white overflow-hidden">
@@ -80,6 +88,7 @@ export default function FAQSection() {
             sertifikasi kompetensi melalui SIMLSP.
           </motion.p>
         </div>
+
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -101,10 +110,16 @@ export default function FAQSection() {
                 visible: { opacity: 1, y: 0 },
               }}
             >
-              <FAQItem question={faq.question} answer={faq.answer} />
+              <FAQItem 
+                question={faq.question} 
+                answer={faq.answer} 
+                isOpen={activeId === faq.id} 
+                onClick={() => toggleFAQ(faq.id)}
+              />
             </motion.div>
           ))}
         </motion.div>
+
         <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}

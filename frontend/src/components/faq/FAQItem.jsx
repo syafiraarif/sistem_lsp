@@ -1,14 +1,12 @@
-import { useState } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
-export default function FAQItem({ question, answer }) {
-  const [isOpen, setIsOpen] = useState(false);
-
+export default function FAQItem({ question, answer, isOpen, onClick }) {
   return (
     <div className="group">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={onClick}
         className={`w-full flex justify-between items-center px-8 py-6 text-left rounded-[1.5rem] border transition-all duration-300 ${
           isOpen
             ? "bg-white border-orange-500/30 shadow-xl shadow-[#071E3D]/5"
@@ -42,7 +40,7 @@ export default function FAQItem({ question, answer }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className="overflow-hidden"
           >
             <div className="px-8 py-6 text-slate-500 text-sm md:text-base leading-relaxed font-medium">
