@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import ReCAPTCHA from "react-google-recaptcha"; // Menggunakan Google ReCAPTCHA sesuai Controller
+import ReCAPTCHA from "react-google-recaptcha";
 import { 
   User, 
   MessageSquare, 
@@ -16,7 +16,8 @@ import {
   AlertCircle,
   Sparkles,
   ShieldCheck,
-  Briefcase
+  Fingerprint,
+  AlertTriangle
 } from "lucide-react";
 
 const API_URL = "http://localhost:3000/api/public";
@@ -24,63 +25,133 @@ const API_URL = "http://localhost:3000/api/public";
 export default function Complaint() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const recaptchaRef = useRef(null);
   
-  // State Form disesuaikan dengan pengaduan.model.js
   const [formData, setFormData] = useState({
-    nama_pengadu: "",    // Sesuai DB: nama_pengadu
-    email_pengadu: "",   // Sesuai DB: email_pengadu
-    no_hp_pengadu: "",   // Sesuai DB: no_hp_pengadu
-    sebagai_siapa: "",   // Sesuai DB: ENUM("asesi","asesor","masyarakat")
-    isi_pengaduan: "",   // Sesuai DB: isi_pengaduan
-    captchaToken: ""     // Diperlukan oleh Controller
+    nama_pengadu: "",
+    nik_pengadu: "", // Tambahan NIK
+    email_pengadu: "",
+    no_hp_pengadu: "08", // Default prefix 08
+    sebagai_siapa: "",
+    isi_pengaduan: "",
+    captchaToken: ""
   });
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
+
+  // --- LOGIKA VALIDASI ---
+  const validateStep1 = () => {
+    let newErrors = {};
+    const { nama_pengadu, nik_pengadu, email_pengadu, no_hp_pengadu, sebagai_siapa } = formData;
+
+    if (!nama_pengadu.trim()) newErrors.nama_pengadu = "Nama wajib diisi";
+    
+    // Validasi NIK Hard-Locked 16 Digit
+    if (!nik_pengadu) {
+      newErrors.nik_pengadu = "NIK wajib diisi";
+    } else if (nik_pengadu.length !== 16) {
+      newErrors.nik_pengadu = "NIK harus tepat 16 digit";
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email_pengadu) {
+      newErrors.email_pengadu = "Email wajib diisi";
+    } else if (!emailRegex.test(email_pengadu)) {
+      newErrors.email_pengadu = "Format email tidak valid";
+    }
+
+    // Validasi No HP (Minimal 10 digit termasuk 08)
+    if (no_hp_pengadu === "08") {
+      newErrors.no_hp_pengadu = "Nomor WhatsApp wajib diisi";
+    } else if (no_hp_pengadu.length < 10) {
+      newErrors.no_hp_pengadu = "Nomor tidak valid (terlalu pendek)";
+    }
+
+    if (!sebagai_siapa) newErrors.sebagai_siapa = "Pilih kategori pelapor";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    if (name === "nik_pengadu") {
+      // Hanya angka & Maksimal 16 Digit
+      const sanitized = value.replace(/[^0-9]/g, "").slice(0, 16);
+      setFormData({ ...formData, [name]: sanitized });
+    } 
+    else if (name === "no_hp_pengadu") {
+      // Proteksi Prefix 08
+      let val = value.replace(/[^0-9]/g, "");
+      if (!val.startsWith("08")) {
+        val = "08";
+      }
+      setFormData({ ...formData, [name]: val });
+    } 
+    else {
+      setFormData({ ...formData, [name]: value });
+    }
+
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: null });
+    }
   };
 
   const onCaptchaChange = (token) => {
     setFormData({ ...formData, captchaToken: token });
+    if (token) setErrors({ ...errors, captchaToken: null });
   };
 
-  const nextStep = () => setStep(step + 1);
+  const nextStep = () => {
+    if (validateStep1()) setStep(step + 1);
+  };
+  
   const prevStep = () => setStep(step - 1);
 
   const handleSubmit = async () => {
+    if (!formData.isi_pengaduan || formData.isi_pengaduan.trim().length < 10) {
+      setErrors(prev => ({ ...prev, isi_pengaduan: "Isi pengaduan terlalu singkat (minimal 10 karakter)." }));
+      return;
+    }
+    
     if (!formData.captchaToken) {
-      alert("Silakan centang Captcha terlebih dahulu!");
+      alert("Silakan selesaikan verifikasi Captcha.");
       return;
     }
 
     setLoading(true);
     try {
-      // Menambahkan tanggal_pengaduan secara otomatis jika backend tidak menghandle default NOW
       const payload = {
         ...formData,
         tanggal_pengaduan: new Date().toISOString()
       };
 
-      await axios.post(`${API_URL}/pengaduan`, payload);
+      const response = await axios.post(`${API_URL}/pengaduan`, payload);
       
-      alert("Pengaduan Anda telah terkirim dan akan segera diproses.");
-      
-      // Reset Form
-      setStep(1);
-      setFormData({
-        nama_pengadu: "",
-        email_pengadu: "",
-        no_hp_pengadu: "",
-        sebagai_siapa: "",
-        isi_pengaduan: "",
-        captchaToken: ""
-      });
-      if (recaptchaRef.current) recaptchaRef.current.reset();
+      if (response.status === 200 || response.status === 201) {
+        alert("✅ Pengaduan Anda berhasil dikirim!");
+        setStep(1);
+        setFormData({
+          nama_pengadu: "",
+          nik_pengadu: "",
+          email_pengadu: "",
+          no_hp_pengadu: "08",
+          sebagai_siapa: "",
+          isi_pengaduan: "",
+          captchaToken: ""
+        });
+        setErrors({});
+        if (recaptchaRef.current) recaptchaRef.current.reset();
+      }
     } catch (err) {
-      console.error(err);
-      const errorMsg = err.response?.data?.message || "Gagal mengirim pengaduan. Pastikan server terhubung.";
-      alert(errorMsg);
+      const errorMsg = err.response?.data?.message || "Gagal mengirim pengaduan.";
+      alert(`❌ Error: ${errorMsg}`);
       if (recaptchaRef.current) recaptchaRef.current.reset();
+      setFormData(prev => ({ ...prev, captchaToken: "" }));
     } finally {
       setLoading(false);
     }
@@ -107,6 +178,7 @@ export default function Complaint() {
               </p>
             </header>
 
+            {/* Stepper */}
             <div className="flex items-center gap-4 mb-12">
               {[1, 2].map((num) => (
                 <div key={num} className="flex items-center gap-2">
@@ -137,40 +209,60 @@ export default function Complaint() {
                       </div>
                       <h2 className="text-xl font-black text-[#071E3D]">Data Pelapor</h2>
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <InputGroup 
                         label="Nama Lengkap*" 
                         name="nama_pengadu"
                         value={formData.nama_pengadu}
                         onChange={handleChange}
-                        placeholder="Masukkan nama Anda" 
+                        placeholder="Masukkan nama sesuai KTP" 
+                        error={errors.nama_pengadu}
                       />
+                      
+                      <InputGroup 
+                        label="NIK KTP* (16 Digit)" 
+                        name="nik_pengadu"
+                        value={formData.nik_pengadu}
+                        onChange={handleChange}
+                        placeholder="Contoh: 3201xxxxxxxxxxxx" 
+                        error={errors.nik_pengadu}
+                        maxLength={16}
+                      />
+
                       <InputGroup 
                         label="Alamat Email*" 
                         name="email_pengadu"
                         value={formData.email_pengadu}
                         onChange={handleChange}
-                        placeholder="nama@domain.com" 
+                        placeholder="nama@email.com" 
                         type="email" 
+                        error={errors.email_pengadu}
                       />
+
                       <InputGroup 
-                        label="Nomor WhatsApp*" 
+                        label="Nomor WhatsApp* (Awalan 08)" 
                         name="no_hp_pengadu"
                         value={formData.no_hp_pengadu}
                         onChange={handleChange}
-                        placeholder="0812xxxx" 
+                        placeholder="08xxxxxxxx" 
+                        error={errors.no_hp_pengadu}
                       />
-                      <SelectGroup 
-                        label="Bertindak Sebagai*" 
-                        name="sebagai_siapa"
-                        value={formData.sebagai_siapa}
-                        onChange={handleChange}
-                      >
-                        <option value="">Pilih Kategori</option>
-                        <option value="asesi">Asesi (Peserta)</option>
-                        <option value="asesor">Asesor (Penguji)</option>
-                        <option value="masyarakat">Masyarakat Umum</option>
-                      </SelectGroup>
+
+                      <div className="md:col-span-2">
+                        <SelectGroup 
+                          label="Bertindak Sebagai*" 
+                          name="sebagai_siapa"
+                          value={formData.sebagai_siapa}
+                          onChange={handleChange}
+                          error={errors.sebagai_siapa}
+                        >
+                          <option value="">Pilih Kategori</option>
+                          <option value="asesi">Asesi (Peserta Sertifikasi)</option>
+                          <option value="asesor">Asesor (Penguji)</option>
+                          <option value="masyarakat">Masyarakat Umum</option>
+                        </SelectGroup>
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -189,25 +281,33 @@ export default function Complaint() {
                       </div>
                       <h2 className="text-xl font-black text-[#071E3D]">Detail Aduan</h2>
                     </div>
+                    
                     <div className="flex flex-col gap-2.5">
-                      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">Isi Pengaduan*</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">Isi Pengaduan* (Minimal 10 Karakter)</label>
                       <textarea 
                         name="isi_pengaduan"
                         value={formData.isi_pengaduan}
                         onChange={handleChange}
-                        rows="5"
-                        placeholder="Tuliskan keluhan Anda secara lengkap..."
-                        className="px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all text-sm font-bold text-[#071E3D] resize-none"
+                        rows="6"
+                        placeholder="Ceritakan keluhan Anda secara mendetail agar kami dapat memproses lebih cepat..."
+                        className={`px-6 py-4 bg-slate-50 border rounded-2xl focus:outline-none focus:ring-4 transition-all text-sm font-bold text-[#071E3D] resize-none ${
+                          errors.isi_pengaduan ? "border-red-400 focus:border-red-500 focus:ring-red-500/5" : "border-slate-100 focus:border-orange-500 focus:bg-white focus:ring-orange-500/5"
+                        }`}
                       />
+                      {errors.isi_pengaduan && (
+                        <div className="mt-1 flex items-center gap-1.5 px-1 animate-shake">
+                          <AlertTriangle size={12} className="text-red-500" />
+                          <span className="text-[10px] font-bold text-red-500 uppercase tracking-tighter">{errors.isi_pengaduan}</span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* GOOGLE RECAPTCHA - Menggantikan Captcha Manual agar sinkron dengan Backend */}
                     <div className="p-6 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200 flex flex-col items-center">
-                       <div className="flex items-center gap-2 mb-4">
-                          <ShieldCheck size={16} className="text-orange-500" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Verifikasi Keamanan</span>
-                       </div>
-                       <ReCAPTCHA
+                        <div className="flex items-center gap-2 mb-4">
+                           <ShieldCheck size={16} className="text-orange-500" />
+                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Verifikasi Keamanan</span>
+                        </div>
+                        <ReCAPTCHA
                           ref={recaptchaRef}
                           sitekey="6LdSGX4sAAAAAA7BAt1iY8OVxtnx_EFunFBQV-QF" 
                           onChange={onCaptchaChange}
@@ -229,7 +329,7 @@ export default function Complaint() {
                   disabled={loading}
                   className={`px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all duration-300 shadow-xl ${
                     step === 2 ? "bg-orange-500 text-white hover:bg-[#071E3D] shadow-orange-500/20" : "bg-[#071E3D] text-white hover:bg-orange-600 shadow-[#071E3D]/20"
-                  }`}
+                  } ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
                 >
                   {loading ? "Mengirim..." : step === 2 ? (
                     <span className="flex items-center gap-2">Kirim Pengaduan <Send size={16} /></span>
@@ -239,15 +339,17 @@ export default function Complaint() {
             </div>
           </div>
 
+          {/* Sidebar Info */}
           <div className="lg:col-span-4 space-y-8 lg:sticky lg:top-32">
             <div className="bg-orange-50 border border-orange-100 rounded-[2.5rem] p-8 shadow-sm">
               <div className="flex items-center gap-3 mb-8 text-orange-600">
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-orange-500 shadow-sm">
-                  <Info size={20} />
+                  <span className="animate-pulse"><Info size={20} /></span>
                 </div>
                 <h3 className="font-black uppercase tracking-widest text-xs">Penting</h3>
               </div>
               <div className="space-y-6">
+                <InfoItem icon={Fingerprint} text="Siapkan NIK KTP valid untuk keperluan verifikasi data pelapor." />
                 <InfoItem icon={Mail} text="Pastikan email aktif untuk koordinasi lebih lanjut." />
                 <InfoItem icon={AlertCircle} text="Layanan ini hanya untuk keluhan terkait sertifikasi." />
                 <InfoItem icon={CheckCircle2} text="Identitas pelapor dijamin kerahasiaannya." />
@@ -267,13 +369,6 @@ export default function Complaint() {
                     <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white shadow-lg group-hover:rotate-12 transition-transform duration-500">
                       <HelpCircle size={32} strokeWidth={2.5} />
                     </div>
-                    <motion.div 
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="absolute -top-2 -right-2 bg-white text-[#071E3D] p-1.5 rounded-lg shadow-xl"
-                    >
-                      <Sparkles size={14} />
-                    </motion.div>
                   </div>
                   <h4 className="text-white font-black uppercase tracking-[0.2em] text-sm mb-3">Pusat Bantuan</h4>
                   <p className="text-slate-400 text-[11px] leading-relaxed mb-8 px-4 font-medium">Bingung alur pengaduan? Klik untuk panduan lengkap & FAQ.</p>
@@ -303,32 +398,47 @@ function InfoItem({ icon: Icon, text }) {
   );
 }
 
-function InputGroup({ label, name, value, onChange, placeholder, type = "text" }) {
+function InputGroup({ label, name, value, onChange, placeholder, type = "text", error, maxLength }) {
   return (
     <div className="flex flex-col gap-2.5">
-      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">{label}</label>
+      <div className="flex justify-between items-center ml-1">
+        <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50">{label}</label>
+      </div>
       <input 
         type={type}
         name={name}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all text-sm font-bold text-[#071E3D]"
+        maxLength={maxLength}
+        className={`px-6 py-4 bg-slate-50 border rounded-2xl focus:outline-none focus:ring-4 transition-all text-sm font-bold text-[#071E3D] ${
+          error ? "border-red-400 focus:border-red-500 focus:ring-red-500/5" : "border-slate-100 focus:border-orange-500 focus:ring-orange-500/5 focus:bg-white"
+        }`}
       />
+      {error && (
+        <div className="mt-1 flex items-center gap-1.5 px-1 animate-shake">
+          <AlertTriangle size={12} className="text-red-500" />
+          <span className="text-[10px] font-bold text-red-500 uppercase tracking-tighter">{error}</span>
+        </div>
+      )}
     </div>
   );
 }
 
-function SelectGroup({ label, children, onChange, value, name }) {
+function SelectGroup({ label, children, onChange, value, name, error }) {
   return (
     <div className="flex flex-col gap-2.5">
-      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] ml-1 opacity-50">{label}</label>
+      <div className="flex justify-between items-center ml-1">
+        <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50">{label}</label>
+      </div>
       <div className="relative">
         <select 
           name={name} 
           value={value} 
           onChange={onChange}
-          className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D] appearance-none"
+          className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl focus:outline-none transition-all text-sm font-bold text-[#071E3D] appearance-none ${
+            error ? "border-red-400 focus:border-red-500 focus:ring-red-500/5" : "border-slate-100 focus:border-orange-500 focus:bg-white focus:ring-orange-500/5"
+          }`}
         >
           {children}
         </select>
@@ -336,6 +446,12 @@ function SelectGroup({ label, children, onChange, value, name }) {
            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </div>
       </div>
+      {error && (
+        <div className="mt-1 flex items-center gap-1.5 px-1 animate-shake">
+          <AlertTriangle size={12} className="text-red-500" />
+          <span className="text-[10px] font-bold text-red-500 uppercase tracking-tighter">{error}</span>
+        </div>
+      )}
     </div>
   );
 }

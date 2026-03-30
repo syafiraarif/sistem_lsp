@@ -55,7 +55,7 @@ export default function Hero() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="z-10"
+          className="z-10 -mt-10 lg:-mt-20"
         >
           <motion.div
             variants={itemVariants}
@@ -89,7 +89,10 @@ export default function Hero() {
           </motion.p>
 
           <motion.div variants={itemVariants} className="mt-10 flex flex-wrap gap-4">
-            <button className="group px-8 py-4 rounded-2xl bg-orange-500 text-white font-black shadow-xl shadow-orange-500/20 hover:bg-orange-600 transition-all flex items-center gap-2 uppercase text-xs tracking-widest">
+            <button 
+              onClick={() => navigate("/pendaftaran")}
+              className="group px-8 py-4 rounded-2xl bg-orange-500 text-white font-black shadow-xl shadow-orange-500/20 hover:bg-orange-600 transition-all flex items-center gap-2 uppercase text-xs tracking-widest"
+            >
               Daftar Uji Kompetensi
               <ChevronRight
                 className="group-hover:translate-x-1 transition-transform"

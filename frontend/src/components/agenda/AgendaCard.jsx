@@ -9,9 +9,23 @@ import {
   XCircle 
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom"; // 1. Import useNavigate
 
-export default function AgendaCard({ title, date, location, scheme, status }) {
+export default function AgendaCard({ id, title, date, location, scheme, status }) {
   const isOpen = status === "Dibuka";
+  const navigate = useNavigate(); // 2. Inisialisasi hook navigate
+
+  const handleRegistration = () => {
+    if (isOpen) {
+      // Mengarahkan ke route pendaftaran, Anda bisa mengirim state title/id jika perlu
+      navigate("/pendaftaran", { 
+        state: { 
+          agendaTitle: title,
+          agendaId: id 
+        } 
+      });
+    }
+  };
 
   return (
     <motion.div 
@@ -45,7 +59,9 @@ export default function AgendaCard({ title, date, location, scheme, status }) {
         <Info icon={BookOpen} label="Skema Kompetensi" value={scheme} />
       </div>
 
+      {/* 3. Tambahkan onClick handler */}
       <button
+        onClick={handleRegistration}
         disabled={!isOpen}
         className={`mt-10 py-5 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] flex items-center justify-center gap-3 transition-all duration-500
           ${isOpen 

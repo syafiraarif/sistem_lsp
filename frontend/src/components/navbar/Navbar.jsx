@@ -6,6 +6,9 @@ import NavDropdown from "./NavDropdown";
 import SidebarPublic from "../sidebar/SidebarPublic"; // Sesuaikan path folder sidebar kamu
 import { Link } from "react-router-dom";
 
+// IMPORT LOGO ANDA DI SINI
+import logoApp from "../../assets/images/logo.png";
+
 export default function Navbar() {
   const [open, setOpen] = useState(false);
 
@@ -22,13 +25,16 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           
           {/* SISI KIRI: LOGO */}
-          <div className="flex items-center gap-3 group cursor-pointer shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-[#071E3D]
-                            flex items-center justify-center
-                            text-white font-black text-lg shadow-lg
-                            group-hover:bg-orange-500 transition-all duration-500">
-              L
+          <Link to="/" className="flex items-center gap-3 group cursor-pointer shrink-0">
+            {/* CONTAINER LOGO BARU */}
+            <div className="w-12 h-12 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
+              <img 
+                src={logoApp} 
+                alt="Logo SIMLSP" 
+                className="w-full h-full object-contain"
+              />
             </div>
+
             <div className="leading-tight">
               <span className="block text-lg font-black text-[#071E3D]">
                 SIMLSP
@@ -37,7 +43,7 @@ export default function Navbar() {
                 Sertifikasi Profesi
               </span>
             </div>
-          </div>
+          </Link>
 
           {/* TENGAH: MENU DESKTOP (Hidden on half screen/mobile) */}
           <nav className="hidden lg:flex items-center justify-center flex-1 gap-8 px-10">

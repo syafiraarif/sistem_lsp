@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import {
   Award,
   Building2,
@@ -8,18 +9,23 @@ import {
 } from "lucide-react";
 
 export default function AssessorCard({
+  id,
   name,
   competency,
   institution,
   status,
+  image
 }) {
   const isActive = status === "Aktif";
+  // Membuat slug dari nama untuk URL yang rapi
+  const slug = name.toLowerCase().replace(/\s+/g, '-');
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0 }
+      }}
       whileHover={{ y: -12 }}
       className="group relative bg-white rounded-[2.5rem] p-8
                  border border-slate-100
@@ -36,10 +42,14 @@ export default function AssessorCard({
                           flex items-center justify-center p-1.5
                           transition-all duration-500
                           group-hover:border-orange-500">
-            <div className="w-full h-full rounded-2xl bg-white flex items-center justify-center shadow-sm">
-              <span className="text-[#071E3D] font-black text-4xl select-none group-hover:text-orange-500 transition-colors">
-                {name.charAt(0)}
-              </span>
+            <div className="w-full h-full rounded-2xl bg-white flex items-center justify-center shadow-sm overflow-hidden">
+              {image ? (
+                <img src={image} alt={name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[#071E3D] font-black text-4xl select-none group-hover:text-orange-500 transition-colors">
+                  {name.charAt(0)}
+                </span>
+              )}
             </div>
           </div>
 
@@ -65,7 +75,9 @@ export default function AssessorCard({
           {isActive ? "Asesor Tersertifikasi" : "Non-Aktif"}
         </p>
       </div>
+
       <div className="my-8 h-[1px] w-full bg-slate-50" />
+
       <div className="space-y-6 flex-grow">
         <div className="flex gap-4">
           <div className="p-2.5 rounded-xl bg-[#071E3D]/10 text-[#071E3D]
@@ -76,7 +88,7 @@ export default function AssessorCard({
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               Bidang Keahlian
             </p>
-            <p className="text-sm font-bold text-slate-700">
+            <p className="text-sm font-bold text-slate-700 line-clamp-1">
               {competency}
             </p>
           </div>
@@ -91,23 +103,26 @@ export default function AssessorCard({
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               Unit Kerja / TUK
             </p>
-            <p className="text-sm font-bold text-slate-700">
+            <p className="text-sm font-bold text-slate-700 line-clamp-1">
               {institution}
             </p>
           </div>
         </div>
       </div>
+
       <div className="mt-10">
-        <button
+        <Link
+          to={`/assessor/${slug}`}
+          state={{ id, name, competency, institution, status, image }}
           className="w-full py-4 rounded-2xl
-                     bg-[#071E3D] text-white
-                     font-black text-xs tracking-widest uppercase
-                     flex items-center justify-center gap-2
-                     hover:bg-orange-600 hover:shadow-xl hover:shadow-orange-500/20 transition-all duration-300"
+                    bg-[#071E3D] text-white
+                    font-black text-xs tracking-widest uppercase
+                    flex items-center justify-center gap-2
+                    hover:bg-orange-600 hover:shadow-xl hover:shadow-orange-500/20 transition-all duration-300"
         >
           Detail Profile
           <ArrowUpRight size={16} />
-        </button>
+        </Link>
       </div>
     </motion.div>
   );

@@ -9,7 +9,10 @@ import Information from "../pages/public/Information";
 import FAQ from "../pages/public/FAQ";
 import Complaint from "../pages/public/Complaint";
 import Login from "../pages/public/Login";
-
+import AssessorProfile from "../pages/public/AssessorProfile";
+import AssessorExplore from "../pages/public/AssessorExplore";
+import JadwalDetail from "../pages/public/JadwalDetail";
+import Jadwal from "../components/info/Jadwal";
 
 
 export default function AppRoutes() {
@@ -24,6 +27,10 @@ export default function AppRoutes() {
       <Route path="/faq" element={<FAQ />} />
       <Route path="/pengaduan" element={<Complaint />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/assessor/:slug" element={<AssessorProfile />} />
+      <Route path="/explore-assessors" element={<AssessorExplore />} />
+      <Route path="/jadwal-detail/:id" element={<JadwalDetail />} />
+      <Route path="/jadwal" element={<Jadwal />} />
     </Routes>
   );
 }
