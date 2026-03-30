@@ -20,6 +20,9 @@ const DokumenMutu = () => {
   // Pagination (Client Side)
   const [pagination, setPagination] = useState({ page: 1, limit: 10 });
 
+  // Error state untuk validasi manual
+  const [errors, setErrors] = useState({});
+
   // Form State
   const initialFormState = {
     jenis_dokumen: 'kebijakan_mutu',
@@ -34,11 +37,17 @@ const DokumenMutu = () => {
   };
   const [formData, setFormData] = useState(initialFormState);
 
-  // State Khusus File
+  // State Khusus File & Preview
   const [files, setFiles] = useState({
     file_dokumen: null,
     file_pendukung: null
   });
+  
+  const [previewUrlUtama, setPreviewUrlUtama] = useState(null);
+  const [showFullPreviewUtama, setShowFullPreviewUtama] = useState(false);
+  
+  const [previewUrlPendukung, setPreviewUrlPendukung] = useState(null);
+  const [showFullPreviewPendukung, setShowFullPreviewPendukung] = useState(false);
 
   // --- FETCH DATA ---
   const fetchData = async () => {
@@ -75,19 +84,55 @@ const DokumenMutu = () => {
     fetchData();
   }, []);
 
+  // --- HELPER UNTUK URL DAN TIPE FILE ---
+  const buildFileUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('blob:') || path.startsWith('http')) return path;
+    const cleanPath = path.replace(/^(\/?uploads\/|\/)/, '');
+    return `http://localhost:3000/uploads/${cleanPath}`;
+  };
+
+  // PERBAIKAN: Baca ektensi dari file fisik (jika ada) saat upload baru (blob)
+  const isPdfFile = (filename, fieldName) => {
+    const checkName = files[fieldName] ? files[fieldName].name : filename;
+    return checkName && /\.(pdf)$/i.test(checkName);
+  };
+  
+  const isImageFile = (filename, fieldName) => {
+    const checkName = files[fieldName] ? files[fieldName].name : filename;
+    return checkName && /\.(jpg|jpeg|png|gif|webp)$/i.test(checkName);
+  };
+
+  const isPreviewable = (filename, fieldName) => isPdfFile(filename, fieldName) || isImageFile(filename, fieldName);
+
+  // --- VALIDASI MANUAL ---
+  const validateInput = (name, value) => {
+    let errorMsg = '';
+    if (typeof value === 'string' && value.trim().length > 0 && value.trim().length <= 3) {
+      errorMsg = 'Terlalu pendek (minimal 4 karakter).';
+    }
+    setErrors(prev => ({ ...prev, [name]: errorMsg }));
+    return errorMsg === '';
+  };
+
   // --- HANDLERS ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    validateInput(name, value);
   };
 
   const handleFileChange = (e, fieldName) => {
     const file = e.target.files[0];
     if (file) {
-      setFiles(prev => ({
-        ...prev,
-        [fieldName]: file
-      }));
+      setFiles(prev => ({ ...prev, [fieldName]: file }));
+      const url = URL.createObjectURL(file);
+      
+      if (fieldName === 'file_dokumen') {
+        setPreviewUrlUtama(url);
+      } else if (fieldName === 'file_pendukung') {
+        setPreviewUrlPendukung(url);
+      }
     }
   };
 
@@ -95,10 +140,15 @@ const DokumenMutu = () => {
     setModalType(type);
     setSelectedItem(item);
     setShowModal(true);
+    setErrors({});
+    setShowFullPreviewUtama(false);
+    setShowFullPreviewPendukung(false);
 
     if (type === 'create') {
       setFormData(initialFormState);
       setFiles({ file_dokumen: null, file_pendukung: null });
+      setPreviewUrlUtama(null);
+      setPreviewUrlPendukung(null);
     } else if (item) {
       setFormData({
         jenis_dokumen: item.jenis_dokumen || 'kebijakan_mutu',
@@ -112,6 +162,9 @@ const DokumenMutu = () => {
         tanggal_dokumen: item.tanggal_dokumen ? item.tanggal_dokumen.split('T')[0] : ''
       });
       setFiles({ file_dokumen: null, file_pendukung: null });
+      
+      setPreviewUrlUtama(item.file_dokumen || null);
+      setPreviewUrlPendukung(item.file_pendukung || null);
     }
   };
 
@@ -128,6 +181,7 @@ const DokumenMutu = () => {
 
     if (result.isConfirmed) {
       try {
+        Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         await api.delete(`/admin/dokumen-mutu/${id}`);
         Swal.fire('Terhapus!', 'Dokumen berhasil dihapus.', 'success');
         fetchData();
@@ -137,29 +191,46 @@ const DokumenMutu = () => {
     }
   };
 
-  // --- SUBMIT HANDLE (CREATE & UPDATE) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    let isValid = true;
+    Object.keys(formData).forEach(key => {
+      if (!validateInput(key, formData[key])) isValid = false;
+    });
+
+    if (!isValid) {
+      Swal.fire('Peringatan', 'Silakan perbaiki kolom isian yang terlalu pendek!', 'warning');
+      return;
+    }
 
     if (!formData.nama_dokumen || !formData.jenis_dokumen) {
       Swal.fire('Peringatan', 'Nama Dokumen dan Jenis Dokumen wajib diisi!', 'warning');
       return;
     }
 
+    const actionText = modalType === 'create' ? 'menambahkan' : 'menyimpan perubahan pada';
+    const confirm = await Swal.fire({
+      title: 'Konfirmasi',
+      text: `Apakah Anda yakin ingin ${actionText} dokumen mutu ini?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#CC6B27',
+      cancelButtonColor: '#182D4A',
+      confirmButtonText: 'Ya, Simpan'
+    });
+
+    if (!confirm.isConfirmed) return;
+
     const dataPayload = new FormData();
-    
     Object.keys(formData).forEach(key => {
       if (formData[key] !== null && formData[key] !== '') {
         dataPayload.append(key, formData[key]);
       }
     });
 
-    if (files.file_dokumen) {
-      dataPayload.append('file_dokumen', files.file_dokumen);
-    }
-    if (files.file_pendukung) {
-      dataPayload.append('file_pendukung', files.file_pendukung);
-    }
+    if (files.file_dokumen) dataPayload.append('file_dokumen', files.file_dokumen);
+    if (files.file_pendukung) dataPayload.append('file_pendukung', files.file_pendukung);
 
     try {
       Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -195,7 +266,11 @@ const DokumenMutu = () => {
     }
   };
 
-  // --- FILTER & PAGINATION ---
+  const inputClass = (name) => `w-full p-2.5 border rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 placeholder:text-[#182D4A]/40
+    ${errors[name] ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-[#071E3D]/20 focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10'}
+  `;
+
+  // Filter & Pagination
   const filteredData = data.filter(item => {
     const matchSearch = item.nama_dokumen?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                         item.nomor_dokumen?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -229,7 +304,7 @@ const DokumenMutu = () => {
       {/* CONTENT CARD */}
       <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6">
         
-        {/* TOOLBAR (SEARCH & FILTER) */}
+        {/* TOOLBAR */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative group flex-1">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
@@ -372,10 +447,10 @@ const DokumenMutu = () => {
         )}
       </div>
 
-      {/* --- MODAL FORM --- */}
+      {/* --- MODAL FORM & DETAIL --- */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden zoom-in-95">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden zoom-in-95">
             
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
@@ -385,6 +460,7 @@ const DokumenMutu = () => {
                 {modalType === 'detail' && <><Eye size={20} className="text-[#CC6B27]"/> Detail Dokumen</>}
               </h3>
               <button 
+                type="button"
                 className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors" 
                 onClick={() => setShowModal(false)}
               >
@@ -396,158 +472,187 @@ const DokumenMutu = () => {
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
               <div className="overflow-y-auto px-6 py-5 space-y-6">
                 
-                {/* Section 1: Info Utama */}
+                {/* Bagian Form: Full Width */}
                 <div>
-                  <h4 className="text-[14px] font-bold text-[#071E3D] mb-4 border-b border-[#071E3D]/10 pb-2">Informasi Utama</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-bold text-[#071E3D]">Jenis Dokumen <span className="text-red-500">*</span></label>
-                          <select 
-                              className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"
-                              name="jenis_dokumen" 
-                              value={formData.jenis_dokumen} 
-                              onChange={handleInputChange}
-                              disabled={modalType === 'detail'}
-                          >
-                              <option value="kebijakan_mutu">Kebijakan Mutu</option>
-                              <option value="manual_mutu">Manual Mutu</option>
-                              <option value="standar_mutu">Standar Mutu</option>
-                              <option value="formulir_mutu">Formulir Mutu</option>
-                              <option value="referensi">Referensi</option>
-                          </select>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-bold text-[#071E3D]">Kategori</label>
-                          <input 
-                              className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] placeholder:text-[#182D4A]/40 disabled:opacity-70 disabled:bg-gray-100"
-                              type="text" 
-                              name="kategori" 
-                              value={formData.kategori} 
-                              onChange={handleInputChange} 
-                              placeholder="Contoh: Internal / Eksternal"
-                              disabled={modalType === 'detail'}
-                          />
-                      </div>
-                  </div>
+                    <h4 className="text-[14px] font-bold text-[#071E3D] mb-4 border-b border-[#071E3D]/10 pb-2">Informasi Utama</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="flex flex-col gap-1.5 lg:col-span-2">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Nama Dokumen <span className="text-red-500">*</span></label>
+                            <input className={inputClass('nama_dokumen')} type="text" name="nama_dokumen" value={formData.nama_dokumen} onChange={handleInputChange} placeholder="Nama dokumen lengkap" disabled={modalType === 'detail'} required />
+                            {errors.nama_dokumen && <span className="text-[11px] text-red-500 font-medium">{errors.nama_dokumen}</span>}
+                        </div>
 
-                  <div className="flex flex-col gap-1.5 mt-4">
-                      <label className="text-[13px] font-bold text-[#071E3D]">Nama Dokumen <span className="text-red-500">*</span></label>
-                      <input 
-                          className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] placeholder:text-[#182D4A]/40 disabled:opacity-70 disabled:bg-gray-100"
-                          type="text" 
-                          name="nama_dokumen" 
-                          value={formData.nama_dokumen} 
-                          onChange={handleInputChange} 
-                          placeholder="Nama dokumen lengkap"
-                          disabled={modalType === 'detail'}
-                          required
-                      />
-                  </div>
+                        <div className="flex flex-col gap-1.5 lg:col-span-1">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Jenis Dokumen <span className="text-red-500">*</span></label>
+                            <select className={inputClass('jenis_dokumen')} name="jenis_dokumen" value={formData.jenis_dokumen} onChange={handleInputChange} disabled={modalType === 'detail'}>
+                                <option value="kebijakan_mutu">Kebijakan Mutu</option>
+                                <option value="manual_mutu">Manual Mutu</option>
+                                <option value="standar_mutu">Standar Mutu</option>
+                                <option value="formulir_mutu">Formulir Mutu</option>
+                                <option value="referensi">Referensi</option>
+                            </select>
+                        </div>
+                        
+                        <div className="flex flex-col gap-1.5 lg:col-span-1">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Kategori</label>
+                            <input className={inputClass('kategori')} type="text" name="kategori" value={formData.kategori} onChange={handleInputChange} placeholder="Internal / Eksternal" disabled={modalType === 'detail'} />
+                            {errors.kategori && <span className="text-[11px] text-red-500 font-medium">{errors.kategori}</span>}
+                        </div>
 
-                  <div className="flex flex-col gap-1.5 mt-4">
-                      <label className="text-[13px] font-bold text-[#071E3D]">Deskripsi</label>
-                      <textarea 
-                          className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all resize-none font-medium text-[13px] placeholder:text-[#182D4A]/40 disabled:opacity-70 disabled:bg-gray-100"
-                          name="deskripsi" 
-                          value={formData.deskripsi} 
-                          onChange={handleInputChange} 
-                          rows="3"
-                          disabled={modalType === 'detail'}
-                      ></textarea>
-                  </div>
+                        <div className="flex flex-col gap-1.5 lg:col-span-4">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Deskripsi</label>
+                            <textarea className={`${inputClass('deskripsi')} resize-none`} name="deskripsi" value={formData.deskripsi} onChange={handleInputChange} rows="2" disabled={modalType === 'detail'}></textarea>
+                            {errors.deskripsi && <span className="text-[11px] text-red-500 font-medium">{errors.deskripsi}</span>}
+                        </div>
+
+                        {/* Baris Kedua form */}
+                        <div className="flex flex-col gap-1.5 lg:col-span-1">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Nomor Dokumen</label>
+                            <input className={inputClass('nomor_dokumen')} type="text" name="nomor_dokumen" value={formData.nomor_dokumen} onChange={handleInputChange} disabled={modalType === 'detail'} />
+                            {errors.nomor_dokumen && <span className="text-[11px] text-red-500 font-medium">{errors.nomor_dokumen}</span>}
+                        </div>
+                        <div className="flex flex-col gap-1.5 lg:col-span-1">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Nomor Revisi</label>
+                            <input className={inputClass('nomor_revisi')} type="text" name="nomor_revisi" value={formData.nomor_revisi} onChange={handleInputChange} disabled={modalType === 'detail'} />
+                            {errors.nomor_revisi && <span className="text-[11px] text-red-500 font-medium">{errors.nomor_revisi}</span>}
+                        </div>
+                        <div className="flex flex-col gap-1.5 lg:col-span-1">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Penyusun</label>
+                            <input className={inputClass('penyusun')} type="text" name="penyusun" value={formData.penyusun} onChange={handleInputChange} disabled={modalType === 'detail'} />
+                            {errors.penyusun && <span className="text-[11px] text-red-500 font-medium">{errors.penyusun}</span>}
+                        </div>
+                        <div className="flex flex-col gap-1.5 lg:col-span-1">
+                            <label className="text-[13px] font-bold text-[#071E3D]">Disahkan Oleh</label>
+                            <input className={inputClass('disahkan_oleh')} type="text" name="disahkan_oleh" value={formData.disahkan_oleh} onChange={handleInputChange} disabled={modalType === 'detail'} />
+                            {errors.disahkan_oleh && <span className="text-[11px] text-red-500 font-medium">{errors.disahkan_oleh}</span>}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Section 2: Detail Teknis */}
-                <div>
-                  <h4 className="text-[14px] font-bold text-[#071E3D] mb-4 border-b border-[#071E3D]/10 pb-2">Detail Teknis</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                      <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-bold text-[#071E3D]">Nomor Dokumen</label>
-                          <input 
-                            className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"
-                            type="text" name="nomor_dokumen" value={formData.nomor_dokumen} onChange={handleInputChange} disabled={modalType === 'detail'} 
-                          />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-bold text-[#071E3D]">Nomor Revisi</label>
-                          <input 
-                            className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"
-                            type="text" name="nomor_revisi" value={formData.nomor_revisi} onChange={handleInputChange} disabled={modalType === 'detail'} 
-                          />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-bold text-[#071E3D]">Tanggal Dokumen</label>
-                          <input 
-                            className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"
-                            type="date" name="tanggal_dokumen" value={formData.tanggal_dokumen} onChange={handleInputChange} disabled={modalType === 'detail'} 
-                          />
-                      </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-                      <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-bold text-[#071E3D]">Penyusun</label>
-                          <input 
-                            className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"
-                            type="text" name="penyusun" value={formData.penyusun} onChange={handleInputChange} disabled={modalType === 'detail'} 
-                          />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-bold text-[#071E3D]">Disahkan Oleh</label>
-                          <input 
-                            className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"
-                            type="text" name="disahkan_oleh" value={formData.disahkan_oleh} onChange={handleInputChange} disabled={modalType === 'detail'} 
-                          />
-                      </div>
-                  </div>
-                </div>
-
-                {/* Section 3: File Upload */}
-                <div>
-                  <h4 className="text-[14px] font-bold text-[#071E3D] mb-4 border-b border-[#071E3D]/10 pb-2">Upload File</h4>
-                  <div className="space-y-4 bg-[#FAFAFA] p-5 rounded-lg border border-dashed border-[#071E3D]/30">
+                {/* Bagian File Upload & Previews */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#071E3D]/10">
                     
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[13px] font-bold text-[#071E3D]">File Dokumen Utama (PDF/Docx)</label>
-                        {modalType !== 'detail' && (
-                            <input 
-                                type="file" 
-                                onChange={(e) => handleFileChange(e, 'file_dokumen')} 
-                                className="block w-full text-[13px] text-[#182D4A] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:font-bold file:bg-[#071E3D]/10 file:text-[#071E3D] hover:file:bg-[#071E3D]/20 transition-all cursor-pointer" 
-                                accept=".pdf,.doc,.docx"
-                            />
-                        )}
-                        {selectedItem?.file_dokumen && (
-                            <div className="flex items-center gap-2 mt-1.5 text-[13px] bg-white px-3 py-2 border border-[#071E3D]/10 rounded-lg shadow-sm w-fit font-medium">
-                                <FileText size={16} className="text-[#CC6B27]"/>
-                                <a href={`http://localhost:3000/uploads/${selectedItem.file_dokumen}`} target="_blank" rel="noreferrer" className="text-[#CC6B27] hover:text-[#071E3D] transition-colors">
-                                  {selectedItem.file_dokumen}
-                                </a>
+                    {/* Kolom 1: File Utama */}
+                    <div className="flex flex-col gap-4">
+                        <h4 className="text-[14px] font-bold text-[#CC6B27] flex items-center gap-2 m-0 pb-2 border-b border-[#CC6B27]/20">
+                            <FileText size={16}/> Dokumen Utama
+                        </h4>
+                        
+                        <div className="bg-[#FAFAFA] p-4 rounded-lg border border-dashed border-[#071E3D]/30">
+                            <label className="block text-[13px] font-bold text-[#071E3D] mb-2">Upload Dokumen Utama (PDF) <span className="text-red-500">*</span></label>
+                            {modalType !== 'detail' && (
+                                <input 
+                                  type="file" name="file_dokumen" accept=".pdf" onChange={(e) => handleFileChange(e, 'file_dokumen')} 
+                                  className="block w-full text-[12px] text-[#182D4A] file:mr-3 file:py-2 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-bold file:bg-[#CC6B27]/10 file:text-[#CC6B27] hover:file:bg-[#CC6B27] hover:file:text-white cursor-pointer transition-colors border border-[#071E3D]/20 rounded-lg bg-white p-1"
+                                />
+                            )}
+                            {selectedItem?.file_dokumen && !files.file_dokumen && (
+                                <div className="mt-2 text-[12px] font-medium text-[#182D4A] bg-[#E2E8F0] px-3 py-2 rounded border border-[#071E3D]/10 break-all">
+                                    Tersimpan: <a href={buildFileUrl(selectedItem.file_dokumen)} target="_blank" rel="noreferrer" className="text-[#CC6B27] hover:underline">{selectedItem.file_dokumen}</a>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Preview Dokumen Utama */}
+                        <div className="border border-[#071E3D]/20 rounded-lg flex flex-col overflow-hidden min-h-[300px]">
+                            <div className="bg-gray-100 px-3 py-2 text-[11px] font-bold text-[#182D4A] flex justify-between items-center border-b border-[#071E3D]/20">
+                                <span>Preview Dokumen Utama</span>
+                                {previewUrlUtama && isPreviewable(previewUrlUtama, 'file_dokumen') && (
+                                <button type="button" onClick={() => setShowFullPreviewUtama(!showFullPreviewUtama)} className="text-[#CC6B27] hover:underline">
+                                    {showFullPreviewUtama ? 'Perkecil' : 'Tampilkan Lebih Banyak'}
+                                </button>
+                                )}
                             </div>
-                        )}
+                            
+                            <div className={`relative flex-1 transition-all duration-300 ${showFullPreviewUtama ? 'h-[500px]' : 'h-full bg-white'}`}>
+                                {previewUrlUtama ? (
+                                    isPreviewable(previewUrlUtama, 'file_dokumen') ? (
+                                        isImageFile(previewUrlUtama, 'file_dokumen') ? (
+                                            <div className="w-full h-full overflow-auto absolute inset-0 flex justify-center items-start bg-gray-50 p-2">
+                                                <img src={buildFileUrl(previewUrlUtama)} alt="Preview" className="max-w-full object-contain" />
+                                            </div>
+                                        ) : (
+                                            <iframe src={`${buildFileUrl(previewUrlUtama)}#toolbar=0&navpanes=0`} className="w-full h-full border-0 absolute inset-0" title="Preview PDF" />
+                                        )
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6 text-center absolute inset-0 bg-gray-50">
+                                            <FileText size={42} className="mb-2 text-blue-400" />
+                                            <p className="text-[12px] font-bold mb-1">Preview tidak tersedia</p>
+                                            <p className="text-[11px]">Format file ini (.doc/.xls dsb) tidak dapat dipratinjau langsung di browser.</p>
+                                            <a href={buildFileUrl(previewUrlUtama)} target="_blank" rel="noreferrer" className="mt-3 px-3 py-1.5 bg-blue-100 text-blue-700 rounded text-[11px] font-bold hover:bg-blue-200">Unduh File</a>
+                                        </div>
+                                    )
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 p-6 text-center absolute inset-0">
+                                        <FileText size={42} className="mb-2 opacity-30" />
+                                        <p className="text-[11px]">Pilih file utama untuk melihat pratinjau.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="flex flex-col gap-2 pt-3 border-t border-dashed border-[#071E3D]/20">
-                        <label className="text-[13px] font-bold text-[#071E3D]">File Pendukung / Lampiran</label>
-                        {modalType !== 'detail' && (
-                            <input 
-                                type="file" 
-                                onChange={(e) => handleFileChange(e, 'file_pendukung')} 
-                                className="block w-full text-[13px] text-[#182D4A] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:font-bold file:bg-[#CC6B27]/10 file:text-[#CC6B27] hover:file:bg-[#CC6B27]/20 transition-all cursor-pointer"
-                                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png"
-                            />
-                        )}
-                        {selectedItem?.file_pendukung && (
-                            <div className="flex items-center gap-2 mt-1.5 text-[13px] bg-white px-3 py-2 border border-[#071E3D]/10 rounded-lg shadow-sm w-fit font-medium">
-                                <FileText size={16} className="text-[#CC6B27]"/>
-                                <a href={`http://localhost:3000/uploads/${selectedItem.file_pendukung}`} target="_blank" rel="noreferrer" className="text-[#CC6B27] hover:text-[#071E3D] transition-colors">
-                                  {selectedItem.file_pendukung}
-                                </a>
-                            </div>
-                        )}
-                    </div>
+                    {/* Kolom 2: File Pendukung */}
+                    <div className="flex flex-col gap-4">
+                        <h4 className="text-[14px] font-bold text-[#CC6B27] flex items-center gap-2 m-0 pb-2 border-b border-[#CC6B27]/20">
+                            <FileText size={16}/> Dokumen Pendukung (Opsional)
+                        </h4>
+                        
+                        <div className="bg-[#FAFAFA] p-4 rounded-lg border border-dashed border-[#071E3D]/30">
+                            <label className="block text-[13px] font-bold text-[#071E3D] mb-2">Upload File Pendukung</label>
+                            {modalType !== 'detail' && (
+                                <input 
+                                  type="file" name="file_pendukung" onChange={(e) => handleFileChange(e, 'file_pendukung')} 
+                                  className="block w-full text-[12px] text-[#182D4A] file:mr-3 file:py-2 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-bold file:bg-[#182D4A]/10 file:text-[#182D4A] hover:file:bg-[#182D4A] hover:file:text-white cursor-pointer transition-colors border border-[#071E3D]/20 rounded-lg bg-white p-1"
+                                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                                />
+                            )}
+                            {selectedItem?.file_pendukung && !files.file_pendukung && (
+                                <div className="mt-2 text-[12px] font-medium text-[#182D4A] bg-[#E2E8F0] px-3 py-2 rounded border border-[#071E3D]/10 break-all">
+                                    Tersimpan: <a href={buildFileUrl(selectedItem.file_pendukung)} target="_blank" rel="noreferrer" className="text-[#CC6B27] hover:underline">{selectedItem.file_pendukung}</a>
+                                </div>
+                            )}
+                        </div>
 
-                  </div>
+                        {/* Preview Dokumen Pendukung */}
+                        <div className="border border-[#071E3D]/20 rounded-lg flex flex-col overflow-hidden min-h-[300px]">
+                            <div className="bg-gray-100 px-3 py-2 text-[11px] font-bold text-[#182D4A] flex justify-between items-center border-b border-[#071E3D]/20">
+                                <span>Preview Dokumen Pendukung</span>
+                                {previewUrlPendukung && isPreviewable(previewUrlPendukung, 'file_pendukung') && (
+                                <button type="button" onClick={() => setShowFullPreviewPendukung(!showFullPreviewPendukung)} className="text-[#CC6B27] hover:underline">
+                                    {showFullPreviewPendukung ? 'Perkecil' : 'Tampilkan Lebih Banyak'}
+                                </button>
+                                )}
+                            </div>
+                            
+                            <div className={`relative flex-1 transition-all duration-300 ${showFullPreviewPendukung ? 'h-[500px]' : 'h-full bg-white'}`}>
+                                {previewUrlPendukung ? (
+                                    isPreviewable(previewUrlPendukung, 'file_pendukung') ? (
+                                        isImageFile(previewUrlPendukung, 'file_pendukung') ? (
+                                            <div className="w-full h-full overflow-auto absolute inset-0 flex justify-center items-start bg-gray-50 p-2">
+                                                <img src={buildFileUrl(previewUrlPendukung)} alt="Preview" className="max-w-full object-contain" />
+                                            </div>
+                                        ) : (
+                                            <iframe src={`${buildFileUrl(previewUrlPendukung)}#toolbar=0&navpanes=0`} className="w-full h-full border-0 absolute inset-0" title="Preview PDF" />
+                                        )
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6 text-center absolute inset-0 bg-gray-50">
+                                            <FileText size={42} className="mb-2 text-blue-400" />
+                                            <p className="text-[12px] font-bold mb-1">Preview tidak tersedia</p>
+                                            <p className="text-[11px]">Format file ini (.doc/.xls dsb) tidak dapat dipratinjau langsung di browser.</p>
+                                            <a href={buildFileUrl(previewUrlPendukung)} target="_blank" rel="noreferrer" className="mt-3 px-3 py-1.5 bg-blue-100 text-blue-700 rounded text-[11px] font-bold hover:bg-blue-200">Unduh File</a>
+                                        </div>
+                                    )
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 p-6 text-center absolute inset-0">
+                                        <FileText size={42} className="mb-2 opacity-30" />
+                                        <p className="text-[11px]">Pilih file pendukung untuk melihat pratinjau.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
 
               </div>

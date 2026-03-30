@@ -4,18 +4,22 @@ import api from "../../services/api";
 import { getProvinsi, getKota, getKecamatan, getKelurahan } from "../../services/wilayah.service";
 import { 
   Search, Plus, Eye, Edit2, Trash2, X, Save, Upload, FileSpreadsheet,
-  MapPin, User, Building2, Loader2, FileText, Home
+  MapPin, User, Building2, Loader2, FileText, Home, Mail, Key, CheckCircle
 } from 'lucide-react';
 
 const TempatUji = () => {
   // --- STATE UTAMA ---
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // STATE FILTER & SEARCH
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState(''); 
   
   // Modal State
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [selectedImportFile, setSelectedImportFile] = useState(null); // Menampung file Excel yg dipilih
   const [isDetailMode, setIsDetailMode] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -30,31 +34,22 @@ const TempatUji = () => {
   const [kelurahanList, setKelurahanList] = useState([]);
 
   // --- FORM DATA ---
-  // Disesuaikan dengan tuk.model.js dan controller
   const initialFormState = {
-    // Data Akun (User) & TUK
     email: '',
-    no_hp: '', // di backend diproses menjadi telepon TUK
-
-    // Data Profile TUK
+    telepon: '',
     kode_tuk: '',
     nama_tuk: '',
-    jenis_tuk: 'sewaktu', // "mandiri", "sewaktu", "tempat_kerja"
-    penanggung_jawab: '',
+    jenis_tuk: 'sewaktu',
     institusi_induk: '',
-    
-    // Alamat
     alamat: '',
     provinsi: '',
     kota: '',
     kecamatan: '',
     kelurahan: '',
     kode_pos: '',
-    
-    // Legalitas
     no_lisensi: '',
     masa_berlaku_lisensi: '',
-    status: 'aktif' // enum "aktif", "nonaktif"
+    status: 'aktif'
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -62,8 +57,8 @@ const TempatUji = () => {
   // --- LOAD DATA ---
   useEffect(() => {
     fetchData();
-    fetchProvinsi();
-  }, [pagination.page, searchTerm]);
+    fetchProvinsiInit();
+  }, [pagination.page, searchTerm, filterStatus]);
 
   // --- API FUNCTIONS ---
   const fetchData = async () => {
@@ -73,7 +68,8 @@ const TempatUji = () => {
         params: {
           page: pagination.page,
           limit: pagination.limit,
-          search: searchTerm
+          search: searchTerm,
+          status: filterStatus 
         }
       });
 
@@ -91,37 +87,69 @@ const TempatUji = () => {
     }
   };
 
-  const fetchProvinsi = async () => {
+  const fetchProvinsiInit = async () => {
     try {
       const res = await getProvinsi();
-      setProvinsiList(res);
+      setProvinsiList(Array.isArray(res) ? res : (res?.data || []));
     } catch (err) { console.error("Gagal load provinsi", err); }
   };
 
   // --- HANDLER WILAYAH ---
   const handleProvinsiChange = async (e) => {
     const id = e.target.value;
-    const name = e.target.options[e.target.selectedIndex].text;
-    setFormData({ ...formData, provinsi: name, kota: '', kecamatan: '', kelurahan: '' });
+    const name = id ? provinsiList.find(p => String(p.id) === String(id))?.name : '';
+    
+    setFormData(prev => ({ ...prev, provinsi: name || '', kota: '', kecamatan: '', kelurahan: '' }));
     setKotaList([]); setKecamatanList([]); setKelurahanList([]);
-    if (id) setKotaList(await getKota(id));
+    
+    if (id) {
+      try {
+        const res = await getKota(id);
+        setKotaList(Array.isArray(res) ? res : (res?.data || []));
+      } catch(err) { console.error(err) }
+    }
   };
 
   const handleKotaChange = async (e) => {
     const id = e.target.value;
-    const name = e.target.options[e.target.selectedIndex].text;
-    setFormData({ ...formData, kota: name, kecamatan: '', kelurahan: '' });
+    const name = id ? kotaList.find(p => String(p.id) === String(id))?.name : '';
+    
+    setFormData(prev => ({ ...prev, kota: name || '', kecamatan: '', kelurahan: '' }));
     setKecamatanList([]); setKelurahanList([]);
-    if (id) setKecamatanList(await getKecamatan(id));
+    
+    if (id) {
+      try {
+        const res = await getKecamatan(id);
+        setKecamatanList(Array.isArray(res) ? res : (res?.data || []));
+      } catch(err) { console.error(err) }
+    }
   };
 
   const handleKecamatanChange = async (e) => {
     const id = e.target.value;
-    const name = e.target.options[e.target.selectedIndex].text;
-    setFormData({ ...formData, kecamatan: name, kelurahan: '' });
+    const name = id ? kecamatanList.find(p => String(p.id) === String(id))?.name : '';
+    
+    setFormData(prev => ({ ...prev, kecamatan: name || '', kelurahan: '' }));
     setKelurahanList([]);
-    if (id) setKelurahanList(await getKelurahan(id));
+    
+    if (id) {
+      try {
+        const res = await getKelurahan(id);
+        setKelurahanList(Array.isArray(res) ? res : (res?.data || []));
+      } catch(err) { console.error(err) }
+    }
   };
+
+  const handleKelurahanChange = (e) => {
+    const id = e.target.value;
+    const name = id ? kelurahanList.find(k => String(k.id) === String(id))?.name : '';
+    setFormData(prev => ({ ...prev, kelurahan: name || '' }));
+  };
+
+  const selectedProvinsiId = provinsiList.find(p => p.name === formData.provinsi)?.id || "";
+  const selectedKotaId = kotaList.find(k => k.name === formData.kota)?.id || "";
+  const selectedKecamatanId = kecamatanList.find(k => k.name === formData.kecamatan)?.id || "";
+  const selectedKelurahanId = kelurahanList.find(k => k.name === formData.kelurahan)?.id || "";
 
   // --- FORM HANDLERS ---
   const handleInputChange = (e) => {
@@ -148,12 +176,11 @@ const TempatUji = () => {
       const toDateInput = (dateStr) => dateStr ? new Date(dateStr).toISOString().split('T')[0] : '';
 
       setFormData({
-        email: item.User?.email || item.email || '',
-        no_hp: item.User?.no_hp || item.telepon || '',
+        email: item.email || '',
+        telepon: item.telepon || '',
         kode_tuk: item.kode_tuk || '',
         nama_tuk: item.nama_tuk || '',
         jenis_tuk: item.jenis_tuk || 'sewaktu',
-        penanggung_jawab: item.penanggung_jawab || '',
         institusi_induk: item.institusi_induk || '',
         alamat: item.alamat || '',
         provinsi: item.provinsi || '',
@@ -165,29 +192,136 @@ const TempatUji = () => {
         masa_berlaku_lisensi: toDateInput(item.masa_berlaku_lisensi),
         status: item.status || 'aktif'
       });
-      return true;
+      return item;
     } catch (error) {
       Swal.fire({title: 'Error', text: 'Gagal mengambil detail TUK', icon: 'error', confirmButtonColor: '#CC6B27'});
-      return false;
+      return null;
+    }
+  };
+
+  const fetchDependentRegions = async (item) => {
+    if (!item.provinsi) return;
+    const provMatch = provinsiList.find(p => p.name === item.provinsi);
+    if (!provMatch) return;
+
+    try {
+        const kotaRes = await getKota(provMatch.id);
+        const kList = Array.isArray(kotaRes) ? kotaRes : (kotaRes?.data || []);
+        setKotaList(kList);
+
+        if (item.kota) {
+            const kotaMatch = kList.find(k => k.name === item.kota);
+            if (kotaMatch) {
+                const kecRes = await getKecamatan(kotaMatch.id);
+                const kecList = Array.isArray(kecRes) ? kecRes : (kecRes?.data || []);
+                setKecamatanList(kecList);
+
+                if (item.kecamatan) {
+                    const kecMatch = kecList.find(k => k.name === item.kecamatan);
+                    if (kecMatch) {
+                        const kelRes = await getKelurahan(kecMatch.id);
+                        const kelList = Array.isArray(kelRes) ? kelRes : (kelRes?.data || []);
+                        setKelurahanList(kelList);
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Gagal meload child wilayah", e);
     }
   };
 
   const openEditModal = async (id) => {
     resetForm();
-    const success = await fetchDetail(id);
-    if (success) {
-      setCurrentId(id); // id_tuk
+    const item = await fetchDetail(id);
+    if (item) {
+      setCurrentId(id);
       setIsEditMode(true);
       setShowModal(true);
+      await fetchDependentRegions(item);
     }
   };
 
   const openDetailModal = async (id) => {
     resetForm();
-    const success = await fetchDetail(id);
-    if (success) {
+    const item = await fetchDetail(id);
+    if (item) {
       setIsDetailMode(true);
       setShowModal(true);
+    }
+  };
+
+  // --- ACTIONS ---
+  const handleSendEmail = async (tukId, hasAccount) => {
+    if (!tukId || hasAccount) return; 
+    
+    const confirm = await Swal.fire({
+      title: 'Buat & Kirim Akun?',
+      text: "Akun penanggung jawab untuk TUK ini belum ada. Sistem akan membuatkan akun dan mengirimkannya via email. Lanjutkan?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#CC6B27',
+      cancelButtonColor: '#182D4A',
+      confirmButtonText: 'Ya, Lanjutkan',
+      cancelButtonText: 'Batal'
+    });
+
+    if (confirm.isConfirmed) {
+      Swal.fire({
+        title: 'Memproses...',
+        text: 'Sedang membuat akun dan mengirim email...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      try {
+        const resGenerate = await api.post(`/admin/tuk/${tukId}/generate-account`);
+        const targetUserId = resGenerate.data.data.id_user; 
+        await api.post(`/admin/send-email/${targetUserId}`);
+        
+        Swal.fire({
+          title: 'Sukses', 
+          text: 'Akun berhasil dibuat & email informasi login telah dikirim.', 
+          icon: 'success', 
+          confirmButtonColor: '#CC6B27'
+        });
+        
+        fetchData(); 
+      } catch (error) {
+        Swal.fire({
+          title: 'Gagal', 
+          text: error.response?.data?.message || 'Gagal memproses akun/email', 
+          icon: 'error', 
+          confirmButtonColor: '#CC6B27'
+        });
+      }
+    }
+  };
+
+  const handleResetPassword = async (id_user) => {
+    if (!id_user) {
+      return Swal.fire({title: 'Peringatan', text: 'ID User (Penanggung Jawab) tidak ditemukan untuk TUK ini.', icon: 'warning', confirmButtonColor: '#CC6B27'});
+    }
+    const confirm = await Swal.fire({
+      title: 'Reset Password?',
+      text: "Password akan direset dan dikirimkan ke email TUK. Lanjutkan?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#EF4444',
+      cancelButtonColor: '#182D4A',
+      confirmButtonText: 'Ya, Reset',
+      cancelButtonText: 'Batal'
+    });
+
+    if (confirm.isConfirmed) {
+      try {
+        await api.put(`/admin/tuk/${id_user}/reset-password`);
+        Swal.fire({title: 'Sukses', text: 'Password berhasil direset dan dikirim ke email.', icon: 'success', confirmButtonColor: '#CC6B27'});
+      } catch (error) {
+        Swal.fire({title: 'Gagal', text: error.response?.data?.message || 'Gagal mereset password', icon: 'error', confirmButtonColor: '#CC6B27'});
+      }
     }
   };
 
@@ -203,18 +337,21 @@ const TempatUji = () => {
 
     try {
       if (isEditMode) {
-        // Update data via PUT /admin/tuk/:id
         await api.put(`/admin/tuk/${currentId}`, payload);
         Swal.fire({title: 'Sukses', text: 'Data TUK berhasil diperbarui', icon: 'success', confirmButtonColor: '#CC6B27'});
       } else {
+<<<<<<< HEAD
         // Create akun user & TUK
         await api.post('/admin/tuk', payload);
         Swal.fire({title: 'Sukses', text: 'TUK baru berhasil dibuat.', icon: 'success', confirmButtonColor: '#CC6B27'});
+=======
+        await api.post('/admin/tuk', payload);
+        Swal.fire({title: 'Sukses', text: 'TUK baru berhasil ditambahkan.', icon: 'success', confirmButtonColor: '#CC6B27'});
+>>>>>>> 80010cdc8138b371dcd978cf1d54fe2b48eeab22
       }
       setShowModal(false);
       fetchData();
     } catch (error) {
-      console.error("Submit Error:", error);
       Swal.fire({title: 'Gagal', text: error.response?.data?.message || 'Gagal menyimpan data', icon: 'error', confirmButtonColor: '#CC6B27'});
     }
   };
@@ -242,21 +379,49 @@ const TempatUji = () => {
     }
   };
 
+  // ==========================================
+  // FUNGSI IMPORT EXCEL DENGAN LOADING & STATE FILE
+  // ==========================================
   const handleImportSubmit = async (e) => {
     e.preventDefault();
-    const file = e.target.elements[0].files[0];
-    if (!file) return Swal.fire({title: 'Peringatan', text: 'Pilih file excel dulu', icon: 'warning', confirmButtonColor: '#CC6B27'});
+    
+    if (!selectedImportFile) {
+        return Swal.fire({title: 'Peringatan', text: 'Pilih file excel terlebih dahulu', icon: 'warning', confirmButtonColor: '#CC6B27'});
+    }
 
     const form = new FormData();
-    form.append('file', file);
+    form.append('file', selectedImportFile);
+
+    // Tampilkan animasi Loading karena pengiriman banyak email memakan waktu lama
+    Swal.fire({
+      title: 'Memproses Import...',
+      text: 'Sistem sedang membaca file, membuat akun, dan mengirimkan email. Harap jangan tutup halaman ini.',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
 
     try {
-      await api.post('/admin/import-tuk', form);
-      Swal.fire({title: 'Sukses', text: 'Import berhasil', icon: 'success', confirmButtonColor: '#CC6B27'});
+      const response = await api.post('/admin/import-tuk', form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      Swal.fire({
+        title: 'Import Selesai', 
+        text: response.data.message || 'Data berhasil diimport dan email telah dikirim!', 
+        icon: 'success', 
+        confirmButtonColor: '#CC6B27'
+      });
+
       setShowImportModal(false);
+      setSelectedImportFile(null); // Reset form
       fetchData();
     } catch (err) {
-      Swal.fire({title: 'Gagal', text: err.response?.data?.message || 'Import gagal', icon: 'error', confirmButtonColor: '#CC6B27'});
+      Swal.fire({
+        title: 'Gagal Import', 
+        text: err.response?.data?.message || 'Gagal membaca atau memproses file Excel', 
+        icon: 'error', 
+        confirmButtonColor: '#CC6B27'
+      });
     }
   };
 
@@ -272,7 +437,10 @@ const TempatUji = () => {
         <div className="flex gap-3 w-full md:w-auto">
           <button 
             className="flex-1 md:flex-none px-4 py-2 bg-white border border-[#071E3D]/20 text-[#182D4A] rounded-lg hover:bg-[#E2E8F0] shadow-sm transition-all font-bold flex items-center justify-center gap-2 text-[13px]" 
-            onClick={() => setShowImportModal(true)}
+            onClick={() => {
+              setSelectedImportFile(null); // Reset setiap kali modal dibuka
+              setShowImportModal(true);
+            }}
           >
             <FileSpreadsheet size={18} /> Import
           </button>
@@ -288,16 +456,34 @@ const TempatUji = () => {
       {/* CONTENT */}
       <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-6">
         
-        {/* Search */}
-        <div className="w-full md:w-80 relative group">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
-          <input 
-            type="text" 
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]" 
-            placeholder="Cari Kode atau Nama TUK..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        {/* --- PENCARIAN & FILTER --- */}
+        <div className="flex flex-col md:flex-row gap-3 w-full">
+          <div className="w-full md:w-80 relative group">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
+            <input 
+              type="text" 
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]" 
+              placeholder="Cari Kode atau Nama TUK..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPagination(prev => ({...prev, page: 1})); 
+              }}
+            />
+          </div>
+
+          <select 
+            value={filterStatus}
+            onChange={(e) => {
+              setFilterStatus(e.target.value);
+              setPagination(prev => ({...prev, page: 1})); 
+            }}
+            className="w-full md:w-48 px-3 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-medium appearance-none cursor-pointer"
+          >
+            <option value="">Semua Status</option>
+            <option value="aktif">Status: Aktif</option>
+            <option value="nonaktif">Status: Nonaktif</option>
+          </select>
         </div>
 
         {/* Table */}
@@ -310,7 +496,7 @@ const TempatUji = () => {
                 <th className="py-3.5 px-4">Nama TUK</th>
                 <th className="py-3.5 px-4">Jenis</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
-                <th className="py-3.5 px-4 text-center w-32">Aksi</th>
+                <th className="py-3.5 px-4 text-center w-40">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#071E3D]/5">
@@ -345,7 +531,22 @@ const TempatUji = () => {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex justify-center gap-1.5">
+                      <div className="flex justify-center gap-1">
+                        
+                        <button 
+                          onClick={() => handleSendEmail(item.id_tuk, !!item.penanggungJawab)} 
+                          disabled={!!item.penanggungJawab}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            item.penanggungJawab 
+                              ? "text-[#182D4A]/30 bg-[#071E3D]/5 cursor-not-allowed" 
+                              : "text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10"
+                          }`} 
+                          title={item.penanggungJawab ? "Akun sudah dibuat" : "Buat Akun & Kirim Email"}
+                        >
+                          <Mail size={18}/>
+                        </button>
+                        
+                        <button onClick={() => handleResetPassword(item.penanggungJawab?.id_user)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10 transition-colors" title="Reset Password"><Key size={18}/></button>
                         <button onClick={() => openDetailModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 transition-colors" title="Detail"><Eye size={18}/></button>
                         <button onClick={() => openEditModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10 transition-colors" title="Edit"><Edit2 size={18}/></button>
                         <button onClick={() => handleDelete(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus"><Trash2 size={18}/></button>
@@ -375,7 +576,7 @@ const TempatUji = () => {
               <button onClick={() => setShowModal(false)} className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors"><X size={20}/></button>
             </div>
             
-            <div className="overflow-y-auto px-6 py-5">
+            <div className="overflow-y-auto px-6 py-5 custom-scrollbar">
                 <form id="tukForm" onSubmit={handleSubmit} className="space-y-6">
                 
                 {/* AKUN */}
@@ -390,7 +591,7 @@ const TempatUji = () => {
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <label className="text-[13px] font-bold text-[#071E3D]">No Handphone / Telp</label>
-                            <input type="text" name="no_hp" value={formData.no_hp} onChange={handleInputChange} disabled={isDetailMode} required={!isEditMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="08..."/>
+                            <input type="text" name="telepon" value={formData.telepon} onChange={handleInputChange} disabled={isDetailMode} required={!isEditMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="08..."/>
                         </div>
                     </div>
                 </div>
@@ -417,11 +618,7 @@ const TempatUji = () => {
                                 <option value="mandiri">TUK Mandiri</option>
                             </select>
                         </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Penanggung Jawab</label>
-                            <input type="text" name="penanggung_jawab" value={formData.penanggung_jawab} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="Nama penanggung jawab..."/>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1.5 md:col-span-2">
                             <label className="text-[13px] font-bold text-[#071E3D]">Institusi Induk</label>
                             <input type="text" name="institusi_induk" value={formData.institusi_induk} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="Nama instansi/perusahaan..."/>
                         </div>
@@ -443,29 +640,29 @@ const TempatUji = () => {
                         <>
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-bold text-[#071E3D]">Provinsi</label>
-                                <select onChange={handleProvinsiChange} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] appearance-none">
-                                    <option value="">{formData.provinsi || "Pilih Provinsi"}</option>
+                                <select value={selectedProvinsiId} onChange={handleProvinsiChange} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] appearance-none">
+                                    <option value="">Pilih Provinsi</option>
                                     {provinsiList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-bold text-[#071E3D]">Kota/Kab</label>
-                                <select onChange={handleKotaChange} disabled={!kotaList.length} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
-                                    <option value="">{formData.kota || "Pilih Kota"}</option>
+                                <select value={selectedKotaId} onChange={handleKotaChange} disabled={kotaList.length === 0} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
+                                    <option value="">Pilih Kota/Kab</option>
                                     {kotaList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-bold text-[#071E3D]">Kecamatan</label>
-                                <select onChange={handleKecamatanChange} disabled={!kecamatanList.length} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
-                                    <option value="">{formData.kecamatan || "Pilih Kecamatan"}</option>
+                                <select value={selectedKecamatanId} onChange={handleKecamatanChange} disabled={kecamatanList.length === 0} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
+                                    <option value="">Pilih Kecamatan</option>
                                     {kecamatanList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-bold text-[#071E3D]">Kelurahan</label>
-                                <select onChange={(e) => setFormData({...formData, kelurahan: e.target.options[e.target.selectedIndex].text})} disabled={!kelurahanList.length} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
-                                    <option value="">{formData.kelurahan || "Pilih Kelurahan"}</option>
+                                <select value={selectedKelurahanId} onChange={handleKelurahanChange} disabled={kelurahanList.length === 0} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
+                                    <option value="">Pilih Kelurahan</option>
                                     {kelurahanList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
                                 </select>
                             </div>
@@ -525,7 +722,7 @@ const TempatUji = () => {
         </div>
       )}
 
-      {/* MODAL IMPORT */}
+      {/* --- MODAL IMPORT DENGAN FEEDBACK VISUAL NAMA FILE --- */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden zoom-in-95">
@@ -535,12 +732,33 @@ const TempatUji = () => {
             </div>
             
             <form onSubmit={handleImportSubmit} className="p-6">
-              <div className="border-2 border-dashed border-[#071E3D]/30 rounded-xl p-8 text-center bg-[#FAFAFA] hover:bg-white transition-colors cursor-pointer relative">
-                <Upload className="mx-auto text-[#CC6B27] mb-3" size={40} />
-                <p className="text-[13px] font-bold text-[#071E3D] mb-1">Pilih atau letakkan file Excel di sini</p>
-                <p className="text-[12px] font-medium text-[#182D4A]/70">Format yang didukung: .xls, .xlsx</p>
-                <input type="file" accept=".xlsx, .xls" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required/>
+              <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer relative ${
+                selectedImportFile ? 'border-green-500/50 bg-green-50' : 'border-[#071E3D]/30 bg-[#FAFAFA] hover:bg-white'
+              }`}>
+                
+                {selectedImportFile ? (
+                  <>
+                    <CheckCircle className="mx-auto text-green-500 mb-3" size={40} />
+                    <p className="text-[14px] font-bold text-green-700 mb-1 truncate px-4">{selectedImportFile.name}</p>
+                    <p className="text-[12px] font-medium text-green-600/70">Klik untuk mengganti file</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mx-auto text-[#CC6B27] mb-3" size={40} />
+                    <p className="text-[13px] font-bold text-[#071E3D] mb-1">Pilih atau letakkan file Excel di sini</p>
+                    <p className="text-[12px] font-medium text-[#182D4A]/70">Format yang didukung: .xls, .xlsx</p>
+                  </>
+                )}
+
+                <input 
+                  type="file" 
+                  accept=".xlsx, .xls" 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                  required
+                  onChange={(e) => setSelectedImportFile(e.target.files[0])} // Update state ketika file dipilih
+                />
               </div>
+              
               <div className="mt-6 flex justify-end gap-3">
                 <button type="button" className="px-5 py-2.5 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] bg-white hover:bg-[#E2E8F0] transition-colors text-[13px]" onClick={() => setShowImportModal(false)}>Batal</button>
                 <button type="submit" className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all text-[13px]">Upload File</button>

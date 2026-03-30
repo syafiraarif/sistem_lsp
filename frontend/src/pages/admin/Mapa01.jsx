@@ -78,7 +78,8 @@ const Mapa01 = () => {
         timer: 2000,
         showConfirmButton: false
       }).then(() => {
-        navigate('/admin/mapa');
+        // PERBAIKAN: Kembali ke halaman sebelumnya dengan aman
+        navigate(-1);
       });
     } catch (error) {
       Swal.fire('Gagal', error.response?.data?.message || 'Gagal menyimpan MAPA-01', 'error');
@@ -101,11 +102,13 @@ const Mapa01 = () => {
       <div className="bg-[#071E3D] rounded-2xl shadow-lg p-6 mb-6 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
         <div className="relative z-10">
+          
+          {/* PERBAIKAN: Tombol Kembali menggunakan navigate(-1) */}
           <button 
-            onClick={() => navigate('/admin/mapa')}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-[#FAFAFA]/70 hover:text-white mb-4 transition-colors text-sm font-medium"
           >
-            <ArrowLeft size={16} /> Kembali ke Data MAPA
+            <ArrowLeft size={16} /> Kembali
           </button>
           
           <div className="flex items-center gap-4 mb-2">
@@ -179,9 +182,12 @@ const Mapa01 = () => {
         </div>
 
         <div className="bg-[#FAFAFA] p-5 border-t border-slate-100 flex justify-end gap-3 mt-auto rounded-b-xl">
-          <button type="button" onClick={() => navigate('/admin/mapa')} className="px-6 py-2.5 rounded-lg font-bold border border-slate-300 text-slate-600 bg-white hover:bg-slate-50 transition-colors text-sm">
+          
+          {/* PERBAIKAN: Tombol Batal menggunakan navigate(-1) */}
+          <button type="button" onClick={() => navigate(-1)} className="px-6 py-2.5 rounded-lg font-bold border border-slate-300 text-slate-600 bg-white hover:bg-slate-50 transition-colors text-sm">
             Batal
           </button>
+          
           <button type="submit" disabled={saving} className="px-6 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-md flex items-center gap-2 text-sm disabled:opacity-70">
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             Simpan Dokumen MAPA-01

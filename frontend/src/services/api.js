@@ -4,6 +4,10 @@ const api = axios.create({
   baseURL: "http://localhost:3000/api", // Pastikan port sesuai backend
   headers: {
     "Content-Type": "application/json",
+    // --- TAMBAHKAN 3 BARIS INI UNTUK MENCEGAH CHROME NGE-CACHE GET REQUEST ---
+    "Cache-Control": "no-cache", 
+    "Pragma": "no-cache",
+    "Expires": "0"
   },
 });
 

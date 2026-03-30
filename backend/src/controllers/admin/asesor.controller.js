@@ -13,15 +13,17 @@ exports.createAsesor = async (req, res) => {
 
     const { nik, email, no_hp, ...profile } = req.body;
 
-    const role = await Role.findOne({
-      where: { role_name: "ASESOR" },
-        transaction: t
-    });
+    let role = await Role.findOne({
+  where: { role_name: "ASESOR" },
+  transaction: t
+});
 
-    if (!role) {
-      await t.rollback();
-      return response.error(res, "Role ASESOR tidak ditemukan", 500);
-    }
+// AUTO CREATE ROLE
+if (!role) {
+  role = await Role.create({
+    role_name: "ASESOR"
+  }, { transaction: t });
+}
 
     const { user } =
       await createUser({
@@ -67,13 +69,16 @@ exports.importAsesorExcel = async (req, res) => {
       return response.error(res, "File Excel kosong", 400);
     }
 
-    const role = await Role.findOne({
-      where: { role_name: "ASESOR" }
-    });
+    let role = await Role.findOne({
+  where: { role_name: "ASESOR" }
+});
 
-    if (!role) {
-      return response.error(res, "Role ASESOR tidak ditemukan", 500);
-    }
+// AUTO CREATE ROLE
+if (!role) {
+  role = await Role.create({
+    role_name: "ASESOR"
+  });
+}
 
     let totalSuccess = 0;
     let totalFailed = 0;
