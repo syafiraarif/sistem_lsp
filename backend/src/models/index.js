@@ -63,8 +63,8 @@ ProfileAsesor.belongsTo(User, { foreignKey: "id_user" });
 ProfileAdmin.belongsTo(User, { foreignKey: "id_user" });
 ProfileTuk.belongsTo(User, { foreignKey: "id_user" });
 
-User.hasMany(Notifikasi, { foreignKey: "id_user" });
-Notifikasi.belongsTo(User, { foreignKey: "id_user" });
+User.hasMany(Notifikasi, { foreignKey: "ref_id", constraints: false });
+Notifikasi.belongsTo(User, { foreignKey: "ref_id", constraints: false });
 
 Skkni.hasMany(UnitKompetensi, { foreignKey: "id_skkni" });
 UnitKompetensi.belongsTo(Skkni, { foreignKey: "id_skkni" });
