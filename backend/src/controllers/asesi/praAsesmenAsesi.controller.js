@@ -11,16 +11,26 @@ exports.getFormData = async (req, res) => {
         const peserta = await PesertaJadwal.findOne({
             where: { id_user: id_user_asesi },
             include: [
-                { model: Jadwal, as: 'jadwal', where: { status: 'ongoing' }, include: [{ model: Skema, as: 'skema' }, { model: Tuk, as: 'tuk' }] },
-                { model: User, as: 'user', include: [{ model: ProfileAsesi, as: 'profileAsesi' }] }
+                {
+                    model: Jadwal, as: 'jadwal',
+                    where: { status: 'ongoing' },
+                    include: [
+                        { model: Skema, as: 'skema' },
+                        { model: Tuk, as: 'tuk' }
+                    ]
+                },
+                {
+                    model: User, as: 'user',
+                    include: [{ model: ProfileAsesi, as: 'profileAsesi' }]
+                }
             ]
         });
+
         if (!peserta) return response.error(res, "Anda tidak memiliki jadwal aktif", 404);
 
         const presensi = await PresensiPraAsesmen.findOne({ where: { id_peserta: peserta.id_peserta } });
-        const asesiProfile = await ProfileAsesi.findOne({ where: { id_user: id_user_asesi } });
+        const asesiProfile = peserta.user.profileAsesi;
 
-        // Ambil semua asesor di jadwal ini (untuk ditampilkan di form)
         const allAsesors = await JadwalAsesor.findAll({
             where: { id_jadwal: peserta.id_jadwal, status: 'aktif' },
             include: [{ model: User, as: 'user', include: [{ model: ProfileAsesor, as: 'profileAsesor' }] }]
@@ -31,22 +41,30 @@ exports.getFormData = async (req, res) => {
         response.success(res, "Data form berhasil diambil", {
             id_peserta: peserta.id_peserta,
             id_jadwal: peserta.id_jadwal,
-            skema_sertifikasi: { jenis: peserta.jadwal.skema.jenis_skema, judul: peserta.jadwal.skema.judul_skema, nomor: peserta.jadwal.skema.kode_skema },
+            skema_sertifikasi: {
+                jenis: peserta.jadwal.skema.jenis_skema,
+                judul: peserta.jadwal.skema.judul_skema,
+                nomor: peserta.jadwal.skema.kode_skema
+            },
             tuk: { jenis: peserta.jadwal.tuk.jenis_tuk, nama: peserta.jadwal.tuk.nama_tuk },
             nama_asesor: namaAsesorList,
-            nama_asesi: peserta.user.profileAsesi?.nama_lengkap || peserta.user.username,
+            nama_asesi: asesiProfile?.nama_lengkap || peserta.user.username,
             jadwal_pelaksanaan: {
-                hari_tanggal: peserta.jadwal.tgl_pra_asesmen ? new Date(peserta.jadwal.tgl_pra_asesmen).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '-',
+                hari_tanggal: peserta.jadwal.tgl_pra_asesmen
+                    ? new Date(peserta.jadwal.tgl_pra_asesmen).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                    : '-',
                 tempat: peserta.jadwal.tuk.nama_tuk
             },
             ttd_asesi_ready: !!asesiProfile?.ttd_path,
             is_submitted: !!presensi,
             current_data: presensi || null
         });
-    } catch (err) { response.error(res, err.message); }
+    } catch (err) {
+        response.error(res, err.message);
+    }
 };
 
-// 2. Submit Form (Asesi TTD dari Profile)
+// 2. Submit Form
 exports.submitForm = async (req, res) => {
     try {
         const id_user_asesi = req.user.id_user;
@@ -59,36 +77,52 @@ exports.submitForm = async (req, res) => {
         const asesiProfile = await ProfileAsesi.findOne({ where: { id_user: id_user_asesi } });
         if (!asesiProfile?.ttd_path) return response.error(res, "Profile Asesi belum punya TTD", 400);
 
-        const [presensi] = await PresensiPraAsesmen.upsert({
-            id_peserta,
-            ttd_asesi_status: 'ditandatangani',
-            ttd_asesi_tanggal: new Date(),
-            catatan: catatan || 'Hadir'
-        }, { where: { id_peserta }, defaults: {} });
+        // Cek presensi sebelumnya
+        let presensi = await PresensiPraAsesmen.findOne({ where: { id_peserta } });
+        if (presensi) {
+            // Update jika sudah ada
+            presensi.catatan = catatan || 'Hadir';
+            presensi.ttd_asesi_status = 'ditandatangani';
+            presensi.ttd_asesi_tanggal = new Date();
+            await presensi.save();
+        } else {
+            // Create baru
+            presensi = await PresensiPraAsesmen.create({
+                id_peserta,
+                catatan: catatan || 'Hadir',
+                ttd_asesi_status: 'ditandatangani',
+                ttd_asesi_tanggal: new Date()
+            });
+        }
 
+        // Update status peserta jika sebelumnya 'terdaftar'
         if (peserta.status_asesmen === 'terdaftar') {
             await PesertaJadwal.update({ status_asesmen: 'pra_asesmen' }, { where: { id_peserta } });
         }
 
         response.success(res, "Presensi berhasil disimpan", presensi);
-    } catch (err) { response.error(res, err.message); }
+    } catch (err) {
+        response.error(res, err.message);
+    }
 };
 
-// 3. Download PDF (TTD Asesor di Jadwal + TTD Asesi Sendiri)
+// 3. Download PDF
 exports.downloadPdf = async (req, res) => {
     try {
         const id_user_asesi = req.user.id_user;
 
         const peserta = await PesertaJadwal.findOne({
             where: { id_user: id_user_asesi },
-            include: [{ model: Jadwal, as: 'jadwal', include: [{ model: Skema, as: 'skema' }, { model: Tuk, as: 'tuk' }] }]
+            include: [
+                { model: Jadwal, as: 'jadwal', include: [{ model: Skema, as: 'skema' }, { model: Tuk, as: 'tuk' }] },
+                { model: User, as: 'user', include: [{ model: ProfileAsesi, as: 'profileAsesi' }] }
+            ]
         });
         if (!peserta) return response.error(res, "Tidak ada jadwal aktif", 404);
 
         const presensi = await PresensiPraAsesmen.findOne({ where: { id_peserta: peserta.id_peserta } });
-        const asesiProfile = await ProfileAsesi.findOne({ where: { id_user: id_user_asesi } });
+        const asesiProfile = peserta.user.profileAsesi;
 
-        // Ambil semua asesor di jadwal yang sama (untuk TTD)
         const allAsesors = await JadwalAsesor.findAll({
             where: { id_jadwal: peserta.id_jadwal, status: 'aktif' },
             include: [{ model: User, as: 'user', include: [{ model: ProfileAsesor, as: 'profileAsesor' }] }]
@@ -102,31 +136,31 @@ exports.downloadPdf = async (req, res) => {
         // Header
         doc.fontSize(14).text('FORMULIR PRESENSI PRA ASESMEN', { align: 'center' });
         doc.moveDown();
-        
         doc.fontSize(10);
         doc.text(`Skema Sertifikasi: ${peserta.jadwal.skema.jenis_skema} - ${peserta.jadwal.skema.judul_skema}`);
         doc.text(`Nomor: ${peserta.jadwal.skema.kode_skema}`);
         doc.text(`TUK: ${peserta.jadwal.tuk.jenis_tuk} - ${peserta.jadwal.tuk.nama_tuk}`);
-        
+
         const namaAsesor = allAsesors.map(a => a.user?.profileAsesor?.nama_lengkap || a.user?.username).join('; ');
         doc.text(`Nama Asesor: ${namaAsesor}`);
-        doc.text(`Nama Asesi: ${asesiProfile?.nama_lengkap || req.user.username}`);
-        doc.text(`Jadwal Pelaksanaan: ${new Date(peserta.jadwal.tgl_pra_asesmen).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`);
-        if(presensi?.catatan) doc.text(`Keterangan: ${presensi.catatan}`);
-
+        doc.text(`Nama Asesi: ${asesiProfile?.nama_lengkap || peserta.user.username}`);
+        doc.text(`Jadwal Pelaksanaan: ${peserta.jadwal.tgl_pra_asesmen ? new Date(peserta.jadwal.tgl_pra_asesmen).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '-'}`);
+        if (presensi?.catatan) doc.text(`Keterangan: ${presensi.catatan}`);
         doc.moveDown(2);
 
-        // TTD Asesor (Kiri)
+        // TTD Asesor
         doc.text('Tanda Tangan Asesor:', 50, doc.y);
         const ttdAsesorPath = allAsesors.find(a => a.user?.profileAsesor?.ttd_path)?.user?.profileAsesor?.ttd_path;
-        if (ttdAsesorPath) doc.image(path.join(__dirname, '../../uploads', ttdAsesorPath), 50, doc.y + 10, { width: 100, height: 50 });
-        else doc.text('(Belum Ada TTD)', 50, doc.y + 20);
+        if (ttdAsesorPath) doc.image(path.join(__dirname, '../../', ttdAsesorPath), 50, doc.y + 10, { width: 100, height: 50 });
+        else doc.text('(Belum Ada TTD)', 50, doc.y + 10);
 
-        // TTD Asesi (Kanan)
-        doc.text('Tanda Tangan Asesi:', 350, doc.y - 70);
-        if (asesiProfile?.ttd_path) doc.image(path.join(__dirname, '../../uploads', asesiProfile.ttd_path), 350, doc.y - 60, { width: 100, height: 50 });
-        else doc.text('(Belum Ada TTD)', 350, doc.y - 60);
+        // TTD Asesi
+        doc.text('Tanda Tangan Asesi:', 350, doc.y - 60);
+        if (asesiProfile?.ttd_path) doc.image(path.join(__dirname, '../../', asesiProfile.ttd_path), 350, doc.y - 50, { width: 100, height: 50 });
+        else doc.text('(Belum Ada TTD)', 350, doc.y - 50);
 
         doc.end();
-    } catch (err) { response.error(res, err.message); }
+    } catch (err) {
+        response.error(res, err.message);
+    }
 };

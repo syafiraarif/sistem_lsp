@@ -1,13 +1,14 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
+// Model Pembayaran
 const Pembayaran = sequelize.define("pembayaran", {
   id_pembayaran: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  id_apl01: {
+  id_skema: {  // diganti dari id_apl01
     type: DataTypes.INTEGER,
     allowNull: false
   },
@@ -40,7 +41,7 @@ const Pembayaran = sequelize.define("pembayaran", {
     defaultValue: "pending"
   },
   bukti_bayar: {
-    type: DataTypes.STRING(255),  
+    type: DataTypes.STRING(255),
     allowNull: true
   },
   created_at: {
