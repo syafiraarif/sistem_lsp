@@ -74,6 +74,7 @@ router.delete("/tuk/:id", tukAdmin.delete);
 router.post("/tuk-tempat/attach-skema", tukAdmin.attachSkema);
 router.delete( "/tuk-tempat/detach-skema/:id_tuk/:id_skema", tukAdmin.detachSkema);
 router.put("/tuk/:id/reset-password", tukAdmin.resetPassword);
+router.post("/tuk/:id/generate-account", tukAdmin.generateAccount);
 
 router.post("/send-email/:id", accountController.sendAccountEmailManual);
 
