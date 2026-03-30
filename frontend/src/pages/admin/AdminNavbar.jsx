@@ -40,7 +40,7 @@ const AdminNavbar = () => {
         {/* Area Profil (Klik langsung ke halaman profil) */}
         <div 
           className="flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer hover:bg-[#071E3D]/10 transition-all duration-200 border border-transparent hover:border-[#071E3D]/20" 
-          onClick={() => navigate('/admin/profil')}
+          onClick={() => navigate('/admin/profil-lsp')}
           title="Ke Halaman Profil"
         >
           <div className="text-right hidden sm:block">

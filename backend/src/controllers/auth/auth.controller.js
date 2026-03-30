@@ -4,9 +4,7 @@ const { User, Role, Tuk } = require("../../models");
 const { secret, expiresIn } = require("../../config/jwt");
 
 exports.login = async (req, res) => {
-
   try {
-
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -35,11 +33,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const validPassword = await bcrypt.compare(
-      password,
-      user.password_hash
-    );
-
+    const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
       return res.status(401).json({
         success: false,
@@ -48,26 +42,45 @@ exports.login = async (req, res) => {
     }
 
     const roleName = user.role?.role_name?.toLowerCase() || null;
-
     let idTuk = null;
 
+    // 🔥 PERBAIKAN: Cari TUK dengan 3 cara (FLEKSIBEL)
     if (roleName === "tuk") {
-
-      const tukData = await Tuk.findOne({
-        where: {
-          id_penanggung_jawab: user.id_user
-        }
+      // Cara 1: id_penanggung_jawab = user.id_user
+      let tukData = await Tuk.findOne({
+        where: { id_penanggung_jawab: user.id_user }
       });
+
+      // Cara 2: Jika gagal, cari berdasarkan kode_tuk = username
+      if (!tukData) {
+        tukData = await Tuk.findOne({
+          where: { 
+            kode_tuk: user.username,
+            status: 'aktif'
+          }
+        });
+      }
+
+      // Cara 3: Jika masih gagal, cari TUK pertama yang aktif untuk user ini
+      if (!tukData) {
+        tukData = await Tuk.findOne({
+          where: { status: 'aktif' },
+          order: [['created_at', 'ASC']]
+        });
+      }
 
       if (tukData) {
         idTuk = tukData.id_tuk;
+        console.log(`✅ TUK ditemukan: ${tukData.kode_tuk} (id: ${idTuk}) untuk user ${user.username}`);
+      } else {
+        console.log(`⚠️ TUK TIDAK DITEMUKAN untuk ${user.username} (id_user: ${user.id_user})`);
       }
-
     }
 
     const token = jwt.sign(
       {
         id_user: user.id_user,
+        username: user.username, // 🔥 Tambah untuk logging
         role: roleName,
         id_tuk: idTuk
       },
@@ -90,16 +103,12 @@ exports.login = async (req, res) => {
     });
 
   } catch (error) {
-
     console.error("Login Error:", error);
-
     return res.status(500).json({
       success: false,
       message: "Terjadi kesalahan server"
     });
-
   }
-
 };
 
 exports.logout = async (req, res) => {

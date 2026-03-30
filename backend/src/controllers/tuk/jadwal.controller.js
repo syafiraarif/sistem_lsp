@@ -10,13 +10,31 @@ const {
 
 const { Op } = require("sequelize");
 
-/* ===================================================== */
-/* GET SKEMA */
-/* ===================================================== */
+
+// 🔥 HELPER (TAMBAHAN, TIDAK MERUBAH FLOW)
+const getTukId = async (req) => {
+  let tukId = req.user?.id_tuk;
+
+  if (!tukId) {
+    const userId = req.user?.id_user;
+
+    if (!userId) return null;
+
+    const tuk = await Tuk.findOne({
+      where: { id_penanggung_jawab: userId }
+    });
+
+    if (tuk) tukId = tuk.id_tuk;
+  }
+
+  return tukId;
+};
+
+
 const getSkemaTuk = async (req, res) => {
   try {
 
-    const tukId = req.user?.id_tuk;
+    const tukId = await getTukId(req);
 
     if (!tukId) {
       return res.status(400).json({
@@ -31,7 +49,9 @@ const getSkemaTuk = async (req, res) => {
       });
     }
 
-    const data = await Skema.findAll();
+    const data = await Skema.findAll({
+      where: { status: "aktif" } // 🔥 biar rapi
+    });
 
     return res.json({ data });
 
@@ -42,21 +62,25 @@ const getSkemaTuk = async (req, res) => {
   }
 };
 
-/* ===================================================== */
-/* CREATE JADWAL + AUTO INSERT KE TUK_SKEMA */
-/* ===================================================== */
+
 const createJadwal = async (req, res) => {
 
   const transaction = await Jadwal.sequelize.transaction();
 
   try {
 
-    const tukId = req.user?.id_tuk;
+    const tukId = await getTukId(req);
     const idSkema = parseInt(req.body.id_skema);
 
     if (!tukId) {
       return res.status(400).json({
         message: "ID TUK tidak ditemukan."
+      });
+    }
+
+    if (!idSkema || isNaN(idSkema)) {
+      return res.status(400).json({
+        message: "ID Skema tidak valid"
       });
     }
 
@@ -70,21 +94,19 @@ const createJadwal = async (req, res) => {
     const allowedTipe = ["luring", "daring", "hybrid", "onsite"];
     const allowedStatus = ["draft", "open", "ongoing", "selesai", "arsip"];
 
-    /* ================= CREATE JADWAL ================= */
-
     const data = await Jadwal.create({
-      kode_jadwal: req.body.kode_jadwal,
+      kode_jadwal: req.body.kode_jadwal || null,
       id_skema: idSkema,
       id_tuk: tukId,
       nama_kegiatan: req.body.nama_kegiatan,
-      tahun: parseInt(req.body.tahun),
-      periode_bulan: req.body.periode_bulan,
-      gelombang: req.body.gelombang,
-      tgl_pra_asesmen: req.body.tgl_pra_asesmen,
-      tgl_awal: req.body.tgl_awal,
-      tgl_akhir: req.body.tgl_akhir,
-      jam: req.body.jam,
-      kuota: parseInt(req.body.kuota) || 0,
+      tahun: req.body.tahun ? parseInt(req.body.tahun) : null,
+      periode_bulan: req.body.periode_bulan || null,
+      gelombang: req.body.gelombang || null,
+      tgl_pra_asesmen: req.body.tgl_pra_asesmen || null,
+      tgl_awal: req.body.tgl_awal || null,
+      tgl_akhir: req.body.tgl_akhir || null,
+      jam: req.body.jam || null,
+      kuota: req.body.kuota ? parseInt(req.body.kuota) : 0,
       pelaksanaan_uji: allowedTipe.includes(req.body.pelaksanaan_uji)
         ? req.body.pelaksanaan_uji
         : "luring",
@@ -92,12 +114,10 @@ const createJadwal = async (req, res) => {
       status: allowedStatus.includes(req.body.status)
         ? req.body.status
         : "draft",
-      created_by: req.user?.id_user,
+      created_by: req.user?.id_user || null,
       created_at: new Date(),
       updated_at: new Date()
     }, { transaction });
-
-    /* ================= AUTO INSERT KE TUK_SKEMA ================= */
 
     await TukSkema.findOrCreate({
       where: {
@@ -128,14 +148,12 @@ const createJadwal = async (req, res) => {
   }
 };
 
-/* ===================================================== */
-/* GET ALL JADWAL */
-/* ===================================================== */
+
 const getAllJadwal = async (req, res) => {
 
   try {
 
-    const tukId = req.user?.id_tuk;
+    const tukId = await getTukId(req);
 
     const data = await Jadwal.findAll({
       where: { id_tuk: tukId },
@@ -163,14 +181,12 @@ const getAllJadwal = async (req, res) => {
   }
 };
 
-/* ===================================================== */
-/* GET BY ID */
-/* ===================================================== */
+
 const getJadwalById = async (req, res) => {
 
   try {
 
-    const tukId = req.user?.id_tuk;
+    const tukId = await getTukId(req);
     const { id } = req.params;
 
     const data = await Jadwal.findOne({
@@ -199,14 +215,12 @@ const getJadwalById = async (req, res) => {
   }
 };
 
-/* ===================================================== */
-/* UPDATE JADWAL */
-/* ===================================================== */
+
 const updateJadwal = async (req, res) => {
 
   try {
 
-    const tukId = req.user?.id_tuk;
+    const tukId = await getTukId(req);
     const { id } = req.params;
 
     const jadwal = await Jadwal.findOne({
@@ -266,14 +280,12 @@ const updateJadwal = async (req, res) => {
   }
 };
 
-/* ===================================================== */
-/* DELETE JADWAL */
-/* ===================================================== */
+
 const deleteJadwal = async (req, res) => {
 
   try {
 
-    const tukId = req.user?.id_tuk;
+    const tukId = await getTukId(req);
     const { id } = req.params;
 
     const jadwal = await Jadwal.findOne({
@@ -303,14 +315,12 @@ const deleteJadwal = async (req, res) => {
   }
 };
 
-/* ===================================================== */
-/* DETAIL LENGKAP JADWAL */
-/* ===================================================== */
+
 const getDetailJadwalLengkap = async (req, res) => {
 
   try {
 
-    const tukId = req.user?.id_tuk;
+    const tukId = await getTukId(req);
     const { id } = req.params;
 
     const data = await Jadwal.findOne({
@@ -321,28 +331,23 @@ const getDetailJadwalLengkap = async (req, res) => {
 
       include: [
 
-        /* ================= SKEMA ================= */
         {
           model: Skema,
           as: "skema",
           attributes: ["id_skema", "kode_skema", "judul_skema", "jenis_skema"]
         },
 
-        /* ================= TUK ================= */
         {
           model: Tuk,
           as: "tuk",
           attributes: ["id_tuk", "nama_tuk", "email"]
         },
-
-        /* ================= ASESO R YANG TERDAFTAR ================= */
         {
           model: JadwalAsesor,
           as: "asesorList",
           required: false,
           include: [
 
-            /* USER ASESO R */
             {
               model: User,
               as: "asesor",
@@ -354,7 +359,6 @@ const getDetailJadwalLengkap = async (req, res) => {
               ]
             },
 
-            /* PROFILE ASESO R */
             {
               model: ProfileAsesor,
               as: "profileAsesor",
@@ -387,6 +391,7 @@ const getDetailJadwalLengkap = async (req, res) => {
 
   }
 };
+
 
 module.exports = {
   getDetailJadwalLengkap,
