@@ -340,8 +340,14 @@ const TempatUji = () => {
         await api.put(`/admin/tuk/${currentId}`, payload);
         Swal.fire({title: 'Sukses', text: 'Data TUK berhasil diperbarui', icon: 'success', confirmButtonColor: '#CC6B27'});
       } else {
+<<<<<<< HEAD
+        // Create akun user & TUK
+        await api.post('/admin/tuk', payload);
+        Swal.fire({title: 'Sukses', text: 'TUK baru berhasil dibuat.', icon: 'success', confirmButtonColor: '#CC6B27'});
+=======
         await api.post('/admin/tuk', payload);
         Swal.fire({title: 'Sukses', text: 'TUK baru berhasil ditambahkan.', icon: 'success', confirmButtonColor: '#CC6B27'});
+>>>>>>> 80010cdc8138b371dcd978cf1d54fe2b48eeab22
       }
       setShowModal(false);
       fetchData();
