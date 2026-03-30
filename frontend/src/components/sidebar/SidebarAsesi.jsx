@@ -7,7 +7,6 @@ import {
   User,
   BookOpen,
   ClipboardList,
-  CreditCard,
   Key,
   Menu,
   LogOut,
@@ -27,15 +26,13 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
 
   const isExpanded = isOpen || isHovered;
 
-  // Daftar menu sidebar
+  // Daftar menu sidebar (hapus Konfirmasi Pembayaran)
   const menus = useMemo(
     () => [
       { id: 'home', name: 'Home', path: '/asesi', icon: <Home size={20} /> },
       { id: 'profile', name: 'Profile Anda', path: '/asesi/profile', icon: <User size={20} /> },
       { id: 'skema', name: 'Lihat Skema Sertifikasi', path: '/asesi/jadwal', icon: <BookOpen size={20} /> },
-      // Hanya ubah path agar mengarah ke JadwalSaya
       { id: 'asesmen', name: 'Asesmen Anda', path: '/asesi/jadwal-saya', icon: <ClipboardList size={20} /> },
-      { id: 'pembayaran', name: 'Konfirmasi Pembayaran', path: '/asesi/pembayaran', icon: <CreditCard size={20} /> },
       { id: 'ubah-password', name: 'Ubah Password', path: '/asesi/ubah-password', icon: <Key size={20} /> },
     ],
     []

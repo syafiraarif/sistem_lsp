@@ -10,48 +10,50 @@ exports.getProfile = async (req, res) => {
   try {
     const data = await ProfileAsesi.findByPk(req.user.id_user);
 
-    if (!data) {
-      return response.error(res, "Profil asesi tidak ditemukan", 404);
-    }
+    if (!data) return response.error(res, "Profil asesi tidak ditemukan", 404);
 
     return response.success(res, "Profil asesi", data);
-
   } catch (err) {
     console.error("GET PROFILE ERROR:", err);
     return response.error(res, err.message);
   }
 };
 
+/* ===================================================== */
+/* UPDATE PROFILE */
+/* ===================================================== */
 exports.updateProfile = async (req, res) => {
   try {
+    const profile = await ProfileAsesi.findByPk(req.user.id_user);
+
+    if (!profile) {
+      return response.error(res, "Profil tidak ditemukan", 404);
+    }
 
     const [affectedRows] = await ProfileAsesi.update(req.body, {
-      where: { id_user: req.user.id_user }
+      where: { id_user: req.user.id_user },
     });
 
     if (!affectedRows) {
-      return response.error(
-        res,
-        "Tidak ada perubahan atau profil tidak ditemukan",
-        404
-      );
+      return response.error(res, "Tidak ada perubahan", 400);
     }
 
     const updatedData = await ProfileAsesi.findByPk(req.user.id_user);
-
     return response.success(res, "Profil asesi diperbarui", updatedData);
-
   } catch (err) {
     console.error("UPDATE PROFILE ERROR:", err);
     return response.error(res, err.message);
   }
 };
 
+/* ===================================================== */
+/* UPLOAD DOKUMEN ASESI */
+/* ===================================================== */
 exports.uploadDokumen = async (req, res) => {
   try {
-
-    const files = req.files || {};
-    const updateData = {};
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return response.error(res, "Tidak ada file yang diupload", 400);
+    }
 
     const allowedFields = [
       "pas_foto",
@@ -59,34 +61,69 @@ exports.uploadDokumen = async (req, res) => {
       "ijazah",
       "transkrip",
       "kk",
-      "surat_kerja"
+      "surat_kerja",
+      "foto_profil",   // ✅ tambahan
+      "portofolio",    // ✅ tambahan
     ];
 
-    allowedFields.forEach((field) => {
-      if (files[field] && files[field][0]) {
-        updateData[field] = files[field][0].path.replace(/\\/g, "/");
+    const profile = await ProfileAsesi.findByPk(req.user.id_user);
+
+    if (!profile) {
+      return response.error(res, "Profil tidak ditemukan", 404);
+    }
+
+    const updateData = {};
+
+    const dokumenDir = path.join(process.cwd(), "uploads", "asesi", "dokumen");
+    if (!fs.existsSync(dokumenDir)) {
+      fs.mkdirSync(dokumenDir, { recursive: true });
+    }
+
+    for (const field of allowedFields) {
+      if (req.files[field] && req.files[field][0]) {
+
+        // hapus file lama
+        if (profile[field]) {
+          const oldPath = path.join(process.cwd(), profile[field]);
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+            console.log(`File lama ${field} berhasil dihapus`);
+          }
+        }
+
+        const fieldDir = path.join(dokumenDir, field);
+        if (!fs.existsSync(fieldDir)) {
+          fs.mkdirSync(fieldDir, { recursive: true });
+        }
+
+        const fileName = `${field}_${req.user.id_user}${path.extname(req.files[field][0].originalname)}`;
+        const filePath = path.join(fieldDir, fileName);
+
+        fs.renameSync(req.files[field][0].path, filePath);
+
+        updateData[field] = path.join(
+          "uploads",
+          "asesi",
+          "dokumen",
+          field,
+          fileName
+        ).replace(/\\/g, "/");
+
+        console.log(`File baru ${field} berhasil diupload`);
       }
-    });
+    }
 
     if (Object.keys(updateData).length === 0) {
-      return response.error(res, "Tidak ada file yang diupload", 400);
+      return response.error(res, "Tidak ada file valid yang diupload", 400);
     }
 
-    const [affectedRows] = await ProfileAsesi.update(updateData, {
-      where: { id_user: req.user.id_user }
+    await ProfileAsesi.update(updateData, {
+      where: { id_user: req.user.id_user },
     });
-
-    if (!affectedRows) {
-      return response.error(
-        res,
-        "Upload gagal atau profil tidak ditemukan",
-        404
-      );
-    }
 
     const updatedData = await ProfileAsesi.findByPk(req.user.id_user);
 
-    return response.success(res, "Dokumen berhasil diupload", updatedData);
+    return response.success(res, "Dokumen berhasil diperbarui", updatedData);
 
   } catch (err) {
     console.error("UPLOAD DOKUMEN ERROR:", err);
@@ -94,9 +131,11 @@ exports.uploadDokumen = async (req, res) => {
   }
 };
 
+/* ===================================================== */
+/* UPLOAD TTD */
+/* ===================================================== */
 exports.uploadTTD = async (req, res) => {
   try {
-
     const { ttd_base64 } = req.body;
 
     if (!ttd_base64 || typeof ttd_base64 !== "string") {
@@ -105,63 +144,36 @@ exports.uploadTTD = async (req, res) => {
 
     const profile = await ProfileAsesi.findByPk(req.user.id_user);
 
-    if (profile?.ttd_path) {
-
-      const oldPath = path.join(
-        process.cwd(),
-        profile.ttd_path
-      );
-
-      if (fs.existsSync(oldPath)) {
-        await fs.promises.unlink(oldPath);
-      }
+    if (!profile) {
+      return response.error(res, "Profil tidak ditemukan", 404);
     }
 
-    const uploadDir = path.join(
-      process.cwd(),
-      "uploads",
-      "ttd",
-      "asesi"
-    );
-
-    await fs.promises.mkdir(uploadDir, { recursive: true });
-
-    const base64Data = ttd_base64.replace(
-      /^data:image\/\w+;base64,/,
-      ""
-    );
-
-    if (!base64Data) {
-      return response.error(res, "Format TTD tidak valid", 400);
+    if (profile.ttd_path) {
+      const oldPath = path.join(process.cwd(), profile.ttd_path);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
     }
+
+    const uploadDir = path.join(process.cwd(), "uploads", "asesi", "ttd");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const base64Data = ttd_base64.replace(/^data:image\/\w+;base64,/, "");
+    if (!base64Data) return response.error(res, "Format TTD tidak valid", 400);
 
     const fileName = `ttd_${req.user.id_user}.png`;
     const filePath = path.join(uploadDir, fileName);
 
-    await fs.promises.writeFile(
-      filePath,
-      Buffer.from(base64Data, "base64")
-    );
+    fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
 
-    const ttdPath = path.join(
-      "uploads",
-      "ttd",
-      "asesi",
-      fileName
-    ).replace(/\\/g, "/");
+    const ttdPath = path.join("uploads", "asesi", "ttd", fileName).replace(/\\/g, "/");
 
-    const [affectedRows] = await ProfileAsesi.update(
+    await ProfileAsesi.update(
       { ttd_path: ttdPath },
       { where: { id_user: req.user.id_user } }
     );
 
-    if (!affectedRows) {
-      return response.error(res, "Gagal menyimpan TTD", 404);
-    }
-
-    return response.success(res, "TTD berhasil diperbarui", {
-      ttd_path: ttdPath
-    });
+    return response.success(res, "TTD berhasil diperbarui", { ttd_path: ttdPath });
 
   } catch (err) {
     console.error("UPLOAD TTD ERROR:", err);
@@ -169,9 +181,11 @@ exports.uploadTTD = async (req, res) => {
   }
 };
 
+/* ===================================================== */
+/* GET FILES */
+/* ===================================================== */
 exports.getFiles = async (req, res) => {
   try {
-
     const profile = await ProfileAsesi.findByPk(req.user.id_user);
 
     if (!profile) {
@@ -179,36 +193,29 @@ exports.getFiles = async (req, res) => {
     }
 
     const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const files = [
+      "pas_foto",
+      "ktp",
+      "ijazah",
+      "transkrip",
+      "kk",
+      "surat_kerja",
+      "foto_profil",   // ✅ tambahan
+      "portofolio",    // ✅ tambahan
+      "ttd_path"
+    ];
 
-    const data = {
-      pas_foto: profile.pas_foto
-        ? `${baseUrl}/${profile.pas_foto}`
-        : null,
+    const data = {};
 
-      ktp: profile.ktp
-        ? `${baseUrl}/${profile.ktp}`
-        : null,
+    files.forEach((key) => {
+      const value = profile[key];
 
-      ijazah: profile.ijazah
-        ? `${baseUrl}/${profile.ijazah}`
-        : null,
-
-      transkrip: profile.transkrip
-        ? `${baseUrl}/${profile.transkrip}`
-        : null,
-
-      kk: profile.kk
-        ? `${baseUrl}/${profile.kk}`
-        : null,
-
-      surat_kerja: profile.surat_kerja
-        ? `${baseUrl}/${profile.surat_kerja}`
-        : null,
-
-      ttd: profile.ttd_path
-        ? `${baseUrl}/${profile.ttd_path}`
-        : null
-    };
+      if (value) {
+        data[key === "ttd_path" ? "ttd" : key] = `${baseUrl}/${value}`;
+      } else {
+        data[key === "ttd_path" ? "ttd" : key] = null;
+      }
+    });
 
     return response.success(res, "File berhasil diambil", data);
 

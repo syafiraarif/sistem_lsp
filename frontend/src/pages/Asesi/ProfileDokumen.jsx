@@ -5,266 +5,196 @@ import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
+// ✅ axios instance
+const api = axios.create({
+  baseURL: API_BASE,
+});
+
+// ✅ auto inject token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
 export default function ProfileDokumen() {
   const sigRef = useRef(null);
-  const containerRef = useRef(null);
-  const token = localStorage.getItem("token");
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [files, setFiles] = useState({});
-  const [dataFiles, setDataFiles] = useState(null);
+  const [dataFiles, setDataFiles] = useState({});
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [savingTTD, setSavingTTD] = useState(false);
+  const [refresh, setRefresh] = useState(Date.now());
 
-  useEffect(() => {
-    fetchFiles();
-  }, []);
-
-  // FIX: Responsive Canvas Logic
-  useEffect(() => {
-    const resizeCanvas = () => {
-      if (sigRef.current && containerRef.current) {
-        const { width, height } = containerRef.current.getBoundingClientRect();
-        sigRef.current.resize(width, height);
-      }
-    };
-
-    resizeCanvas(); // Initial size
-    window.addEventListener("resize", resizeCanvas);
-
-    return () => {
-      window.removeEventListener("resize", resizeCanvas);
-    };
-  }, []);
-
+  /* ================= FETCH ================= */
   const fetchFiles = async () => {
     try {
-      const res = await axios.get(
-        `${API_BASE}/asesi/profile/files`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setDataFiles(res.data?.data || null);
+      const res = await api.get("/asesi/profile/files");
+      setDataFiles(res.data?.data || {});
     } catch (err) {
-      console.error("Fetch files error:", err);
+      console.error("FETCH ERROR:", err.response?.data || err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchFiles();
+  }, []);
+
+  /* ================= HANDLE FILE ================= */
   const handleFileChange = (e) => {
+    const { name, files: selected } = e.target;
+    if (!selected || !selected[0]) return;
+
     setFiles((prev) => ({
       ...prev,
-      [e.target.name]: e.target.files[0],
+      [name]: selected[0],
     }));
   };
 
+  /* ================= UPLOAD ================= */
   const uploadFiles = async () => {
-    if (Object.keys(files).length === 0) {
+    if (!Object.keys(files).length) {
       alert("Pilih file dulu");
       return;
     }
 
     try {
       setUploading(true);
-      const formData = new FormData();
 
-      Object.keys(files).forEach((key) => {
-        formData.append(key, files[key]);
+      const formData = new FormData();
+      Object.entries(files).forEach(([k, v]) => {
+        formData.append(k, v);
       });
 
-      await axios.put(
-        `${API_BASE}/asesi/profile/upload-dokumen`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
+      const res = await api.put(
+        "/asesi/profile/upload-dokumen",
+        formData
       );
 
-      alert("Dokumen berhasil diupload ✅");
+      console.log("UPLOAD:", res.data);
+
+      alert("Upload berhasil");
       setFiles({});
       fetchFiles();
+      setRefresh(Date.now());
     } catch (err) {
-      console.error(err);
-      alert("Upload gagal ❌");
+      console.error("UPLOAD ERROR:", err.response?.data || err.message);
+      alert(err.response?.data?.message || "Upload gagal");
     } finally {
       setUploading(false);
     }
   };
 
-  const clearCanvas = () => {
-    sigRef.current?.clear();
-  };
-
+  /* ================= TTD ================= */
   const saveTTD = async () => {
     if (!sigRef.current || sigRef.current.isEmpty()) {
-      alert("TTD masih kosong");
-      return;
+      return alert("TTD kosong");
     }
 
     try {
       setSavingTTD(true);
+
       const base64 = sigRef.current
-        .getTrimmedCanvas()
+        .getCanvas()
         .toDataURL("image/png");
 
-      await axios.put(
-        `${API_BASE}/asesi/profile/upload-ttd`,
-        { ttd_base64: base64 },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await api.put("/asesi/profile/upload-ttd", {
+        ttd_base64: base64,
+      });
 
-      alert("TTD berhasil disimpan ✅");
+      console.log("TTD:", res.data);
+
+      alert("TTD berhasil");
       sigRef.current.clear();
       fetchFiles();
+      setRefresh(Date.now());
     } catch (err) {
-      console.error(err);
-      alert("Gagal simpan TTD ❌");
+      console.error("TTD ERROR:", err.response?.data || err.message);
+      alert(err.response?.data?.message || "Gagal simpan TTD");
     } finally {
       setSavingTTD(false);
     }
   };
 
-  if (loading) return <p className="p-10">Loading...</p>;
+  if (loading) return <p>Loading...</p>;
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <SidebarAsesi />
 
-      <div className="flex-1 p-6 md:p-10">
-        {/* HEADER */}
-        <div className="mb-10">
-          <h2 className="text-3xl font-bold text-gray-800">
-            Upload Dokumen & Tanda Tangan
-          </h2>
-          <p className="text-gray-500 mt-2">
-            Silakan upload dokumen persyaratan dan tanda tangan digital Anda.
-          </p>
-        </div>
+      <div className="flex-1 p-6">
+        <h2 className="text-2xl font-bold mb-6">Dokumen & TTD</h2>
 
-        {/* ======================== DOKUMEN SECTION ======================== */}
-        <div className="bg-white rounded-2xl shadow-sm border p-8 mb-10">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-semibold text-gray-700">
-              Dokumen Persyaratan
-            </h3>
-
-            <button
-              onClick={uploadFiles}
-              disabled={uploading}
-              className="bg-orange-500 hover:bg-orange-600 transition text-white px-6 py-3 rounded-xl font-medium shadow-sm"
-            >
-              {uploading ? "Uploading..." : "Upload Dokumen"}
-            </button>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              "pas_foto",
-              "ktp",
-              "ijazah",
-              "transkrip",
-              "kk",
-              "surat_kerja",
-            ].map((field) => (
-              <div
-                key={field}
-                className="border rounded-xl p-5 bg-gray-50 hover:shadow-md transition duration-200"
-              >
-                <label className="block text-sm font-semibold text-gray-700 mb-3 capitalize">
-                  {field.replace("_", " ")}
-                </label>
-
-                <input
-                  type="file"
-                  name={field}
-                  onChange={handleFileChange}
-                  className="w-full text-sm border rounded-lg p-2 bg-white"
-                />
-
-                {dataFiles?.[field] && (
-                  <div className="mt-4">
-                    <a
-                      href={dataFiles[field]}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      Lihat file tersimpan
-                    </a>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ======================== TTD SECTION ======================== */}
-        <div className="bg-white rounded-2xl shadow-sm border p-8">
-          <h3 className="text-xl font-semibold text-gray-700 mb-6">
-            Tanda Tangan Digital
-          </h3>
-
-          <div
-            ref={containerRef}
-            className="border-2 border-dashed rounded-xl bg-gray-50 p-4"
+        {/* ================= DOKUMEN ================= */}
+        <div className="bg-white p-6 rounded shadow mb-10">
+          <button
+            onClick={uploadFiles}
+            className="bg-orange-500 text-white px-4 py-2 rounded mb-4"
+            disabled={uploading}
           >
-            <SignatureCanvas
-              ref={sigRef}
-              penColor="black"
-              backgroundColor="white"
-              minWidth={1}
-              maxWidth={3}
-              canvasProps={{
-                className: "w-full h-56 bg-white rounded-lg",
-                style: { touchAction: "none" },
-              }}
-            />
-          </div>
+            {uploading ? "Uploading..." : "Upload"}
+          </button>
 
-          <div className="mt-6 flex flex-wrap gap-4">
-            <button
-              onClick={clearCanvas}
-              className="bg-gray-400 hover:bg-gray-500 transition text-white px-5 py-2 rounded-lg"
-            >
-              Clear
-            </button>
+          {[
+            "pas_foto",
+            "ktp",
+            "ijazah",
+            "transkrip",
+            "kk",
+            "surat_kerja",
+            "foto_profil",   // ✅ tambahan
+            "portofolio",    // ✅ tambahan
+          ].map((f) => (
+            <div key={f} className="mb-4">
+              <label className="block font-semibold">{f}</label>
 
-            <button
-              onClick={saveTTD}
-              disabled={savingTTD}
-              className="bg-green-600 hover:bg-green-700 transition text-white px-5 py-2 rounded-lg"
-            >
-              {savingTTD ? "Menyimpan..." : "Simpan TTD"}
-            </button>
-          </div>
+              <input
+                type="file"
+                name={f}
+                onChange={handleFileChange}
+                className="border p-2 w-full"
+              />
 
-          {/* PREVIEW TTD */}
-          {dataFiles?.ttd && (
-            <div className="mt-10">
-              <p className="text-sm font-semibold text-gray-600 mb-3">
-                TTD Tersimpan
-              </p>
-
-              <div className="inline-block bg-gray-50 border rounded-xl p-4 shadow-sm">
-                <img
-                  src={dataFiles.ttd}
-                  alt="TTD"
-                  className="w-64 object-contain"
-                />
-              </div>
+              {dataFiles[f] && (
+                <a
+                  href={`${dataFiles[f]}?t=${refresh}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-500 block"
+                >
+                  Lihat File
+                </a>
+              )}
             </div>
+          ))}
+        </div>
+
+        {/* ================= TTD ================= */}
+        <div className="bg-white p-6 rounded shadow">
+          <SignatureCanvas
+            ref={sigRef}
+            penColor="black"
+            canvasProps={{
+              className: "border w-full h-[200px]",
+            }}
+          />
+
+          <button
+            onClick={saveTTD}
+            className="bg-green-600 text-white px-4 py-2 mt-3"
+            disabled={savingTTD}
+          >
+            {savingTTD ? "Saving..." : "Simpan TTD"}
+          </button>
+
+          {dataFiles.ttd && (
+            <img
+              src={`${dataFiles.ttd}?t=${refresh}`}
+              className="mt-4 w-40 border"
+            />
           )}
         </div>
       </div>

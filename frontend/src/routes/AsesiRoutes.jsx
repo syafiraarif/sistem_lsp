@@ -11,7 +11,15 @@ import ProfileDokumen from "../pages/asesi/ProfileDokumen";
 
 /* Jadwal & Skema */
 import JadwalAsesi from "../pages/asesi/JadwalAsesi";
-import JadwalSaya from "../pages/asesi/JadwalSaya"; // import baru
+import JadwalSaya from "../pages/asesi/JadwalSaya";
+import BayarSkema from "../pages/asesi/BayarSkema";
+import APL01 from "../pages/asesi/APL01";
+import APL02 from "../pages/asesi/APL02"; 
+import PraAsesmenAsesi from "../pages/asesi/PraAsesmenAsesi"; // halaman Pra Asesmen
+import Banding from "../pages/asesi/Banding"; // <<< tambahan
+
+/* Lupa Password */
+import LupaPasswordAsesi from "../pages/asesi/LupaPasswordAsesi";
 
 export default function AsesiRoutes() {
   return (
@@ -26,7 +34,19 @@ export default function AsesiRoutes() {
 
       {/* JADWAL & SKEMA */}
       <Route path="jadwal" element={<JadwalAsesi />} />
-      <Route path="jadwal-saya" element={<JadwalSaya />} /> {/* route baru */}
+      <Route path="jadwal-saya" element={<JadwalSaya />} />
+
+      {/* APLIKASI ASESMEN */}
+      <Route path="apl01/:id_skema" element={<APL01 />} />
+      <Route path="apl02/:id_skema" element={<APL02 />} />
+      <Route path="pembayaran/:id_skema" element={<BayarSkema />} />
+      <Route path="pra-asesmen/:id_skema" element={<PraAsesmenAsesi />} /> {/* PRA ASESMEN */}
+
+      {/* BANDING */}
+      <Route path="banding" element={<Banding />} /> {/* <<< route baru */}
+
+      {/* PASSWORD */}
+      <Route path="ubah-password" element={<LupaPasswordAsesi />} />
     </Routes>
   );
 }

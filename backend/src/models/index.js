@@ -121,10 +121,12 @@ Apl02AsesmenMandiri.belongsTo(Apl01Asesmen, { foreignKey: "id_apl01" });
 
 Apl02AsesmenMandiri.belongsTo(UnitKompetensi, { foreignKey: "id_unit"});
 
-Pembayaran.belongsTo(Apl01Asesmen, { foreignKey: "id_apl01" });
-Apl01Asesmen.hasMany(Pembayaran, { foreignKey: "id_apl01" });
+// Relasi baru Pembayaran → Skema
+Pembayaran.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
+Skema.hasMany(Pembayaran, { foreignKey: "id_skema", as: "pembayaran" });
 
-Pembayaran.belongsTo(TujuanPembayaran, { foreignKey: "id_tujuan_transfer"});
+// Relasi Pembayaran → TujuanPembayaran tetap
+Pembayaran.belongsTo(TujuanPembayaran, { foreignKey: "id_tujuan_transfer" });
 
 User.hasMany(BandingAsesmen, { foreignKey: "id_user" });
 BandingAsesmen.belongsTo(User, { foreignKey: "id_user", as: "user"});
