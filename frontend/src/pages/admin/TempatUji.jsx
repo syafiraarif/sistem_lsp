@@ -208,7 +208,7 @@ const TempatUji = () => {
         Swal.fire({title: 'Sukses', text: 'Data TUK berhasil diperbarui', icon: 'success', confirmButtonColor: '#CC6B27'});
       } else {
         // Create akun user & TUK
-        await api.post('/admin/tuk-akun', payload);
+        await api.post('/admin/tuk', payload);
         Swal.fire({title: 'Sukses', text: 'TUK baru berhasil dibuat.', icon: 'success', confirmButtonColor: '#CC6B27'});
       }
       setShowModal(false);
