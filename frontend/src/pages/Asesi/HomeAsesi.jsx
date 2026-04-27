@@ -2,10 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
-import { Menu, User, BookOpen, ClipboardList, CreditCard } from "lucide-react";
+import {
+  User,
+  BookOpen,
+  ClipboardList,
+  CreditCard
+} from "lucide-react";
 
 const HomeAsesi = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
@@ -14,92 +19,106 @@ const HomeAsesi = () => {
   }, []);
 
   return (
-    <div className="flex bg-gray-100 min-h-screen">
-      {/* Sidebar */}
-      <SidebarAsesi isOpen={isOpen} setIsOpen={setIsOpen} />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex">
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        
-        {/* Top Navbar */}
-        <header className="h-16 bg-white shadow-sm flex items-center justify-between px-6">
-          <button
-            onClick={() => setIsOpen(true)}
-            className="lg:hidden text-gray-600"
-          >
-            <Menu size={24} />
-          </button>
+      {/* SIDEBAR */}
+      <SidebarAsesi
+        isOpen={sidebarOpen}
+        setIsOpen={setSidebarOpen}
+      />
 
-          <h1 className="text-lg font-bold text-gray-700">
+      {/* CONTENT */}
+      <div className="flex-1 lg:ml-24 p-6 lg:p-10">
+
+        {/* HEADER */}
+        <div className="mb-10">
+          <h1 className="text-3xl lg:text-4xl font-black text-[#071E3D]">
             Dashboard Asesi
           </h1>
+          <p className="text-slate-500 mt-2 font-medium">
+            Kelola sertifikasi dan asesmen Anda dengan mudah
+          </p>
+        </div>
 
-          <div className="text-sm font-semibold text-gray-600">
-            {userData?.nama || "Peserta"}
-          </div>
-        </header>
+        {/* HERO CARD */}
+        <div className="relative mb-10 rounded-[32px] overflow-hidden bg-gradient-to-r from-[#071E3D] to-blue-600 text-white p-8 shadow-2xl">
 
-        {/* Content */}
-        <main className="p-6">
-          
-          {/* Welcome Card */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-2xl shadow-lg mb-6">
-            <h2 className="text-2xl font-bold mb-2">
-              Selamat Datang, {userData?.nama || "Asesi"} 👋
-            </h2>
-            <p className="text-sm opacity-90">
-              Silakan kelola data sertifikasi dan asesmen Anda melalui dashboard ini.
-            </p>
-          </div>
+          <div className="absolute right-0 top-0 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl" />
 
-          {/* Statistik / Menu Cepat */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            
-            <div className="bg-white p-5 rounded-2xl shadow hover:shadow-lg transition">
-              <div className="flex items-center justify-between">
-                <User className="text-blue-600" size={28} />
-              </div>
-              <h3 className="mt-4 font-semibold text-gray-700">
-                Profile Anda
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Lihat dan edit data pribadi Anda
-              </p>
-            </div>
+          <h2 className="text-2xl lg:text-3xl font-black mb-2">
+            Selamat Datang, {userData?.nama || "Asesi"} 👋
+          </h2>
 
-            <div className="bg-white p-5 rounded-2xl shadow hover:shadow-lg transition">
-              <BookOpen className="text-green-600" size={28} />
-              <h3 className="mt-4 font-semibold text-gray-700">
-                Skema Sertifikasi
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Lihat daftar skema yang tersedia
-              </p>
-            </div>
+          <p className="text-white/80 text-sm max-w-lg">
+            Akses semua fitur sertifikasi Anda dalam satu dashboard modern dan terintegrasi.
+          </p>
 
-            <div className="bg-white p-5 rounded-2xl shadow hover:shadow-lg transition">
-              <ClipboardList className="text-purple-600" size={28} />
-              <h3 className="mt-4 font-semibold text-gray-700">
-                Asesmen Anda
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Pantau status asesmen Anda
-              </p>
-            </div>
+        </div>
 
-            <div className="bg-white p-5 rounded-2xl shadow hover:shadow-lg transition">
-              <CreditCard className="text-red-600" size={28} />
-              <h3 className="mt-4 font-semibold text-gray-700">
-                Konfirmasi Pembayaran
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Upload bukti pembayaran Anda
-              </p>
-            </div>
+        {/* MENU CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
 
-          </div>
-        </main>
+          <Card
+            icon={<User />}
+            title="Profile Anda"
+            desc="Kelola dan perbarui data pribadi Anda"
+            color="blue"
+          />
+
+          <Card
+            icon={<BookOpen />}
+            title="Skema Sertifikasi"
+            desc="Lihat dan pilih skema yang tersedia"
+            color="green"
+          />
+
+          <Card
+            icon={<ClipboardList />}
+            title="Asesmen Anda"
+            desc="Pantau progres asesmen Anda"
+            color="purple"
+          />
+
+          <Card
+            icon={<CreditCard />}
+            title="Pembayaran"
+            desc="Upload bukti pembayaran sertifikasi"
+            color="red"
+          />
+
+        </div>
+
       </div>
+    </div>
+  );
+};
+
+/* ================= COMPONENT CARD ================= */
+
+const Card = ({ icon, title, desc, color }) => {
+
+  const colorMap = {
+    blue: "bg-blue-50 text-blue-600",
+    green: "bg-emerald-50 text-emerald-600",
+    purple: "bg-purple-50 text-purple-600",
+    red: "bg-red-50 text-red-600",
+  };
+
+  return (
+    <div className="group bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+
+      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 ${colorMap[color]}`}>
+        {icon}
+      </div>
+
+      <h3 className="font-black text-[#071E3D] text-lg mb-1">
+        {title}
+      </h3>
+
+      <p className="text-sm text-slate-500">
+        {desc}
+      </p>
+
     </div>
   );
 };
