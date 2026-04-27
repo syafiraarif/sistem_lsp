@@ -1,8 +1,29 @@
+// frontend/src/pages/tuk/AsesorPenguji.jsx
+
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import SidebarTUK from "../../components/sidebar/SidebarTuk";
-import { ArrowLeftIcon, Loader2Icon, SearchIcon, UserPlusIcon, Trash2Icon, CheckCircleIcon, XCircleIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Search,
+  UserPlus,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  Users,
+  Calendar,
+  ClipboardList,
+  BadgeCheck,
+  Phone,
+  User,
+  Hash,
+  Award,
+  AlertCircle,
+  ChevronRight,
+  Inbox,
+} from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
@@ -20,52 +41,45 @@ const AsesorPenguji = () => {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
 
-  // 🔥 FIXED: Filter asesor BELUM terdaftar + search
   const filteredAsesor = useMemo(() => {
-    // Filter asesor yang BELUM terdaftar di jadwal ini
-    const availableAsesor = allAsesor.filter(a => 
-      !asesorJadwal.some(j => j.id_user === a.id_user)
+    const availableAsesor = allAsesor.filter(
+      (a) => !asesorJadwal.some((j) => j.id_user === a.id_user)
     );
-    
-    return availableAsesor.filter((a) =>
-      a.nama_lengkap?.toLowerCase().includes(search.toLowerCase()) ||
-      a.no_reg_asesor?.toLowerCase().includes(search.toLowerCase()) ||
-      a.username?.toLowerCase().includes(search.toLowerCase()) ||
-      a.no_hp?.toLowerCase().includes(search.toLowerCase())
-    );
+
+    return availableAsesor.filter((a) => {
+      const keyword = search.toLowerCase();
+
+      return (
+        a.nama_lengkap?.toLowerCase().includes(keyword) ||
+        a.no_reg_asesor?.toLowerCase().includes(keyword) ||
+        a.username?.toLowerCase().includes(keyword) ||
+        a.no_hp?.toLowerCase().includes(keyword)
+      );
+    });
   }, [allAsesor, search, asesorJadwal]);
 
-  // 🔥 FIXED: Response structure SESUAI backend
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('🔄 Fetching data for jadwal:', id);
 
-      // 🔥 PARALLEL REQUEST untuk performance
       const [resJadwal, resAsesorJadwal, resAllAsesor] = await Promise.all([
         axios.get(`${API_BASE}/tuk/jadwal/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }),
         axios.get(`${API_BASE}/tuk/jadwal/${id}/asesor/asesor_penguji`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }),
         axios.get(`${API_BASE}/tuk/asesor`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
-      console.log('📋 Jadwal:', resJadwal.data);
-      console.log('👥 Asesor jadwal:', resAsesorJadwal.data);
-      console.log('👨‍💼 All asesor:', resAllAsesor.data);
-
-      // 🔥 FIXED: Sesuai backend response structure
-      setJadwal(resJadwal.data.data); // getJadwalById return { data: jadwal }
-      setAsesorJadwal(resAsesorJadwal.data.data || []); // listAsesorJadwal return { data: [] }
-      setAllAsesor(resAllAsesor.data.data || []); // getAsesorTuk return { data: [] }
-
+      setJadwal(resJadwal.data.data);
+      setAsesorJadwal(resAsesorJadwal.data.data || []);
+      setAllAsesor(resAllAsesor.data.data || []);
     } catch (err) {
-      console.error("💥 Fetch Error:", err.response?.data || err);
-      
+      console.error("Fetch Error:", err.response?.data || err);
+
       if (err.response?.status === 401) {
         alert("Session habis, silakan login kembali");
         localStorage.clear();
@@ -83,47 +97,61 @@ const AsesorPenguji = () => {
 
   useEffect(() => {
     if (id) fetchData();
-  }, [fetchData]);
+  }, [fetchData, id]);
 
-  // Handlers
-  const handleAdd = useCallback((id_user) => {
-    if (selected.includes(id_user)) return;
-    setSelected(prev => [...prev, id_user]);
-  }, [selected]);
+  const handleAdd = useCallback(
+    (id_user) => {
+      if (selected.includes(id_user)) return;
+      setSelected((prev) => [...prev, id_user]);
+    },
+    [selected]
+  );
 
   const handleRemove = useCallback((id_user) => {
-    setSelected(prev => prev.filter(i => i !== id_user));
+    setSelected((prev) => prev.filter((i) => i !== id_user));
   }, []);
 
-  const handleDeleteAsesor = useCallback(async (idUser) => {
-    const asesor = asesorJadwal.find(a => a.id_user === parseInt(idUser));
-    if (!window.confirm(`Hapus ${asesor?.nama_lengkap || 'asesor ini'} dari jadwal?`)) return;
+  const handleDeleteAsesor = useCallback(
+    async (idUser) => {
+      const asesor = asesorJadwal.find((a) => a.id_user === parseInt(idUser));
 
-    try {
-      await axios.delete(
-        `${API_BASE}/tuk/jadwal/${id}/asesor/asesor_penguji/${idUser}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("✅ Asesor berhasil dihapus dari jadwal");
-      fetchData();
-    } catch (err) {
-      console.error("🗑️ Delete error:", err);
-      alert(err?.response?.data?.message || "❌ Gagal menghapus asesor");
-    }
-  }, [id, token, asesorJadwal, fetchData]);
+      if (
+        !window.confirm(
+          `Hapus ${asesor?.nama_lengkap || "asesor ini"} dari jadwal?`
+        )
+      ) {
+        return;
+      }
+
+      try {
+        await axios.delete(
+          `${API_BASE}/tuk/jadwal/${id}/asesor/asesor_penguji/${idUser}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        alert("Asesor berhasil dihapus dari jadwal");
+        fetchData();
+      } catch (err) {
+        console.error("Delete error:", err);
+        alert(err?.response?.data?.message || "Gagal menghapus asesor");
+      }
+    },
+    [id, token, asesorJadwal, fetchData]
+  );
 
   const handleSave = useCallback(async () => {
     if (selected.length === 0) {
-      alert("❌ Pilih minimal 1 asesor");
+      alert("Pilih minimal 1 asesor");
       return;
     }
 
     try {
       setSaving(true);
-      console.log('💾 Saving asesor:', selected);
-      
+
       const payload = {
-        listAsesor: selected.map(id_user => ({ id_user: parseInt(id_user) }))
+        listAsesor: selected.map((id_user) => ({
+          id_user: parseInt(id_user),
+        })),
       };
 
       const res = await axios.post(
@@ -132,21 +160,23 @@ const AsesorPenguji = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log('✅ Save response:', res.data);
-      
-      const message = res.data?.message || 
-                     `✅ Berhasil menambahkan ${res.data?.baru || 0} asesor baru, ${res.data?.sudah_ada || 0} sudah ada`;
+      const message =
+        res.data?.message ||
+        `Berhasil menambahkan ${res.data?.baru || 0} asesor baru, ${
+          res.data?.sudah_ada || 0
+        } sudah ada`;
+
       alert(message);
-      
+
       setSelected([]);
       fetchData();
     } catch (err) {
-      console.error("💾 Save error:", err.response?.data);
-      
+      console.error("Save error:", err.response?.data);
+
       if (err.response?.data?.invalid) {
-        alert(`❌ Asesor tidak valid: ${err.response.data.invalid.join(', ')}`);
+        alert(`Asesor tidak valid: ${err.response.data.invalid.join(", ")}`);
       } else {
-        alert(err?.response?.data?.message || "❌ Gagal menyimpan asesor");
+        alert(err?.response?.data?.message || "Gagal menyimpan asesor");
       }
     } finally {
       setSaving(false);
@@ -158,32 +188,55 @@ const AsesorPenguji = () => {
     navigate("/login");
   }, [navigate]);
 
-  // Loading state
+  const formatDate = (date) => {
+    if (!date) return "-";
+
+    return new Date(date).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="flex flex-col items-center gap-4 p-8">
-          <Loader2Icon className="w-12 h-12 text-blue-500 animate-spin" />
-          <div className="text-xl font-semibold text-gray-600">Memuat data jadwal...</div>
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center">
+          <Loader2 className="animate-spin text-orange-500 mx-auto mb-5" size={44} />
+          <p className="text-[#071E3D] font-black text-lg">
+            Memuat Data Asesor
+          </p>
+          <p className="text-slate-400 text-sm mt-1 font-medium">
+            Mohon tunggu sebentar...
+          </p>
         </div>
       </div>
     );
   }
 
-  // Check jadwal kosong
   if (!jadwal) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="text-center p-12 max-w-md mx-auto">
-          <div className="text-4xl text-gray-400 mb-6">📋</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Jadwal Tidak Ditemukan</h2>
-          <p className="text-gray-600 mb-8">Jadwal yang Anda cari tidak ditemukan atau tidak memiliki akses.</p>
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
+        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center max-w-md">
+          <div className="w-20 h-20 rounded-[28px] bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-5">
+            <AlertCircle className="text-orange-500" size={38} />
+          </div>
+
+          <h2 className="text-2xl font-black text-[#071E3D] mb-3">
+            Jadwal Tidak Ditemukan
+          </h2>
+
+          <p className="text-slate-500 font-medium mb-6">
+            Jadwal yang Anda cari tidak ditemukan atau Anda tidak memiliki
+            akses.
+          </p>
+
           <button
             onClick={() => navigate("/tuk/jadwal")}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all"
+            className="px-6 py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all inline-flex items-center gap-2"
           >
-            <ArrowLeftIcon className="w-5 h-5" />
-            Kembali ke Daftar Jadwal
+            <ArrowLeft size={17} />
+            Kembali ke Jadwal
           </button>
         </div>
       </div>
@@ -191,298 +244,388 @@ const AsesorPenguji = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarTUK
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
         onLogout={handleLogout}
       />
 
-      <div className="flex-1 lg:ml-64 p-4 md:p-6 lg:p-8">
-        {/* HEADER */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-white/50 backdrop-blur-sm rounded-2xl shadow-sm border hover:shadow-md transition-all flex items-center gap-2 text-gray-700 hover:text-gray-900"
-              title="Kembali"
-            >
-              <ArrowLeftIcon className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-3xl lg:text-4xl font-black bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                👥 Asesor Penguji
-              </h1>
-              <p className="text-gray-600 mt-1 text-lg">
-                Kelola asesor untuk jadwal <strong>"{jadwal.nama_kegiatan || 'Loading...'}"</strong>
-              </p>
-            </div>
-          </div>
-        </div>
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <section className="relative overflow-hidden bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 lg:p-8 mb-6">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-[90px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#071E3D]/5 rounded-full blur-[90px] pointer-events-none" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* ================= DATA JADWAL & ASESOR AKTIF ================= */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8 sticky top-4">
-              <h2 className="font-black text-2xl mb-8 text-gray-800 flex items-center gap-3">
-                📋 Informasi Jadwal
-              </h2>
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="mb-5 inline-flex items-center gap-2 text-slate-400 hover:text-orange-500 font-black text-xs uppercase tracking-widest transition-colors"
+                >
+                  <ArrowLeft size={17} />
+                  Kembali
+                </button>
 
-              <div className="space-y-6">
-                <div>
-                  <span className="text-sm font-semibold text-gray-500 block mb-3 uppercase tracking-wide">Skema</span>
-                  <div className="font-black text-2xl text-gray-900 bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">
-                    {jadwal?.skema?.judul_skema || jadwal?.nama_skema || "Belum ditentukan"}
-                  </div>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 mb-4">
+                  <Users size={15} className="text-orange-500" />
+                  <span className="text-orange-500 text-[10px] font-black uppercase tracking-widest">
+                    Kelola Asesor Penguji
+                  </span>
                 </div>
 
-                <div>
-                  <span className="text-sm font-semibold text-gray-500 block mb-3 uppercase tracking-wide">Nama Kegiatan</span>
-                  <div className="font-bold text-xl text-gray-900 p-3 bg-gray-50 rounded-2xl border">
-                    {jadwal?.nama_kegiatan || "-"}
-                  </div>
-                </div>
+                <h1 className="text-3xl lg:text-4xl font-black text-[#071E3D] leading-tight">
+                  Asesor Penguji
+                </h1>
 
-                <div>
-                  <span className="text-sm font-semibold text-gray-500 block mb-3 uppercase tracking-wide">Periode</span>
-                  <div className="font-bold text-xl text-gray-900">
-                    {jadwal?.tgl_awal 
-                      ? `${new Date(jadwal.tgl_awal).toLocaleDateString('id-ID', { 
-                          day: 'numeric', 
-                          month: 'long', 
-                          year: 'numeric' 
-                        })}${jadwal.tgl_akhir ? ` s/d ${new Date(jadwal.tgl_akhir).toLocaleDateString('id-ID', { 
-                          day: 'numeric', 
-                          month: 'long', 
-                          year: 'numeric' 
-                        })}` : ''}`
-                      : "-"
-                    }
-                  </div>
-                </div>
+                <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
+                  Tambahkan atau hapus asesor penguji untuk jadwal{" "}
+                  <span className="font-black text-[#071E3D]">
+                    {jadwal.nama_kegiatan || "-"}
+                  </span>
+                  .
+                </p>
+              </div>
 
-                <div>
-                  <span className="text-sm font-semibold text-gray-500 block mb-3 uppercase tracking-wide">Kuota</span>
-                  <div className="text-3xl font-black text-emerald-600">
-                    {jadwal?.kuota || 0}
+              <div className="bg-[#071E3D] text-white rounded-[26px] p-5 min-w-[230px] relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/20 rounded-full blur-3xl -mr-12 -mt-12" />
+                <div className="relative z-10">
+                  <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">
+                    Asesor Aktif
+                  </p>
+                  <div className="flex items-end justify-between mt-2">
+                    <h2 className="text-4xl font-black">
+                      {asesorJadwal.length}
+                    </h2>
+                    <UserPlus className="text-orange-400" size={30} />
                   </div>
                 </div>
               </div>
+            </div>
+          </section>
 
-              {/* ASESOR TERDAFTAR */}
-              <div className="mt-12 pt-8 border-t border-gray-200">
-                <h3 className="font-black text-xl mb-6 text-gray-800 flex items-center gap-3">
-                  👥 Asesor Aktif
-                  <span className="bg-emerald-100 text-emerald-800 px-4 py-2 rounded-2xl text-lg font-bold shadow-lg">
-                    {asesorJadwal.length}
-                  </span>
-                </h3>
-                
-                {asesorJadwal.length === 0 ? (
-                  <div className="text-center py-12 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl border-2 border-dashed border-gray-300">
-                    <div className="text-5xl text-gray-400 mb-4 mx-auto w-20 h-20 bg-gray-200 rounded-2xl flex items-center justify-center">
-                      📭
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Left Panel */}
+            <section className="xl:col-span-1 space-y-6">
+              <Card title="Informasi Jadwal" icon={<ClipboardList size={22} />}>
+                <div className="space-y-4">
+                  <InfoBox label="Skema">
+                    <p className="text-[#071E3D] font-black leading-snug">
+                      {jadwal?.skema?.judul_skema ||
+                        jadwal?.nama_skema ||
+                        "Belum ditentukan"}
+                    </p>
+                  </InfoBox>
+
+                  <InfoBox label="Nama Kegiatan">
+                    <p className="text-[#071E3D] font-black leading-snug">
+                      {jadwal?.nama_kegiatan || "-"}
+                    </p>
+                  </InfoBox>
+
+                  <InfoBox label="Periode">
+                    <div className="flex items-center gap-2 text-[#071E3D] font-black">
+                      <Calendar size={17} className="text-orange-500" />
+                      <span>
+                        {formatDate(jadwal?.tgl_awal)} -{" "}
+                        {formatDate(jadwal?.tgl_akhir)}
+                      </span>
                     </div>
-                    <p className="text-xl font-semibold text-gray-600 mb-2">Belum ada asesor</p>
-                    <p className="text-gray-500">Tambahkan asesor penguji untuk jadwal ini</p>
-                  </div>
+                  </InfoBox>
+
+                  <InfoBox label="Kuota">
+                    <div className="flex items-center gap-2 text-[#071E3D] font-black">
+                      <Users size={17} className="text-orange-500" />
+                      <span>{jadwal?.kuota || 0} peserta</span>
+                    </div>
+                  </InfoBox>
+                </div>
+              </Card>
+
+              <Card
+                title="Asesor Aktif"
+                icon={<CheckCircle size={22} />}
+                rightBadge={asesorJadwal.length}
+              >
+                {asesorJadwal.length === 0 ? (
+                  <EmptyState
+                    icon={<Inbox size={34} />}
+                    title="Belum ada asesor"
+                    desc="Tambahkan asesor penguji untuk jadwal ini."
+                  />
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 max-h-80 overflow-y-auto -mr-4 pr-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
                     {asesorJadwal.map((a) => (
-                      <div key={`${a.id}-${a.id_user}-${a.jenis_tugas}`} className="group p-5 bg-gradient-to-r from-emerald-50 to-green-50 rounded-2xl border border-emerald-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-emerald-300">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-black text-lg text-gray-900 truncate mb-1" title={a.nama_lengkap}>
+                      <div
+                        key={`${a.id}-${a.id_user}-${a.jenis_tugas}`}
+                        className="rounded-[24px] bg-emerald-50/60 border border-emerald-100 p-4 group"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h4
+                              className="font-black text-[#071E3D] truncate"
+                              title={a.nama_lengkap}
+                            >
                               {a.nama_lengkap}
                             </h4>
-                            <div className="flex flex-wrap gap-3 text-sm text-gray-600 mb-2">
+
+                            <div className="mt-3 space-y-2 text-xs text-slate-500 font-medium">
                               {a.no_reg_asesor && (
-                                <span className="bg-white px-3 py-1 rounded-full text-xs font-mono border">
-                                  Reg: {a.no_reg_asesor}
-                                </span>
+                                <MiniInfo
+                                  icon={<Hash size={13} />}
+                                  value={`Reg: ${a.no_reg_asesor}`}
+                                />
                               )}
                               {a.no_hp && (
-                                <span className="flex items-center gap-1">
-                                  📱 {a.no_hp}
-                                </span>
+                                <MiniInfo
+                                  icon={<Phone size={13} />}
+                                  value={a.no_hp}
+                                />
                               )}
                               {a.username && (
-                                <span className="flex items-center gap-1">
-                                  👤 {a.username}
-                                </span>
+                                <MiniInfo
+                                  icon={<User size={13} />}
+                                  value={a.username}
+                                />
                               )}
                             </div>
-                            {a.assigned_by && (
-                              <div className="text-xs text-gray-500 bg-white/50 px-3 py-1 rounded-full">
-                                Ditugaskan oleh: {a.assigned_by}
-                              </div>
-                            )}
                           </div>
+
                           <button
                             onClick={() => handleDeleteAsesor(a.id_user)}
-                            className="ml-4 p-2 bg-red-500/90 hover:bg-red-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all group-hover:scale-110 opacity-0 group-hover:opacity-100"
+                            className="w-10 h-10 rounded-2xl bg-white border border-red-100 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center shrink-0"
                             title="Hapus dari jadwal"
                           >
-                            <Trash2Icon className="w-5 h-5" />
+                            <Trash2 size={17} />
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
-          </div>
+              </Card>
+            </section>
 
-          {/* ================= PILIH ASESOR ================= */}
-          <div>
-            <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8">
-              <h2 className="font-black text-2xl mb-8 text-gray-800 flex items-center gap-3">
-                ➕ Tambah Asesor Penguji
-                <div className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-2xl font-semibold">
-                  {filteredAsesor.length} tersedia 
-                  <span className="text-xs ml-1">({allAsesor.length - asesorJadwal.length} belum dipilih)</span>
+            {/* Right Panel */}
+            <section className="xl:col-span-2">
+              <Card
+                title="Tambah Asesor Penguji"
+                icon={<UserPlus size={22} />}
+                rightBadge={filteredAsesor.length}
+              >
+                <div className="relative mb-6">
+                  <Search
+                    size={20}
+                    className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Cari nama, nomor registrasi, username, atau HP..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-14 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 text-[#071E3D] font-bold transition-all"
+                  />
                 </div>
-              </h2>
 
-                            {/* SEARCH */}
-              <div className="relative mb-8">
-                <SearchIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Cari nama, nomor registrasi, username atau HP..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-12 pr-5 py-5 border-2 border-gray-200 rounded-3xl focus:border-blue-400 focus:ring-4 focus:ring-blue-100/50 transition-all shadow-lg hover:shadow-xl"
-                />
-              </div>
-
-              {/* LIST ASESOR */}
-              <div className="space-y-4 max-h-[500px] overflow-y-auto mb-8 pr-2 -mr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {filteredAsesor.length === 0 ? (
-                  <div className="text-center py-20 bg-gradient-to-r from-gray-50 to-gray-100 rounded-3xl border-2 border-dashed border-gray-300">
-                    <div className="text-6xl text-gray-400 mb-6 mx-auto w-24 h-24 bg-gray-200 rounded-3xl flex items-center justify-center">
-                      🔍
-                    </div>
-                    <h3 className="text-2xl font-black text-gray-600 mb-3">
-                      {search ? "Tidak Ditemukan" : "Semua Asesor Sudah Terpilih"}
-                    </h3>
-                    {search ? (
-                      <p className="text-lg text-gray-500">Coba kata kunci yang berbeda</p>
-                    ) : (
-                      <p className="text-lg text-gray-500">Semua asesor sudah terdaftar di jadwal ini</p>
-                    )}
-                  </div>
+                  <EmptyState
+                    icon={<Search size={36} />}
+                    title={
+                      search
+                        ? "Asesor tidak ditemukan"
+                        : "Semua asesor sudah terdaftar"
+                    }
+                    desc={
+                      search
+                        ? "Coba gunakan kata kunci lain."
+                        : "Tidak ada asesor tersedia untuk ditambahkan."
+                    }
+                  />
                 ) : (
-                  filteredAsesor.map((a) => {
-                    return (
-                      <div
-                        key={a.id_user}
-                        className={`p-6 border-2 rounded-3xl shadow-sm transition-all hover:shadow-2xl hover:-translate-y-2 group ${
-                          selected.includes(a.id_user)
-                            ? 'border-emerald-200 bg-emerald-50/50 ring-4 ring-emerald-100/50' 
-                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-6">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-black text-xl text-gray-900 mb-3 truncate" title={a.nama_lengkap}>
-                              {a.nama_lengkap}
-                            </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-6">
-                              <div className="flex items-center gap-2 p-3 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm">
-                                <span className="font-mono font-bold text-gray-800">Reg:</span>
-                                <span className="font-mono bg-gradient-to-r from-blue-100 to-blue-200 px-3 py-1 rounded-full text-xs">
-                                  {a.no_reg_asesor || '-'}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 p-3 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm">
-                                <span className="font-semibold text-gray-800">📱 HP:</span>
-                                <span>{a.no_hp || '-'}</span>
-                              </div>
-                              {a.no_lisensi && (
-                                <div className="flex items-center gap-2 p-3 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm">
-                                  <span className="font-semibold text-gray-800">📜 Lisensi:</span>
-                                  <span className="font-mono">{a.no_lisensi}</span>
-                                </div>
-                              )}
-                              {a.username && (
-                                <div className="flex items-center gap-2 p-3 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm">
-                                  <span className="font-semibold text-gray-800">👤 Username:</span>
-                                  <span className="font-mono bg-gray-100 px-3 py-1 rounded-full">@ {a.username}</span>
-                                </div>
-                              )}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[620px] overflow-y-auto pr-1">
+                    {filteredAsesor.map((a) => {
+                      const isSelected = selected.includes(a.id_user);
+
+                      return (
+                        <div
+                          key={a.id_user}
+                          className={`rounded-[26px] border p-5 transition-all ${
+                            isSelected
+                              ? "bg-orange-50 border-orange-200"
+                              : "bg-white border-slate-100 hover:border-orange-200 hover:bg-orange-50/30"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4 mb-4">
+                            <div className="min-w-0">
+                              <h4
+                                className="font-black text-[#071E3D] text-lg leading-snug truncate"
+                                title={a.nama_lengkap}
+                              >
+                                {a.nama_lengkap}
+                              </h4>
+
                               {a.bidang_keahlian && (
-                                <div className="col-span-full p-3 bg-indigo-50/50 backdrop-blur-sm rounded-2xl border border-indigo-200 mt-2">
-                                  <span className="font-semibold text-indigo-800 block mb-1">🎯 Bidang Keahlian:</span>
-                                  <span className="text-sm">{a.bidang_keahlian}</span>
-                                </div>
+                                <p className="text-xs text-slate-400 font-bold mt-1 line-clamp-2">
+                                  {a.bidang_keahlian}
+                                </p>
                               )}
+                            </div>
+
+                            <div
+                              className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                                isSelected
+                                  ? "bg-orange-500 text-white"
+                                  : "bg-orange-50 text-orange-500"
+                              }`}
+                            >
+                              <UserPlus size={20} />
                             </div>
                           </div>
 
-                          <div className="flex flex-col gap-3 ml-4 shrink-0">
-                            {selected.includes(a.id_user) ? (
-                              <button
-                                onClick={() => handleRemove(a.id_user)}
-                                className="flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl hover:shadow-3xl hover:-translate-y-1 transition-all transform"
-                              >
-                                <XCircleIcon className="w-6 h-6" />
-                                Batal Pilih
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleAdd(a.id_user)}
-                                className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl hover:shadow-3xl hover:-translate-y-1 transition-all transform group-hover:scale-105"
-                              >
-                                <UserPlusIcon className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                                Pilih Asesor
-                              </button>
+                          <div className="space-y-2 mb-5">
+                            <MiniInfo
+                              icon={<Hash size={14} />}
+                              value={`Reg: ${a.no_reg_asesor || "-"}`}
+                            />
+                            <MiniInfo
+                              icon={<Phone size={14} />}
+                              value={`HP: ${a.no_hp || "-"}`}
+                            />
+                            {a.username && (
+                              <MiniInfo
+                                icon={<User size={14} />}
+                                value={`Username: ${a.username}`}
+                              />
+                            )}
+                            {a.no_lisensi && (
+                              <MiniInfo
+                                icon={<Award size={14} />}
+                                value={`Lisensi: ${a.no_lisensi}`}
+                              />
                             )}
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
 
-              {/* COUNTER & SAVE BUTTON */}
-              {selected.length > 0 && (
-                <div className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 text-white p-8 rounded-3xl shadow-2xl border-4 border-white/30 backdrop-blur-xl">
-                  <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-                    <div className="text-center lg:text-left flex flex-col items-center lg:items-start gap-2">
-                      <div className="text-5xl lg:text-6xl font-black drop-shadow-lg">
-                        🎉 {selected.length}
-                      </div>
-                      <div className="text-2xl font-bold drop-shadow-lg">
-                        Asesor Siap Ditugaskan
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="group flex items-center gap-4 bg-white/90 text-emerald-800 px-12 py-6 rounded-3xl font-black text-xl shadow-2xl hover:shadow-4xl hover:-translate-y-2 transition-all duration-300 border-4 border-white/50 backdrop-blur-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none hover:scale-[1.02]"
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2Icon className="w-8 h-8 animate-spin" />
-                          <span className="tracking-wide">Menyimpan...</span>
-                        </>
-                      ) : (
-                        <>
-                          <UserPlusIcon className="w-8 h-8 group-hover:rotate-12 transition-transform" />
-                          <span className="tracking-wide">Simpan {selected.length} Asesor</span>
-                        </>
-                      )}
-                    </button>
+                          {isSelected ? (
+                            <button
+                              onClick={() => handleRemove(a.id_user)}
+                              className="w-full px-4 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                            >
+                              <XCircle size={17} />
+                              Batal Pilih
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleAdd(a.id_user)}
+                              className="w-full px-4 py-3 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                            >
+                              <UserPlus size={17} />
+                              Pilih Asesor
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+
+                {selected.length > 0 && (
+                  <div className="mt-6 rounded-[28px] bg-[#071E3D] text-white p-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-44 h-44 bg-orange-500/20 rounded-full blur-3xl -mr-20 -mt-20" />
+
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+                      <div>
+                        <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">
+                          Siap Ditugaskan
+                        </p>
+                        <h3 className="text-2xl font-black mt-1">
+                          {selected.length} Asesor Dipilih
+                        </h3>
+                      </div>
+
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="px-6 py-4 rounded-2xl bg-orange-500 hover:bg-white hover:text-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                      >
+                        {saving ? (
+                          <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                          <UserPlus size={18} />
+                        )}
+                        {saving
+                          ? "Menyimpan..."
+                          : `Simpan ${selected.length} Asesor`}
+                        {!saving && <ChevronRight size={17} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </section>
           </div>
         </div>
+      </main>
+    </div>
+  );
+};
+
+const Card = ({ title, icon, children, rightBadge }) => {
+  return (
+    <div className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
+            {icon}
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-[#071E3D]">{title}</h2>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+              Data Asesor
+            </p>
+          </div>
+        </div>
+
+        {rightBadge !== undefined && (
+          <span className="px-4 py-2 rounded-full bg-orange-50 border border-orange-100 text-orange-500 text-xs font-black">
+            {rightBadge}
+          </span>
+        )}
       </div>
+
+      <div className="p-6">{children}</div>
+    </div>
+  );
+};
+
+const InfoBox = ({ label, children }) => {
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+};
+
+const MiniInfo = ({ icon, value }) => {
+  return (
+    <div className="inline-flex items-center gap-2 mr-2 mb-1 px-3 py-1.5 rounded-full bg-white border border-slate-100 text-slate-500">
+      {icon}
+      <span className="text-xs font-bold">{value}</span>
+    </div>
+  );
+};
+
+const EmptyState = ({ icon, title, desc }) => {
+  return (
+    <div className="text-center py-14 px-6 bg-slate-50 rounded-[28px] border border-dashed border-slate-200">
+      <div className="w-18 h-18 mx-auto mb-4 text-slate-300 flex items-center justify-center">
+        {icon}
+      </div>
+      <h3 className="text-lg font-black text-[#071E3D] mb-2">{title}</h3>
+      <p className="text-slate-400 font-medium">{desc}</p>
     </div>
   );
 };

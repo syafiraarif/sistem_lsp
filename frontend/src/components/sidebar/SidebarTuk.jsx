@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const SidebarTUK = ({ isOpen, setIsOpen }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -73,11 +74,16 @@ const SidebarTUK = ({ isOpen, setIsOpen }) => {
     if (window.innerWidth < 1024) setIsOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user");
     localStorage.removeItem("id_tuk");
+
     navigate("/login", { replace: true });
   };
 
@@ -112,7 +118,7 @@ const SidebarTUK = ({ isOpen, setIsOpen }) => {
                 menus={menus}
                 isActive={isActive}
                 handleClick={handleClick}
-                handleLogout={handleLogout}
+                handleLogout={handleLogoutClick}
                 displayName={displayName}
                 isExpanded={true}
                 onClose={() => setIsOpen(false)}
@@ -134,7 +140,7 @@ const SidebarTUK = ({ isOpen, setIsOpen }) => {
           menus={menus}
           isActive={isActive}
           handleClick={handleClick}
-          handleLogout={handleLogout}
+          handleLogout={handleLogoutClick}
           displayName={displayName}
           isExpanded={isExpanded}
           onClose={() => setIsOpen(false)}
@@ -146,6 +152,55 @@ const SidebarTUK = ({ isOpen, setIsOpen }) => {
           isExpanded ? "w-72" : "w-24"
         }`}
       />
+
+      <AnimatePresence>
+        {showLogoutModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-[#071E3D]/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 12 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 12 }}
+              transition={{ duration: 0.18 }}
+              className="w-full max-w-md bg-white rounded-[30px] border border-slate-100 shadow-2xl p-8 text-center"
+            >
+              <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
+                <LogOut size={30} />
+              </div>
+
+              <h2 className="text-2xl font-black text-[#071E3D] mb-2">
+                Keluar dari Akun?
+              </h2>
+
+              <p className="text-slate-500 font-medium mb-7">
+                Apakah Anda yakin ingin logout dari dashboard TUK?
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutModal(false)}
+                  className="px-5 py-4 rounded-2xl border border-slate-200 text-[#071E3D] font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmLogout}
+                  className="px-5 py-4 rounded-2xl bg-red-500 text-white font-black text-xs uppercase tracking-widest hover:bg-red-600 transition-all"
+                >
+                  Ya, Keluar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
