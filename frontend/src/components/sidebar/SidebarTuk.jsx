@@ -1,33 +1,70 @@
 // frontend/src/components/sidebar/SidebarTuk.jsx
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Calendar, Key, Menu, LogOut, User } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  Home,
+  Calendar,
+  Key,
+  Menu,
+  LogOut,
+  User,
+  X,
+  ChevronRight,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const SidebarTUK = ({ isOpen, setIsOpen }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [userData, setUserData] = useState(null);
+
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) setUserData(JSON.parse(storedUser));
+    const storedUser = localStorage.getItem("user");
+
+    if (storedUser) {
+      try {
+        setUserData(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Failed to parse user data", error);
+      }
+    }
   }, []);
 
   const isExpanded = isOpen || isHovered;
 
+  const displayName =
+    userData?.nama_tuk ||
+    userData?.username ||
+    userData?.nama ||
+    "TUK Portal";
+
   const menus = [
-    { id: 'home', name: 'Home', path: '/tuk', icon: <Home size={20} /> },
-    { id: 'jadwal', name: 'Jadwal Uji Kompetensi', path: '/tuk/jadwal', icon: <Calendar size={20} /> },
-    { id: 'profile', name: 'Profile TUK', path: '/tuk/profile', icon: <User size={20} /> },
-    { id: 'lupa-password', name: 'Lupa Password', path: '/tuk/lupa-password', icon: <Key size={20} /> },
+    { id: "home", name: "Home", path: "/tuk", icon: <Home size={21} /> },
+    {
+      id: "jadwal",
+      name: "Jadwal Uji Kompetensi",
+      path: "/tuk/jadwal",
+      icon: <Calendar size={21} />,
+    },
+    {
+      id: "profile",
+      name: "Profile TUK",
+      path: "/tuk/profile",
+      icon: <User size={21} />,
+    },
+    {
+      id: "lupa-password",
+      name: "Lupa Password",
+      path: "/tuk/lupa-password",
+      icon: <Key size={21} />,
+    },
   ];
 
   const isActive = (path) => {
-    if (path === '/tuk') {
-      return location.pathname === '/tuk';
-    }
+    if (path === "/tuk") return location.pathname === "/tuk";
     return location.pathname.startsWith(path);
   };
 
@@ -36,90 +73,205 @@ const SidebarTUK = ({ isOpen, setIsOpen }) => {
     if (window.innerWidth < 1024) setIsOpen(false);
   };
 
-  /* =========================
-     🔐 HANDLE LOGOUT
-  ========================= */
   const handleLogout = () => {
-    // Bersihkan semua session
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user");
     localStorage.removeItem("id_tuk");
-
-    // Redirect ke login
     navigate("/login", { replace: true });
   };
 
   return (
     <>
-      {/* Overlay Mobile */}
-      <div 
-        className={`fixed inset-0 bg-black/50 z-[60] lg:hidden backdrop-blur-sm transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
-        onClick={() => setIsOpen(false)} 
-      />
-      
-      {/* Sidebar */}
-      <div 
-        onMouseEnter={() => setIsHovered(true)} 
-        onMouseLeave={() => setIsHovered(false)} 
-        className={`fixed left-0 top-0 h-screen bg-[#071E3D] text-white flex flex-col z-[70] border-r border-white/10 transition-all duration-300 ${isExpanded ? 'w-64' : 'w-20'} ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+      <button
+        onClick={() => setIsOpen(true)}
+        className="fixed top-4 left-4 z-[55] lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 shadow-lg text-[#071E3D] flex items-center justify-center"
       >
-        {/* Header */}
-        <div className="h-20 flex items-center px-4 border-b border-white/10 overflow-hidden shrink-0">
-          <button onClick={() => setIsOpen(!isOpen)} className={`p-2 rounded-lg hover:bg-white/10 text-orange-500 ${!isExpanded ? 'mx-auto' : ''}`}>
-            <Menu size={24} />
-          </button>
-          <div className={`ml-4 transition-all ${isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
-            <h1 className="text-lg font-black text-orange-500 uppercase">
-              {userData?.nama_tuk || "TUK PORTAL"}
-            </h1>
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></span>
-              <p className="text-[10px] font-bold text-white/90 uppercase">
-                {userData?.username || "Admin TUK"}
-              </p>
-            </div>
+        <Menu size={22} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 bg-[#071E3D]/50 backdrop-blur-sm z-[60] lg:hidden"
+            />
+
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-y-0 left-0 w-80 bg-white shadow-2xl z-[70] lg:hidden flex flex-col overflow-hidden"
+            >
+              <SidebarContent
+                menus={menus}
+                isActive={isActive}
+                handleClick={handleClick}
+                handleLogout={handleLogout}
+                displayName={displayName}
+                isExpanded={true}
+                onClose={() => setIsOpen(false)}
+                isMobile
+              />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      <aside
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`hidden lg:flex fixed left-0 top-0 h-screen bg-white text-[#071E3D] flex-col z-[70] border-r border-slate-100 shadow-[16px_0_40px_-30px_rgba(7,30,61,0.35)] overflow-hidden transition-[width] duration-200 ease-linear ${
+          isExpanded ? "w-72" : "w-24"
+        }`}
+      >
+        <SidebarContent
+          menus={menus}
+          isActive={isActive}
+          handleClick={handleClick}
+          handleLogout={handleLogout}
+          displayName={displayName}
+          isExpanded={isExpanded}
+          onClose={() => setIsOpen(false)}
+        />
+      </aside>
+
+      <div
+        className={`hidden lg:block shrink-0 pointer-events-none transition-[width] duration-200 ease-linear ${
+          isExpanded ? "w-72" : "w-24"
+        }`}
+      />
+    </>
+  );
+};
+
+const SidebarContent = ({
+  menus,
+  isActive,
+  handleClick,
+  handleLogout,
+  displayName,
+  isExpanded,
+  onClose,
+  isMobile = false,
+}) => {
+  return (
+    <>
+      {/* Header: posisi logo tidak berubah */}
+      <div className="h-[120px] border-b border-slate-100 flex items-center shrink-0">
+        <div className="w-24 h-full flex items-center justify-center shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center font-black text-xl">
+            {displayName?.charAt(0)?.toUpperCase() || "T"}
           </div>
         </div>
 
-        {/* Menu */}
-        <nav className="flex-1 mt-4 px-3 space-y-1 overflow-y-auto">
-          {menus.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleClick(item.path)}
-              className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 ${
-                isActive(item.path) 
-                  ? 'bg-orange-500 text-[#071E3D] font-bold shadow-lg shadow-orange-500/20' 
-                  : 'hover:bg-white/10 text-white/70 hover:text-white'
-              }`}
-            >
-              <div className="min-w-[32px] flex justify-center shrink-0">{item.icon}</div>
-              <span className={`ml-3 text-sm whitespace-nowrap transition-all duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>
-                {item.name}
-              </span>
-            </button>
-          ))}
-        </nav>
+        <div
+          className={`overflow-hidden whitespace-nowrap transition-opacity duration-150 ${
+            isExpanded ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <h1 className="text-xl font-black text-[#071E3D] uppercase truncate max-w-[165px] leading-tight">
+            {displayName}
+          </h1>
+          <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-1">
+            Dashboard Admin
+          </p>
+        </div>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-white/10 shrink-0">
+        {isMobile && (
+          <button
+            onClick={onClose}
+            className="ml-auto mr-5 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+          >
+            <X size={24} />
+          </button>
+        )}
+      </div>
+
+      {/* Menu: label dan item punya slot tetap, jadi tidak turun naik */}
+      <nav className="flex-1 overflow-y-auto py-4">
+        <div className="space-y-1">
+          {menus.map((item) => {
+            const active = isActive(item.path);
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleClick(item.path)}
+                title={!isExpanded ? item.name : ""}
+                className="group w-full h-16 flex items-center"
+              >
+                {/* Icon column tetap w-24, icon tidak geser */}
+                <div className="w-24 h-16 flex items-center justify-center shrink-0">
+                  <div
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-150 ${
+                      active
+                        ? "bg-orange-50 border border-orange-100 text-orange-500"
+                        : "text-[#071E3D]/80 group-hover:bg-slate-50 group-hover:text-orange-500"
+                    }`}
+                  >
+                    {item.icon}
+                  </div>
+                </div>
+
+                {/* Text column cuma opacity, tidak mengubah posisi icon */}
+                <div
+                  className={`h-16 flex-1 pr-5 flex items-center justify-between overflow-hidden transition-opacity duration-150 ${
+                    isExpanded ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  <span
+                    className={`text-[15px] whitespace-nowrap ${
+                      active
+                        ? "font-black text-orange-500"
+                        : "font-medium text-slate-600"
+                    }`}
+                  >
+                    {item.name}
+                  </span>
+
+                  <ChevronRight
+                    size={16}
+                    className={
+                      active
+                        ? "text-orange-500"
+                        : "text-slate-300 group-hover:text-orange-500"
+                    }
+                  />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* Logout: posisi icon tetap */}
+      <div className="h-28 border-t border-slate-100 bg-slate-50/50 shrink-0 flex items-center">
+        <div className="w-24 h-full flex items-center justify-center shrink-0">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center p-3 text-red-400 hover:bg-red-500 hover:text-white rounded-xl transition-all"
+            title={!isExpanded ? "Keluar" : ""}
+            className="w-14 h-14 rounded-2xl bg-white border border-slate-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 shadow-sm flex items-center justify-center transition-colors duration-150"
           >
-            <div className="min-w-[32px] flex justify-center shrink-0">
-              <LogOut size={20} />
-            </div>
-            <span className={`ml-3 text-sm font-bold ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>
-              Keluar
-            </span>
+            <LogOut size={20} />
           </button>
         </div>
+
+        <button
+          onClick={handleLogout}
+          className={`h-14 flex-1 mr-5 rounded-2xl flex items-center justify-between overflow-hidden text-red-500 transition-opacity duration-150 ${
+            isExpanded ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <span className="text-sm font-black whitespace-nowrap">Keluar</span>
+          <ChevronRight size={16} />
+        </button>
       </div>
-      
-      {/* Spacer */}
-      <div className={`hidden lg:block transition-all duration-300 shrink-0 pointer-events-none ${isExpanded ? 'w-64' : 'w-20'}`} />
     </>
   );
 };

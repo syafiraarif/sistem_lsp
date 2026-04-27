@@ -1,8 +1,26 @@
 // frontend/src/pages/tuk/ListJadwal.jsx
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Calendar, Plus, Search, Users } from "lucide-react";
+import {
+  Calendar,
+  Plus,
+  Search,
+  Users,
+  Clock,
+  Trash2,
+  Pencil,
+  UserCheck,
+  ShieldCheck,
+  CheckCircle,
+  FileCheck,
+  AlertTriangle,
+  Loader2,
+  Inbox,
+  ChevronRight,
+  ClipboardList,
+} from "lucide-react";
 import SidebarTUK from "../../components/sidebar/SidebarTuk";
 
 const API = `${import.meta.env.VITE_API_BASE}/tuk/jadwal`;
@@ -20,67 +38,78 @@ const ListJadwal = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  /* ================= FETCH DATA ================= */
   const fetchJadwal = async () => {
     try {
       setLoading(true);
 
-      // 1. Fetch jadwal utama
       const res = await axios.get(API, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const jadwalList = res.data?.data || [];
 
-      // 2. Fetch asesor untuk setiap jadwal (hanya untuk jadwal yang statusnya bukan draft)
       const jadwalWithAsesor = await Promise.all(
         jadwalList.map(async (item) => {
           if (item.status === "draft") {
-            return { 
-              ...item, 
-              asesorSummary: { 
-                asesor_penguji: { count: 0, names: [] }, 
-                verifikator_tuk: { count: 0, names: [] }, 
-                validator_mkva: { count: 0, names: [] } 
-              } 
+            return {
+              ...item,
+              asesorSummary: {
+                asesor_penguji: { count: 0, names: [] },
+                verifikator_tuk: { count: 0, names: [] },
+                validator_mkva: { count: 0, names: [] },
+              },
             };
           }
 
           try {
-            const asesorPromises = [
-              axios.get(`${API}/${item.id_jadwal}/asesor/asesor_penguji`, { headers: { Authorization: `Bearer ${token}` } }),
-              axios.get(`${API}/${item.id_jadwal}/asesor/verifikator_tuk`, { headers: { Authorization: `Bearer ${token}` } }),
-              axios.get(`${API}/${item.id_jadwal}/asesor/validator_mkva`, { headers: { Authorization: `Bearer ${token}` } })
-            ];
+            const [pengujiRes, verifRes, mkvaRes] = await Promise.all([
+              axios.get(`${API}/${item.id_jadwal}/asesor/asesor_penguji`, {
+                headers: { Authorization: `Bearer ${token}` },
+              }),
+              axios.get(`${API}/${item.id_jadwal}/asesor/verifikator_tuk`, {
+                headers: { Authorization: `Bearer ${token}` },
+              }),
+              axios.get(`${API}/${item.id_jadwal}/asesor/validator_mkva`, {
+                headers: { Authorization: `Bearer ${token}` },
+              }),
+            ]);
 
-            const [pengujiRes, verifRes, mkvaRes] = await Promise.all(asesorPromises);
-            
             return {
               ...item,
               asesorSummary: {
                 asesor_penguji: {
                   count: pengujiRes.data.data?.length || 0,
-                  names: pengujiRes.data.data?.map(a => a.nama_lengkap).slice(0, 2) || []
+                  names:
+                    pengujiRes.data.data
+                      ?.map((a) => a.nama_lengkap)
+                      .slice(0, 2) || [],
                 },
                 verifikator_tuk: {
                   count: verifRes.data.data?.length || 0,
-                  names: verifRes.data.data?.map(a => a.nama_lengkap).slice(0, 2) || []
+                  names:
+                    verifRes.data.data
+                      ?.map((a) => a.nama_lengkap)
+                      .slice(0, 2) || [],
                 },
                 validator_mkva: {
                   count: mkvaRes.data.data?.length || 0,
-                  names: mkvaRes.data.data?.map(a => a.nama_lengkap).slice(0, 2) || []
-                }
-              }
+                  names:
+                    mkvaRes.data.data
+                      ?.map((a) => a.nama_lengkap)
+                      .slice(0, 2) || [],
+                },
+              },
             };
           } catch (err) {
             console.warn(`Gagal fetch asesor untuk jadwal ${item.id_jadwal}:`, err);
+
             return {
               ...item,
-              asesorSummary: { 
-                asesor_penguji: { count: 0, names: [] }, 
-                verifikator_tuk: { count: 0, names: [] }, 
-                validator_mkva: { count: 0, names: [] } 
-              }
+              asesorSummary: {
+                asesor_penguji: { count: 0, names: [] },
+                verifikator_tuk: { count: 0, names: [] },
+                validator_mkva: { count: 0, names: [] },
+              },
             };
           }
         })
@@ -100,10 +129,10 @@ const ListJadwal = () => {
       navigate("/login");
       return;
     }
+
     fetchJadwal();
   }, []);
 
-  /* ================= DELETE ================= */
   const handleDeleteClick = (id) => {
     setDeleteId(id);
     setShowModal(true);
@@ -112,9 +141,11 @@ const ListJadwal = () => {
   const handleDelete = async () => {
     try {
       setDeleting(true);
+
       await axios.delete(`${API}/${deleteId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
+
       setShowModal(false);
       setDeleteId(null);
       fetchJadwal();
@@ -125,9 +156,9 @@ const ListJadwal = () => {
     }
   };
 
-  /* ================= FILTER ================= */
   const filteredJadwal = jadwal.filter((j) => {
     const keyword = search.toLowerCase();
+
     return (
       j.nama_kegiatan?.toLowerCase().includes(keyword) ||
       j.kode_jadwal?.toLowerCase().includes(keyword) ||
@@ -135,317 +166,401 @@ const ListJadwal = () => {
     );
   });
 
-  /* ================= FORMAT DATE ================= */
   const formatDate = (date) => {
     if (!date) return "-";
+
     return new Date(date).toLocaleDateString("id-ID", {
       day: "2-digit",
       month: "short",
-      year: "numeric"
+      year: "numeric",
     });
   };
 
-  /* ================= STATUS BADGE ================= */
   const getStatusBadge = (status) => {
-    const statusMap = {
-      draft: { bg: "bg-gray-200", text: "text-gray-700", label: "Draft" },
-      open: { bg: "bg-green-100", text: "text-green-700", label: "Open" },
-      ongoing: { bg: "bg-blue-100", text: "text-blue-700", label: "Ongoing" },
-      selesai: { bg: "bg-purple-100", text: "text-purple-700", label: "Selesai" },
-      arsip: { bg: "bg-gray-100", text: "text-gray-600", label: "Arsip" }
+    const map = {
+      draft: "bg-orange-50 text-orange-600 border-orange-100",
+      open: "bg-emerald-50 text-emerald-600 border-emerald-100",
+      ongoing: "bg-blue-50 text-blue-600 border-blue-100",
+      selesai: "bg-purple-50 text-purple-600 border-purple-100",
+      arsip: "bg-slate-50 text-slate-500 border-slate-100",
     };
 
-    const config = statusMap[status] || statusMap.arsip;
+    const label = {
+      draft: "Draft",
+      open: "Open",
+      ongoing: "Ongoing",
+      selesai: "Selesai",
+      arsip: "Arsip",
+    };
+
     return (
-      <span className={`px-2 py-1 text-xs ${config.bg} ${config.text} rounded-full font-medium`}>
-        {config.label}
+      <span
+        className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${
+          map[status] || map.arsip
+        }`}
+      >
+        {label[status] || "Arsip"}
       </span>
     );
   };
 
-  /* ================= ASESOR SUMMARY - NAMA + COUNT ================= */
-  const renderAsesorSummary = (asesorSummary) => {
-    const totalAsesor = Object.values(asesorSummary).reduce((sum, data) => sum + data.count, 0);
-    
-    if (totalAsesor === 0) {
+  const getTotalAsesor = (summary = {}) => {
+    return Object.values(summary).reduce((sum, data) => sum + (data?.count || 0), 0);
+  };
+
+  const renderAsesorSummary = (summary = {}) => {
+    const total = getTotalAsesor(summary);
+
+    if (total === 0) {
       return (
-        <div className="text-xs text-gray-400 flex items-center gap-1">
-          <Users size={12} />
+        <div className="flex items-center gap-2 text-slate-400 text-xs font-bold">
+          <Users size={14} />
           Belum ada asesor
         </div>
       );
     }
 
     return (
-      <div className="space-y-1">
-        {/* Total asesor */}
-        <div className="text-sm font-medium text-gray-900">
-          {totalAsesor} Asesor
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 text-[#071E3D] text-sm font-black">
+          <Users size={15} className="text-orange-500" />
+          {total} Asesor
         </div>
-        
-        {/* Detail per jenis tugas - NAMA + COUNT */}
-        <div className="space-y-0.5 text-xs">
-          {asesorSummary.asesor_penguji.count > 0 && (
-            <div className="flex items-center gap-1 text-orange-600">
-              <span className="font-medium">👨‍🏫</span>
-              <span className="font-medium">{asesorSummary.asesor_penguji.count} Penguji:</span>
-              <span className="text-gray-700">
-                {asesorSummary.asesor_penguji.names.join(', ')}
-                {asesorSummary.asesor_penguji.count > 2 && ` +${asesorSummary.asesor_penguji.count - 2}`}
-              </span>
-            </div>
+
+        <div className="space-y-1 text-xs text-slate-500">
+          {summary.asesor_penguji?.count > 0 && (
+            <AsesorItem
+              label={`${summary.asesor_penguji.count} Penguji`}
+              names={summary.asesor_penguji.names}
+              extra={summary.asesor_penguji.count - 2}
+              color="text-orange-500"
+            />
           )}
-          
-          {asesorSummary.verifikator_tuk.count > 0 && (
-            <div className="flex items-center gap-1 text-green-600">
-              <span className="font-medium">✅</span>
-              <span className="font-medium">{asesorSummary.verifikator_tuk.count} Verif:</span>
-              <span className="text-gray-700">
-                {asesorSummary.verifikator_tuk.names.join(', ')}
-                {asesorSummary.verifikator_tuk.count > 2 && ` +${asesorSummary.verifikator_tuk.count - 2}`}
-              </span>
-            </div>
+
+          {summary.verifikator_tuk?.count > 0 && (
+            <AsesorItem
+              label={`${summary.verifikator_tuk.count} Verif`}
+              names={summary.verifikator_tuk.names}
+              extra={summary.verifikator_tuk.count - 2}
+              color="text-emerald-600"
+            />
           )}
-          
-          {asesorSummary.validator_mkva.count > 0 && (
-            <div className="flex items-center gap-1 text-purple-600">
-              <span className="font-medium">📋</span>
-              <span className="font-medium">{asesorSummary.validator_mkva.count} MKVA:</span>
-              <span className="text-gray-700">
-                {asesorSummary.validator_mkva.names.join(', ')}
-                {asesorSummary.validator_mkva.count > 2 && ` +${asesorSummary.validator_mkva.count - 2}`}
-              </span>
-            </div>
+
+          {summary.validator_mkva?.count > 0 && (
+            <AsesorItem
+              label={`${summary.validator_mkva.count} MKVA`}
+              names={summary.validator_mkva.names}
+              extra={summary.validator_mkva.count - 2}
+              color="text-purple-600"
+            />
           )}
         </div>
       </div>
     );
   };
 
-  /* ================= RENDER ACTION BUTTONS ================= */
-  const renderActionButtons = (item) => {
-    // Jika status draft, tampilkan pesan "Belum di-acc Admin"
-    if (item.status === "draft") {
-      return (
-        <div className="p-4 text-center">
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-lg">⏳</span>
-            </div>
-            <p className="text-sm font-medium text-orange-800 mb-1">Menunggu Persetujuan</p>
-            <p className="text-xs text-orange-600">Belum di-acc Admin</p>
-          </div>
-        </div>
-      );
-    }
-
-    // Button untuk status non-draft
-    return (
-      <div className="flex flex-col sm:flex-row gap-2 justify-end items-end">
-        <button
-          onClick={() => navigate(`/tuk/jadwal/${item.id_jadwal}/edit`)}
-          className="px-3 py-1.5 text-xs bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors flex-1 sm:flex-none"
-          title="Edit Jadwal"
-        >
-          ✏️ Edit
-        </button>
-        
-        <button
-          onClick={() => handleDeleteClick(item.id_jadwal)}
-          className="px-3 py-1.5 text-xs bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex-1 sm:flex-none"
-          title="Hapus Jadwal"
-        >
-          🗑️ Hapus
-        </button>
-        
-        <button
-          onClick={() => navigate(`/tuk/jadwal/${item.id_jadwal}/asesor`)}
-          className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors flex-1 sm:flex-none"
-          title="Kelola Asesor Penguji"
-        >
-          👨‍🏫 Penguji
-        </button>
-        
-        <div className="flex flex-col gap-1 w-full sm:w-auto">
-          <button
-            onClick={() => navigate(`/tuk/jadwal/${item.id_jadwal}/verifikasi`)}
-            className="px-3 py-1 text-xs bg-green-500 hover:bg-green-600 text-white rounded font-medium transition-colors w-full"
-            title="Kelola Verifikasi TUK"
-          >
-            ✅ Verif TUK
-          </button>
-          <button
-            onClick={() => navigate(`/tuk/jadwal/${item.id_jadwal}/validator`)}
-            className="px-3 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded font-medium transition-colors w-full"
-            title="Kelola Validator MKVA"
-          >
-            📋 MKVA
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  /* ================= LOGOUT ================= */
   const handleLogout = () => {
     localStorage.clear();
     navigate("/login");
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarTUK
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
         onLogout={handleLogout}
       />
 
-      <div className="flex-1 lg:ml-20 p-6 lg:p-8">
-        {/* HEADER */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-3">
-            <Calendar className="text-orange-500" size={32} />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Daftar Jadwal Sertifikasi
-              </h1>
-              <p className="text-gray-600 mt-1">Kelola jadwal asesmen kompetensi</p>
-            </div>
-          </div>
+      <main className="flex-1 transition-all duration-300 p-4 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 lg:p-8 mb-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-72 h-72 bg-orange-500/10 rounded-full blur-[90px] pointer-events-none" />
 
-          <button
-            onClick={() => navigate("/tuk/jadwal/buat")}
-            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-all"
-          >
-            <Plus size={20} />
-            Buat Jadwal Baru
-          </button>
-        </div>
+            <div className="relative z-10 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+              <div>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 mb-4">
+                  <ClipboardList size={15} className="text-orange-500" />
+                  <span className="text-orange-500 text-[10px] font-black uppercase tracking-widest">
+                    Manajemen Jadwal TUK
+                  </span>
+                </div>
 
-        {/* SEARCH */}
-        <div className="mb-8">
-          <div className="relative max-w-md">
-            <Search
-              size={20}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="🔍 Cari nama kegiatan, kode jadwal, atau skema..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-            />
-          </div>
-        </div>
+                <h1 className="text-3xl lg:text-4xl font-black text-[#071E3D] leading-tight">
+                  Daftar Jadwal Sertifikasi
+                </h1>
 
-        {/* TABLE */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center">
-              <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-500">Memuat data jadwal...</p>
-            </div>
-          ) : filteredJadwal.length === 0 ? (
-            <div className="p-16 text-center text-gray-500">
-              <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-semibold mb-2">Belum ada jadwal</h3>
-              <p className="mb-4">Buat jadwal pertama Anda untuk memulai</p>
+                <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
+                  Kelola jadwal asesmen kompetensi, status persetujuan,
+                  asesor penguji, verifikator TUK, dan validator MKVA.
+                </p>
+              </div>
+
               <button
                 onClick={() => navigate("/tuk/jadwal/buat")}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-xl font-medium"
+                className="w-full sm:w-fit px-6 py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={19} />
+                Buat Jadwal Baru
+              </button>
+            </div>
+          </div>
+
+          {/* Search + Summary */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+            <div className="lg:col-span-3 bg-white rounded-[26px] border border-slate-100 shadow-sm p-4">
+              <div className="relative">
+                <Search
+                  size={20}
+                  className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <input
+                  type="text"
+                  placeholder="Cari nama kegiatan, kode jadwal, atau skema..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-14 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 text-[#071E3D] font-bold transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="bg-[#071E3D] rounded-[26px] p-5 text-white shadow-sm">
+              <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">
+                Total Jadwal
+              </p>
+              <div className="flex items-end justify-between mt-2">
+                <h2 className="text-3xl font-black">{jadwal.length}</h2>
+                <Calendar className="text-orange-400" size={28} />
+              </div>
+            </div>
+          </div>
+
+          {/* Content */}
+          {loading ? (
+            <div className="bg-white rounded-[32px] border border-slate-100 p-16 text-center">
+              <Loader2 className="animate-spin mx-auto text-orange-500 mb-4" size={42} />
+              <p className="text-slate-400 text-xs font-black uppercase tracking-widest">
+                Memuat Data Jadwal...
+              </p>
+            </div>
+          ) : filteredJadwal.length === 0 ? (
+            <div className="bg-white rounded-[32px] border border-slate-100 p-16 text-center">
+              <div className="w-20 h-20 rounded-[28px] bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-5">
+                <Inbox className="text-slate-300" size={38} />
+              </div>
+
+              <h3 className="text-xl font-black text-[#071E3D] mb-2">
+                Jadwal tidak ditemukan
+              </h3>
+
+              <p className="text-slate-500 font-medium mb-6">
+                Belum ada jadwal, atau kata kunci pencarian tidak cocok.
+              </p>
+
+              <button
+                onClick={() => navigate("/tuk/jadwal/buat")}
+                className="px-6 py-3 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all"
               >
                 Buat Jadwal
               </button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                  <tr>
-                    <th className="p-4 text-left font-semibold text-gray-800">Kegiatan & Tanggal</th>
-                    <th className="p-4 text-left font-semibold text-gray-800">Skema & Kuota</th>
-                    <th className="p-4 text-left font-semibold text-gray-800">Asesor</th>
-                    <th className="p-4 text-left font-semibold text-gray-800">Status</th>
-                    <th className="p-4 text-right font-semibold text-gray-800">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredJadwal.map((item) => (
-                    <tr key={item.id_jadwal} className="border-t hover:bg-gray-50 transition-colors">
-                      {/* Nama + Tanggal */}
-                      <td className="p-4">
-                        <div className="font-bold text-lg text-gray-900 mb-1">
-                          {item.nama_kegiatan}
+            <div className="space-y-4">
+              {filteredJadwal.map((item) => (
+                <div
+                  key={item.id_jadwal}
+                  className="bg-white rounded-[30px] border border-slate-100 shadow-sm hover:shadow-[0_20px_50px_-30px_rgba(7,30,61,0.35)] transition-all overflow-hidden"
+                >
+                  <div className="p-5 lg:p-6">
+                    <div className="flex flex-col xl:flex-row xl:items-start gap-6">
+                      {/* Main Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                          <div className="flex items-start gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+                              <Calendar size={26} />
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                {getStatusBadge(item.status)}
+
+                                {item.kode_jadwal && (
+                                  <span className="px-3 py-1.5 rounded-full bg-slate-50 border border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                                    {item.kode_jadwal}
+                                  </span>
+                                )}
+                              </div>
+
+                              <h2 className="text-xl lg:text-2xl font-black text-[#071E3D] leading-tight">
+                                {item.nama_kegiatan}
+                              </h2>
+
+                              <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-slate-500 font-medium">
+                                <span className="inline-flex items-center gap-2">
+                                  <Clock size={16} className="text-orange-500" />
+                                  {formatDate(item.tgl_awal)} - {formatDate(item.tgl_akhir)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-500 flex items-center gap-1">
-                          📅 {formatDate(item.tgl_awal)} - {formatDate(item.tgl_akhir)}
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                          <InfoCard label="Skema Sertifikasi">
+                            <p className="text-sm font-black text-[#071E3D] leading-snug">
+                              {item.skema?.judul_skema || "-"}
+                            </p>
+
+                            {item.skema?.kode_skema && (
+                              <p className="text-[11px] text-slate-400 font-bold mt-1 uppercase tracking-wide">
+                                {item.skema.kode_skema}
+                              </p>
+                            )}
+                          </InfoCard>
+
+                          <InfoCard label="Kuota">
+                            <div className="flex items-center gap-2">
+                              <Users size={18} className="text-orange-500" />
+                              <p className="text-lg font-black text-[#071E3D]">
+                                {item.kuota || 0}{" "}
+                                <span className="text-xs text-slate-400 font-bold">
+                                  orang
+                                </span>
+                              </p>
+                            </div>
+                          </InfoCard>
+
+                          <InfoCard label="Asesor">
+                            {renderAsesorSummary(item.asesorSummary || {})}
+                          </InfoCard>
                         </div>
-                        {item.kode_jadwal && (
-                          <div className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded mt-1 inline-block">
-                            {item.kode_jadwal}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="xl:w-[260px] shrink-0">
+                        {item.status === "draft" ? (
+                          <div className="rounded-[24px] bg-orange-50 border border-orange-100 p-5 text-center">
+                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
+                              <AlertTriangle className="text-orange-500" size={22} />
+                            </div>
+
+                            <p className="text-sm font-black text-[#071E3D]">
+                              Menunggu Persetujuan
+                            </p>
+
+                            <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-1">
+                              Belum di-acc Admin
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 xl:grid-cols-1 gap-2">
+                            <ActionButton
+                              onClick={() =>
+                                navigate(`/tuk/jadwal/${item.id_jadwal}/edit`)
+                              }
+                              icon={<Pencil size={15} />}
+                              label="Edit Jadwal"
+                              className="bg-orange-500 hover:bg-orange-600 text-white"
+                            />
+
+                            <ActionButton
+                              onClick={() => handleDeleteClick(item.id_jadwal)}
+                              icon={<Trash2 size={15} />}
+                              label="Hapus"
+                              className="bg-red-500 hover:bg-red-600 text-white"
+                            />
+
+                            <ActionButton
+                              onClick={() =>
+                                navigate(`/tuk/jadwal/${item.id_jadwal}/asesor`)
+                              }
+                              icon={<UserCheck size={15} />}
+                              label="Penguji"
+                              className="bg-[#071E3D] hover:bg-[#0B2A55] text-white"
+                            />
+
+                            <ActionButton
+                              onClick={() =>
+                                navigate(`/tuk/jadwal/${item.id_jadwal}/verifikasi`)
+                              }
+                              icon={<CheckCircle size={15} />}
+                              label="Verif TUK"
+                              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                            />
+
+                            <ActionButton
+                              onClick={() =>
+                                navigate(`/tuk/jadwal/${item.id_jadwal}/validator`)
+                              }
+                              icon={<FileCheck size={15} />}
+                              label="MKVA"
+                              className="bg-purple-600 hover:bg-purple-700 text-white col-span-2 xl:col-span-1"
+                            />
                           </div>
                         )}
-                      </td>
+                      </div>
+                    </div>
+                  </div>
 
-                      {/* Skema */}
-                      <td className="p-4">
-                        <div className="font-semibold text-gray-900">
-                          {item.skema?.judul_skema || "-"}
-                        </div>
-                        {item.skema?.kode_skema && (
-                          <div className="text-sm text-gray-500">{item.skema.kode_skema}</div>
-                        )}
-                        <div className="text-sm font-medium text-gray-700 mt-2">
-                          👥 Kuota: <span className="text-orange-600">{item.kuota || 0}</span> orang
-                        </div>
-                      </td>
+                  <div className="px-5 lg:px-6 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                      ID Jadwal: {item.id_jadwal}
+                    </span>
 
-                      {/* ASESOR SUMMARY - NAMA + COUNT */}
-                      <td className="p-4">
-                        {renderAsesorSummary(item.asesorSummary || {})}
-                      </td>
+                    <button
+                      onClick={() =>
+                        item.status === "draft"
+                          ? null
+                          : navigate(`/tuk/jadwal/${item.id_jadwal}/asesor`)
+                      }
+                      disabled={item.status === "draft"}
+                      className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-all ${
+                        item.status === "draft"
+                          ? "text-slate-300 cursor-not-allowed"
+                          : "text-orange-500 hover:text-[#071E3D]"
+                      }`}
+                    >
+                      Kelola Detail
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-                                            {/* STATUS */}
-                      <td className="p-4">
-                        {getStatusBadge(item.status)}
-                      </td>
-
-                      {/* AKSI - Conditional Rendering */}
-                      <td className="p-4">
-                        {renderActionButtons(item)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {!loading && (
+            <div className="mt-6 text-right text-sm text-slate-400 font-bold">
+              Menampilkan{" "}
+              <span className="text-[#071E3D]">{filteredJadwal.length}</span>{" "}
+              dari <span className="text-[#071E3D]">{jadwal.length}</span> jadwal
             </div>
           )}
         </div>
+      </main>
 
-        {/* SUMMARY */}
-        {!loading && (
-          <div className="mt-6 text-sm text-gray-500 text-right">
-            Menampilkan {filteredJadwal.length} dari {jadwal.length} jadwal
-          </div>
-        )}
-      </div>
-
-      {/* MODAL DELETE */}
+      {/* Modal Delete */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🗑️</span>
+        <div className="fixed inset-0 bg-[#071E3D]/60 backdrop-blur-sm flex items-center justify-center z-[90] p-4">
+          <div className="bg-white rounded-[30px] p-8 w-full max-w-md shadow-2xl border border-slate-100">
+            <div className="text-center mb-7">
+              <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 className="text-red-500" size={28} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+
+              <h2 className="text-2xl font-black text-[#071E3D] mb-2">
                 Konfirmasi Penghapusan
               </h2>
-              <p className="text-gray-600">
-                Apakah Anda yakin ingin menghapus jadwal ini? 
+
+              <p className="text-slate-500 leading-relaxed">
+                Apakah Anda yakin ingin menghapus jadwal ini?
                 <br />
-                <strong className="text-red-600">Data akan hilang permanen</strong>
+                <strong className="text-red-500">
+                  Data akan hilang permanen.
+                </strong>
               </p>
             </div>
 
@@ -455,14 +570,15 @@ const ListJadwal = () => {
                   setShowModal(false);
                   setDeleteId(null);
                 }}
-                className="px-6 py-2.5 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                className="px-6 py-3 border border-slate-200 rounded-2xl hover:bg-slate-50 transition-colors font-black text-[#071E3D] text-xs uppercase tracking-widest"
               >
                 Batal
               </button>
+
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+                className="px-6 py-3 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all"
               >
                 {deleting ? "Menghapus..." : "Hapus Jadwal"}
               </button>
@@ -470,6 +586,42 @@ const ListJadwal = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const InfoCard = ({ label, children }) => {
+  return (
+    <div className="rounded-[22px] bg-slate-50 border border-slate-100 p-4">
+      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2">
+        {label}
+      </p>
+
+      {children}
+    </div>
+  );
+};
+
+const ActionButton = ({ onClick, icon, label, className = "" }) => {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm ${className}`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+};
+
+const AsesorItem = ({ label, names, extra, color }) => {
+  return (
+    <div className="leading-snug">
+      <span className={`font-black ${color}`}>{label}: </span>
+      <span className="font-medium">
+        {names?.join(", ")}
+        {extra > 0 && ` +${extra}`}
+      </span>
     </div>
   );
 };
