@@ -19,25 +19,52 @@ import {
   Hash,
   Calendar,
   Globe,
-  Building2,
   Phone,
   Mail,
   BadgeCheck,
 } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
 export default function ProfileView() {
   const [profile, setProfile] = useState(null);
+  const [wilayah, setWilayah] = useState({
+    provinsi: "",
+    kota: "",
+    kecamatan: "",
+    kelurahan: "",
+  });
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
+  const imageBase = API_BASE.replace("/api", "");
+
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  const normalizeList = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.data)) return payload.data;
+    if (Array.isArray(payload?.result)) return payload.result;
+    if (Array.isArray(payload?.items)) return payload.items;
+    return [];
+  };
+
+  const getNameFromList = (list, idOrName) => {
+    if (!idOrName) return "";
+
+    const found = list.find(
+      (item) =>
+        String(item.id) === String(idOrName) ||
+        String(item.name).toLowerCase() === String(idOrName).toLowerCase()
+    );
+
+    return found?.name || idOrName;
+  };
 
   const fetchProfile = async () => {
     try {
@@ -47,7 +74,12 @@ export default function ProfileView() {
         },
       });
 
-      setProfile(res.data?.data);
+      const data = res.data?.data || null;
+      setProfile(data);
+
+      if (data) {
+        await resolveWilayah(data);
+      }
     } catch (err) {
       console.error("Gagal ambil profile:", err);
     } finally {
@@ -55,17 +87,72 @@ export default function ProfileView() {
     }
   };
 
-  const BASE_URL = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
-const imageBase = BASE_URL.replace("/api", "");
+  const resolveWilayah = async (data) => {
+    try {
+      let provinsiNama = data.provinsi || data.provinsi_nama || "";
+      let kotaNama = data.kota || data.kota_nama || "";
+      let kecamatanNama = data.kecamatan || data.kecamatan_nama || "";
+      let kelurahanNama = data.kelurahan || data.kelurahan_nama || "";
+
+      const provinsiId = data.provinsi_id || data.id_provinsi;
+      const kotaId = data.kota_id || data.id_kota;
+      const kecamatanId = data.kecamatan_id || data.id_kecamatan;
+      const kelurahanId = data.kelurahan_id || data.id_kelurahan;
+
+      if (provinsiId) {
+        const provRes = await axios.get(`${API_BASE}/asesi/wilayah/provinsi`);
+        const provinsiList = normalizeList(provRes.data);
+        provinsiNama = getNameFromList(provinsiList, provinsiId);
+      }
+
+      if (provinsiId && kotaId) {
+        const kotaRes = await axios.get(`${API_BASE}/asesi/wilayah/kota/${provinsiId}`);
+        const kotaList = normalizeList(kotaRes.data);
+        kotaNama = getNameFromList(kotaList, kotaId);
+      }
+
+      if (kotaId && kecamatanId) {
+        const kecRes = await axios.get(`${API_BASE}/asesi/wilayah/kecamatan/${kotaId}`);
+        const kecamatanList = normalizeList(kecRes.data);
+        kecamatanNama = getNameFromList(kecamatanList, kecamatanId);
+      }
+
+      if (kecamatanId && kelurahanId) {
+        const kelRes = await axios.get(`${API_BASE}/asesi/wilayah/kelurahan/${kecamatanId}`);
+        const kelurahanList = normalizeList(kelRes.data);
+        kelurahanNama = getNameFromList(kelurahanList, kelurahanId);
+      }
+
+      setWilayah({
+        provinsi: provinsiNama || "-",
+        kota: kotaNama || "-",
+        kecamatan: kecamatanNama || "-",
+        kelurahan: kelurahanNama || "-",
+      });
+    } catch (err) {
+      console.error("Gagal resolve wilayah:", err);
+
+      setWilayah({
+        provinsi: data.provinsi || data.provinsi_nama || "-",
+        kota: data.kota || data.kota_nama || "-",
+        kecamatan: data.kecamatan || data.kecamatan_nama || "-",
+        kelurahan: data.kelurahan || data.kelurahan_nama || "-",
+      });
+    }
+  };
+
+  const getImageSrc = (path) => {
+    if (!path) return "";
+    if (path.startsWith("http")) return path;
+    return `${imageBase}/${path}`;
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
         <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center">
           <Loader2 className="animate-spin text-orange-500 mx-auto mb-5" size={44} />
-          <p className="text-[#071E3D] font-black text-lg">
-            Memuat Profile
-          </p>
+          <p className="text-[#071E3D] font-black text-lg">Memuat Profile</p>
           <p className="text-slate-400 text-sm mt-1 font-medium">
             Mohon tunggu sebentar...
           </p>
@@ -108,7 +195,6 @@ const imageBase = BASE_URL.replace("/api", "");
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
           <section className="relative overflow-hidden bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 lg:p-8 mb-6">
             <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-[90px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#071E3D]/5 rounded-full blur-[90px] pointer-events-none" />
@@ -153,7 +239,6 @@ const imageBase = BASE_URL.replace("/api", "");
           </section>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Profile Summary */}
             <aside className="xl:col-span-1">
               <div className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden sticky top-6">
                 <div className="relative bg-[#071E3D] p-8 text-center overflow-hidden">
@@ -163,7 +248,7 @@ const imageBase = BASE_URL.replace("/api", "");
                     <div className="mx-auto w-36 h-36 rounded-[36px] bg-white/10 border border-white/10 flex items-center justify-center p-2 mb-5">
                       {profile.foto_profil ? (
                         <img
-                          src={`${imageBase}/${profile.foto_profil}`}
+                          src={getImageSrc(profile.foto_profil)}
                           alt="Foto Profil"
                           className="w-full h-full rounded-[30px] object-cover"
                         />
@@ -185,16 +270,8 @@ const imageBase = BASE_URL.replace("/api", "");
                 </div>
 
                 <div className="p-6 space-y-4">
-                  <ReadonlyBox
-                    label="NIK"
-                    value={profile.nik || "-"}
-                    icon={<Hash size={18} />}
-                  />
-                  <ReadonlyBox
-                    label="Jenis Kelamin"
-                    value={profile.jenis_kelamin || "-"}
-                    icon={<User size={18} />}
-                  />
+                  <ReadonlyBox label="NIK" value={profile.nik || "-"} icon={<Hash size={18} />} />
+                  <ReadonlyBox label="Jenis Kelamin" value={profile.jenis_kelamin || "-"} icon={<User size={18} />} />
                   <ReadonlyBox
                     label="Tempat / Tanggal Lahir"
                     value={`${profile.tempat_lahir || "-"} / ${
@@ -204,39 +281,40 @@ const imageBase = BASE_URL.replace("/api", "");
                     }`}
                     icon={<Calendar size={18} />}
                   />
-                  <ReadonlyBox
-                    label="Kebangsaan"
-                    value={profile.kebangsaan || "-"}
-                    icon={<Globe size={18} />}
-                  />
+                  <ReadonlyBox label="Kebangsaan" value={profile.kebangsaan || "-"} icon={<Globe size={18} />} />
                 </div>
               </div>
             </aside>
 
-            {/* Details */}
             <section className="xl:col-span-2 space-y-6">
               <Card title="Alamat" icon={<MapPin size={22} />}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <InfoBox label="Alamat Lengkap" className="md:col-span-2">
                     {profile.alamat || "-"}
                   </InfoBox>
+
                   <InfoBox label="RT / RW">
                     {(profile.rt || "-") + " / " + (profile.rw || "-")}
                   </InfoBox>
+
                   <InfoBox label="Kode Pos">
                     {profile.kode_pos || "-"}
                   </InfoBox>
+
                   <InfoBox label="Provinsi">
-                    {profile.provinsi || "-"}
+                    {wilayah.provinsi || "-"}
                   </InfoBox>
+
                   <InfoBox label="Kota/Kabupaten">
-                    {profile.kota || "-"}
+                    {wilayah.kota || "-"}
                   </InfoBox>
+
                   <InfoBox label="Kecamatan">
-                    {profile.kecamatan || "-"}
+                    {wilayah.kecamatan || "-"}
                   </InfoBox>
-                  <InfoBox label="Kelurahan">
-                    {profile.kelurahan || "-"}
+
+                  <InfoBox label="Kelurahan/Desa">
+                    {wilayah.kelurahan || "-"}
                   </InfoBox>
                 </div>
               </Card>
@@ -344,9 +422,9 @@ const InfoBox = ({ label, children, className = "" }) => {
       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
         {label}
       </p>
-      <p className="text-sm font-black text-[#071E3D] leading-relaxed">
+      <div className="text-sm font-black text-[#071E3D] leading-relaxed">
         {children}
-      </p>
+      </div>
     </div>
   );
 };
