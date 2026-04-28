@@ -74,8 +74,21 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
   );
 
   const isActive = (path) => {
-    if (path === "/asesi") return location.pathname === "/asesi";
-    return location.pathname.startsWith(path);
+    const currentPath = location.pathname;
+
+    if (path === "/asesi") {
+      return currentPath === "/asesi";
+    }
+
+    if (path === "/asesi/jadwal") {
+      return currentPath === "/asesi/jadwal" || currentPath.startsWith("/asesi/jadwal/");
+    }
+
+    if (path === "/asesi/jadwal-saya") {
+      return currentPath === "/asesi/jadwal-saya" || currentPath.startsWith("/asesi/jadwal-saya/");
+    }
+
+    return currentPath === path || currentPath.startsWith(`${path}/`);
   };
 
   const handleClick = (path) => {
@@ -88,13 +101,11 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
     localStorage.removeItem("role");
     localStorage.removeItem("user");
     localStorage.removeItem("id_user");
-
     navigate("/login", { replace: true });
   };
 
   return (
     <>
-      {/* Mobile Toggle */}
       <button
         onClick={() => setIsOpen(true)}
         className="fixed top-4 left-4 z-[55] lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 shadow-lg text-[#071E3D] flex items-center justify-center"
@@ -102,7 +113,6 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
         <Menu size={22} />
       </button>
 
-      {/* Mobile Sidebar */}
       <AnimatePresence>
         {isOpen && (
           <>
@@ -136,7 +146,6 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar */}
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -154,14 +163,12 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
         />
       </aside>
 
-      {/* Spacer */}
       <div
         className={`hidden lg:block shrink-0 pointer-events-none transition-[width] duration-200 ease-linear ${
           isExpanded ? "w-72" : "w-24"
         }`}
       />
 
-      {/* Logout Modal */}
       <AnimatePresence>
         {showLogoutModal && (
           <motion.div
@@ -226,7 +233,6 @@ const SidebarContent = ({
 }) => {
   return (
     <>
-      {/* Header */}
       <div className="h-[120px] border-b border-slate-100 flex items-center shrink-0">
         <div className="w-24 h-full flex items-center justify-center shrink-0">
           <div className="w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center font-black text-xl">
@@ -257,7 +263,6 @@ const SidebarContent = ({
         )}
       </div>
 
-      {/* Menu */}
       <nav className="flex-1 overflow-y-auto py-4">
         <div className="space-y-1">
           {menus.map((item) => {
@@ -312,7 +317,6 @@ const SidebarContent = ({
         </div>
       </nav>
 
-      {/* Logout */}
       <div className="h-28 border-t border-slate-100 bg-slate-50/50 shrink-0 flex items-center">
         <div className="w-24 h-full flex items-center justify-center shrink-0">
           <button
