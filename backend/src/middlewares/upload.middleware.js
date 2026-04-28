@@ -47,8 +47,17 @@ const storage = multer.diskStorage({
     ROUTE KHUSUS TTD
     =====================================
     */
-    if (field === "ttd") {
+    else if (field === "ttd") {
       folder = path.join("uploads", "asesi", "ttd");
+    }
+
+    /*
+    =====================================
+    ROUTE KHUSUS FOTO TUK (FIX DI SINI)
+    =====================================
+    */
+    else if (field === "foto") {
+      folder = path.join("uploads", "tuk", "foto_profile");
     }
 
     ensureDir(folder);
@@ -76,14 +85,20 @@ const upload = multer({
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /pdf|jpeg|jpg|png/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
     const mimetype = allowedTypes.test(file.mimetype);
 
     if (mimetype && extname) {
       return cb(null, true);
     }
 
-    cb(new Error("File type not allowed. Only PDF, JPG, JPEG, PNG are permitted."));
+    cb(
+      new Error(
+        "File type not allowed. Only PDF, JPG, JPEG, PNG are permitted."
+      )
+    );
   },
 });
 
@@ -106,8 +121,11 @@ const uploadMiddleware = upload.fields([
   { name: "transkrip", maxCount: 1 },
   { name: "kk", maxCount: 1 },
   { name: "surat_kerja", maxCount: 1 },
-  { name: "foto_profil", maxCount: 1 },   // ✅
-  { name: "portofolio", maxCount: 1 },    // ✅
+  { name: "foto_profil", maxCount: 1 },
+  { name: "portofolio", maxCount: 1 },
+
+  // ✅ TAMBAHAN FOTO TUK
+  { name: "foto", maxCount: 1 },
 ]);
 
 module.exports = uploadMiddleware;
