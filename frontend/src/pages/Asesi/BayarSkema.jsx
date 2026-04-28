@@ -1,8 +1,16 @@
-// src/pages/asesi/BayarSkema.jsx
+// frontend/src/pages/asesi/BayarSkema.jsx
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
+import {
+  CreditCard,
+  Wallet,
+  Loader2,
+  CheckCircle,
+  AlertCircle
+} from "lucide-react";
 
 const BayarSkema = () => {
   const { id_skema } = useParams();
@@ -27,43 +35,35 @@ const BayarSkema = () => {
         const token = localStorage.getItem("token");
         if (!token) return navigate("/login");
 
-        // 1️⃣ Ambil detail skema & tujuan transfer
         const detailRes = await axios.get(`${API_BASE}/asesi/pembayaran/${id_skema}/detail`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const detailData = detailRes.data?.data;
-        if (!detailData) throw new Error("Data detail pembayaran tidak tersedia");
 
-        setSkemaJudul(detailData.skema || "");
-        setHarga(detailData.harga ?? 0);
+        const detailData = detailRes.data?.data;
+        setSkemaJudul(detailData.skema);
+        setHarga(detailData.harga);
         setTujuanTransfer(detailData.tujuan_transfer || []);
 
-        // 2️⃣ Ambil status pembayaran
         try {
           const statusRes = await axios.get(`${API_BASE}/asesi/pembayaran/${id_skema}/status`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          const statusData = statusRes.data?.data;
-          const status = statusData?.status || "belum bayar";
+
+          const status = statusRes.data?.data?.status || "belum bayar";
           setStatusPembayaran(status);
 
-          // Redirect jika sudah paid
           if (status === "paid") {
-            alert("Pembayaran sudah selesai. Anda bisa melanjutkan APL01.");
+            alert("Pembayaran selesai");
             navigate(`/asesi/apl01/${id_skema}`);
           }
-        } catch (statusErr) {
-          // Jika 404, anggap belum ada pembayaran
-          if (statusErr.response?.status === 404) {
-            setStatusPembayaran("belum bayar");
-          } else {
-            console.error(statusErr);
-            setError(statusErr.response?.data?.message || statusErr.message || "Gagal mengambil status pembayaran");
+        } catch (err) {
+          if (err.response?.status !== 404) {
+            setError("Gagal ambil status");
           }
         }
+
       } catch (err) {
-        console.error(err);
-        setError(err.response?.data?.message || err.message || "Gagal mengambil detail pembayaran");
+        setError("Gagal ambil data pembayaran");
       } finally {
         setLoading(false);
       }
@@ -76,103 +76,167 @@ const BayarSkema = () => {
     if (statusPembayaran === "pending") return;
 
     if (metode === "transfer_rekening" && !selectedTujuan) {
-      return alert("Pilih tujuan transfer terlebih dahulu");
+      return alert("Pilih tujuan transfer");
     }
-
-    if (metode === "tunai") setJalur("tunai");
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) return navigate("/login");
 
-      const body = {
-        id_skema,
-        metode_pembayaran: metode,
-        jalur_pembayaran: jalur,
-        id_tujuan_transfer: selectedTujuan || null,
-      };
-
-      const res = await axios.post(`${API_BASE}/asesi/pembayaran/submit`, body, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const struk = res.data?.data;
-      if (!struk) throw new Error("Respon pembayaran tidak valid");
-
-      alert(
-        `Berhasil membuat pembayaran!\n\nSkema: ${struk.skema}\nNominal: Rp ${Number(
-          struk.nominal
-        ).toLocaleString("id-ID")}\nMetode: ${struk.metode_pembayaran}\nInstruksi: ${struk.instruksi}`
+      const res = await axios.post(
+        `${API_BASE}/asesi/pembayaran/submit`,
+        {
+          id_skema,
+          metode_pembayaran: metode,
+          jalur_pembayaran: metode === "tunai" ? "tunai" : jalur,
+          id_tujuan_transfer: selectedTujuan || null,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
 
+      alert("Pembayaran berhasil dibuat");
       navigate(`/asesi/apl01/${id_skema}`);
+
     } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || err.message || "Terjadi kesalahan saat submit pembayaran");
+      alert("Gagal submit pembayaran");
     }
   };
 
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (error) return <div className="p-6 text-red-600">{error}</div>;
-  if (!skemaJudul) return <div className="p-6 text-red-600">Skema tidak ditemukan</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <Loader2 className="animate-spin text-orange-500" size={40} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="p-6 text-red-500">{error}</div>;
+  }
 
   return (
-    <div className="flex min-h-screen bg-[#FAFAFA]">
-      <SidebarAsesi isOpen={true} setIsOpen={() => {}} />
-      <div className="flex-1 p-6 md:p-8">
-        <h2 className="text-2xl font-bold text-[#071E3D] mb-4">Bayar Skema: {skemaJudul}</h2>
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <SidebarAsesi />
 
-        <p className="mb-2">Harga: Rp {Number(harga).toLocaleString("id-ID")}</p>
-        <p className="mb-4 font-semibold">Status Pembayaran: {statusPembayaran}</p>
+      <div className="flex-1 p-6 lg:p-10">
 
-        <div className="mb-4">
-          <label className="block mb-1 font-semibold">Metode Pembayaran</label>
-          <select
-            value={metode}
-            onChange={(e) => {
-              const val = e.target.value;
-              setMetode(val);
-              setJalur(val === "tunai" ? "tunai" : "");
-              if (val === "tunai") setSelectedTujuan("");
-            }}
-            className="border p-2 rounded w-full"
-          >
-            <option value="tunai">Tunai</option>
-            <option value="transfer_rekening">Transfer Rekening</option>
-          </select>
+        {/* HEADER */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-black text-[#071E3D]">
+            Pembayaran Skema
+          </h1>
+          <p className="text-gray-500">
+            Selesaikan pembayaran untuk melanjutkan asesmen
+          </p>
         </div>
 
-        {metode === "transfer_rekening" && (
-          <div className="mb-4">
-            <label className="block mb-1 font-semibold">Tujuan Transfer</label>
-            <select
-              value={selectedTujuan}
-              onChange={(e) => setSelectedTujuan(e.target.value)}
-              className="border p-2 rounded w-full"
-            >
-              <option value="">Pilih Tujuan</option>
-              {tujuanTransfer.map((t) => (
-                <option key={t.id_tujuan_transfer} value={t.id_tujuan_transfer}>
-                  {t.nama_bank} - {t.nomor_rekening} ({t.nama_pemilik})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        {/* CARD */}
+        <div className="bg-white/90 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-white/50 space-y-6">
 
-        <button
-          className={`px-4 py-2 rounded text-white ${
-            statusPembayaran === "pending"
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700"
-          }`}
-          onClick={handleSubmit}
-          disabled={statusPembayaran === "pending"}
-        >
-          {statusPembayaran === "pending"
-            ? "Pembayaran Sedang Diproses..."
-            : "Submit Pembayaran"}
-        </button>
+          {/* INFO */}
+          <div>
+            <p className="text-sm text-gray-500">Skema</p>
+            <p className="font-bold text-lg text-[#071E3D]">{skemaJudul}</p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500">Harga</p>
+            <p className="text-2xl font-black text-orange-500">
+              Rp {Number(harga).toLocaleString("id-ID")}
+            </p>
+          </div>
+
+          {/* STATUS */}
+          <div
+            className={`p-4 rounded-2xl flex justify-between items-center ${
+              statusPembayaran === "pending"
+                ? "bg-yellow-100 text-yellow-700"
+                : statusPembayaran === "paid"
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            <span className="font-semibold">
+              Status: {statusPembayaran}
+            </span>
+            {statusPembayaran === "paid" ? (
+              <CheckCircle />
+            ) : (
+              <AlertCircle />
+            )}
+          </div>
+
+          {/* METODE */}
+          <div>
+            <label className="block mb-2 font-semibold">
+              Metode Pembayaran
+            </label>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setMetode("tunai")}
+                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 ${
+                  metode === "tunai"
+                    ? "bg-orange-500 text-white"
+                    : "bg-white"
+                }`}
+              >
+                <Wallet />
+                Tunai
+              </button>
+
+              <button
+                onClick={() => setMetode("transfer_rekening")}
+                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 ${
+                  metode === "transfer_rekening"
+                    ? "bg-orange-500 text-white"
+                    : "bg-white"
+                }`}
+              >
+                <CreditCard />
+                Transfer
+              </button>
+            </div>
+          </div>
+
+          {/* TRANSFER */}
+          {metode === "transfer_rekening" && (
+            <div>
+              <label className="block mb-2 font-semibold">
+                Pilih Rekening
+              </label>
+              <select
+                value={selectedTujuan}
+                onChange={(e) => setSelectedTujuan(e.target.value)}
+                className="w-full p-3 border rounded-xl"
+              >
+                <option value="">Pilih Tujuan</option>
+                {tujuanTransfer.map((t) => (
+                  <option key={t.id_tujuan_transfer} value={t.id_tujuan_transfer}>
+                    {t.nama_bank} - {t.nomor_rekening}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* BUTTON */}
+          <button
+            onClick={handleSubmit}
+            disabled={statusPembayaran === "pending"}
+            className={`w-full py-4 rounded-2xl font-bold text-white shadow-lg ${
+              statusPembayaran === "pending"
+                ? "bg-gray-400"
+                : "bg-orange-500 hover:bg-orange-600"
+            }`}
+          >
+            {statusPembayaran === "pending"
+              ? "Menunggu Pembayaran..."
+              : "Submit Pembayaran"}
+          </button>
+
+        </div>
       </div>
     </div>
   );
