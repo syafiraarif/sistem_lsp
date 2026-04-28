@@ -16,8 +16,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_BASE;
-const PUBLIC_API = "http://localhost:3000/api/public";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
+const WILAYAH_API = `${API_BASE}/asesi/wilayah`;
 
 export default function ProfileEdit() {
   const [form, setForm] = useState({});
@@ -39,17 +39,31 @@ export default function ProfileEdit() {
     if (Array.isArray(payload?.data)) return payload.data;
     if (Array.isArray(payload?.result)) return payload.result;
     if (Array.isArray(payload?.items)) return payload.items;
-    if (Array.isArray(payload?.wilayah)) return payload.wilayah;
     return [];
+  };
+
+  const findByName = (list, name) => {
+    if (!name || !Array.isArray(list)) return null;
+
+    return list.find(
+      (item) =>
+        String(item.name || "").toLowerCase() ===
+        String(name || "").toLowerCase()
+    );
   };
 
   useEffect(() => {
     if (!token) return;
-    fetchProvinsi();
-    fetchProfile();
+
+    const init = async () => {
+      const provList = await fetchProvinsi();
+      await fetchProfile(provList);
+    };
+
+    init();
   }, []);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (initialProvinsiList = []) => {
     try {
       setError(null);
 
@@ -59,33 +73,74 @@ export default function ProfileEdit() {
 
       const data = res.data?.data || {};
 
-      const fixedData = {
+      let provinsiId = data.provinsi_id || data.id_provinsi || "";
+      let provinsiNama = data.provinsi || data.provinsi_nama || "";
+
+      if (!provinsiId && provinsiNama) {
+        const foundProv = findByName(initialProvinsiList, provinsiNama);
+        provinsiId = foundProv?.id || "";
+        provinsiNama = foundProv?.name || provinsiNama;
+      }
+
+      let kotaId = data.kota_id || data.id_kota || "";
+      let kotaNama = data.kota || data.kota_nama || "";
+      let kotaListResolved = [];
+
+      if (provinsiId) {
+        kotaListResolved = await fetchKota(provinsiId);
+        if (!kotaId && kotaNama) {
+          const foundKota = findByName(kotaListResolved, kotaNama);
+          kotaId = foundKota?.id || "";
+          kotaNama = foundKota?.name || kotaNama;
+        }
+      }
+
+      let kecamatanId = data.kecamatan_id || data.id_kecamatan || "";
+      let kecamatanNama = data.kecamatan || data.kecamatan_nama || "";
+      let kecamatanListResolved = [];
+
+      if (kotaId) {
+        kecamatanListResolved = await fetchKecamatan(kotaId);
+        if (!kecamatanId && kecamatanNama) {
+          const foundKec = findByName(kecamatanListResolved, kecamatanNama);
+          kecamatanId = foundKec?.id || "";
+          kecamatanNama = foundKec?.name || kecamatanNama;
+        }
+      }
+
+      let kelurahanId = data.kelurahan_id || data.id_kelurahan || "";
+      let kelurahanNama = data.kelurahan || data.kelurahan_nama || "";
+
+      if (kecamatanId) {
+        const kelurahanListResolved = await fetchKelurahan(kecamatanId);
+        if (!kelurahanId && kelurahanNama) {
+          const foundKel = findByName(kelurahanListResolved, kelurahanNama);
+          kelurahanId = foundKel?.id || "";
+          kelurahanNama = foundKel?.name || kelurahanNama;
+        }
+      }
+
+      setForm({
         ...data,
         tanggal_lahir: data.tanggal_lahir
           ? data.tanggal_lahir.split("T")[0]
           : "",
 
-        provinsi_id: data.provinsi_id || "",
-        provinsi_nama: data.provinsi || data.provinsi_nama || "",
+        provinsi_id: provinsiId,
+        provinsi_nama: provinsiNama,
 
-        kota_id: data.kota_id || "",
-        kota_nama: data.kota || data.kota_nama || "",
+        kota_id: kotaId,
+        kota_nama: kotaNama,
 
-        kecamatan_id: data.kecamatan_id || "",
-        kecamatan_nama: data.kecamatan || data.kecamatan_nama || "",
+        kecamatan_id: kecamatanId,
+        kecamatan_nama: kecamatanNama,
 
-        kelurahan_id: data.kelurahan_id || "",
-        kelurahan_nama: data.kelurahan || data.kelurahan_nama || "",
-      };
-
-      setForm(fixedData);
-
-      if (fixedData.provinsi_id) await fetchKota(fixedData.provinsi_id);
-      if (fixedData.kota_id) await fetchKecamatan(fixedData.kota_id);
-      if (fixedData.kecamatan_id) await fetchKelurahan(fixedData.kecamatan_id);
+        kelurahan_id: kelurahanId,
+        kelurahan_nama: kelurahanNama,
+      });
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError("Gagal mengambil data profile");
+      console.error("Fetch profile error:", err);
+      setError("Gagal mengambil data profile.");
     } finally {
       setLoading(false);
     }
@@ -93,56 +148,84 @@ export default function ProfileEdit() {
 
   const fetchProvinsi = async () => {
     try {
-      const res = await axios.get(`${PUBLIC_API}/provinsi`);
-      setProvinsiList(normalizeList(res.data));
+      const res = await axios.get(`${WILAYAH_API}/provinsi`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const list = normalizeList(res.data);
+      setProvinsiList(list);
+      return list;
     } catch (err) {
       console.error("Provinsi error:", err);
       setProvinsiList([]);
+      setError("Gagal memuat data provinsi.");
+      return [];
     }
   };
 
-  const fetchKota = async (id) => {
-    if (!id) {
+  const fetchKota = async (provinsiId) => {
+    if (!provinsiId) {
       setKotaList([]);
-      return;
+      return [];
     }
 
     try {
-      const res = await axios.get(`${PUBLIC_API}/kota/${id}`);
-      setKotaList(normalizeList(res.data));
+      const res = await axios.get(`${WILAYAH_API}/kota/${provinsiId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const list = normalizeList(res.data);
+      setKotaList(list);
+      return list;
     } catch (err) {
       console.error("Kota error:", err);
       setKotaList([]);
+      setError("Gagal memuat data kota/kabupaten.");
+      return [];
     }
   };
 
-  const fetchKecamatan = async (id) => {
-    if (!id) {
+  const fetchKecamatan = async (kotaId) => {
+    if (!kotaId) {
       setKecamatanList([]);
-      return;
+      return [];
     }
 
     try {
-      const res = await axios.get(`${PUBLIC_API}/kecamatan/${id}`);
-      setKecamatanList(normalizeList(res.data));
+      const res = await axios.get(`${WILAYAH_API}/kecamatan/${kotaId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const list = normalizeList(res.data);
+      setKecamatanList(list);
+      return list;
     } catch (err) {
       console.error("Kecamatan error:", err);
       setKecamatanList([]);
+      setError("Gagal memuat data kecamatan.");
+      return [];
     }
   };
 
-  const fetchKelurahan = async (id) => {
-    if (!id) {
+  const fetchKelurahan = async (kecamatanId) => {
+    if (!kecamatanId) {
       setKelurahanList([]);
-      return;
+      return [];
     }
 
     try {
-      const res = await axios.get(`${PUBLIC_API}/kelurahan/${id}`);
-      setKelurahanList(normalizeList(res.data));
+      const res = await axios.get(`${WILAYAH_API}/kelurahan/${kecamatanId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const list = normalizeList(res.data);
+      setKelurahanList(list);
+      return list;
     } catch (err) {
       console.error("Kelurahan error:", err);
       setKelurahanList([]);
+      setError("Gagal memuat data kelurahan/desa.");
+      return [];
     }
   };
 
@@ -264,6 +347,11 @@ export default function ProfileEdit() {
 
         tahun_lulus: form.tahun_lulus ? parseInt(form.tahun_lulus) : null,
 
+        provinsi_id: form.provinsi_id || null,
+        kota_id: form.kota_id || null,
+        kecamatan_id: form.kecamatan_id || null,
+        kelurahan_id: form.kelurahan_id || null,
+
         provinsi: form.provinsi_nama || null,
         kota: form.kota_nama || null,
         kecamatan: form.kecamatan_nama || null,
@@ -286,10 +374,11 @@ export default function ProfileEdit() {
       });
 
       setSuccess("Profil berhasil disimpan.");
-      fetchProfile();
+      const provList = provinsiList.length ? provinsiList : await fetchProvinsi();
+      fetchProfile(provList);
     } catch (err) {
-      console.error("Update error:", err);
-      setError(err.response?.data?.message || "Gagal menyimpan data");
+      console.error("Update profile error:", err);
+      setError(err.response?.data?.message || "Gagal menyimpan data.");
     } finally {
       setSaving(false);
     }
@@ -299,7 +388,10 @@ export default function ProfileEdit() {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
         <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center">
-          <Loader2 className="animate-spin text-orange-500 mx-auto mb-5" size={44} />
+          <Loader2
+            className="animate-spin text-orange-500 mx-auto mb-5"
+            size={44}
+          />
           <p className="text-[#071E3D] font-black text-lg">Memuat Profile</p>
           <p className="text-slate-400 text-sm mt-1 font-medium">
             Mohon tunggu sebentar...
@@ -348,7 +440,11 @@ export default function ProfileEdit() {
                     : "bg-orange-500 hover:bg-[#071E3D] shadow-orange-500/20"
                 }`}
               >
-                {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {saving ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Save size={18} />
+                )}
                 {saving ? "Menyimpan..." : "Simpan Perubahan"}
                 {!saving && <ChevronRight size={17} />}
               </button>
@@ -361,23 +457,69 @@ export default function ProfileEdit() {
           <div className="space-y-6">
             <Card title="Data Pribadi" icon={<User size={22} />}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <Input label="NIK" name="nik" form={form} handleChange={handleChange} />
-                <Input label="Nama Lengkap" name="nama_lengkap" form={form} handleChange={handleChange} />
-                <SelectJenisKelamin label="Jenis Kelamin" name="jenis_kelamin" form={form} handleChange={handleChange} />
-                <Input label="Tempat Lahir" name="tempat_lahir" form={form} handleChange={handleChange} />
-                <Input label="Tanggal Lahir" name="tanggal_lahir" type="date" form={form} handleChange={handleChange} />
-                <Input label="Kebangsaan" name="kebangsaan" form={form} handleChange={handleChange} />
+                <Input
+                  label="NIK"
+                  name="nik"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Nama Lengkap"
+                  name="nama_lengkap"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <SelectJenisKelamin
+                  label="Jenis Kelamin"
+                  name="jenis_kelamin"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Tempat Lahir"
+                  name="tempat_lahir"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Tanggal Lahir"
+                  name="tanggal_lahir"
+                  type="date"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Kebangsaan"
+                  name="kebangsaan"
+                  form={form}
+                  handleChange={handleChange}
+                />
               </div>
             </Card>
 
             <Card title="Alamat Lengkap" icon={<MapPin size={22} />}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="md:col-span-2">
-                  <TextArea label="Alamat" name="alamat" form={form} handleChange={handleChange} />
+                  <TextArea
+                    label="Alamat"
+                    name="alamat"
+                    form={form}
+                    handleChange={handleChange}
+                  />
                 </div>
 
-                <Input label="RT" name="rt" form={form} handleChange={handleChange} />
-                <Input label="RW" name="rw" form={form} handleChange={handleChange} />
+                <Input
+                  label="RT"
+                  name="rt"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="RW"
+                  name="rw"
+                  form={form}
+                  handleChange={handleChange}
+                />
 
                 <SelectWilayah
                   label="Provinsi"
@@ -387,7 +529,7 @@ export default function ProfileEdit() {
                 />
 
                 <SelectWilayah
-                  label="Kota"
+                  label="Kota/Kabupaten"
                   list={kotaList}
                   value={form.kota_nama}
                   onChange={handleKotaChange}
@@ -403,37 +545,98 @@ export default function ProfileEdit() {
                 />
 
                 <SelectWilayah
-                  label="Kelurahan"
+                  label="Kelurahan/Desa"
                   list={kelurahanList}
                   value={form.kelurahan_nama}
                   onChange={handleKelurahanChange}
                   disabled={!form.kecamatan_id}
                 />
 
-                <Input label="Kode Pos" name="kode_pos" form={form} handleChange={handleChange} />
+                <Input
+                  label="Kode Pos"
+                  name="kode_pos"
+                  form={form}
+                  handleChange={handleChange}
+                />
               </div>
             </Card>
 
             <Card title="Pendidikan" icon={<GraduationCap size={22} />}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <Input label="Pendidikan Terakhir" name="pendidikan_terakhir" form={form} handleChange={handleChange} />
-                <Input label="Universitas" name="universitas" form={form} handleChange={handleChange} />
-                <Input label="Jurusan" name="jurusan" form={form} handleChange={handleChange} />
-                <Input label="Tahun Lulus" name="tahun_lulus" type="number" form={form} handleChange={handleChange} />
+                <Input
+                  label="Pendidikan Terakhir"
+                  name="pendidikan_terakhir"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Universitas"
+                  name="universitas"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Jurusan"
+                  name="jurusan"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Tahun Lulus"
+                  name="tahun_lulus"
+                  type="number"
+                  form={form}
+                  handleChange={handleChange}
+                />
               </div>
             </Card>
 
             <Card title="Pekerjaan" icon={<BriefcaseBusiness size={22} />}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <Input label="Pekerjaan" name="pekerjaan" form={form} handleChange={handleChange} />
-                <Input label="Jabatan" name="jabatan" form={form} handleChange={handleChange} />
-                <Input label="Nama Perusahaan" name="nama_perusahaan" form={form} handleChange={handleChange} />
-                <Input label="Telepon Perusahaan" name="telp_perusahaan" form={form} handleChange={handleChange} />
-                <Input label="Fax Perusahaan" name="fax_perusahaan" form={form} handleChange={handleChange} />
-                <Input label="Email Perusahaan" name="email_perusahaan" form={form} handleChange={handleChange} />
+                <Input
+                  label="Pekerjaan"
+                  name="pekerjaan"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Jabatan"
+                  name="jabatan"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Nama Perusahaan"
+                  name="nama_perusahaan"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Telepon Perusahaan"
+                  name="telp_perusahaan"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Fax Perusahaan"
+                  name="fax_perusahaan"
+                  form={form}
+                  handleChange={handleChange}
+                />
+                <Input
+                  label="Email Perusahaan"
+                  name="email_perusahaan"
+                  form={form}
+                  handleChange={handleChange}
+                />
 
                 <div className="md:col-span-2">
-                  <TextArea label="Alamat Perusahaan" name="alamat_perusahaan" form={form} handleChange={handleChange} />
+                  <TextArea
+                    label="Alamat Perusahaan"
+                    name="alamat_perusahaan"
+                    form={form}
+                    handleChange={handleChange}
+                  />
                 </div>
               </div>
             </Card>
@@ -449,7 +652,11 @@ export default function ProfileEdit() {
                     : "bg-orange-500 hover:bg-[#071E3D] shadow-orange-500/20"
                 }`}
               >
-                {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {saving ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Save size={18} />
+                )}
                 {saving ? "Menyimpan..." : "Simpan Perubahan"}
               </button>
             </div>
@@ -473,7 +680,9 @@ const AlertMessage = ({ type, text }) => {
     >
       {isSuccess ? <CheckCircle size={22} /> : <AlertCircle size={22} />}
       <div>
-        <p className="font-black">{isSuccess ? "Berhasil" : "Terjadi Kesalahan"}</p>
+        <p className="font-black">
+          {isSuccess ? "Berhasil" : "Terjadi Kesalahan"}
+        </p>
         <p className="text-sm font-medium mt-1">{text}</p>
       </div>
     </div>
