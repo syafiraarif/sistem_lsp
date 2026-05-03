@@ -1,114 +1,213 @@
-const Skema = require("../../models/skema.model");
-const SkemaPersyaratan = require("../../models/skemaPersyaratan.model");
-const Skkni = require("../../models/skkni.model");
-const UnitKompetensi = require("../../models/unitKompetensi.model");
-const AplikasiAsesmen = require("../../models/apl01Asesmen.model");
-const Pembayaran = require("../../models/pembayaran.model");  
-const response = require("../../utils/response.util");
+const {
+  Apl01Asesmen,
+  Apl01Dokumen,
+  PesertaJadwal,
+  Jadwal,
+  Skema,
+  Tuk,
+  Persyaratan,
+  SkemaPersyaratan
+} = require("../../models");
 
-exports.getSkema = async (req, res) => {
+exports.getFormApl01 = async (req, res) => {
   try {
-    const data = await Skema.findAll({ where: { status: "aktif" } });
-    response.success(res, "List skema aktif", data);
-  } catch (err) {
-    response.error(res, err.message);
-  }
-};
+    const { id_peserta } = req.params;
 
-exports.getPersyaratanBySkema = async (req, res) => {
-  try {
-    const { id_skema } = req.params;
-    const data = await SkemaPersyaratan.findAll({ where: { id_skema } });
-    response.success(res, "Persyaratan skema", data);
-  } catch (err) {
-    response.error(res, err.message);
-  }
-};
-
-exports.getSkkni = async (req, res) => {
-  try {
-    const data = await Skkni.findAll();
-    response.success(res, "List SKKNI", data);
-  } catch (err) {
-    response.error(res, err.message);
-  }
-};
-
-exports.getUnitKompetensiBySkkni = async (req, res) => {
-  try {
-    const { id_skkni } = req.params;
-    const data = await UnitKompetensi.findAll({ where: { id_skkni } });
-    response.success(res, "Unit kompetensi", data);
-  } catch (err) {
-    response.error(res, err.message);
-  }
-};
-
-exports.submitAplikasi = async (req, res) => {
-  try {
-    const { id_skema, selected_persyaratan, dokumen_tambahan, tujuan_asesmen, tujuan_asesmen_lainnya, selected_units } = req.body;
-    const files = req.files;
-
-    if (!id_skema || !tujuan_asesmen) {
-      return response.error(res, "ID skema dan tujuan asesmen wajib diisi", 400);
-    }
-
-    const pembayaran = await Pembayaran.findOne({
+    const peserta = await PesertaJadwal.findByPk(id_peserta, {
       include: [
         {
-          model: AplikasiAsesmen,
-          where: { id_user: req.user.id_user, id_skema, status: ["draft", "submitted"] },
-          required: true
+          model: Jadwal,
+          include: [
+            { model: Skema, as: "skema" },
+            { model: Tuk, as: "tuk" }
+          ]
         }
-      ],
-      where: { status: "paid" }
+      ]
     });
-    if (!pembayaran) {
-      return response.error(res, "Pembayaran untuk skema ini belum dilakukan atau belum dikonfirmasi. Selesaikan pembayaran terlebih dahulu.", 403);
+
+    if (!peserta) {
+      return res.status(404).json({ message: "Peserta tidak ditemukan" });
     }
 
-    let dokumenPaths = [];
-    if (files.dokumen_tambahan) {
-      files.dokumen_tambahan.forEach((file, index) => {
-        dokumenPaths.push({
-          file_path: file.path,
-          nomor_dokumen: req.body[`nomor_dokumen_${index}`] || null,
-          tanggal_dokumen: req.body[`tanggal_dokumen_${index}`] || null
-        });
+    // ambil persyaratan sesuai skema
+    const persyaratan = await SkemaPersyaratan.findAll({
+      where: { id_skema: peserta.Jadwal.id_skema },
+      include: [{ model: Persyaratan }]
+    });
+
+    return res.json({
+      peserta,
+      persyaratan
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Gagal ambil form APL01" });
+  }
+};
+
+exports.createApl01 = async (req, res) => {
+  try {
+    const {
+      id_peserta,
+      tujuan_asesmen,
+      tujuan_lainnya
+    } = req.body;
+
+    // ambil data peserta
+    const peserta = await PesertaJadwal.findByPk(id_peserta);
+
+    if (!peserta) {
+      return res.status(404).json({
+        message: "Peserta tidak ditemukan"
       });
     }
 
-    let tandaTanganPath = null;
-    if (files.tanda_tangan && files.tanda_tangan[0]) {
-      tandaTanganPath = files.tanda_tangan[0].path;
-    }
-
-    const aplikasi = await AplikasiAsesmen.create({
-      id_user: req.user.id_user,
-      id_skema,
-      selected_persyaratan: selected_persyaratan ? JSON.parse(selected_persyaratan) : [],
-      dokumen_tambahan: dokumenPaths,
-      tujuan_asesmen,
-      tujuan_asesmen_lainnya: tujuan_asesmen === "Lainnya" ? tujuan_asesmen_lainnya : null,
-      selected_units: selected_units ? JSON.parse(selected_units) : [],
-      tanda_tangan: tandaTanganPath,
-      status: "submitted"
+    // cek sudah ada belum
+    const existing = await Apl01Asesmen.findOne({
+      where: { id_peserta }
     });
 
-    response.success(res, "Aplikasi asesmen berhasil disubmit", aplikasi);
-  } catch (err) {
-    response.error(res, err.message);
+    if (existing) {
+      return res.status(400).json({
+        message: "APL01 sudah dibuat"
+      });
+    }
+
+    const apl01 = await Apl01Asesmen.create({
+      id_peserta,
+      id_jadwal: peserta.id_jadwal,
+      id_skema: peserta.id_skema || null,
+      tujuan_asesmen,
+      tujuan_lainnya,
+      status: "draft"
+    });
+
+    res.json({
+      message: "APL01 berhasil dibuat",
+      data: apl01
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Gagal membuat APL01"
+    });
   }
 };
 
-exports.getAplikasi = async (req, res) => {
+
+exports.uploadDokumenApl01 = async (req, res) => {
   try {
-    const data = await AplikasiAsesmen.findAll({
-      where: { id_user: req.user.id_user },
-      include: [{ model: Skema, as: "skema" }]
+    const {
+      id_apl01,
+      id_persyaratan,
+      nomor_dokumen,
+      tanggal_dokumen
+    } = req.body;
+
+    if (!req.files || !req.files.file_dokumen) {
+      return res.status(400).json({
+        message: "File wajib diupload"
+      });
+    }
+
+    const filePath = req.files.file_dokumen[0].path;
+
+    const dokumen = await Apl01Dokumen.create({
+      id_apl01,
+      id_persyaratan,
+      nomor_dokumen,
+      tanggal_dokumen,
+      file_path: filePath
     });
-    response.success(res, "Aplikasi asesi", data);
-  } catch (err) {
-    response.error(res, err.message);
+
+    res.json({
+      message: "Dokumen berhasil diupload",
+      data: dokumen
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Gagal upload dokumen"
+    });
+  }
+};
+
+
+exports.getApl01 = async (req, res) => {
+  try {
+    const { id_peserta } = req.params;
+
+    const apl01 = await Apl01Asesmen.findOne({
+      where: { id_peserta },
+      include: [
+        {
+          model: Apl01Dokumen,
+          include: [
+            {
+              model: Persyaratan
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!apl01) {
+      return res.status(404).json({
+        message: "APL01 belum dibuat"
+      });
+    }
+
+    res.json({
+      data: apl01
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Gagal ambil data APL01"
+    });
+  }
+};
+
+
+exports.submitFinalApl01 = async (req, res) => {
+  try {
+    const { id_apl01 } = req.params;
+
+    const apl01 = await Apl01Asesmen.findByPk(id_apl01);
+
+    if (!apl01) {
+      return res.status(404).json({
+        message: "APL01 tidak ditemukan"
+      });
+    }
+
+    // cek semua dokumen wajib sudah ada
+    const dokumen = await Apl01Dokumen.findAll({
+      where: { id_apl01 }
+    });
+
+    if (dokumen.length === 0) {
+      return res.status(400).json({
+        message: "Dokumen belum diupload"
+      });
+    }
+
+    await apl01.update({
+      status: "submit"
+    });
+
+    res.json({
+      message: "APL01 berhasil disubmit"
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Gagal submit APL01"
+    });
   }
 };

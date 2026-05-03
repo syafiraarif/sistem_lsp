@@ -1,41 +1,30 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const FrAk06 = sequelize.define("fr_ak06", {
-  id: {
+const Apl02Detail = sequelize.define("apl02_detail", {
+  id_detail: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
 
-  id_jadwal: {
+  id_apl02: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
 
-  id_asesor: {
+  id_elemen: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
 
-  rekomendasi_1: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-
-  rekomendasi_2: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-
-  komentar: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-
-  ttd_asesor: {
-    type: DataTypes.STRING(255),
+  kompeten: {
+    type: DataTypes.ENUM("K", "BK"),
     allowNull: false
+  },
+
+  catatan: {
+    type: DataTypes.TEXT
   },
 
   created_at: {
@@ -44,8 +33,8 @@ const FrAk06 = sequelize.define("fr_ak06", {
   }
 
 }, {
-  tableName: "fr_ak06",
+  tableName: "apl02_detail",
   timestamps: false
 });
 
-module.exports = FrAk06;
+module.exports = Apl02Detail;

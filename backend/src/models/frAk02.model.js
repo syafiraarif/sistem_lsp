@@ -1,79 +1,73 @@
-// frAk02.model.js
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const FrAk02 = sequelize.define('FrAk02', {
-  id_fr_ak_02: {
+const FrAk02 = sequelize.define("fr_ak02", {
+  id_fr_ak02: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true,
-    field: 'id_fr_ak_02'
+    autoIncrement: true
   },
-  id_peserta: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
+
   id_jadwal: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: false
   },
-  id_skema: {
+
+  id_peserta: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: false
   },
-  id_user_asesor: {
+
+  id_asesor: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: false
   },
-  nama_asesi: {
-    type: DataTypes.STRING(150),
-    allowNull: false,
-  },
-  nama_asesor: {
-    type: DataTypes.STRING(255),
-    allowNull: false,
-  },
-  skema_sertifikasi: {
-    type: DataTypes.STRING(255),
-    allowNull: false,
-  },
+
   tanggal_mulai: {
-    type: DataTypes.DATE,
-    allowNull: false,
+    type: DataTypes.DATEONLY,
+    allowNull: true
   },
+
   tanggal_selesai: {
-    type: DataTypes.DATE,
-    allowNull: false,
+    type: DataTypes.DATEONLY,
+    allowNull: true
   },
-  unit_kompetensi: {
-    type: DataTypes.JSON,
-    allowNull: false,
+
+  rekomendasi: {
+    type: DataTypes.ENUM("kompeten", "belum_kompeten"),
+    allowNull: true
   },
-  rekomendasi_hasil: {
-    type: DataTypes.ENUM('kompeten', 'belum_kompeten'),
-    allowNull: false,
-  },
+
   tindak_lanjut: {
     type: DataTypes.TEXT,
-    allowNull: true,
+    allowNull: true
   },
+
   komentar_asesor: {
     type: DataTypes.TEXT,
-    allowNull: true,
+    allowNull: true
   },
-  ttd_asesor_confirmed: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
+
+  ttd_asesor: {
+    type: DataTypes.STRING(255),
+    allowNull: false
   },
-  ttd_asesor_confirmed_at: {
+
+  created_at: {
     type: DataTypes.DATE,
-    allowNull: true,
-  },
+    defaultValue: DataTypes.NOW
+  }
+
 }, {
-  tableName: 'fr_ak_02',
-  timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
+  tableName: "fr_ak02",
+  timestamps: false,
+
+  indexes: [
+    {
+      unique: true,
+      fields: ["id_jadwal", "id_peserta"] // 🔥 anti double submit
+    }
+  ]
 });
 
 module.exports = FrAk02;

@@ -1,41 +1,41 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const FrAk06 = sequelize.define("fr_ak06", {
-  id: {
+const Apl01Dokumen = sequelize.define("apl01_dokumen", {
+  id_dokumen: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
 
-  id_jadwal: {
+  id_apl01: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
 
-  id_asesor: {
+  id_persyaratan: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
 
-  rekomendasi_1: {
-    type: DataTypes.TEXT,
+  nomor_dokumen: {
+    type: DataTypes.STRING(100),
     allowNull: true
   },
 
-  rekomendasi_2: {
-    type: DataTypes.TEXT,
+  tanggal_dokumen: {
+    type: DataTypes.DATEONLY,
     allowNull: true
   },
 
-  komentar: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-
-  ttd_asesor: {
+  file_path: {
     type: DataTypes.STRING(255),
     allowNull: false
+  },
+
+  status: {
+    type: DataTypes.ENUM("pending", "disetujui", "ditolak"),
+    defaultValue: "pending"
   },
 
   created_at: {
@@ -44,8 +44,8 @@ const FrAk06 = sequelize.define("fr_ak06", {
   }
 
 }, {
-  tableName: "fr_ak06",
+  tableName: "apl01_dokumen",
   timestamps: false
 });
 
-module.exports = FrAk06;
+module.exports = Apl01Dokumen;

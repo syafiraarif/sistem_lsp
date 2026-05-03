@@ -1,37 +1,37 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-// FR.AK.07 Main Table
-const FrAk07 = sequelize.define("fr_ak07", {
-  id_fr_ak07: {
+// FR.AK.07 Detail A (Checklist 1-8)
+const FrAk07DetailA = sequelize.define("fr_ak07_detailA", {
+  id_fr_ak07_detailA: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
     allowNull: false,
   },
-  id_jadwal: {
+  id_fr_ak07: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-  id_asesor: {
-    type: DataTypes.INTEGER,
+  nomor: {
+    type: DataTypes.STRING(10),
     allowNull: false,
   },
-  id_asesi: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  potensi_asesi: {
+  aspek: {
     type: DataTypes.STRING(255),
     allowNull: false,
   },
-  ttd_asesor: {
+  butuh_penyesuaian: {
     type: DataTypes.STRING(255),
     allowNull: true,
   },
+  keterangan: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
 }, {
-  tableName: "fr_ak07",
-  timestamps: true,  // Automatically add createdAt and updatedAt
+  tableName: "fr_ak07_detailA",
+  timestamps: true,
 });
 
-module.exports = FrAk07;
+module.exports = FrAk07DetailA;
