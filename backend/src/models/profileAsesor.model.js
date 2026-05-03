@@ -33,7 +33,11 @@ const ProfileAsesor = sequelize.define("profile_asesor", {
 
   status_asesor: DataTypes.ENUM("aktif","nonaktif"),
 
-  ttd_path: DataTypes.STRING(255)
+  ttd_path: DataTypes.STRING(255),
+
+  // ✅ TAMBAHAN BARU
+  foto_profil: DataTypes.STRING(255)
+
 }, {
   tableName: "profile_asesor",
   timestamps: false
