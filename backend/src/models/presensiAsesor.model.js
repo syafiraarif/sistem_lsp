@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const FrAk06 = sequelize.define("fr_ak06", {
-  id: {
+const PresensiAsesor = sequelize.define("presensi_asesor", {
+  id_presensi: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
@@ -13,27 +13,17 @@ const FrAk06 = sequelize.define("fr_ak06", {
     allowNull: false
   },
 
-  id_asesor: {
+  id_user: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
 
-  rekomendasi_1: {
-    type: DataTypes.TEXT,
-    allowNull: true
+  waktu_presensi: {
+    type: DataTypes.DATE,
+    allowNull: false
   },
 
-  rekomendasi_2: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-
-  komentar: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-
-  ttd_asesor: {
+  ttd_path: {
     type: DataTypes.STRING(255),
     allowNull: false
   },
@@ -44,8 +34,15 @@ const FrAk06 = sequelize.define("fr_ak06", {
   }
 
 }, {
-  tableName: "fr_ak06",
-  timestamps: false
+  tableName: "presensi_asesor",
+  timestamps: false,
+
+  indexes: [
+    {
+      unique: true,
+      fields: ["id_jadwal", "id_user"] // 🔥 sesuai UNIQUE KEY di SQL
+    }
+  ]
 });
 
-module.exports = FrAk06;
+module.exports = PresensiAsesor;

@@ -1,213 +1,280 @@
-const { Mkva, JadwalAsesor, Jadwal, Skema, Tuk, User, PesertaJadwal } = require("../../models");
+const { 
+  Mkva, 
+  MkvaDetail, 
+  JadwalAsesor, 
+  Jadwal, 
+  Skema, 
+  Tuk, 
+  PesertaJadwal 
+} = require("../../models");
+
 const response = require("../../utils/response.util");
-const PDFDocument = require('pdfkit');
+const PDFDocument = require("pdfkit");
 
-const fmt = (val) => val ? JSON.parse(val).join(', ') : '-';
-
-const periodeLabel = (val) => ({
-  'sebelum_asesmen': 'Sebelum Asesmen',
-  'pada_saat_asesmen': 'Pada Saat Asesmen', 
-  'setelah_asesmen': 'Setelah Asesmen'
-}[val] || val);
-
-const options = {
-  periode: [
-    { value: 'sebelum_asesmen', label: 'Sebelum Asesmen' },
-    { value: 'pada_saat_asesmen', label: 'Pada Saat Asesmen' },
-    { value: 'setelah_asesmen', label: 'Setelah Asesmen' }
-  ],
-  tujuan_fokus_validasi: ['Bagian dari proses penjaminan mutu organisasi', 'Mengantisipasi risiko', 'Memenuhi persyaratan BNSP', 'Memastikan kesesuaian bukti-bukti', 'Meningkatkan kualitas asesmen', 'Mengevaluasi kualitas perangkat asesmen'],
-  konteks_validasi: ['Internal organisasi', 'Eksternal organisasi', 'Proses lisensi/re lisensi', 'Dengan kolega asesor', 'Kolega dari organisasi pelatihan atau asesmen'],
-  pendekatan_validasi: ['Panel asesmen', 'Pertemuan moderasi', 'Mengkaji perangkat asesmen', 'Acuan pembanding', 'Pengujian lapangan dan uji coba perangkat asesmen', 'Umpan balik dari klien'],
-  acuan_pembanding: ['Standar Kompetensi', 'SOP/IK', 'Manual Instruction/book', 'Standar Kinerja'],
-  dokumen_terkait: ['Skema sertifikasi', 'SKKNI/SK3/SKI', 'Perangkat asesmen', 'Peraturan/Pedoman'],
-  keterampilan_komunikasi: ['PRO AKTIF', 'ACTIVE LISTENING'],
-  aturan_bukti: [
-    { value: 'V', label: 'Valid (Sahih)' }, { value: 'A', label: 'Authentic (Asli)' },
-    { value: 'T', label: 'Current (Terkini)' }, { value: 'M', label: 'Sufficient (Memadai)' }
-  ],
-  prinsip_asesmen: [
-    { value: 'V', label: 'Valid' }, { value: 'R', label: 'Reliable (Dapat Dipercaya)' },
-    { value: 'F', label: 'Fair (Adil)' }, { value: 'F', label: 'Flexible (Fleksibel)' }
-  ]
-};
-
-exports.getJadwalAsesor = async (req, res) => {
+// ==============================
+// GET JADWAL MKVA
+// ==============================
+exports.getJadwalMkva = async (req, res) => {
   try {
     const id_user = req.user.id_user;
-    const jadwalAsesors = await JadwalAsesor.findAll({
-      where: { id_user, jenis_tugas: 'validator_mkva' },
-      include: [{ model: Jadwal, as: 'jadwal', include: [{ model: Skema, as: 'skema' }, { model: Tuk, as: 'tuk' }] }]
+
+    const data = await JadwalAsesor.findAll({
+      where: { id_user, jenis_tugas: "validator_mkva", status: "aktif" },
+      include: [{
+        model: Jadwal,
+        as: "jadwal",
+        include: [
+          { model: Skema, as: "skema" },
+          { model: Tuk, as: "tuk" }
+        ]
+      }]
     });
-    
-    if (!jadwalAsesors.length) return response.success(res, "Tidak ada jadwal MKVA", []);
-    
-    const jadwalList = await Promise.all(jadwalAsesors.map(async (ja) => {
+
+    const result = await Promise.all(data.map(async (ja) => {
       const j = ja.jadwal;
-      const count = await PesertaJadwal.count({ where: { id_jadwal: j.id_jadwal } });
+
+      const totalAsesi = await PesertaJadwal.count({
+        where: { id_jadwal: j.id_jadwal }
+      });
+
       return {
         id_jadwal: j.id_jadwal,
-        nama_kegiatan: `Jadwal ${j.periode_bulan} ${j.tahun}`,
-        tanggal: `${new Date(j.tgl_awal).toLocaleDateString('id-ID')} Pukul: ${j.jam || 'N/A'}`,
-        tempat: j.tuk?.nama_tuk || 'N/A',
-        skema: `${j.skema?.judul_skema} (${j.skema?.kode_skema})`,
-        peserta_terjadwal: `${count} Asesi`,
-        actions: count > 0 ? ['input_mkva', 'download_surat_tugas'] : []
+        nama_kegiatan: j.nama_kegiatan,
+        skema: j.skema?.judul_skema,
+        tanggal: j.tgl_awal,
+        tempat: j.tuk?.nama_tuk,
+        total_asesi: totalAsesi,
+        boleh_mkva: totalAsesi > 0
       };
     }));
-    
-    response.success(res, "Daftar jadwal MKVA", jadwalList);
-  } catch (err) { response.error(res, err.message); }
+
+    return response.success(res, "Daftar jadwal MKVA", result);
+
+  } catch (err) {
+    return response.error(res, err.message);
+  }
 };
 
-exports.getFormData = async (req, res) => {
+// ==============================
+// GET DETAIL MKVA
+// ==============================
+exports.getDetailMkva = async (req, res) => {
   try {
-    const { id_jadwal } = req.params;
-    const id_user = req.user.id_user;
-    
-    const jadwalAsesor = await JadwalAsesor.findOne({
-      where: { id_jadwal, id_user, jenis_tugas: 'validator_mkva' },
-      include: [{ model: Jadwal, as: 'jadwal', include: [{ model: Skema, as: 'skema' }, { model: Tuk, as: 'tuk' }] }]
-    });
-    
-    if (!jadwalAsesor) return response.error(res, "Jadwal MKVA tidak ditemukan", 403);
-    
-    const timValidasi = await JadwalAsesor.findAll({
-      where: { id_jadwal, jenis_tugas: 'validator_mkva' },
-      include: [{ model: User, as: 'user', attributes: ['nama_lengkap'] }]
-    });
-    
-    const timNames = timValidasi.map(j => j.user?.nama_lengkap).filter(Boolean).join(', ');
-    
-    response.success(res, "Data form MKVA", {
-      id_jadwal,
-      tim_validasi: timNames || "Tim dari TUK",
-      hari_tgl: jadwalAsesor.jadwal.tgl_awal,
-      tempat: jadwalAsesor.jadwal.tuk?.nama_tuk,
-      nama_skema: jadwalAsesor.jadwal.skema?.judul_skema,
-      nomor_skema: jadwalAsesor.jadwal.skema?.kode_skema,
-      ...options
-    });
-  } catch (err) { response.error(res, err.message); }
-};
+    const { id_mkva } = req.params;
 
-exports.submitForm = async (req, res) => {
-  try {
-    const { id_jadwal } = req.params;
-    const id_user = req.user.id_user;
-    
-    const exists = await JadwalAsesor.findOne({ where: { id_jadwal, id_user, jenis_tugas: 'validator_mkva' } });
-    if (!exists) return response.error(res, "Tidak diizinkan", 403);
-    
-    const { asesor_kompetensi, ...fields } = req.body;
-    
-    if (!asesor_kompetensi || !Array.isArray(asesor_kompetensi) || asesor_kompetensi.length === 0) {
-      return response.error(res, "Asesor kompetensi wajib diisi", 400);
+    const mkva = await Mkva.findOne({
+      where: { id_mkva },
+      include: [{ model: MkvaDetail, as: "details" }]
+    });
+
+    if (!mkva) {
+      return response.error(res, "Data tidak ditemukan", 404);
     }
-    
-    const data = {
-      id_jadwal, id_user, jenis_tugas: 'validator_mkva',
-      periode: fields.periode,
-      asesor_kompetensi: JSON.stringify(asesor_kompetensi),
-      lead_asesor: fields.lead_asesor ? JSON.stringify(fields.lead_asesor) : null,
-      manajer_supervisor: fields.manajer_supervisor ? JSON.stringify(fields.manajer_supervisor) : null,
-      tenaga_ahli: fields.tenaga_ahli ? JSON.stringify(fields.tenaga_ahli) : null,
-      koord_pelatihan: fields.koord_pelatihan ? JSON.stringify(fields.koord_pelatihan) : null,
-      anggota_asosiasi: fields.anggota_asosiasi ? JSON.stringify(fields.anggota_asosiasi) : null,
-      hasil_konfirmasi: fields.hasil_konfirmasi,
-      kontribusi_hasil_asesmen: fields.kontribusi_hasil_asesmen,
-      ...Object.fromEntries(
-        Object.entries(fields).filter(([k]) => !['asesor_kompetensi', 'lead_asesor', 'manajer_supervisor', 'tenaga_ahli', 'koord_pelatihan', 'anggota_asosiasi', 'hasil_konfirmasi', 'kontribusi_hasil_asesmen', 'periode'].includes(k))
-        .map(([k, v]) => [k, JSON.stringify(v)])
-      )
+
+    const safeParse = (val) => {
+      try {
+        return val ? JSON.parse(val) : [];
+      } catch {
+        return [];
+      }
     };
-    
-    const mkva = await Mkva.create(data);
-    response.success(res, "Form MKVA berhasil disimpan", mkva);
-  } catch (err) { response.error(res, err.message); }
+
+    return response.success(res, "Detail MKVA", {
+      ...mkva.toJSON(),
+      tujuan_fokus_validasi: safeParse(mkva.tujuan_fokus_validasi),
+      konteks_validasi: safeParse(mkva.konteks_validasi),
+      pendekatan_validasi: safeParse(mkva.pendekatan_validasi),
+      asesor_kompetensi: safeParse(mkva.asesor_kompetensi),
+      acuan_pembanding: safeParse(mkva.acuan_pembanding),
+      dokumen_terkait: safeParse(mkva.dokumen_terkait),
+      keterampilan_komunikasi: safeParse(mkva.keterampilan_komunikasi),
+      rencana_implementasi: safeParse(mkva.rencana_implementasi)
+    });
+
+  } catch (err) {
+    return response.error(res, err.message);
+  }
 };
 
-exports.downloadForm = async (req, res) => {
+// ==============================
+// SUBMIT MKVA
+// ==============================
+exports.submitMkva = async (req, res) => {
+  const t = await Mkva.sequelize.transaction();
+
+  try {
+    const id_user = req.user.id_user;
+    const { id_jadwal } = req.params;
+
+    // VALIDASI ROLE
+    const isValidator = await JadwalAsesor.findOne({
+      where: { id_jadwal, id_user, jenis_tugas: "validator_mkva", status: "aktif" }
+    });
+
+    if (!isValidator) return response.error(res, "Tidak diizinkan", 403);
+
+    // VALIDASI ADA ASESI
+    const totalAsesi = await PesertaJadwal.count({ where: { id_jadwal } });
+    if (totalAsesi === 0) return response.error(res, "Tidak ada asesi", 400);
+
+    // CEK SUDAH ADA
+    const existing = await Mkva.findOne({ where: { id_jadwal, id_user } });
+    if (existing) return response.error(res, "MKVA sudah diisi", 400);
+
+    const mkva = await Mkva.create({
+      id_jadwal,
+      id_user,
+      periode: req.body.periode,
+
+      tujuan_fokus_validasi: JSON.stringify(req.body.tujuan_fokus_validasi || []),
+      konteks_validasi: JSON.stringify(req.body.konteks_validasi || []),
+      pendekatan_validasi: JSON.stringify(req.body.pendekatan_validasi || []),
+
+      asesor_kompetensi: JSON.stringify(req.body.asesor_kompetensi || []),
+
+      hasil_konfirmasi: req.body.hasil_konfirmasi || null,
+
+      acuan_pembanding: JSON.stringify(req.body.acuan_pembanding || []),
+      dokumen_terkait: JSON.stringify(req.body.dokumen_terkait || []),
+
+      keterampilan_komunikasi: JSON.stringify(req.body.keterampilan_komunikasi || []),
+
+      temuan_validasi: req.body.temuan_validasi || null,
+      rekomendasi: req.body.rekomendasi || null,
+
+      rencana_implementasi: JSON.stringify(req.body.rencana_implementasi || [])
+    }, { transaction: t });
+
+    // 🔥 FIX: HANDLE EMPTY ARRAY
+    const detailsInput = req.body.detail_penilaian || [];
+
+    const details = detailsInput.map(item => ({
+      id_mkva: mkva.id_mkva,
+      aspek: item.aspek || "",
+
+      bukti_valid: item.V || false,
+      bukti_authentic: item.A || false,
+      bukti_terkini: item.T || false,
+      bukti_memadai: item.M || false,
+
+      prinsip_valid: item.Vp || false,
+      prinsip_reliable: item.R || false,
+      prinsip_fair: item.F || false,
+      prinsip_flexible: item.FL || false
+    }));
+
+    if (details.length > 0) {
+      await MkvaDetail.bulkCreate(details, { transaction: t });
+    }
+
+    await t.commit();
+
+    return response.success(res, "MKVA berhasil disimpan");
+
+  } catch (err) {
+    await t.rollback();
+    return response.error(res, err.message);
+  }
+};
+
+// ==============================
+// UPDATE MKVA
+// ==============================
+exports.updateMkva = async (req, res) => {
+  const t = await Mkva.sequelize.transaction();
+
   try {
     const { id_mkva } = req.params;
     const id_user = req.user.id_user;
-    
-    const mkva = await Mkva.findOne({
+
+    const mkva = await Mkva.findOne({ where: { id_mkva, id_user } });
+    if (!mkva) return response.error(res, "Data tidak ditemukan", 404);
+
+    await mkva.update({
+      periode: req.body.periode,
+
+      tujuan_fokus_validasi: JSON.stringify(req.body.tujuan_fokus_validasi || []),
+      konteks_validasi: JSON.stringify(req.body.konteks_validasi || []),
+      pendekatan_validasi: JSON.stringify(req.body.pendekatan_validasi || []),
+
+      asesor_kompetensi: JSON.stringify(req.body.asesor_kompetensi || []),
+
+      hasil_konfirmasi: req.body.hasil_konfirmasi || null,
+      temuan_validasi: req.body.temuan_validasi || null,
+      rekomendasi: req.body.rekomendasi || null,
+
+      rencana_implementasi: JSON.stringify(req.body.rencana_implementasi || [])
+    }, { transaction: t });
+
+    // 🔥 FIX: destroy harus pakai transaction object
+    await MkvaDetail.destroy({
       where: { id_mkva },
-      include: [{ model: JadwalAsesor, as: 'jadwalAsesor', where: { id_user },
-        include: [{ model: Jadwal, as: 'jadwal', include: [{ model: Skema, as: 'skema' }, { model: Tuk, as: 'tuk' }] }]
-      }]
+      transaction: t
     });
-    
-    if (!mkva) return response.error(res, "Form tidak ditemukan", 404);
-    
-    const doc = new PDFDocument();
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="MKVA_${id_mkva}.pdf"`);
-    doc.pipe(res);
-    
-    const j = mkva.jadwalAsesor?.jadwal;
-    doc.fontSize(16).text('FORM MONITORING KUALITAS VALIDASI ASESMEN (MKVA)', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(11).text(`Skema: ${j?.skema?.judul_skema} (${j?.skema?.kode_skema})`);
-    doc.text(`Tanggal: ${new Date(j?.tgl_awal).toLocaleDateString('id-ID')} | Tempat: ${j?.tuk?.nama_tuk}`);
-    doc.moveDown();
-    doc.text(`Periode: ${periodeLabel(mkva.periode)}`);
-    doc.text(`Tujuan Fokus: ${fmt(mkva.tujuan_fokus_validasi)}`);
-    doc.text(`Konteks: ${fmt(mkva.konteks_validasi)}`);
-    doc.text(`Pendekatan: ${fmt(mkva.pendekatan_validasi)}`);
-    doc.moveDown();
-    doc.text(`Asesor Kompetensi: ${fmt(mkva.asesor_kompetensi)}`);
-    if (mkva.lead_asesor) doc.text(`Lead Asesor: ${fmt(mkva.lead_asesor)}`);
-    if (mkva.manajer_supervisor) doc.text(`Manajer/Supervisor: ${fmt(mkva.manajer_supervisor)}`);
-    if (mkva.tenaga_ahli) doc.text(`Tenaga Ahli: ${fmt(mkva.tenaga_ahli)}`);
-    if (mkva.koord_pelatihan) doc.text(`Koord. Pelatihan: ${fmt(mkva.koord_pelatihan)}`);
-    if (mkva.anggota_asosiasi) doc.text(`Anggota Asosiasi: ${fmt(mkva.anggota_asosiasi)}`);
-    doc.moveDown();
-    doc.text(`Acuan Pembanding: ${fmt(mkva.acuan_pembanding)}`);
-    doc.text(`Dokumen Terkait: ${fmt(mkva.dokumen_terkait)}`);
-    doc.text(`Keterampilan Komunikasi: ${fmt(mkva.keterampilan_komunikasi)}`);
-    doc.moveDown();
-    doc.text(`Proses Asesmen: ${fmt(mkva.proses_asesmen)}`);
-    doc.text(`Rencana Asesmen: ${fmt(mkva.rencana_asesmen)}`);
-    doc.text(`Interpretasi Standar Kompetensi: ${fmt(mkva.interpretasi_standar_kompetensi)}`);
-    doc.text(`Interpretasi Acuan Pembanding Lainnya: ${fmt(mkva.interpretasi_acuan_pembanding_lainnya)}`);
-    doc.text(`Penyeleksian Metode Asesmen: ${fmt(mkva.penyeleksian_metode_asesmen)}`);
-    doc.text(`Penyeleksian Perangkat Asesmen: ${fmt(mkva.penyeleksian_perangkat_asesmen)}`);
-    doc.text(`Bukti-bukti Dikumpulkan: ${fmt(mkva.bukti_bukti_dikumpulkan)}`);
-    doc.text(`Proses Pengambilan Keputusan: ${fmt(mkva.proses_pengambilan_keputusan)}`);
-    doc.moveDown();
-    doc.text(`Kontribusi Hasil Asesmen: ${mkva.kontribusi_hasil_asesmen || '-'}`);
-    doc.text(`Temuan Rekomendasi: ${fmt(mkva.temuan_rekomendasi)}`);
-    doc.text(`Rencana Implementasi: ${fmt(mkva.rencana_implementasi)}`);
-    doc.end();
-  } catch (err) { response.error(res, err.message); }
+
+    const detailsInput = req.body.detail_penilaian || [];
+
+    const details = detailsInput.map(item => ({
+      id_mkva,
+      aspek: item.aspek || "",
+      bukti_valid: item.V || false,
+      bukti_authentic: item.A || false,
+      bukti_terkini: item.T || false,
+      bukti_memadai: item.M || false,
+      prinsip_valid: item.Vp || false,
+      prinsip_reliable: item.R || false,
+      prinsip_fair: item.F || false,
+      prinsip_flexible: item.FL || false
+    }));
+
+    if (details.length > 0) {
+      await MkvaDetail.bulkCreate(details, { transaction: t });
+    }
+
+    await t.commit();
+
+    return response.success(res, "MKVA berhasil diupdate");
+
+  } catch (err) {
+    await t.rollback();
+    return response.error(res, err.message);
+  }
 };
 
-exports.downloadSuratTugas = async (req, res) => {
+// ==============================
+// DOWNLOAD PDF
+// ==============================
+exports.downloadPdf = async (req, res) => {
   try {
-    const { id_jadwal } = req.params;
-    const id_user = req.user.id_user;
-    
-    const jadwalAsesor = await JadwalAsesor.findOne({
-      where: { id_jadwal, id_user, jenis_tugas: 'validator_mkva' },
-      include: [{ model: Jadwal, as: 'jadwal', include: [{ model: Skema, as: 'skema' }, { model: Tuk, as: 'tuk' }] }, { model: User, as: 'user', attributes: ['nama_lengkap'] }]
+    const { id_mkva } = req.params;
+
+    const mkva = await Mkva.findOne({
+      where: { id_mkva },
+      include: [{ model: MkvaDetail, as: "details" }]
     });
-    
-    if (!jadwalAsesor) return response.error(res, "Jadwal tidak ditemukan", 403);
-    
+
+    if (!mkva) return response.error(res, "Data tidak ditemukan", 404);
+
     const doc = new PDFDocument();
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="Surat_Tugas_MKVA_${id_jadwal}.pdf"`);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=MKVA_${id_mkva}.pdf`);
+
     doc.pipe(res);
-    
-    doc.fontSize(16).text('SURAT TUGAS MKVA', { align: 'center' });
+
+    doc.fontSize(16).text("FORM MKVA", { align: "center" });
     doc.moveDown();
-    doc.fontSize(12).text(`Kepada: ${jadwalAsesor.user.nama_lengkap}`);
-    doc.text(`Jadwal: ${jadwalAsesor.jadwal.nama_kegiatan}`);
-    doc.text(`Tanggal: ${new Date(jadwalAsesor.jadwal.tgl_awal).toLocaleDateString('id-ID')}`);
-    doc.text(`Tempat: ${jadwalAsesor.jadwal.tuk?.nama_tuk}`);
-    doc.text(`Skema: ${jadwalAsesor.jadwal.skema?.judul_skema}`);
+
+    doc.text(`Periode: ${mkva.periode}`);
+    doc.moveDown();
+
+    doc.text("Penilaian:");
+    mkva.details.forEach(d => {
+      doc.text(`${d.aspek} | V:${d.bukti_valid} A:${d.bukti_authentic}`);
+    });
+
     doc.end();
-  } catch (err) { response.error(res, err.message); }
+
+  } catch (err) {
+    return response.error(res, err.message);
+  }
 };

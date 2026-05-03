@@ -1,164 +1,262 @@
+const { FrAk07, FrAk07DetailA, FrAk07DetailB, FrAk07Hasil } = require("../../models");
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
 const path = require('path');
-const { FrAk07, User, JadwalAsesor, Jadwal, Skema, Tuk, ProfileAsesi, ProfileAsesor, PesertaJadwal } = require("../../models");
-const response = require("../../utils/response.util");
 
-// Helper Validasi & Ambil Data
-const getMainData = async (id_user, id_asesor) => {
-    const peserta = await PesertaJadwal.findOne({
-        where: { id_user },
-        include: [{
-            model: Jadwal, as: 'jadwal',
-            include: [
-                { model: Skema, as: 'skema' }, { model: Tuk, as: 'tuk' },
-                { model: JadwalAsesor, as: 'jadwalAsesors', include: [{ model: User, as: 'user', include: [{ model: ProfileAsesor, as: 'profileAsesor' }] }] }
-            ]
-        }]
+// Get FR.AK.07 details by ID
+const getFrAk07 = async (req, res) => {
+  try {
+    const { id } = req.query;
+
+    // Fetch the FR.AK.07 record, along with its related details
+    const frAk07 = await FrAk07.findOne({
+      where: { id_fr_ak07: id },
+      include: [
+        {
+          model: FrAk07DetailA,
+          as: "detailsA",
+          attributes: ["nomor", "aspek", "butuh_penyesuaian", "keterangan"],
+        },
+        {
+          model: FrAk07DetailB,
+          as: "detailsB",
+          attributes: [
+            "nomor",
+            "pertanyaan",
+            "jawaban",
+            "standar_industri",
+            "sop",
+            "regulasi_teknik",
+            "metode_asesmen",
+            "instrumen_asesmen",
+          ],
+        },
+        {
+          model: FrAk07Hasil,
+          as: "results",
+          attributes: [
+            "bagian",
+            "acuan_pembanding",
+            "metode_asesmen",
+            "instrumen_asesmen",
+          ],
+        },
+      ],
     });
-    if (!peserta || !peserta.jadwal.jadwalAsesors.some(ja => ja.id_user === id_asesor)) return null;
-    return peserta;
+
+    if (!frAk07) {
+      return res.status(404).json({ message: "FR.AK.07 record not found." });
+    }
+
+    res.status(200).json({ data: frAk07 });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching FR.AK.07 record." });
+  }
 };
 
-// 1. GET DATA
-exports.getFormData = async (req, res) => {
-    try {
-        const peserta = await getMainData(req.params.id_user, req.user.id_user);
-        if (!peserta) return response.error(res, "Data tidak ditemukan", 404);
+// Submit FR.AK.07
+const submitFrAk07 = async (req, res) => {
+  try {
+    const { id_jadwal, id_asesor, id_asesi, potensi_asesi, ttd_asesor, detailsA, detailsB, results } = req.body;
 
-        const asesi = await ProfileAsesi.findByPk(req.params.id_user);
-        const form = await FrAk07.findOne({ where: { id_peserta_jadwal: peserta.id_peserta } });
+    // Create a new FR.AK.07 record
+    const frAk07 = await FrAk07.create({
+      id_jadwal,
+      id_asesor,
+      id_asesi,
+      potensi_asesi,
+      ttd_asesor,
+    });
 
-        const namaAsesor = peserta.jadwal.jadwalAsesors.map(ja => {
-            const p = ja.user.profileAsesor;
-            return p ? `${p.gelar_depan || ''} ${p.nama_lengkap} ${p.gelar_belakang || ''}`.trim() : '';
-        }).join('; ');
+    // Create associated detailsA
+    for (const detailA of detailsA) {
+      await FrAk07DetailA.create({
+        id_fr_ak07: frAk07.id_fr_ak07,
+        nomor: detailA.nomor,
+        aspek: detailA.aspek,
+        butuh_penyesuaian: detailA.butuh_penyesuaian,
+        keterangan: detailA.keterangan,
+      });
+    }
 
-        response.success(res, "OK", {
-            id_peserta_jadwal: peserta.id_peserta,
-            header: {
-                skema_sertifikasi: peserta.jadwal.skema?.judul_skema,
-                tuk: peserta.jadwal.tuk?.nama_tuk,
-                nama_asesi: asesi?.nama_lengkap,
-                nama_asesor: namaAsesor,
-                tanggal: form?.tanggal || new Date().toISOString().split('T')[0]
-            },
-            data: form
-        });
-    } catch (err) { response.error(res, err.message); }
+    // Create associated detailsB
+    for (const detailB of detailsB) {
+      await FrAk07DetailB.create({
+        id_fr_ak07: frAk07.id_fr_ak07,
+        nomor: detailB.nomor,
+        pertanyaan: detailB.pertanyaan,
+        jawaban: detailB.jawaban,
+        standar_industri: detailB.standar_industri,
+        sop: detailB.sop,
+        regulasi_teknik: detailB.regulasi_teknik,
+        metode_asesmen: detailB.metode_asesmen,
+        instrumen_asesmen: detailB.instrumen_asesmen,
+      });
+    }
+
+    // Create associated results
+    for (const result of results) {
+      await FrAk07Hasil.create({
+        id_fr_ak07: frAk07.id_fr_ak07,
+        bagian: result.bagian,
+        acuan_pembanding: result.acuan_pembanding,
+        metode_asesmen: result.metode_asesmen,
+        instrumen_asesmen: result.instrumen_asesmen,
+      });
+    }
+
+    res.status(201).json({ message: "FR.AK.07 submitted successfully." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error submitting FR.AK.07 record." });
+  }
 };
 
-// 2. SUBMIT
-exports.submitForm = async (req, res) => {
-    try {
-        const peserta = await getMainData(req.params.id_user, req.user.id_user);
-        if (!peserta) return response.error(res, "Akses ditolak", 403);
+// Update FR.AK.07 by ID
+const updateFrAk07 = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { potensi_asesi, ttd_asesor, detailsA, detailsB, results } = req.body;
 
-        // Ambil TTD dari profil asesor yang login
-        const profileAsesor = await ProfileAsesor.findByPk(req.user.id_user);
-        
-        const toJson = (v) => (typeof v === 'string' ? v : JSON.stringify(v));
+    const frAk07 = await FrAk07.findByPk(id);
 
-        const payload = {
-            id_peserta_jadwal: peserta.id_peserta,
-            id_asesor: req.user.id_user,
-            tanggal: req.body.tanggal || new Date(),
-            panduan_jenis: req.body.panduan_jenis,
-            a1_penyesuaian: req.body.a1_penyesuaian, a1_keterangan: toJson(req.body.a1_keterangan),
-            a2_penyesuaian: req.body.a2_penyesuaian, a2_keterangan: toJson(req.body.a2_keterangan),
-            a3_penyesuaian: req.body.a3_penyesuaian, a3_keterangan: toJson(req.body.a3_keterangan),
-            a4_penyesuaian: req.body.a4_penyesuaian, a4_keterangan: toJson(req.body.a4_keterangan),
-            a5_penyesuaian: req.body.a5_penyesuaian, a5_keterangan: toJson(req.body.a5_keterangan),
-            a6_penyesuaian: req.body.a6_penyesuaian, a6_keterangan: toJson(req.body.a6_keterangan),
-            a7_penyesuaian: req.body.a7_penyesuaian, a7_keterangan: toJson(req.body.a7_keterangan),
-            a8_penyesuaian: req.body.a8_penyesuaian, a8_keterangan: toJson(req.body.a8_keterangan),
-            b1_sesuai: req.body.b1_sesuai, b1_keputusan: req.body.b1_keputusan,
-            b2_sesuai: req.body.b2_sesuai, b2_keputusan: req.body.b2_keputusan,
-            b3_sesuai: req.body.b3_sesuai, b3_keputusan: req.body.b3_keputusan,
-            hasil_penyesuaian_karakteristik: req.body.hasil_penyesuaian_karakteristik,
-            hasil_penyesuaian_rencana: req.body.hasil_penyesuaian_rencana,
-            ttd_asesor_path: profileAsesor.ttd_path // Otomatis dari profil asesor
-        };
+    if (!frAk07) {
+      return res.status(404).json({ message: "FR.AK.07 record not found." });
+    }
 
-        const existing = await FrAk07.findOne({ where: { id_peserta_jadwal: peserta.id_peserta } });
-        if (existing) await FrAk07.update(payload, { where: { id_fr_ak_07: existing.id_fr_ak_07 } });
-        else await FrAk07.create(payload);
+    // Update the main FR.AK.07 record
+    frAk07.potensi_asesi = potensi_asesi;
+    frAk07.ttd_asesor = ttd_asesor;
+    await frAk07.save();
 
-        response.success(res, "Form berhasil disimpan");
-    } catch (err) { response.error(res, err.message); }
+    // Update associated detailsA
+    await FrAk07DetailA.destroy({ where: { id_fr_ak07: frAk07.id_fr_ak07 } });
+    for (const detailA of detailsA) {
+      await FrAk07DetailA.create({
+        id_fr_ak07: frAk07.id_fr_ak07,
+        nomor: detailA.nomor,
+        aspek: detailA.aspek,
+        butuh_penyesuaian: detailA.butuh_penyesuaian,
+        keterangan: detailA.keterangan,
+      });
+    }
+
+    // Update associated detailsB
+    await FrAk07DetailB.destroy({ where: { id_fr_ak07: frAk07.id_fr_ak07 } });
+    for (const detailB of detailsB) {
+      await FrAk07DetailB.create({
+        id_fr_ak07: frAk07.id_fr_ak07,
+        nomor: detailB.nomor,
+        pertanyaan: detailB.pertanyaan,
+        jawaban: detailB.jawaban,
+        standar_industri: detailB.standar_industri,
+        sop: detailB.sop,
+        regulasi_teknik: detailB.regulasi_teknik,
+        metode_asesmen: detailB.metode_asesmen,
+        instrumen_asesmen: detailB.instrumen_asesmen,
+      });
+    }
+
+    // Update associated results
+    await FrAk07Hasil.destroy({ where: { id_fr_ak07: frAk07.id_fr_ak07 } });
+    for (const result of results) {
+      await FrAk07Hasil.create({
+        id_fr_ak07: frAk07.id_fr_ak07,
+        bagian: result.bagian,
+        acuan_pembanding: result.acuan_pembanding,
+        metode_asesmen: result.metode_asesmen,
+        instrumen_asesmen: result.instrumen_asesmen,
+      });
+    }
+
+    res.status(200).json({ message: "FR.AK.07 updated successfully." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error updating FR.AK.07 record." });
+  }
 };
 
-// 3. DOWNLOAD PDF
-exports.downloadPdf = async (req, res) => {
-    try {
-        const peserta = await getMainData(req.params.id_user, req.user.id_user);
-        if (!peserta) return response.error(res, "Akses ditolak", 403);
+// List FR.AK.07 records by Jadwal ID
+const listFrAk07 = async (req, res) => {
+  try {
+    const { id_jadwal } = req.params;
 
-        const form = await FrAk07.findOne({ where: { id_peserta_jadwal: peserta.id_peserta } });
-        if (!form) return response.error(res, "Formulir belum diisi", 404);
+    const frAk07List = await FrAk07.findAll({
+      where: { id_jadwal },
+      include: [
+        { model: FrAk07DetailA, as: "detailsA" },
+        { model: FrAk07DetailB, as: "detailsB" },
+        { model: FrAk07Hasil, as: "results" },
+      ],
+    });
 
-        const asesi = await ProfileAsesi.findByPk(req.params.id_user);
-        
-        // Ambil Semua Asesor di Jadwal ini
-        const allAsesors = await JadwalAsesor.findAll({
-            where: { id_jadwal: peserta.jadwal.id_jadwal },
-            include: [{ model: User, as: 'user', include: [{ model: ProfileAsesor, as: 'profileAsesor' }] }]
-        });
+    res.status(200).json({ data: frAk07List });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching FR.AK.07 list." });
+  }
+};
 
-        const doc = new PDFDocument({ size: 'A4', margin: 40 });
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=FR-AK-07-${peserta.id_peserta}.pdf`);
-        doc.pipe(res);
+// Download PDF for FR.AK.07 using pdfkit
+const downloadPdfFrAk07 = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        // Header
-        doc.fontSize(12).text('FR.AK.07 CEKLIS PENYESUAIAN YANG WAJAR DAN BERALASAN', { align: 'center' });
-        doc.moveDown(0.5);
-        doc.fontSize(9).text(`Skema: ${peserta.jadwal.skema.judul_skema}`);
-        doc.text(`TUK: ${peserta.jadwal.tuk.nama_tuk}`);
-        doc.text(`Nama Asesi: ${asesi.nama_lengkap}`);
-        doc.text(`Tanggal: ${new Date(form.tanggal).toLocaleDateString('id-ID')}`);
-        doc.moveDown();
+    const frAk07 = await FrAk07.findOne({
+      where: { id_fr_ak07: id },
+      include: [
+        { model: FrAk07DetailA, as: "detailsA" },
+        { model: FrAk07DetailB, as: "detailsB" },
+        { model: FrAk07Hasil, as: "results" },
+      ],
+    });
 
-        // Panduan
-        doc.fontSize(10).text(`Panduan: ${form.panduan_jenis}`, { underline: true });
-        
-        // Bagian A
-        const renderA = (num, val, ket) => doc.text(`${num}. ${val === 'Ya' ? 'Ya' : 'Tidak'}: ${val === 'Ya' ? (JSON.parse(ket || '[]').join(', ')) : ''}`);
-        renderA('A.1', form.a1_penyesuaian, form.a1_keterangan);
-        renderA('A.2', form.a2_penyesuaian, form.a2_keterangan);
-        renderA('A.3', form.a3_penyesuaian, form.a3_keterangan);
-        renderA('A.4', form.a4_penyesuaian, form.a4_keterangan);
-        renderA('A.5', form.a5_penyesuaian, form.a5_keterangan);
-        renderA('A.6', form.a6_penyesuaian, form.a6_keterangan);
-        renderA('A.7', form.a7_penyesuaian, form.a7_keterangan);
-        renderA('A.8', form.a8_penyesuaian, form.a8_keterangan);
+    if (!frAk07) {
+      return res.status(404).json({ message: "FR.AK.07 record not found." });
+    }
 
-        // Bagian B
-        doc.moveDown().text(`B.1 (Acuan): ${form.b1_sesuai} ${form.b1_keputusan ? '- ' + form.b1_keputusan : ''}`);
-        doc.text(`B.2 (Potensi): ${form.b2_sesuai} ${form.b2_keputusan ? '- ' + form.b2_keputusan : ''}`);
-        doc.text(`B.3 (Konteks): ${form.b3_sesuai} ${form.b3_keputusan ? '- ' + form.b3_keputusan : ''}`);
+    // Create the PDF directly in the controller using pdfkit
+    const doc = new PDFDocument();
 
-        // Hasil
-        doc.moveDown().text(`Hasil Karakteristik: ${form.hasil_penyesuaian_karakteristik || '-'}`);
-        doc.text(`Hasil Rencana: ${form.hasil_penyesuaian_rencana || '-'}`);
+    // Add content to the PDF
+    doc.text("FR.AK.07 Report", 10, 10);
+    doc.text(`ID FR.AK.07: ${frAk07.id_fr_ak07}`, 10, 20);
+    doc.text(`Potensi Asesi: ${frAk07.potensi_asesi}`, 10, 30);
 
-        // TTD Semua Asesor di Jadwal
-        doc.moveDown(2).text('Tanda Tangan Asesor', { align: 'center' });
-        doc.moveDown();
-        let x = 50;
-        
-        for (const ja of allAsesors) {
-            const p = ja.user.profileAsesor;
-            if (p?.ttd_path) {
-                const pth = path.join(__dirname, "../../../", p.ttd_path);
-                if (fs.existsSync(pth)) {
-                    doc.image(pth, x, doc.y, { width: 80 });
-                    doc.text(`${p.gelar_depan||''} ${p.nama_lengkap} ${p.gelar_belakang||''}`, x, doc.y + 50, { width: 80, align: 'center' });
-                    x += 120;
-                    if(x > 400) { doc.moveDown(3); x = 50; }
-                }
-            }
-        }
-        doc.end();
-    } catch (err) { response.error(res, err.message); }
+    // Add detailsA
+    doc.text("Details A:", 10, 40);
+    frAk07.detailsA.forEach((detailA, index) => {
+      doc.text(`${index + 1}. ${detailA.aspek}`, 10, 50 + index * 10);
+      doc.text(`Need Adjustment: ${detailA.butuh_penyesuaian || 'None'}`, 10, 60 + index * 10);
+    });
+
+    // Add detailsB
+    doc.text("Details B:", 10, 80);
+    frAk07.detailsB.forEach((detailB, index) => {
+      doc.text(`${index + 1}. ${detailB.pertanyaan}`, 10, 90 + index * 10);
+    });
+
+    // Add Results
+    doc.text("Results:", 10, 110);
+    frAk07.results.forEach((result, index) => {
+      doc.text(`${index + 1}. ${result.bagian}`, 10, 120 + index * 10);
+    });
+
+    // Send the PDF
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "attachment; filename=fr_ak07.pdf");
+    doc.pipe(res);
+    doc.end();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error generating PDF for FR.AK.07." });
+  }
+};
+
+module.exports = {
+  getFrAk07,
+  submitFrAk07,
+  updateFrAk07,
+  listFrAk07,
+  downloadPdfFrAk07,
 };

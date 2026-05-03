@@ -7,44 +7,62 @@ const Apl01Asesmen = sequelize.define("apl01_asesmen", {
     primaryKey: true,
     autoIncrement: true
   },
-  id_user: {
+
+  id_peserta: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    unique: true
   },
+
   id_skema: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
+
   id_jadwal: {
-  type: DataTypes.INTEGER,
-  allowNull: true
-  },
-  dokumen_tambahan: {
-    type: DataTypes.JSON, 
-    allowNull: true
-  },
-  tujuan_asesmen: {
-    type: DataTypes.ENUM("sertifikasi", "sertifikasi_ulang", "pengakuan_kompetensi_terkini", "rekognisi_pembelajaran_lampau", "lainnya"),
+    type: DataTypes.INTEGER,
     allowNull: false
   },
-  tujuan_asesmen_lainnya: {
-    type: DataTypes.STRING(255),
+
+  tujuan_asesmen: {
+    type: DataTypes.ENUM(
+      "sertifikasi",
+      "sertifikasi_ulang",
+      "pkk",
+      "rpl",
+      "lainnya"
+    ),
+    defaultValue: "sertifikasi"
+  },
+
+  tujuan_lainnya: {
+    type: DataTypes.TEXT,
     allowNull: true
   },
-  tanda_tangan: {
-    type: DataTypes.STRING(255), 
-    allowNull: true
-  },
+
   status: {
-    type: DataTypes.ENUM("draft", "submitted", "approved", "rejected"),
+    type: DataTypes.ENUM(
+      "draft",
+      "submit",
+      "verifikasi",
+      "disetujui",
+      "ditolak"
+    ),
     defaultValue: "draft"
   },
+
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
+  },
+
+  updated_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
+
 }, {
-  tableName: "apl01",
+  tableName: "apl01_asesmen",
   timestamps: false
 });
 

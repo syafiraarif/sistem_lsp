@@ -3,75 +3,152 @@ const router = require("express").Router();
 const authMiddleware = require("../middlewares/auth.middleware");
 const roleMiddleware = require("../middlewares/role.middleware");
 const uploadMiddleware = require("../middlewares/upload.middleware");
+
+// CONTROLLER YANG PASTI ADA
 const profileController = require("../controllers/asesor/profile.controller");
 const jadwalAsesorController = require("../controllers/asesor/jadwal.controller");
 const pesertaJadwalController = require("../controllers/asesor/pesertaJadwal.controller");
 const mkvaController = require("../controllers/asesor/mkva.controller");
+const verifikasiTukController = require("../controllers/asesor/verifikasiTuk.controller");
+const presensiController = require("../controllers/asesor/presensi.controller");
 const frAk01Controller = require("../controllers/asesor/frAk01.controller");
 const frAk02Controller = require("../controllers/asesor/frAk02.controller");
-const ak05Controller = require("../controllers/asesor/frAk05.controller");
-const ak06Controller = require("../controllers/asesor/frAk06.controller"); 
-const frAk07Controller = require("../controllers/asesor/frAk07.controller"); 
- const mapa02Controller = require("../controllers/asesor/mapa02.controller");
-const praAsesmenController = require("../controllers/asesor/praAsesmenAsesor.controller");
+const frAk05Controller = require("../controllers/asesor/frAk05.controller");
+const frAk06Controller = require("../controllers/asesor/frAk06.controller");
+const frAk07Controller = require("../controllers/asesor/frAk07.controller");
 
-
+// 🔐 hanya asesor
 router.use(authMiddleware, roleMiddleware.asesorOnly);
 
+/* ========================= PROFILE ========================= */
 router.get("/profile", profileController.getProfile);
 router.put("/profile", profileController.updateProfile);
 
-router.put("/profile/upload-ttd", (req, res, next) => {
-  uploadMiddleware(req, res, (err) => {
-    if (err) {
-      return res.status(400).json({ success: false, message: err.message });
-    }
-    next();
-  });
-}, profileController.uploadTTD);
+router.put(
+  "/profile/upload-ttd",
+  (req, res, next) => {
+    uploadMiddleware(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ success: false, message: err.message });
+      }
+      next();
+    });
+  },
+  profileController.uploadTTD
+);
 
+/* ========================= JADWAL ========================= */
 router.get("/jadwal-saya", jadwalAsesorController.getJadwalSaya);
 router.put("/peserta/:id/nilai", pesertaJadwalController.updateNilaiPeserta);
 
-router.get("/fr-ak-01/form/:id_peserta_jadwal", frAk01Controller.getFormData);
-router.post("/fr-ak-01/form/:id_peserta_jadwal", frAk01Controller.submitForm);
-router.put("/fr-ak-01/:id_fr_ak_01/sign", frAk01Controller.signForm);
-router.get("/fr-ak-01/:id_fr_ak_01/pdf", frAk01Controller.downloadPdf);
+/* ========================= MKVA ========================= */
 
-router.get("/fr-ak-02/form/:id_user", frAk02Controller.getFormData);
-router.post("/fr-ak-02/form/:id_user", frAk02Controller.submitForm);
-router.put("/fr-ak-02/:id_fr_ak_02", frAk02Controller.updateForm);
-router.get("/fr-ak-02/:id_fr_ak_02/pdf", frAk02Controller.downloadPdf);
+// daftar jadwal MKVA
+router.get("/mkva/jadwal", mkvaController.getJadwalMkva);
 
-router.get("/fr-ak-05/form/:id_jadwal_asesor", ak05Controller.getFormData); 
-router.post("/fr-ak-05/submit/:id_jadwal_asesor", ak05Controller.submitForm); 
-router.get("/fr-ak-05/my-form/:id_jadwal_asesor/:id_peserta", ak05Controller.getMyForm); 
-router.put("/fr-ak-05/my-form/:id_jadwal_asesor/:id_peserta", ak05Controller.getMyForm); 
-router.get("/fr-ak-05/download/:id_jadwal_asesor/:id_peserta", ak05Controller.downloadForm);
+// detail MKVA
+router.get("/mkva/:id_mkva", mkvaController.getDetailMkva);
 
-router.get("/fr-ak-06/form/:id_jadwal", ak06Controller.getFormData); 
-router.post("/fr-ak-06/form/:id_jadwal", ak06Controller.submitForm); 
-router.put("/fr-ak-06/form/:id_jadwal", ak06Controller.updateForm); 
-router.get("/fr-ak-06/download/:id_jadwal", ak06Controller.downloadForm);
+// submit MKVA
+router.post("/mkva/:id_jadwal/submit", mkvaController.submitMkva);
 
-router.get("/mkva/jadwal", mkvaController.getJadwalAsesor);
-router.get("/mkva/form/:id_jadwal", mkvaController.getFormData);
-router.post("/mkva/form/:id_jadwal", mkvaController.submitForm);
-router.get("/mkva/download/:id_mkva", mkvaController.downloadForm);
-router.get("/mkva/surat-tugas/:id_jadwal", mkvaController.downloadSuratTugas);
+// update MKVA
+router.put("/mkva/:id_mkva/update", mkvaController.updateMkva);
 
-router.get("/fr-ak-07/form/:id_user", frAk07Controller.getFormData);
-router.post("/fr-ak-07/form/:id_user", frAk07Controller.submitForm);
-router.put("/fr-ak-07/form/:id_user", frAk07Controller.submitForm); 
-router.get("/fr-ak-07/download/:id_user", frAk07Controller.downloadPdf);
+// download PDF
+router.get("/mkva/:id_mkva/pdf", mkvaController.downloadPdf);
 
-router.get("/fr-mapa-02/form", mapa02Controller.getFormData); 
-router.post("/fr-mapa-02/submit", mapa02Controller.submitForm); 
-router.put("/fr-mapa-02/update-score", mapa02Controller.updateScore); 
-router.get("/fr-mapa-02/download", mapa02Controller.downloadPDF);
+router.get("/verifikasi-tuk/form", verifikasiTukController.getForm);
+router.get("/verifikasi-tuk/:id_jadwal", verifikasiTukController.getDetail);
+router.post("/verifikasi-tuk/:id_jadwal/submit", verifikasiTukController.submit);
+router.put("/verifikasi-tuk/:id_verifikasi/update", verifikasiTukController.update);
+router.get("/verifikasi-tuk/:id_verifikasi/pdf", verifikasiTukController.downloadPdf);
 
-router.get("/pra-asesmen/form/:id_user", praAsesmenController.getFormData); 
-router.post("/pra-asesmen/submit/:id_user", praAsesmenController.submitForm); 
-router.get("/pra-asesmen/download/:id_user", praAsesmenController.downloadPdf);
+/* ========================= PRESENSI ========================= */
+
+// cek apakah sudah presensi
+router.get("/presensi/cek", presensiController.cekPresensi);
+
+// detail presensi (opsional untuk UI)
+router.get("/presensi/:id_jadwal", presensiController.getDetailPresensi);
+
+// submit presensi (TTD)
+router.post("/presensi", presensiController.presensiAsesor);
+
+// list presensi (optional untuk admin / monitoring)
+router.get("/presensi/list/:id_jadwal", presensiController.listPresensi);
+
+/* ========================= FR.AK.01 ========================= */
+
+// ambil detail FR.AK.01 (untuk load form)
+router.get("/fr-ak01", frAk01Controller.getFrAk01);
+
+// submit FR.AK.01
+router.post("/fr-ak01", frAk01Controller.submitFrAk01);
+
+// update FR.AK.01 (kalau mau edit)
+router.put("/fr-ak01/:id", frAk01Controller.updateFrAk01);
+
+// list FR.AK.01 per jadwal (optional)
+router.get("/fr-ak01/list/:id_jadwal", frAk01Controller.listFrAk01);
+
+/* ========================= FR.AK.02 ========================= */
+
+// ambil detail FR.AK.02
+router.get("/fr-ak02", frAk02Controller.getFrAk02);
+
+// submit FR.AK.02
+router.post("/fr-ak02", frAk02Controller.submitFrAk02);
+
+// update FR.AK.02
+router.put("/fr-ak02/:id", frAk02Controller.updateFrAk02);
+
+// list FR.AK.02 per jadwal
+router.get("/fr-ak02/list/:id_jadwal", frAk02Controller.listFrAk02);
+
+router.get("/fr-ak05", frAk05Controller.getFrAk05);
+
+router.post("/fr-ak05", frAk05Controller.submitFrAk05);
+
+router.put("/fr-ak05/:id", frAk05Controller.updateFrAk05);
+
+router.get("/fr-ak05/list/:id_jadwal", frAk05Controller.listFrAk05);
+
+// 🔥 ini yg tadi salah
+router.get("/fr-ak05/:id/pdf", frAk05Controller.downloadPdfFrAk05);
+
+/* ========================= FR.AK.06 ========================= */
+
+// ambil detail FR.AK.06
+router.get("/fr-ak06", frAk06Controller.getFrAk06);
+
+// submit FR.AK.06
+router.post("/fr-ak06", frAk06Controller.submitFrAk06);
+
+// update FR.AK.06
+router.put("/fr-ak06/:id", frAk06Controller.updateFrAk06);
+
+// list FR.AK.06 per jadwal
+router.get("/fr-ak06/list/:id_jadwal", frAk06Controller.listFrAk06);
+
+// download PDF
+router.get("/fr-ak06/:id/pdf", frAk06Controller.downloadPdf);
+
+/* ========================= FR.AK.07 ========================= */
+
+// ambil detail FR.AK.07
+router.get("/fr-ak07", frAk07Controller.getFrAk07);
+
+// submit FR.AK.07
+router.post("/fr-ak07", frAk07Controller.submitFrAk07);
+
+// update FR.AK.07
+router.put("/fr-ak07/:id", frAk07Controller.updateFrAk07);
+
+// list FR.AK.07 per jadwal
+router.get("/fr-ak07/list/:id_jadwal", frAk07Controller.listFrAk07);
+
+// download PDF
+router.get("/fr-ak07/:id/pdf", frAk07Controller.downloadPdfFrAk07);
 
 module.exports = router;

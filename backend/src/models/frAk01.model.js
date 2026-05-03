@@ -1,70 +1,99 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const FrAk01 = sequelize.define('FrAk01', {
-  id_fr_ak_01: {
+const FrAk01 = sequelize.define("fr_ak01", {
+  id_fr_ak01: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true,
+    autoIncrement: true
   },
-  id_peserta_jadwal: {
+
+  id_jadwal: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: false
   },
+
+  id_peserta: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+
   id_asesor: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: false
   },
 
-  // Skema
-  skema_judul: DataTypes.STRING(255),
-  skema_nomor: DataTypes.STRING(50),
-  skema_jenis: DataTypes.ENUM('klaster', 'kkni', 'okupasi'),
+  // =========================
+  // CHECKLIST BUKTI
+  // =========================
+  bukti_portofolio: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
 
-  // TUK
-  tuk_nama: DataTypes.STRING(255),
-  tuk_jenis: DataTypes.ENUM('mandiri', 'sewaktu', 'tempat_kerja'),
+  bukti_observasi: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
 
-  // Nama
-  nama_asesor: DataTypes.TEXT,
-  nama_asesi: DataTypes.STRING(150),
+  bukti_tertulis: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
 
-  // Pelaksanaan
-  hari_tanggal: DataTypes.DATEONLY,
-  waktu_mulai: DataTypes.TIME,
-  tempat_pelaksanaan: DataTypes.STRING(255),
+  bukti_wawancara: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
 
-  // Bukti
-  bukti_portfolio: DataTypes.TINYINT(1),
-  bukti_reviu_produk: DataTypes.TINYINT(1),
-  bukti_observasi_langsung: DataTypes.TINYINT(1),
-  bukti_keg_terstruktur: DataTypes.TINYINT(1),
-  bukti_pertanyaan_tulis: DataTypes.TINYINT(1),
-  bukti_pertanyaan_lisan: DataTypes.TINYINT(1),
-  bukti_pertanyaan_wawancara: DataTypes.TINYINT(1),
-  bukti_lainnya: DataTypes.TEXT,
+  bukti_review_produk: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
 
-  // Pernyataan
-  pernyataan_kerahasiaan: DataTypes.TINYINT(1),
+  bukti_kegiatan_terstruktur: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
 
-  // Status TTD
-  status_ttd_asesor: DataTypes.ENUM('draft', 'signed'),
+  bukti_lisan: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
 
-  // Timestamp
+  bukti_lainnya: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+
+  // =========================
+  // PERSETUJUAN & TTD
+  // =========================
+  persetujuan: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
+
+  ttd_asesor: {
+    type: DataTypes.STRING(255),
+    allowNull: false
+  },
+
   created_at: {
     type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW,
-  },
-  updated_at: {
-    type: DataTypes.DATE,
-    allowNull: true,
-  },
+    defaultValue: DataTypes.NOW
+  }
+
 }, {
-  tableName: 'fr_ak_01',
-  timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
+  tableName: "fr_ak01",
+  timestamps: false,
+
+  indexes: [
+    {
+      unique: true,
+      fields: ["id_jadwal", "id_peserta"] // 🔥 biar ga double input
+    }
+  ]
 });
 
 module.exports = FrAk01;
