@@ -37,6 +37,20 @@ router.put(
   profileController.uploadTTD
 );
 
+// ✅ TAMBAHAN BARU
+router.put(
+  "/profile/upload-foto",
+  (req, res, next) => {
+    uploadMiddleware(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ success: false, message: err.message });
+      }
+      next();
+    });
+  },
+  profileController.uploadFotoProfil
+);
+
 /* ========================= JADWAL ========================= */
 router.get("/jadwal-saya", jadwalAsesorController.getJadwalSaya);
 router.put("/peserta/:id/nilai", pesertaJadwalController.updateNilaiPeserta);

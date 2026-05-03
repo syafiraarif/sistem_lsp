@@ -43,17 +43,26 @@ const storage = multer.diskStorage({
     }
 
     /*
-    =============================
-    TANDA TANGAN (FIX MULTI ROLE)
-    =============================
-    */
-    else if (field === "ttd") {
-      if (req.user && req.user.role === "asesor") {
-        folder = path.join("uploads", "asesor", "ttd"); // ✅ asesor
-      } else {
-        folder = path.join("uploads", "asesi", "ttd"); // ✅ asesi
-      }
-    }
+=============================
+TANDA TANGAN (FIX MULTI ROLE)
+=============================
+*/
+else if (field === "ttd") {
+  if (req.user && req.user.role === "asesor") {
+    folder = path.join("uploads", "asesor", "ttd");
+  } else {
+    folder = path.join("uploads", "asesi", "ttd");
+  }
+}
+
+/*
+=============================
+FOTO PROFIL ASESOR (BARU)
+=============================
+*/
+else if (field === "foto_profil") {
+  folder = path.join("uploads", "asesor", "foto_profil");
+}
 
     /*
     =============================
