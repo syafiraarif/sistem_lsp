@@ -1,6 +1,7 @@
 const { FrAk06, FrAk06Detail, JadwalAsesor, PresensiAsesor } = require("../../models");
 const fs = require("fs");
 const path = require("path");
+const response = require("../../utils/response.util");
 const PDFDocument = require("pdfkit");
 
 // ================= GET DETAIL =================

@@ -14,7 +14,10 @@ const unitKompetensiAsesi = require("../controllers/asesi/unitKompetensi.control
 const wilayahController = require("../controllers/public/wilayah.controller");
 const lupaPasswordAsesiController = require("../controllers/asesi/lupapasswordAsesi.controller");
 const presensiController = require("../controllers/asesi/presensi.controller");
-
+const frAk03Controller = require("../controllers/asesi/frAk03.controller");
+const frAk04Controller = require("../controllers/asesi/frAk04.controller");
+const frIa05AsesiController = require("../controllers/asesi/frIa05Asesi.controller");
+const controller = require("../controllers/asesi/frIa06Asesi.controller");
 
 // Semua route hanya bisa diakses oleh asesi
 router.use(authMiddleware, roleMiddleware.asesiOnly);
@@ -107,9 +110,51 @@ router.get("/presensi/detail/:id_peserta", presensiController.getDetailPresensi)
 // submit presensi (upload tanda tangan)
 router.post("/presensi", uploadMiddleware, presensiController.createPresensi);
 
+/* ========================= FR.AK.03 ========================= */
+
+router.get("/fr-ak03/:id_peserta", frAk03Controller.getFrAk03ByPeserta);
+router.post("/fr-ak03", frAk03Controller.createFrAk03);
+router.get("/fr-ak03/pdf/:id_peserta", frAk03Controller.generatePdfFrAk03);
+
+
+/* ========================= FR.AK.04 ========================= */
+
+// ambil data FR.AK.04
+router.get("/fr-ak04/:id_peserta", frAk04Controller.getFrAk04ByPeserta);
+// submit FR.AK.04
+router.post("/fr-ak04", frAk04Controller.createFrAk04);
+// generate PDF
+router.get("/fr-ak04/pdf/:id_peserta", frAk04Controller.generatePdfFrAk04);
+
+// ==================== ASESI ====================
+
+// ambil soal
+router.get("/fr-ia05/asesi/:id_fr_ia_05/:id_peserta", frIa05AsesiController.getSoal);
+// submit
+router.post("/fr-ia05/asesi/submit", frIa05AsesiController.submit);
+// hasil
+router.get("/fr-ia05/asesi/hasil/:id_peserta/:id_fr_ia_05", frIa05AsesiController.getHasil);
+
+// ambil soal
+router.get("/fr-ia06/asesi/:id_fr_ia_06/:id_peserta", controller.getSoal);
+
+// simpan jawaban (draft)
+router.post("/fr-ia06/asesi/save", controller.saveJawaban);
+
+// submit final
+router.post("/fr-ia06/asesi/submit", controller.submit);
+
+// lihat jawaban sendiri
+router.get("/fr-ia06/asesi/jawaban/:id_peserta/:id_fr_ia_06", controller.getJawabanSaya);
+
+// cek status
+router.get("/fr-ia06/asesi/status/:id_peserta/:id_fr_ia_06", controller.getStatus);
+
 /* ========================= 404 fallback ========================= */
 router.use((req, res) => {
   res.status(404).json({ status: "error", message: "Route not found" });
 });
+
+
 
 module.exports = router;

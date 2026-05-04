@@ -1,6 +1,8 @@
 const { FrAk07, FrAk07DetailA, FrAk07DetailB, FrAk07Hasil } = require("../../models");
 const PDFDocument = require('pdfkit');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
+const response = require("../../utils/response.util");
 
 // Get FR.AK.07 details by ID
 const getFrAk07 = async (req, res) => {
