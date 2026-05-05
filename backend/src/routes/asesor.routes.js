@@ -70,8 +70,33 @@ router.put(
 );
 
 /* ========================= JADWAL ========================= */
+/* ========================= JADWAL ========================= */
 router.get("/jadwal-saya", jadwalAsesorController.getJadwalSaya);
-router.put("/peserta/:id/nilai", pesertaJadwalController.updateNilaiPeserta);
+
+router.get(
+  "/jadwal-uji-kompetensi",
+  jadwalAsesorController.getJadwalUjiKompetensi
+);
+
+router.get(
+  "/jadwal-verifikasi-tuk",
+  jadwalAsesorController.getJadwalVerifikasiTuk
+);
+
+router.get(
+  "/jadwal-komite-teknis",
+  jadwalAsesorController.getJadwalKomiteTeknis
+);
+
+router.get(
+  "/jadwal/:id_jadwal/peserta",
+  pesertaJadwalController.getPesertaByJadwal
+);
+
+router.put(
+  "/peserta/:id/nilai",
+  pesertaJadwalController.updateNilaiPeserta
+);
 
 /* ========================= MKVA ========================= */
 

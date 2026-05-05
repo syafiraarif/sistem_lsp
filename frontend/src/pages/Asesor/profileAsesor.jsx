@@ -6,12 +6,10 @@ import SidebarAsesor from "../../components/sidebar/SidebarAsesor";
 import {
   BadgeCheck,
   Camera,
-  CheckCircle2,
   ChevronRight,
   FileSignature,
   IdCard,
   ImagePlus,
-  Info,
   Loader2,
   MapPin,
   PenLine,
@@ -22,6 +20,7 @@ import {
   UploadCloud,
   User,
   UserRoundCheck,
+  XCircle,
 } from "lucide-react";
 import api from "../../services/api";
 
@@ -65,11 +64,14 @@ export default function ProfileAsesor() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profile, setProfile] = useState(initialProfile);
+
   const [fotoProfil, setFotoProfil] = useState(null);
   const [previewFoto, setPreviewFoto] = useState("");
   const [previewTtd, setPreviewTtd] = useState("");
+
   const [isEditingTtd, setIsEditingTtd] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [pesan, setPesan] = useState("");
   const [error, setError] = useState("");
@@ -228,9 +230,10 @@ export default function ProfileAsesor() {
     if (previewTtd) {
       setIsEditingTtd(false);
       setHasSignature(false);
-    } else {
-      clearSignature();
+      return;
     }
+
+    clearSignature();
   };
 
   const canvasToBlob = () => {
@@ -417,9 +420,8 @@ export default function ProfileAsesor() {
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Satu halaman untuk mengelola data asesor, lisensi, foto
-                  profil, dan tanda tangan digital agar seluruh dokumen asesmen
-                  siap digunakan.
+                  Kelola data asesor, lisensi, foto profil, dan tanda tangan
+                  digital agar seluruh dokumen asesmen siap digunakan.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -466,8 +468,8 @@ export default function ProfileAsesor() {
                   <h2 className="mb-4 text-2xl font-black">{statusLabel}</h2>
 
                   <p className="text-sm font-medium leading-relaxed text-white/60">
-                    Pastikan foto dan tanda tangan digital sudah tersedia agar
-                    proses administrasi asesmen berjalan lebih cepat.
+                    Pastikan foto dan tanda tangan digital tersedia agar proses
+                    administrasi asesmen berjalan lebih cepat.
                   </p>
 
                   <div className="mt-6 grid grid-cols-2 gap-3">
@@ -504,7 +506,7 @@ export default function ProfileAsesor() {
           {error && (
             <AlertBox
               type="error"
-              icon={<ShieldCheck size={20} />}
+              icon={<XCircle size={20} />}
               message={error}
             />
           )}
@@ -522,7 +524,6 @@ export default function ProfileAsesor() {
             id="upload-section"
             className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch"
           >
-            {/* FOTO */}
             <UploadCard
               title="Foto Profil"
               description="Gunakan foto resmi asesor untuk kebutuhan identitas dan dokumen."
@@ -600,12 +601,10 @@ export default function ProfileAsesor() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <SmallInfoCard
-                    icon={<CheckCircle2 size={18} />}
                     label="Status Foto"
                     value={previewFoto ? "Sudah tersedia" : "Belum tersedia"}
                   />
                   <SmallInfoCard
-                    icon={<Info size={18} />}
                     label="Rekomendasi"
                     value="Gunakan foto formal"
                   />
@@ -613,7 +612,6 @@ export default function ProfileAsesor() {
               </div>
             </UploadCard>
 
-            {/* TTD */}
             <UploadCard
               title="Tanda Tangan Digital"
               description={
@@ -1045,13 +1043,9 @@ function UploadCard({ title, description, icon, children }) {
   );
 }
 
-function SmallInfoCard({ icon, label, value }) {
+function SmallInfoCard({ label, value }) {
   return (
     <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-4">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
-        {icon}
-      </div>
-
       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
         {label}
       </p>

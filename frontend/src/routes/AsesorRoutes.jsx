@@ -10,6 +10,7 @@ import JadwalVerifikasiTuk from "../pages/asesor/JadwalVerifikasiTuk";
 import JadwalKomiteTeknis from "../pages/asesor/JadwalKomiteTeknis";
 import JadwalMkva from "../pages/asesor/JadwalMkva";
 import UbahSandiAsesor from "../pages/asesor/UbahSandiAsesor";
+import PesertaJadwalAsesor from "../pages/asesor/PesertaJadwalAsesor";
 
 export default function AsesorRoutes() {
   return (
@@ -20,10 +21,9 @@ export default function AsesorRoutes() {
       <Route path="jadwal-saya" element={<JadwalSayaAsesor />} />
       <Route path="verifikasi-tuk" element={<JadwalVerifikasiTuk />} />
       <Route path="komite-teknis" element={<JadwalKomiteTeknis />} />
+      <Route path="jadwal-saya/:id_jadwal/peserta" element={<PesertaJadwalAsesor />} />
       <Route path="mkva" element={<JadwalMkva />} />
       <Route path="ubah-password" element={<UbahSandiAsesor />} />
-
-
       <Route path="*" element={<Navigate to="dashboard" replace />} />
     </Routes>
   );

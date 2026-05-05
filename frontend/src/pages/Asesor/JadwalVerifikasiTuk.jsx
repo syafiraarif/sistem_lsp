@@ -8,7 +8,6 @@ import {
   CalendarCheck,
   CalendarDays,
   CheckCircle2,
-  ChevronRight,
   ClipboardCheck,
   FileCheck2,
   Filter,
@@ -53,11 +52,11 @@ export default function JadwalVerifikasiTuk() {
       setPesan("");
 
       const [jadwalRes, formRes] = await Promise.all([
-        api.get("/asesor/jadwal-saya"),
+        api.get("/asesor/jadwal-verifikasi-tuk"),
         api.get("/asesor/verifikasi-tuk/form"),
       ]);
 
-      const allJadwal = Array.isArray(jadwalRes.data?.data)
+      const jadwalData = Array.isArray(jadwalRes.data?.data)
         ? jadwalRes.data.data
         : [];
 
@@ -65,15 +64,12 @@ export default function JadwalVerifikasiTuk() {
         ? formRes.data.data
         : [];
 
-      const verifikasiJadwal = allJadwal.filter(
-        (item) => item.jenis_tugas === "verifikator_tuk"
-      );
-
-      setJadwalList(verifikasiJadwal);
+      setJadwalList(jadwalData);
       setPersyaratanList(formData);
 
-      if (verifikasiJadwal.length > 0) {
-        const firstJadwal = verifikasiJadwal[0];
+      if (jadwalData.length > 0) {
+        const firstJadwal = jadwalData[0];
+
         setSelectedJadwal(firstJadwal);
         await loadDetailVerifikasi(firstJadwal, formData);
       } else {
@@ -93,7 +89,10 @@ export default function JadwalVerifikasiTuk() {
     }
   };
 
-  const loadDetailVerifikasi = async (jadwalItem, formData = persyaratanList) => {
+  const loadDetailVerifikasi = async (
+    jadwalItem,
+    formData = persyaratanList
+  ) => {
     try {
       const idJadwal = getJadwalId(jadwalItem);
 
@@ -140,6 +139,7 @@ export default function JadwalVerifikasiTuk() {
         item.status,
         item.catatan,
         jadwal.kode_jadwal,
+        jadwal.nama_kegiatan,
         jadwal.nama_skema,
         jadwal.skema?.nama_skema,
         jadwal.skema?.judul_skema,
@@ -148,6 +148,7 @@ export default function JadwalVerifikasiTuk() {
         jadwal.tuk?.nama,
         jadwal.tempat,
         jadwal.lokasi,
+        jadwal.status,
       ]
         .filter(Boolean)
         .join(" ")
@@ -168,14 +169,20 @@ export default function JadwalVerifikasiTuk() {
   ).length;
 
   const totalPersyaratan = detail.length;
-  const totalLayak = detail.filter(
-    (item) => Number(item.jumlah_total) > 0 && Number(item.jumlah_baik) > 0
-  ).length;
+  const totalTerisi = detail.filter((item) => {
+    return (
+      Number(item.jumlah_total || 0) > 0 ||
+      Number(item.jumlah_baik || 0) > 0 ||
+      Number(item.jumlah_rusak || 0) > 0 ||
+      item.keterangan
+    );
+  }).length;
 
   const handleSelectJadwal = async (item) => {
     setSelectedJadwal(item);
     setPesan("");
     setError("");
+
     await loadDetailVerifikasi(item);
   };
 
@@ -251,6 +258,16 @@ export default function JadwalVerifikasiTuk() {
     }
   };
 
+  const handleResetForm = () => {
+    if (existingVerifikasi) {
+      loadDetailVerifikasi(selectedJadwal);
+      return;
+    }
+
+    setKeputusan("");
+    setDetail(createEmptyDetail(persyaratanList));
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarAsesor isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
@@ -278,9 +295,9 @@ export default function JadwalVerifikasiTuk() {
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Pilih jadwal verifikasi, cek kelengkapan persyaratan TUK,
-                  masukkan jumlah kondisi sarana, lalu simpan keputusan
-                  verifikasi.
+                  Pilih jadwal TUK, isi kondisi persyaratan, lalu simpan
+                  keputusan verifikasi untuk mendukung kesiapan pelaksanaan
+                  asesmen.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -331,8 +348,8 @@ export default function JadwalVerifikasiTuk() {
                   </h2>
 
                   <p className="text-sm font-medium leading-relaxed text-white/60">
-                    Jadwal ini khusus penugasan asesor sebagai verifikator TUK.
-                    Data persyaratan diambil dari form verifikasi TUK.
+                    Jadwal ini khusus untuk asesor dengan tugas sebagai
+                    verifikator TUK.
                   </p>
 
                   <div className="mt-6 grid grid-cols-2 gap-3">
@@ -358,7 +375,7 @@ export default function JadwalVerifikasiTuk() {
           {error && (
             <AlertBox
               type="error"
-              icon={<ShieldCheck size={20} />}
+              icon={<XCircle size={20} />}
               message={error}
             />
           )}
@@ -385,14 +402,14 @@ export default function JadwalVerifikasiTuk() {
             />
             <MiniStat
               icon={<CheckCircle2 size={22} />}
-              label="Terisi Baik"
-              value={`${totalLayak} Item`}
+              label="Terisi"
+              value={`${totalTerisi} Item`}
             />
           </section>
 
           {/* CONTENT */}
           <section className="grid grid-cols-1 xl:grid-cols-[390px_1fr] gap-6 items-start">
-            {/* LEFT: JADWAL */}
+            {/* LEFT */}
             <aside className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-100">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
@@ -421,7 +438,7 @@ export default function JadwalVerifikasiTuk() {
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Cari jadwal atau TUK..."
+                    placeholder="Cari jadwal, skema, TUK..."
                     className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-12 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                   />
                 </div>
@@ -441,7 +458,7 @@ export default function JadwalVerifikasiTuk() {
                 {filteredJadwal.length === 0 ? (
                   <EmptySmall
                     title="Jadwal tidak ditemukan"
-                    description="Belum ada jadwal dengan tugas Verifikator TUK."
+                    description="Belum ada jadwal verifikasi TUK yang cocok."
                   />
                 ) : (
                   filteredJadwal.map((item, index) => (
@@ -456,7 +473,7 @@ export default function JadwalVerifikasiTuk() {
               </div>
             </aside>
 
-            {/* RIGHT: FORM */}
+            {/* RIGHT */}
             <section className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div>
@@ -534,24 +551,36 @@ export default function JadwalVerifikasiTuk() {
                             : "Simpan data verifikasi TUK"}
                         </p>
                         <p className="mt-1 text-xs font-medium text-slate-400">
-                          Tanda tangan asesor akan menggunakan TTD yang tersimpan
-                          pada profile.
+                          TTD asesor akan otomatis memakai tanda tangan yang
+                          tersimpan pada profile asesor.
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={saving || detail.length === 0}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
-                      >
-                        {saving ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <Save size={16} />
-                        )}
-                        {existingVerifikasi ? "Update" : "Simpan"}
-                      </button>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          type="button"
+                          onClick={handleResetForm}
+                          disabled={saving}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-6 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200"
+                        >
+                          <RefreshCcw size={16} />
+                          Reset
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleSubmit}
+                          disabled={saving || detail.length === 0}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+                        >
+                          {saving ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <Save size={16} />
+                          )}
+                          {existingVerifikasi ? "Update" : "Simpan"}
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}
@@ -625,7 +654,10 @@ function JadwalSummary({ item }) {
       <SummaryBox
         icon={<CalendarCheck size={18} />}
         label="Tanggal"
-        value={formatTanggal(getJadwalDate(jadwal))}
+        value={formatRentangTanggal(
+          jadwal.tgl_awal || jadwal.tanggal || jadwal.tanggal_uji,
+          jadwal.tgl_akhir || jadwal.tanggal_selesai
+        )}
       />
       <SummaryBox
         icon={<Building2 size={18} />}
@@ -653,9 +685,15 @@ function PersyaratanCard({ item, index, onChange }) {
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
             Persyaratan TUK
           </p>
+
           <h3 className="mt-1 text-lg font-black text-[#071E3D]">
-            {item.nama_persyaratan || item.nama || item.persyaratan || "-"}
+            {item.nama_persyaratan ||
+              item.nama ||
+              item.persyaratan ||
+              item.nama_item ||
+              "-"}
           </h3>
+
           {item.kategori && (
             <p className="mt-1 text-xs font-semibold text-slate-400">
               {item.kategori}
@@ -686,6 +724,7 @@ function PersyaratanCard({ item, index, onChange }) {
         <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
           Keterangan
         </label>
+
         <textarea
           value={item.keterangan || ""}
           onChange={(e) => onChange(index, "keterangan", e.target.value)}
@@ -704,6 +743,7 @@ function NumberInput({ label, value, onChange }) {
       <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
         {label}
       </label>
+
       <input
         type="number"
         min="0"
@@ -737,9 +777,11 @@ function SummaryBox({ icon, label, value }) {
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
         {icon}
       </div>
+
       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
         {label}
       </p>
+
       <p className="mt-1 text-sm font-black text-[#071E3D] line-clamp-2">
         {value || "-"}
       </p>
@@ -758,6 +800,7 @@ function MiniStat({ icon, label, value }) {
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           {label}
         </p>
+
         <p className="text-[#071E3D] font-black mt-1">{value}</p>
       </div>
     </div>
@@ -800,7 +843,9 @@ function EmptyState({ title, description }) {
       <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
         <ClipboardCheck size={34} />
       </div>
+
       <h3 className="text-2xl font-black text-[#071E3D]">{title}</h3>
+
       <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
         {description}
       </p>
@@ -812,7 +857,9 @@ function EmptySmall({ title, description }) {
   return (
     <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center">
       <CalendarDays size={32} className="mx-auto mb-3 text-slate-300" />
+
       <p className="text-sm font-black text-[#071E3D]">{title}</p>
+
       <p className="mt-1 text-xs font-medium text-slate-400">{description}</p>
     </div>
   );
@@ -830,7 +877,8 @@ function SmallLine({ icon, text }) {
 function createEmptyDetail(persyaratanList) {
   return persyaratanList.map((item) => ({
     id_persyaratan_tuk: item.id_persyaratan_tuk || item.id,
-    nama_persyaratan: item.nama_persyaratan || item.nama || item.persyaratan,
+    nama_persyaratan:
+      item.nama_persyaratan || item.nama || item.persyaratan || item.nama_item,
     kategori: item.kategori || "",
     jumlah_total: "",
     jumlah_baik: "",
@@ -845,8 +893,7 @@ function mergeDetailWithPersyaratan(persyaratanList, existingDetails) {
       persyaratan.id_persyaratan_tuk || persyaratan.id;
 
     const found = existingDetails.find(
-      (detail) =>
-        Number(detail.id_persyaratan_tuk) === Number(idPersyaratan)
+      (item) => Number(item.id_persyaratan_tuk) === Number(idPersyaratan)
     );
 
     return {
@@ -854,7 +901,8 @@ function mergeDetailWithPersyaratan(persyaratanList, existingDetails) {
       nama_persyaratan:
         persyaratan.nama_persyaratan ||
         persyaratan.nama ||
-        persyaratan.persyaratan,
+        persyaratan.persyaratan ||
+        persyaratan.nama_item,
       kategori: persyaratan.kategori || "",
       jumlah_total: found?.jumlah_total ?? "",
       jumlah_baik: found?.jumlah_baik ?? "",
@@ -882,6 +930,7 @@ function getJadwalTitle(item) {
   const jadwal = item?.jadwal || {};
 
   return (
+    jadwal.nama_kegiatan ||
     jadwal.nama_skema ||
     jadwal.skema?.nama_skema ||
     jadwal.skema?.judul_skema ||
@@ -892,6 +941,7 @@ function getJadwalTitle(item) {
 
 function getJadwalDate(jadwal) {
   return (
+    jadwal?.tgl_awal ||
     jadwal?.tanggal ||
     jadwal?.tanggal_uji ||
     jadwal?.tgl_pelaksanaan ||
@@ -940,6 +990,18 @@ function formatTanggal(value) {
   } catch (err) {
     return value;
   }
+}
+
+function formatRentangTanggal(start, end) {
+  if (!start && !end) return "-";
+  if (start && !end) return formatTanggal(start);
+  if (!start && end) return formatTanggal(end);
+
+  if (String(start).slice(0, 10) === String(end).slice(0, 10)) {
+    return formatTanggal(start);
+  }
+
+  return `${formatTanggal(start)} - ${formatTanggal(end)}`;
 }
 
 function onlyNumber(value) {

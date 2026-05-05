@@ -40,14 +40,10 @@ export default function JadwalKomiteTeknis() {
       setLoading(true);
       setError("");
 
-      const res = await api.get("/asesor/jadwal-saya");
+      const res = await api.get("/asesor/jadwal-komite-teknis");
       const data = Array.isArray(res.data?.data) ? res.data.data : [];
 
-      const komiteTeknis = data.filter(
-        (item) => item.jenis_tugas === "komite_teknis"
-      );
-
-      setJadwalList(komiteTeknis);
+      setJadwalList(data);
     } catch (err) {
       console.error(err);
       setError(
@@ -73,6 +69,7 @@ export default function JadwalKomiteTeknis() {
         item.status,
         item.catatan,
         jadwal.kode_jadwal,
+        jadwal.nama_kegiatan,
         jadwal.nama_skema,
         jadwal.skema?.nama_skema,
         jadwal.skema?.judul_skema,
@@ -81,6 +78,7 @@ export default function JadwalKomiteTeknis() {
         jadwal.tuk?.nama,
         jadwal.tempat,
         jadwal.lokasi,
+        jadwal.status,
       ]
         .filter(Boolean)
         .join(" ")
@@ -128,8 +126,7 @@ export default function JadwalKomiteTeknis() {
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
                   Kelola jadwal komite teknis untuk meninjau, menyusun, dan
-                  mengelola instrumen asesmen seperti FR.IA sesuai skema yang
-                  ditugaskan.
+                  mengelola instrumen asesmen sesuai skema yang ditugaskan.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -175,8 +172,8 @@ export default function JadwalKomiteTeknis() {
                   </h2>
 
                   <p className="text-sm font-medium leading-relaxed text-white/60">
-                    Jadwal ini khusus untuk tugas komite teknis dalam pengelolaan
-                    instrumen asesmen.
+                    Jadwal ini khusus untuk tugas komite teknis dalam
+                    pengelolaan instrumen asesmen.
                   </p>
 
                   <div className="mt-6 grid grid-cols-2 gap-3">
@@ -242,7 +239,7 @@ export default function JadwalKomiteTeknis() {
                 </h2>
 
                 <p className="mt-2 text-sm font-medium text-slate-400">
-                  Cari berdasarkan skema, TUK, lokasi, atau status jadwal.
+                  Cari berdasarkan skema, TUK, lokasi, kegiatan, atau status.
                 </p>
               </div>
 
@@ -316,6 +313,7 @@ function JadwalKomiteCard({ item, index }) {
 
   const title = getJadwalTitle(item);
   const tanggal = getJadwalDate(jadwal);
+  const tanggalAkhir = jadwal.tgl_akhir || jadwal.tanggal_selesai || null;
   const tuk = getJadwalTuk(jadwal);
   const kodeJadwal =
     jadwal.kode_jadwal ||
@@ -364,7 +362,7 @@ function JadwalKomiteCard({ item, index }) {
             <DetailItem
               icon={<CalendarCheck size={18} />}
               label="Tanggal"
-              value={formatTanggal(tanggal)}
+              value={formatRentangTanggal(tanggal, tanggalAkhir)}
             />
             <DetailItem
               icon={<MapPin size={18} />}
@@ -427,7 +425,9 @@ function JadwalKomiteCard({ item, index }) {
             <ActionButton
               icon={<ClipboardCheck size={16} />}
               label="Paket Soal FR.IA.05 - 08"
-              onClick={() => goTo(`/asesor/komite-teknis/${idJadwal}/paket-soal`)}
+              onClick={() =>
+                goTo(`/asesor/komite-teknis/${idJadwal}/paket-soal`)
+              }
               disabled={!idJadwal}
             />
           </div>
@@ -480,7 +480,7 @@ function StatusBadge({ status }) {
         active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
       }`}
     >
-      {status}
+      {status || "aktif"}
     </span>
   );
 }
@@ -491,7 +491,6 @@ function MiniStat({ icon, label, value }) {
       <div className="w-13 h-13 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
         {icon}
       </div>
-
       <div>
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           {label}
@@ -580,6 +579,7 @@ function getJadwalTitle(item) {
   const jadwal = item?.jadwal || {};
 
   return (
+    jadwal.nama_kegiatan ||
     jadwal.nama_skema ||
     jadwal.skema?.nama_skema ||
     jadwal.skema?.judul_skema ||
@@ -590,6 +590,7 @@ function getJadwalTitle(item) {
 
 function getJadwalDate(jadwal) {
   return (
+    jadwal?.tgl_awal ||
     jadwal?.tanggal ||
     jadwal?.tanggal_uji ||
     jadwal?.tgl_pelaksanaan ||
@@ -621,4 +622,16 @@ function formatTanggal(value) {
   } catch (err) {
     return value;
   }
+}
+
+function formatRentangTanggal(start, end) {
+  if (!start && !end) return "-";
+  if (start && !end) return formatTanggal(start);
+  if (!start && end) return formatTanggal(end);
+
+  if (String(start).slice(0, 10) === String(end).slice(0, 10)) {
+    return formatTanggal(start);
+  }
+
+  return `${formatTanggal(start)} - ${formatTanggal(end)}`;
 }

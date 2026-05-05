@@ -41,14 +41,24 @@ exports.getDetail = async (req, res) => {
       ]
     });
 
+    // Kalau belum pernah isi, jangan jadikan 500.
+    // Frontend butuh tahu bahwa form masih baru.
     if (!data) {
-      return response.error(res, "Data tidak ditemukan");
+      return res.status(200).json({
+        success: true,
+        message: "Data verifikasi belum ada",
+        data: null
+      });
     }
 
     return response.success(res, "Detail verifikasi", data);
 
   } catch (err) {
-    return response.error(res, err.message);
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Terjadi kesalahan server"
+    });
   }
 };
 

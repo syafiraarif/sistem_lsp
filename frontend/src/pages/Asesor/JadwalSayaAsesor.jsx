@@ -23,13 +23,6 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 
-const jenisTugasLabel = {
-  asesor_penguji: "Asesor Penguji",
-  verifikator_tuk: "Verifikator TUK",
-  validator_mkva: "Validator MKVA",
-  komite_teknis: "Komite Teknis",
-};
-
 export default function JadwalSayaAsesor() {
   const navigate = useNavigate();
 
@@ -40,22 +33,23 @@ export default function JadwalSayaAsesor() {
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("semua");
-  const [filterTugas, setFilterTugas] = useState("semua");
+
+  const displayName = getDisplayName();
 
   const fetchJadwalSaya = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const res = await api.get("/asesor/jadwal-saya");
-      const data = res.data?.data || [];
+      const res = await api.get("/asesor/jadwal-uji-kompetensi");
+      const data = Array.isArray(res.data?.data) ? res.data.data : [];
 
-      setJadwalSaya(Array.isArray(data) ? data : []);
+      setJadwalSaya(data);
     } catch (err) {
       console.error(err);
       setError(
         err.response?.data?.message ||
-          "Gagal mengambil data jadwal asesor"
+          "Gagal mengambil jadwal uji kompetensi"
       );
     } finally {
       setLoading(false);
@@ -67,47 +61,43 @@ export default function JadwalSayaAsesor() {
   }, []);
 
   const filteredJadwal = useMemo(() => {
+    const keyword = search.toLowerCase();
+
     return jadwalSaya.filter((item) => {
       const jadwal = item.jadwal || {};
 
-      const keyword = search.toLowerCase();
-
       const searchableText = [
-        item.jenis_tugas,
         item.status,
         item.catatan,
+        jadwal.kode_jadwal,
+        jadwal.nama_kegiatan,
         jadwal.nama_skema,
         jadwal.skema?.nama_skema,
+        jadwal.skema?.judul_skema,
         jadwal.nama_tuk,
         jadwal.tuk?.nama_tuk,
-        jadwal.kode_jadwal,
-        jadwal.status,
+        jadwal.tuk?.nama,
         jadwal.tempat,
         jadwal.lokasi,
+        jadwal.status,
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
 
       const matchSearch = searchableText.includes(keyword);
-
       const matchStatus =
         filterStatus === "semua" || item.status === filterStatus;
 
-      const matchTugas =
-        filterTugas === "semua" || item.jenis_tugas === filterTugas;
-
-      return matchSearch && matchStatus && matchTugas;
+      return matchSearch && matchStatus;
     });
-  }, [jadwalSaya, search, filterStatus, filterTugas]);
+  }, [jadwalSaya, search, filterStatus]);
 
   const totalJadwal = jadwalSaya.length;
   const totalAktif = jadwalSaya.filter((item) => item.status === "aktif").length;
   const totalNonaktif = jadwalSaya.filter(
     (item) => item.status === "nonaktif"
   ).length;
-
-  const displayName = getDisplayName();
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -125,7 +115,7 @@ export default function JadwalSayaAsesor() {
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <CalendarCheck size={15} className="text-orange-500" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Jadwal Saya
+                    Jadwal Uji Kompetensi
                   </span>
                 </div>
 
@@ -136,8 +126,9 @@ export default function JadwalSayaAsesor() {
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Pantau seluruh jadwal penugasan asesor, status tugas, catatan,
-                  dan detail asesmen yang terhubung dengan akun Anda.
+                  Pantau jadwal uji kompetensi yang ditugaskan kepada Anda
+                  sebagai asesor penguji, lalu kelola peserta, presensi, dan
+                  formulir asesmen.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -179,12 +170,12 @@ export default function JadwalSayaAsesor() {
                   </p>
 
                   <h2 className="mb-4 text-2xl font-black">
-                    {totalJadwal} Jadwal Terhubung
+                    {totalJadwal} Jadwal Uji
                   </h2>
 
                   <p className="text-sm font-medium leading-relaxed text-white/60">
-                    Jadwal aktif digunakan untuk mengakses peserta, instrumen
-                    asesmen, presensi, dan dokumen terkait.
+                    Jadwal aktif dapat digunakan untuk melihat peserta,
+                    mengelola presensi, dan membuka formulir asesmen.
                   </p>
 
                   <div className="mt-6 grid grid-cols-2 gap-3">
@@ -211,7 +202,7 @@ export default function JadwalSayaAsesor() {
             <AlertBox
               type="loading"
               icon={<Loader2 size={20} className="animate-spin" />}
-              message="Memuat data jadwal..."
+              message="Memuat jadwal uji kompetensi..."
             />
           )}
 
@@ -246,11 +237,12 @@ export default function JadwalSayaAsesor() {
                 </div>
 
                 <h2 className="text-2xl lg:text-3xl font-black text-[#071E3D]">
-                  Daftar Penugasan
+                  Daftar Jadwal Uji Kompetensi
                 </h2>
 
                 <p className="mt-2 text-sm font-medium text-slate-400">
-                  Cari berdasarkan skema, TUK, status, atau jenis tugas.
+                  Cari berdasarkan skema, TUK, lokasi, kegiatan, atau status
+                  jadwal.
                 </p>
               </div>
 
@@ -269,17 +261,18 @@ export default function JadwalSayaAsesor() {
               </button>
             </div>
 
-            <div className="p-6 grid grid-cols-1 lg:grid-cols-[1fr_220px_240px] gap-4">
+            <div className="p-6 grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4">
               <div className="relative">
                 <Search
                   size={18}
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
                 />
+
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari jadwal, skema, TUK, atau catatan..."
+                  placeholder="Cari jadwal, skema, TUK, lokasi, atau catatan..."
                   className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-12 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                 />
               </div>
@@ -292,18 +285,6 @@ export default function JadwalSayaAsesor() {
                 <option value="semua">Semua Status</option>
                 <option value="aktif">Aktif</option>
                 <option value="nonaktif">Nonaktif</option>
-              </select>
-
-              <select
-                value={filterTugas}
-                onChange={(e) => setFilterTugas(e.target.value)}
-                className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-              >
-                <option value="semua">Semua Jenis Tugas</option>
-                <option value="asesor_penguji">Asesor Penguji</option>
-                <option value="verifikator_tuk">Verifikator TUK</option>
-                <option value="validator_mkva">Validator MKVA</option>
-                <option value="komite_teknis">Komite Teknis</option>
               </select>
             </div>
           </section>
@@ -332,29 +313,44 @@ function JadwalCard({ item, index }) {
   const navigate = useNavigate();
 
   const jadwal = item.jadwal || {};
+  const idJadwal = getJadwalId(item);
 
-  const idJadwal = item.id_jadwal || jadwal.id_jadwal || jadwal.id;
-  const namaSkema =
+  const namaKegiatan =
+    jadwal.nama_kegiatan ||
     jadwal.nama_skema ||
     jadwal.skema?.nama_skema ||
     jadwal.skema?.judul_skema ||
-    jadwal.skema ||
-    "Skema belum tersedia";
+    "Jadwal Uji Kompetensi";
+
+  const namaSkema =
+    jadwal.skema?.nama_skema ||
+    jadwal.skema?.judul_skema ||
+    jadwal.nama_skema ||
+    "-";
 
   const namaTuk =
-    jadwal.nama_tuk ||
     jadwal.tuk?.nama_tuk ||
     jadwal.tuk?.nama ||
+    jadwal.nama_tuk ||
     jadwal.tempat ||
     jadwal.lokasi ||
     "TUK belum tersedia";
 
   const tanggal =
+    jadwal.tgl_awal ||
     jadwal.tanggal ||
     jadwal.tanggal_uji ||
     jadwal.tgl_pelaksanaan ||
     jadwal.tanggal_pelaksanaan ||
     jadwal.created_at;
+
+  const tanggalAkhir =
+    jadwal.tgl_akhir ||
+    jadwal.tanggal_selesai ||
+    jadwal.tanggal_akhir ||
+    null;
+
+  const jam = jadwal.jam || jadwal.waktu || "-";
 
   const kodeJadwal =
     jadwal.kode_jadwal ||
@@ -362,7 +358,6 @@ function JadwalCard({ item, index }) {
     (idJadwal ? `JDW-${idJadwal}` : `JDW-${index + 1}`);
 
   const status = item.status || "aktif";
-  const jenisTugas = item.jenis_tugas || "-";
   const catatan = item.catatan || "Tidak ada catatan penugasan.";
 
   const handleLihatPeserta = () => {
@@ -375,9 +370,14 @@ function JadwalCard({ item, index }) {
     navigate(`/asesor/presensi/${idJadwal}`);
   };
 
+  const handleFormAsesmen = () => {
+    if (!idJadwal) return;
+    navigate(`/asesor/jadwal-saya/${idJadwal}/form-asesmen`);
+  };
+
   return (
     <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_290px]">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px]">
         <div className="p-6">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
             <div>
@@ -389,12 +389,12 @@ function JadwalCard({ item, index }) {
                 <StatusBadge status={status} />
 
                 <span className="inline-flex items-center rounded-full bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#071E3D]">
-                  {jenisTugasLabel[jenisTugas] || jenisTugas}
+                  Asesor Penguji
                 </span>
               </div>
 
               <h3 className="text-2xl font-black text-[#071E3D]">
-                {namaSkema}
+                {namaKegiatan}
               </h3>
 
               <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
@@ -407,21 +407,29 @@ function JadwalCard({ item, index }) {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
             <DetailItem
               icon={<CalendarCheck size={18} />}
               label="Tanggal"
-              value={formatTanggal(tanggal)}
+              value={formatRentangTanggal(tanggal, tanggalAkhir)}
             />
+
             <DetailItem
               icon={<MapPin size={18} />}
               label="Lokasi / TUK"
               value={namaTuk}
             />
+
             <DetailItem
               icon={<UserCheck size={18} />}
-              label="Jenis Tugas"
-              value={jenisTugasLabel[jenisTugas] || jenisTugas}
+              label="Skema"
+              value={namaSkema}
+            />
+
+            <DetailItem
+              icon={<Info size={18} />}
+              label="Jam"
+              value={jam}
             />
           </div>
         </div>
@@ -431,11 +439,13 @@ function JadwalCard({ item, index }) {
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
               Aksi Jadwal
             </p>
+
             <h4 className="mt-2 text-lg font-black text-[#071E3D]">
               Kelola Asesmen
             </h4>
+
             <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
-              Buka peserta, presensi, dan formulir terkait jadwal ini.
+              Buka peserta, presensi, dan formulir asesmen untuk jadwal ini.
             </p>
           </div>
 
@@ -462,6 +472,7 @@ function JadwalCard({ item, index }) {
 
             <button
               type="button"
+              onClick={handleFormAsesmen}
               disabled={!idJadwal}
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200"
             >
@@ -481,9 +492,11 @@ function DetailItem({ icon, label, value }) {
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
         {icon}
       </div>
+
       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
         {label}
       </p>
+
       <p className="mt-1 text-sm font-black text-[#071E3D] line-clamp-2">
         {value || "-"}
       </p>
@@ -497,12 +510,10 @@ function StatusBadge({ status }) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
-        isAktif
-          ? "bg-green-50 text-green-600"
-          : "bg-red-50 text-red-500"
+        isAktif ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
       }`}
     >
-      {status}
+      {status || "aktif"}
     </span>
   );
 }
@@ -565,13 +576,13 @@ function EmptyState({ loading }) {
       </div>
 
       <h3 className="text-2xl font-black text-[#071E3D]">
-        {loading ? "Memuat Jadwal" : "Belum Ada Jadwal"}
+        {loading ? "Memuat Jadwal" : "Belum Ada Jadwal Uji Kompetensi"}
       </h3>
 
       <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
         {loading
-          ? "Sistem sedang mengambil data jadwal penugasan asesor."
-          : "Belum ada jadwal yang terhubung dengan akun asesor ini, atau data tidak cocok dengan filter pencarian."}
+          ? "Sistem sedang mengambil data jadwal uji kompetensi."
+          : "Belum ada jadwal uji kompetensi yang ditugaskan kepada akun asesor ini, atau data tidak cocok dengan filter pencarian."}
       </p>
     </div>
   );
@@ -594,6 +605,10 @@ function getDisplayName() {
   }
 }
 
+function getJadwalId(item) {
+  return item?.id_jadwal || item?.jadwal?.id_jadwal || item?.jadwal?.id;
+}
+
 function formatTanggal(value) {
   if (!value) return "-";
 
@@ -606,4 +621,22 @@ function formatTanggal(value) {
   } catch (err) {
     return value;
   }
+}
+
+function formatRentangTanggal(start, end) {
+  if (!start && !end) return "-";
+
+  if (start && !end) {
+    return formatTanggal(start);
+  }
+
+  if (!start && end) {
+    return formatTanggal(end);
+  }
+
+  if (String(start).slice(0, 10) === String(end).slice(0, 10)) {
+    return formatTanggal(start);
+  }
+
+  return `${formatTanggal(start)} - ${formatTanggal(end)}`;
 }
