@@ -1,4 +1,4 @@
-// frontend/src/pages/asesor/JadwalKomiteTeknis.jsx
+// frontend/src/pages/asesor/JadwalMkva.jsx
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -9,8 +9,8 @@ import {
   CalendarDays,
   ChevronRight,
   ClipboardCheck,
+  Download,
   FileCheck2,
-  FileQuestion,
   FileSearch,
   Filter,
   Info,
@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 
-export default function JadwalKomiteTeknis() {
+export default function JadwalMkva() {
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -31,24 +31,24 @@ export default function JadwalKomiteTeknis() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("semua");
   const [loading, setLoading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
   const [error, setError] = useState("");
 
   const displayName = getDisplayName();
 
-  const fetchJadwal = async () => {
+  const fetchJadwalMkva = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const res = await api.get("/asesor/jadwal-komite-teknis");
+      const res = await api.get("/asesor/mkva/jadwal");
       const data = Array.isArray(res.data?.data) ? res.data.data : [];
 
       setJadwalList(data);
     } catch (err) {
       console.error(err);
       setError(
-        err.response?.data?.message ||
-          "Gagal mengambil jadwal komite teknis"
+        err.response?.data?.message || "Gagal mengambil jadwal MKVA"
       );
     } finally {
       setLoading(false);
@@ -56,18 +56,23 @@ export default function JadwalKomiteTeknis() {
   };
 
   useEffect(() => {
-    fetchJadwal();
+    fetchJadwalMkva();
   }, []);
 
   const filteredJadwal = useMemo(() => {
     const keyword = search.toLowerCase();
 
     return jadwalList.filter((item) => {
-      const jadwal = item.jadwal || {};
+      const jadwal = getJadwalObject(item);
 
       const text = [
         item.status,
+        item.status_mkva,
         item.catatan,
+        item.keputusan,
+        item.nama_kegiatan,
+        item.skema,
+        item.tempat,
         jadwal.kode_jadwal,
         jadwal.nama_kegiatan,
         jadwal.nama_skema,
@@ -78,25 +83,63 @@ export default function JadwalKomiteTeknis() {
         jadwal.tuk?.nama,
         jadwal.tempat,
         jadwal.lokasi,
-        jadwal.status,
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
 
       const matchSearch = text.includes(keyword);
-      const matchStatus =
-        filterStatus === "semua" || item.status === filterStatus;
+      const status = getStatus(item);
+      const matchStatus = filterStatus === "semua" || status === filterStatus;
 
       return matchSearch && matchStatus;
     });
   }, [jadwalList, search, filterStatus]);
 
   const totalJadwal = jadwalList.length;
-  const totalAktif = jadwalList.filter((item) => item.status === "aktif").length;
-  const totalNonaktif = jadwalList.filter(
-    (item) => item.status === "nonaktif"
-  ).length;
+  const totalAktif = jadwalList.filter((item) => getStatus(item) === "aktif").length;
+  const totalSelesai = jadwalList.filter((item) => isMkvaDone(item)).length;
+
+  const handleDownloadPdf = async (item) => {
+    const idMkva = getMkvaId(item);
+
+    if (!idMkva) {
+      setError("ID MKVA belum tersedia untuk download PDF");
+      return;
+    }
+
+    try {
+      setDownloadingId(idMkva);
+      setError("");
+
+      const res = await api.get(`/asesor/mkva/${idMkva}/pdf`, {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([res.data], {
+        type: res.headers["content-type"] || "application/pdf",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `MKVA-${idMkva}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err.response?.data?.message ||
+          "Gagal download PDF MKVA. Pastikan dokumen MKVA sudah dibuat."
+      );
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -112,27 +155,28 @@ export default function JadwalKomiteTeknis() {
             <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
               <div className="flex flex-col justify-center">
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <FileSearch size={15} className="text-orange-500" />
+                  <ClipboardCheck size={15} className="text-orange-500" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Jadwal Komite Teknis
+                    Jadwal MKVA
                   </span>
                 </div>
 
                 <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
-                  Peninjauan Instrumen
+                  Validasi MKVA
                   <br />
                   <span className="text-orange-500">{displayName}</span>
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Kelola jadwal komite teknis untuk meninjau, menyusun, dan
-                  mengelola instrumen asesmen sesuai skema yang ditugaskan.
+                  Kelola jadwal validasi MKVA, pantau status pengisian,
+                  lanjutkan proses validasi, dan unduh dokumen sesuai jadwal
+                  yang ditugaskan.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
-                    onClick={fetchJadwal}
+                    onClick={fetchJadwalMkva}
                     disabled={loading}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
@@ -164,23 +208,23 @@ export default function JadwalKomiteTeknis() {
                   </div>
 
                   <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
-                    Ringkasan Komite
+                    Ringkasan MKVA
                   </p>
 
                   <h2 className="mb-4 text-2xl font-black">
-                    {totalJadwal} Jadwal Komite
+                    {totalJadwal} Jadwal MKVA
                   </h2>
 
                   <p className="text-sm font-medium leading-relaxed text-white/60">
-                    Jadwal ini khusus untuk tugas komite teknis dalam
-                    pengelolaan instrumen asesmen.
+                    Jadwal ini khusus untuk penugasan validator MKVA dan
+                    pengelolaan dokumen validasi asesmen.
                   </p>
 
                   <div className="mt-6 grid grid-cols-2 gap-3">
                     <HeroPill label="Aktif" value={`${totalAktif} Jadwal`} />
                     <HeroPill
-                      label="Nonaktif"
-                      value={`${totalNonaktif} Jadwal`}
+                      label="Selesai"
+                      value={`${totalSelesai} Dokumen`}
                     />
                   </div>
                 </div>
@@ -200,7 +244,7 @@ export default function JadwalKomiteTeknis() {
             <AlertBox
               type="loading"
               icon={<Loader2 size={20} className="animate-spin" />}
-              message="Memuat jadwal komite teknis..."
+              message="Memuat jadwal MKVA..."
             />
           )}
 
@@ -217,9 +261,9 @@ export default function JadwalKomiteTeknis() {
               value={`${totalAktif} Aktif`}
             />
             <MiniStat
-              icon={<Info size={22} />}
-              label="Status Nonaktif"
-              value={`${totalNonaktif} Nonaktif`}
+              icon={<FileCheck2 size={22} />}
+              label="MKVA Selesai"
+              value={`${totalSelesai} Dokumen`}
             />
           </section>
 
@@ -235,17 +279,18 @@ export default function JadwalKomiteTeknis() {
                 </div>
 
                 <h2 className="text-2xl lg:text-3xl font-black text-[#071E3D]">
-                  Daftar Jadwal Komite Teknis
+                  Daftar Jadwal MKVA
                 </h2>
 
                 <p className="mt-2 text-sm font-medium text-slate-400">
-                  Cari berdasarkan skema, TUK, lokasi, kegiatan, atau status.
+                  Cari berdasarkan skema, TUK, lokasi, keputusan, atau status
+                  dokumen MKVA.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={fetchJadwal}
+                onClick={fetchJadwalMkva}
                 disabled={loading}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
@@ -268,7 +313,7 @@ export default function JadwalKomiteTeknis() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari skema, TUK, lokasi, atau catatan..."
+                  placeholder="Cari skema, TUK, lokasi, keputusan, atau catatan..."
                   className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-12 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                 />
               </div>
@@ -281,6 +326,7 @@ export default function JadwalKomiteTeknis() {
                 <option value="semua">Semua Status</option>
                 <option value="aktif">Aktif</option>
                 <option value="nonaktif">Nonaktif</option>
+                <option value="selesai">Selesai</option>
               </select>
             </div>
           </section>
@@ -291,10 +337,12 @@ export default function JadwalKomiteTeknis() {
               <EmptyState loading={loading} />
             ) : (
               filteredJadwal.map((item, index) => (
-                <JadwalKomiteCard
-                  key={`${item.id_jadwal}-${item.id_user}-${item.jenis_tugas}-${index}`}
+                <JadwalMkvaCard
+                  key={`${getJadwalId(item)}-${getMkvaId(item) || "mkva"}-${index}`}
                   item={item}
                   index={index}
+                  downloadingId={downloadingId}
+                  onDownload={() => handleDownloadPdf(item)}
                 />
               ))
             )}
@@ -305,27 +353,37 @@ export default function JadwalKomiteTeknis() {
   );
 }
 
-function JadwalKomiteCard({ item, index }) {
+function JadwalMkvaCard({ item, index, downloadingId, onDownload }) {
   const navigate = useNavigate();
 
-  const jadwal = item.jadwal || {};
+  const jadwal = getJadwalObject(item);
   const idJadwal = getJadwalId(item);
+  const idMkva = getMkvaId(item);
 
   const title = getJadwalTitle(item);
-  const tanggal = getJadwalDate(jadwal);
-  const tanggalAkhir = jadwal.tgl_akhir || jadwal.tanggal_selesai || null;
-  const tuk = getJadwalTuk(jadwal);
+  const tanggal = getJadwalDate(jadwal) || item.tanggal;
+  const tuk = getJadwalTuk(jadwal) || item.tempat;
   const kodeJadwal =
     jadwal.kode_jadwal ||
     jadwal.kode ||
     (idJadwal ? `JDW-${idJadwal}` : `JDW-${index + 1}`);
 
-  const catatan = item.catatan || "Tidak ada catatan penugasan.";
-  const status = item.status || "aktif";
+  const status = getStatus(item);
+  const catatan =
+    item.catatan || item.catatan_mkva || "Tidak ada catatan penugasan.";
+  const keputusan = getKeputusan(item);
+  const totalAsesi = item.total_asesi ?? item.total_peserta ?? "-";
+  const bolehMkva = item.boleh_mkva !== false;
 
-  const goTo = (path) => {
-    if (!idJadwal) return;
-    navigate(path);
+  const handleOpenMkva = () => {
+    if (idMkva) {
+      navigate(`/asesor/mkva/${idMkva}`);
+      return;
+    }
+
+    if (idJadwal) {
+      navigate(`/asesor/mkva/jadwal/${idJadwal}`);
+    }
   };
 
   return (
@@ -341,8 +399,10 @@ function JadwalKomiteCard({ item, index }) {
 
                 <StatusBadge status={status} />
 
+                <MkvaBadge done={isMkvaDone(item)} />
+
                 <span className="inline-flex items-center rounded-full bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#071E3D]">
-                  Komite Teknis
+                  Validator MKVA
                 </span>
               </div>
 
@@ -354,15 +414,15 @@ function JadwalKomiteCard({ item, index }) {
             </div>
 
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-              <FileSearch size={26} />
+              <ClipboardCheck size={26} />
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
             <DetailItem
               icon={<CalendarCheck size={18} />}
               label="Tanggal"
-              value={formatRentangTanggal(tanggal, tanggalAkhir)}
+              value={formatTanggal(tanggal)}
             />
             <DetailItem
               icon={<MapPin size={18} />}
@@ -370,9 +430,14 @@ function JadwalKomiteCard({ item, index }) {
               value={tuk}
             />
             <DetailItem
-              icon={<FileCheck2 size={18} />}
-              label="Jenis Tugas"
-              value="Komite Teknis"
+              icon={<FileSearch size={18} />}
+              label="Total Asesi"
+              value={`${totalAsesi} Asesi`}
+            />
+            <DetailItem
+              icon={<Info size={18} />}
+              label="Keputusan"
+              value={keputusan}
             />
           </div>
         </div>
@@ -380,56 +445,43 @@ function JadwalKomiteCard({ item, index }) {
         <div className="border-t xl:border-t-0 xl:border-l border-slate-100 bg-slate-50/60 p-6 flex flex-col justify-between gap-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Instrumen Komite
+              Aksi MKVA
             </p>
 
             <h4 className="mt-2 text-lg font-black text-[#071E3D]">
-              Kelola FR.IA
+              Kelola Dokumen
             </h4>
 
             <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
-              Pilih instrumen yang ingin dibuat atau ditinjau untuk jadwal ini.
+              Lanjutkan pengisian MKVA, update data validasi, atau unduh PDF
+              jika dokumen sudah tersedia.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-3">
-            <ActionButton
-              icon={<FileQuestion size={16} />}
-              label="FR.IA.02"
-              onClick={() => goTo(`/asesor/komite-teknis/${idJadwal}/fr-ia02`)}
-              disabled={!idJadwal}
-              primary
-            />
+            <button
+              type="button"
+              onClick={handleOpenMkva}
+              disabled={(!idJadwal && !idMkva) || !bolehMkva}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <FileCheck2 size={16} />
+              {idMkva ? "Lanjutkan MKVA" : "Isi MKVA"}
+            </button>
 
-            <ActionButton
-              icon={<FileQuestion size={16} />}
-              label="FR.IA.03"
-              onClick={() => goTo(`/asesor/komite-teknis/${idJadwal}/fr-ia03`)}
-              disabled={!idJadwal}
-            />
-
-            <ActionButton
-              icon={<FileQuestion size={16} />}
-              label="FR.IA.04A"
-              onClick={() => goTo(`/asesor/komite-teknis/${idJadwal}/fr-ia04a`)}
-              disabled={!idJadwal}
-            />
-
-            <ActionButton
-              icon={<FileQuestion size={16} />}
-              label="FR.IA.04B"
-              onClick={() => goTo(`/asesor/komite-teknis/${idJadwal}/fr-ia04b`)}
-              disabled={!idJadwal}
-            />
-
-            <ActionButton
-              icon={<ClipboardCheck size={16} />}
-              label="Paket Soal FR.IA.05 - 08"
-              onClick={() =>
-                goTo(`/asesor/komite-teknis/${idJadwal}/paket-soal`)
-              }
-              disabled={!idJadwal}
-            />
+            <button
+              type="button"
+              onClick={onDownload}
+              disabled={!idMkva || downloadingId === idMkva}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200"
+            >
+              {downloadingId === idMkva ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+              Download PDF
+            </button>
           </div>
         </div>
       </div>
@@ -437,21 +489,29 @@ function JadwalKomiteCard({ item, index }) {
   );
 }
 
-function ActionButton({ icon, label, onClick, disabled, primary = false }) {
+function StatusBadge({ status }) {
+  const active = status === "aktif";
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 text-xs font-black uppercase tracking-widest transition-all disabled:cursor-not-allowed disabled:bg-slate-300 ${
-        primary
-          ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-[#071E3D]"
-          : "border border-slate-100 bg-white text-[#071E3D] hover:bg-[#071E3D] hover:text-white"
+    <span
+      className={`inline-flex items-center rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
+        active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
       }`}
     >
-      {icon}
-      {label}
-    </button>
+      {status || "aktif"}
+    </span>
+  );
+}
+
+function MkvaBadge({ done }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
+        done ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-500"
+      }`}
+    >
+      {done ? "MKVA Dibuat" : "Belum MKVA"}
+    </span>
   );
 }
 
@@ -468,20 +528,6 @@ function DetailItem({ icon, label, value }) {
         {value || "-"}
       </p>
     </div>
-  );
-}
-
-function StatusBadge({ status }) {
-  const active = status === "aktif";
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
-        active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
-      }`}
-    >
-      {status || "aktif"}
-    </span>
   );
 }
 
@@ -537,18 +583,18 @@ function EmptyState({ loading }) {
         {loading ? (
           <Loader2 size={30} className="animate-spin" />
         ) : (
-          <FileSearch size={30} />
+          <ClipboardCheck size={30} />
         )}
       </div>
 
       <h3 className="text-2xl font-black text-[#071E3D]">
-        {loading ? "Memuat Jadwal" : "Belum Ada Jadwal Komite Teknis"}
+        {loading ? "Memuat Jadwal" : "Belum Ada Jadwal MKVA"}
       </h3>
 
       <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
         {loading
-          ? "Sistem sedang mengambil data jadwal komite teknis."
-          : "Belum ada jadwal dengan tugas komite teknis, atau data tidak cocok dengan filter pencarian."}
+          ? "Sistem sedang mengambil data jadwal MKVA."
+          : "Belum ada jadwal dengan tugas validator MKVA, atau data tidak cocok dengan filter pencarian."}
       </p>
     </div>
   );
@@ -571,20 +617,69 @@ function getDisplayName() {
   }
 }
 
+function getJadwalObject(item) {
+  return item?.jadwal || item?.Jadwal || item?.data_jadwal || item || {};
+}
+
 function getJadwalId(item) {
-  return item?.id_jadwal || item?.jadwal?.id_jadwal || item?.jadwal?.id;
+  const jadwal = getJadwalObject(item);
+
+  return (
+    item?.id_jadwal ||
+    item?.id_jadwal_asesmen ||
+    jadwal?.id_jadwal ||
+    jadwal?.id
+  );
+}
+
+function getMkvaId(item) {
+  return (
+    item?.id_mkva ||
+    item?.mkva?.id_mkva ||
+    item?.MKVA?.id_mkva ||
+    item?.validasi_mkva?.id_mkva
+  );
+}
+
+function getStatus(item) {
+  if (isMkvaDone(item)) return "selesai";
+
+  return item?.status || item?.status_jadwal || "aktif";
+}
+
+function isMkvaDone(item) {
+  return Boolean(
+    item?.id_mkva ||
+      item?.mkva?.id_mkva ||
+      item?.MKVA?.id_mkva ||
+      item?.validasi_mkva?.id_mkva ||
+      item?.status_mkva === "selesai" ||
+      item?.status_mkva === "sudah"
+  );
+}
+
+function getKeputusan(item) {
+  return (
+    item?.keputusan ||
+    item?.mkva?.keputusan ||
+    item?.MKVA?.keputusan ||
+    item?.validasi_mkva?.keputusan ||
+    "Belum ada"
+  );
 }
 
 function getJadwalTitle(item) {
-  const jadwal = item?.jadwal || {};
+  const jadwal = getJadwalObject(item);
 
   return (
+    item?.nama_kegiatan ||
     jadwal.nama_kegiatan ||
+    item?.skema ||
     jadwal.nama_skema ||
     jadwal.skema?.nama_skema ||
     jadwal.skema?.judul_skema ||
     jadwal.kode_jadwal ||
-    "Jadwal Komite Teknis"
+    "Jadwal MKVA"
   );
 }
 
@@ -622,16 +717,4 @@ function formatTanggal(value) {
   } catch (err) {
     return value;
   }
-}
-
-function formatRentangTanggal(start, end) {
-  if (!start && !end) return "-";
-  if (start && !end) return formatTanggal(start);
-  if (!start && end) return formatTanggal(end);
-
-  if (String(start).slice(0, 10) === String(end).slice(0, 10)) {
-    return formatTanggal(start);
-  }
-
-  return `${formatTanggal(start)} - ${formatTanggal(end)}`;
 }
