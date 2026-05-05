@@ -1,317 +1,212 @@
 // frontend/src/pages/asesi/JadwalAsesi.jsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import axios from "axios";
 import {
+  AlertCircle,
   BookOpen,
   Calendar,
-  Building2,
   CheckCircle,
   ChevronRight,
-  ClipboardList,
+  Clock,
   Inbox,
   Loader2,
+  MapPin,
   MonitorCheck,
+  RefreshCcw,
+  Search,
   ShieldCheck,
   Tag,
   Users,
+  XCircle,
 } from "lucide-react";
 
 export default function JadwalAsesi() {
   const [jadwal, setJadwal] = useState([]);
   const [myJadwal, setMyJadwal] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [choosingId, setChoosingId] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("semua");
+  const [error, setError] = useState("");
 
   const API = import.meta.env.VITE_API_BASE;
   const token = localStorage.getItem("token");
 
+  const authHeader = {
+    headers: { Authorization: `Bearer ${token}` },
+  };
+
   useEffect(() => {
-    fetchJadwal();
-    fetchMyJadwal();
+    loadData();
   }, []);
 
-  const fetchJadwal = async () => {
-    try {
-      const res = await axios.get(`${API}/asesi/jadwal/tersedia`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  const loadData = async () => {
+    setLoading(true);
+    setError("");
 
-      setJadwal(res.data.data || []);
+    try {
+      await Promise.all([fetchJadwal(), fetchMyJadwal()]);
     } catch (err) {
       console.error(err);
-      alert("Gagal memuat jadwal tersedia");
-      setJadwal([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchJadwal = async () => {
+    try {
+      const res = await axios.get(`${API}/asesi/jadwal/tersedia`, authHeader);
+      setJadwal(res.data.data || []);
+    } catch (err) {
+      console.error("Gagal memuat jadwal:", err);
+      setError("Gagal memuat jadwal tersedia.");
+      setJadwal([]);
+    }
+  };
+
   const fetchMyJadwal = async () => {
     try {
-      const res = await axios.get(`${API}/asesi/jadwal-saya`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(`${API}/asesi/jadwal-saya`, authHeader);
 
-      const picked = (res.data.data || []).map(
-        (item) => item.id_jadwal || item.jadwal?.id_jadwal
-      );
+      const picked = (res.data.data || [])
+        .map((item) => item.id_jadwal || item.jadwal?.id_jadwal)
+        .filter(Boolean);
 
-      setMyJadwal(picked);
+      setMyJadwal([...new Set(picked)]);
     } catch (err) {
-      console.error(err);
+      console.error("Gagal memuat jadwal saya:", err);
       setMyJadwal([]);
     }
   };
 
   const pilihJadwal = async (id_jadwal) => {
-    try {
-      await axios.post(
-        `${API}/asesi/jadwal/pilih`,
-        { id_jadwal },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    setChoosingId(id_jadwal);
 
-      alert("Jadwal berhasil dipilih, tinggal menunggu diterima");
-      setMyJadwal((prev) => [...prev, id_jadwal]);
+    try {
+      await axios.post(`${API}/asesi/jadwal/pilih`, { id_jadwal }, authHeader);
+
+      alert("Jadwal berhasil dipilih, tinggal menunggu diterima.");
+
+      setMyJadwal((prev) =>
+        prev.includes(id_jadwal) ? prev : [...prev, id_jadwal]
+      );
     } catch (err) {
       const msg = err.response?.data?.message;
 
-      if (msg?.includes("sudah terdaftar")) {
-        alert("Anda sudah terdaftar pada jadwal ini, tinggal menunggu diterima");
+      if (msg?.toLowerCase().includes("sudah terdaftar")) {
+        alert("Anda sudah terdaftar pada jadwal ini.");
+
+        setMyJadwal((prev) =>
+          prev.includes(id_jadwal) ? prev : [...prev, id_jadwal]
+        );
       } else {
-        alert(msg || "Gagal memilih jadwal");
+        alert(msg || "Gagal memilih jadwal.");
       }
+    } finally {
+      setChoosingId(null);
     }
   };
 
   const formatDate = (date) => {
     if (!date) return "-";
 
-    return new Date(date).toLocaleDateString("id-ID", {
+    const parsed = new Date(date);
+
+    if (Number.isNaN(parsed.getTime())) return "-";
+
+    return parsed.toLocaleDateString("id-ID", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
   };
 
+  const filteredJadwal = useMemo(() => {
+    return jadwal.filter((item) => {
+      const skema = item.skema || {};
+      const tuk = item.tuk || {};
+      const alreadyPicked = myJadwal.includes(item.id_jadwal);
+      const keyword = search.trim().toLowerCase();
+
+      const matchSearch =
+        !keyword ||
+        skema.judul_skema?.toLowerCase().includes(keyword) ||
+        skema.kode_skema?.toLowerCase().includes(keyword) ||
+        tuk.nama_tuk?.toLowerCase().includes(keyword) ||
+        item.nama_kegiatan?.toLowerCase().includes(keyword) ||
+        item.pelaksanaan_uji?.toLowerCase().includes(keyword);
+
+      const matchFilter =
+        filter === "semua" ||
+        (filter === "tersedia" && !alreadyPicked) ||
+        (filter === "dipilih" && alreadyPicked);
+
+      return matchSearch && matchFilter;
+    });
+  }, [jadwal, myJadwal, search, filter]);
+
+  const totalDipilih = jadwal.filter((item) =>
+    myJadwal.includes(item.id_jadwal)
+  ).length;
+
+  const totalKuota = jadwal.reduce(
+    (sum, item) => sum + Number(item.kuota || 0),
+    0
+  );
+
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center">
-          <Loader2
-            className="animate-spin text-orange-500 mx-auto mb-5"
-            size={44}
-          />
-          <p className="text-[#071E3D] font-black text-lg">
-            Memuat Jadwal Sertifikasi
-          </p>
-          <p className="text-slate-400 text-sm mt-1 font-medium">
-            Mohon tunggu sebentar...
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className="min-h-screen bg-[#EEF2F7] flex">
       <SidebarAsesi isOpen={isOpen} setIsOpen={setIsOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <section className="relative overflow-hidden bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 lg:p-8 mb-6">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-[90px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#071E3D]/5 rounded-full blur-[90px] pointer-events-none" />
+      <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <HeaderSection
+            totalJadwal={jadwal.length}
+            totalDipilih={totalDipilih}
+            totalKuota={totalKuota}
+          />
 
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 mb-4">
-                  <ClipboardList size={15} className="text-orange-500" />
-                  <span className="text-orange-500 text-[10px] font-black uppercase tracking-widest">
-                    Dashboard Asesi
-                  </span>
-                </div>
+          <FilterSection
+            search={search}
+            setSearch={setSearch}
+            filter={filter}
+            setFilter={setFilter}
+            loadData={loadData}
+          />
 
-                <h1 className="text-3xl lg:text-4xl font-black text-[#071E3D] leading-tight">
-                  Jadwal Sertifikasi
-                </h1>
+          {error && <ErrorAlert message={error} />}
 
-                <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
-                  Pilih jadwal uji kompetensi yang tersedia sesuai skema
-                  sertifikasi yang ingin Anda ikuti.
-                </p>
-              </div>
-
-              <div className="bg-[#071E3D] text-white rounded-[26px] p-5 min-w-[230px] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/20 rounded-full blur-3xl -mr-12 -mt-12" />
-
-                <div className="relative z-10">
-                  <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">
-                    Jadwal Tersedia
-                  </p>
-
-                  <div className="flex items-end justify-between mt-2">
-                    <h2 className="text-4xl font-black">{jadwal.length}</h2>
-                    <Calendar className="text-orange-400" size={30} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Content */}
-          {jadwal.length === 0 ? (
-            <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-12 lg:p-16 text-center">
-              <div className="w-20 h-20 rounded-[28px] bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-5">
-                <Inbox className="text-slate-300" size={38} />
-              </div>
-
-              <h2 className="text-2xl font-black text-[#071E3D] mb-2">
-                Belum Ada Jadwal Tersedia
-              </h2>
-
-              <p className="text-slate-500 font-medium">
-                Saat ini belum ada jadwal sertifikasi yang dapat dipilih.
-              </p>
-            </div>
+          {filteredJadwal.length === 0 ? (
+            <EmptyState search={search} />
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-              {jadwal.map((item) => {
-                const alreadyPicked = myJadwal.includes(item.id_jadwal);
+            <section className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              {filteredJadwal.map((item) => {
                 const skema = item.skema || {};
                 const tuk = item.tuk || {};
+                const alreadyPicked = myJadwal.includes(item.id_jadwal);
+                const isChoosing = choosingId === item.id_jadwal;
 
                 return (
-                  <article
+                  <ScheduleCard
                     key={item.id_jadwal}
-                    className="bg-white rounded-[30px] border border-slate-100 shadow-sm hover:shadow-[0_20px_50px_-30px_rgba(7,30,61,0.35)] transition-all overflow-hidden"
-                  >
-                    <div className="p-5 lg:p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
-                          <BookOpen size={26} />
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            {skema.kode_skema && (
-                              <span className="px-3 py-1.5 rounded-full bg-orange-50 border border-orange-100 text-orange-500 text-[10px] font-black uppercase tracking-widest">
-                                {skema.kode_skema}
-                              </span>
-                            )}
-
-                            {skema.jenis_skema && (
-                              <span className="px-3 py-1.5 rounded-full bg-slate-50 border border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
-                                {skema.jenis_skema}
-                              </span>
-                            )}
-
-                            {alreadyPicked && (
-                              <span className="px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1">
-                                <CheckCircle size={13} />
-                                Sudah Dipilih
-                              </span>
-                            )}
-                          </div>
-
-                          <h2 className="text-xl lg:text-2xl font-black text-[#071E3D] leading-tight">
-                            {skema.judul_skema || "Skema tidak tersedia"}
-                          </h2>
-
-                          <p className="text-slate-500 text-sm font-medium mt-2">
-                            {item.nama_kegiatan || "Jadwal uji kompetensi"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                        <InfoCard label="Tempat Uji Kompetensi">
-                          <div className="flex items-start gap-2">
-                            <Building2
-                              size={18}
-                              className="text-orange-500 mt-0.5 shrink-0"
-                            />
-                            <p className="text-sm font-black text-[#071E3D] leading-snug">
-                              {tuk.nama_tuk || "-"}
-                            </p>
-                          </div>
-                        </InfoCard>
-
-                        <InfoCard label="Jenis Pelaksanaan">
-                          <div className="flex items-start gap-2">
-                            <MonitorCheck
-                              size={18}
-                              className="text-orange-500 mt-0.5 shrink-0"
-                            />
-                            <p className="text-sm font-black text-[#071E3D] leading-snug capitalize">
-                              {item.pelaksanaan_uji || "-"}
-                            </p>
-                          </div>
-                        </InfoCard>
-
-                        <InfoCard label="Tanggal Uji">
-                          <div className="flex items-start gap-2">
-                            <Calendar
-                              size={18}
-                              className="text-orange-500 mt-0.5 shrink-0"
-                            />
-                            <p className="text-sm font-black text-[#071E3D] leading-snug">
-                              {formatDate(item.tgl_awal)} -{" "}
-                              {formatDate(item.tgl_akhir)}
-                            </p>
-                          </div>
-                        </InfoCard>
-
-                        <InfoCard label="Kuota">
-                          <div className="flex items-start gap-2">
-                            <Users
-                              size={18}
-                              className="text-orange-500 mt-0.5 shrink-0"
-                            />
-                            <p className="text-sm font-black text-[#071E3D] leading-snug">
-                              {item.kuota || 0} peserta
-                            </p>
-                          </div>
-                        </InfoCard>
-                      </div>
-                    </div>
-
-                    <div className="px-5 lg:px-6 py-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest inline-flex items-center gap-2">
-                        <Tag size={13} />
-                        ID Jadwal: {item.id_jadwal || "-"}
-                      </span>
-
-                      <button
-                        disabled={alreadyPicked}
-                        onClick={() => pilihJadwal(item.id_jadwal)}
-                        className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all inline-flex items-center justify-center gap-2 ${
-                          alreadyPicked
-                            ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                            : "bg-orange-500 hover:bg-[#071E3D] text-white shadow-lg shadow-orange-500/20"
-                        }`}
-                      >
-                        {alreadyPicked ? (
-                          <>
-                            <CheckCircle size={17} />
-                            Sudah Dipilih
-                          </>
-                        ) : (
-                          <>
-                            <ShieldCheck size={17} />
-                            Pilih Jadwal
-                            <ChevronRight size={16} />
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </article>
+                    item={item}
+                    skema={skema}
+                    tuk={tuk}
+                    alreadyPicked={alreadyPicked}
+                    isChoosing={isChoosing}
+                    formatDate={formatDate}
+                    onChoose={pilihJadwal}
+                  />
                 );
               })}
-            </div>
+            </section>
           )}
         </div>
       </main>
@@ -319,14 +214,334 @@ export default function JadwalAsesi() {
   );
 }
 
-const InfoCard = ({ label, children }) => {
+const LoadingScreen = () => {
   return (
-    <div className="rounded-[22px] bg-slate-50 border border-slate-100 p-4">
-      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2">
-        {label}
-      </p>
+    <div className="min-h-screen bg-[#EEF2F7] flex items-center justify-center px-5">
+      <div className="bg-white rounded-[28px] border border-slate-200 shadow-lg p-10 text-center max-w-sm w-full">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
+          <Loader2 className="animate-spin text-white" size={34} />
+        </div>
 
-      {children}
+        <h2 className="text-[#071E3D] font-bold text-lg">Memuat Jadwal</h2>
+
+        <p className="text-slate-500 text-sm mt-2">
+          Mengambil data jadwal sertifikasi.
+        </p>
+      </div>
     </div>
+  );
+};
+
+const HeaderSection = ({ totalJadwal, totalDipilih, totalKuota }) => {
+  return (
+    <section className="overflow-hidden rounded-[30px] bg-white border border-slate-200 shadow-md">
+      <div className="bg-[#071E3D] px-6 lg:px-8 py-7">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1.5 mb-4">
+              <Calendar size={14} className="text-orange-400" />
+              <span className="text-white/80 text-xs font-semibold">
+                Dashboard Asesi
+              </span>
+            </div>
+
+            <h1 className="text-3xl md:text-4xl font-bold text-white">
+              Jadwal Sertifikasi
+            </h1>
+
+            <p className="text-slate-300 mt-2 text-sm">
+              Pilih jadwal uji kompetensi yang tersedia.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard label="Jadwal" value={totalJadwal} />
+            <StatCard label="Dipilih" value={totalDipilih} />
+            <StatCard label="Kuota" value={totalKuota} />
+          </div>
+        </div>
+      </div>
+
+      <div className="h-2 bg-orange-500" />
+    </section>
+  );
+};
+
+const FilterSection = ({
+  search,
+  setSearch,
+  filter,
+  setFilter,
+  loadData,
+}) => {
+  return (
+    <section className="bg-white rounded-[28px] border border-slate-200 shadow-md p-4">
+      <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+        <div className="relative flex-1">
+          <Search
+            size={19}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari skema, kegiatan, atau TUK..."
+            className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-200 outline-none text-sm font-medium text-[#071E3D] placeholder:text-slate-400 focus:bg-white focus:border-[#071E3D] transition"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <FilterButton
+            active={filter === "semua"}
+            onClick={() => setFilter("semua")}
+          >
+            Semua
+          </FilterButton>
+
+          <FilterButton
+            active={filter === "tersedia"}
+            onClick={() => setFilter("tersedia")}
+          >
+            Tersedia
+          </FilterButton>
+
+          <FilterButton
+            active={filter === "dipilih"}
+            onClick={() => setFilter("dipilih")}
+          >
+            Dipilih
+          </FilterButton>
+
+          <button
+            onClick={loadData}
+            className="px-4 py-3 rounded-2xl bg-orange-500 text-white font-semibold text-sm hover:bg-orange-600 transition inline-flex items-center gap-2"
+          >
+            <RefreshCcw size={16} />
+            Refresh
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const ScheduleCard = ({
+  item,
+  skema,
+  tuk,
+  alreadyPicked,
+  isChoosing,
+  formatDate,
+  onChoose,
+}) => {
+  return (
+    <article className="bg-white rounded-[28px] border border-slate-200 shadow-md hover:shadow-lg transition overflow-hidden">
+      <div className="bg-[#071E3D] px-5 lg:px-6 py-4">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 text-orange-400 flex items-center justify-center shrink-0">
+            <BookOpen size={25} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <Badge variant="code">{skema.kode_skema || "SKEMA"}</Badge>
+
+              {alreadyPicked ? (
+                <Badge variant="success">
+                  <CheckCircle size={13} />
+                  Dipilih
+                </Badge>
+              ) : (
+                <Badge variant="light">
+                  <Clock size={13} />
+                  Tersedia
+                </Badge>
+              )}
+            </div>
+
+            <h2 className="text-lg lg:text-xl font-bold text-white leading-snug">
+              {skema.judul_skema || "Skema tidak tersedia"}
+            </h2>
+
+            <p className="text-slate-300 text-sm mt-1">
+              {item.nama_kegiatan || "Jadwal uji kompetensi"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-1.5 bg-orange-500" />
+
+      <div className="p-5 lg:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <InfoItem
+            icon={<MapPin size={17} />}
+            label="TUK"
+            value={tuk.nama_tuk || "-"}
+          />
+
+          <InfoItem
+            icon={<MonitorCheck size={17} />}
+            label="Pelaksanaan"
+            value={item.pelaksanaan_uji || "-"}
+          />
+
+          <InfoItem
+            icon={<Calendar size={17} />}
+            label="Tanggal"
+            value={`${formatDate(item.tgl_awal)} - ${formatDate(
+              item.tgl_akhir
+            )}`}
+          />
+
+          <InfoItem
+            icon={<Users size={17} />}
+            label="Kuota"
+            value={`${item.kuota || 0} peserta`}
+          />
+        </div>
+      </div>
+
+      <div className="px-5 lg:px-6 py-4 bg-[#F8FAFC] border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <span className="text-xs text-slate-500 font-semibold inline-flex items-center gap-2">
+          <Tag size={14} />
+          ID: {item.id_jadwal || "-"}
+        </span>
+
+        <button
+          disabled={alreadyPicked || isChoosing}
+          onClick={() => onChoose(item.id_jadwal)}
+          className={`px-5 py-3 rounded-2xl font-semibold text-sm transition inline-flex items-center justify-center gap-2 ${
+            alreadyPicked
+              ? "bg-emerald-50 text-emerald-600 cursor-not-allowed border border-emerald-100"
+              : "bg-[#071E3D] hover:bg-orange-500 text-white"
+          }`}
+        >
+          {isChoosing ? (
+            <>
+              <Loader2 size={17} className="animate-spin" />
+              Memilih
+            </>
+          ) : alreadyPicked ? (
+            <>
+              <CheckCircle size={17} />
+              Sudah Dipilih
+            </>
+          ) : (
+            <>
+              <ShieldCheck size={17} />
+              Pilih Jadwal
+              <ChevronRight size={16} />
+            </>
+          )}
+        </button>
+      </div>
+    </article>
+  );
+};
+
+const StatCard = ({ label, value }) => {
+  return (
+    <div className="min-w-[92px] rounded-2xl bg-white/10 border border-white/15 p-4 text-white">
+      <p className="text-xs text-slate-300 font-medium">{label}</p>
+      <h3 className="text-2xl font-bold mt-1">{value}</h3>
+    </div>
+  );
+};
+
+const FilterButton = ({ active, onClick, children }) => {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-3 rounded-2xl font-semibold text-sm transition ${
+        active
+          ? "bg-[#071E3D] text-white"
+          : "bg-[#F8FAFC] text-slate-600 border border-slate-200 hover:bg-slate-100"
+      }`}
+    >
+      {children}
+    </button>
+  );
+};
+
+const Badge = ({ variant = "light", children }) => {
+  const variants = {
+    code: "bg-orange-500 text-white border-orange-500",
+    success: "bg-emerald-500 text-white border-emerald-500",
+    light: "bg-white/10 text-white border-white/20",
+  };
+
+  return (
+    <span
+      className={`px-3 py-1.5 rounded-full border text-xs font-semibold inline-flex items-center gap-1.5 ${
+        variants[variant] || variants.light
+      }`}
+    >
+      {children}
+    </span>
+  );
+};
+
+const InfoItem = ({ icon, label, value }) => {
+  return (
+    <div className="rounded-2xl bg-[#F8FAFC] border border-slate-200 p-4">
+      <div className="flex gap-3">
+        <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-[#071E3D] flex items-center justify-center shrink-0">
+          {icon}
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-xs text-slate-400 font-semibold mb-1">{label}</p>
+          <p className="text-sm font-semibold text-[#071E3D] leading-snug capitalize break-words">
+            {value}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ErrorAlert = ({ message }) => {
+  return (
+    <div className="rounded-[24px] bg-red-50 border border-red-100 p-5 flex gap-3 items-start shadow-sm">
+      <AlertCircle className="text-red-500 shrink-0" size={22} />
+
+      <div>
+        <h3 className="font-bold text-red-700">Terjadi Kesalahan</h3>
+        <p className="text-red-500 text-sm mt-1">{message}</p>
+      </div>
+    </div>
+  );
+};
+
+const EmptyState = ({ search }) => {
+  return (
+    <section className="bg-white rounded-[28px] border border-slate-200 shadow-md overflow-hidden">
+      <div className="bg-[#071E3D] px-6 py-5">
+        <h2 className="text-white text-xl font-bold">
+          {search ? "Jadwal Tidak Ditemukan" : "Belum Ada Jadwal"}
+        </h2>
+      </div>
+
+      <div className="h-1.5 bg-orange-500" />
+
+      <div className="p-10 lg:p-14 text-center">
+        <div className="w-20 h-20 rounded-3xl bg-[#F8FAFC] border border-slate-200 flex items-center justify-center mx-auto mb-5">
+          {search ? (
+            <XCircle className="text-slate-400" size={40} />
+          ) : (
+            <Inbox className="text-slate-400" size={40} />
+          )}
+        </div>
+
+        <p className="text-slate-500 text-sm max-w-md mx-auto">
+          {search
+            ? "Coba gunakan kata kunci lain."
+            : "Saat ini belum ada jadwal sertifikasi yang tersedia."}
+        </p>
+      </div>
+    </section>
   );
 };

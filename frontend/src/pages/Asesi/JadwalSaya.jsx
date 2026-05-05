@@ -1,338 +1,665 @@
 // frontend/src/pages/asesi/JadwalSaya.jsx
 
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import {
-  Calendar,
-  ClipboardList,
-  CreditCard,
-  FileCheck,
-  Loader2,
-  Send,
-  ShieldCheck,
-  AlertTriangle,
-  ChevronRight,
-  Inbox,
-  Building2,
-  MonitorCheck,
+  AlertCircle,
   BookOpen,
+  CalendarDays,
+  CheckCircle,
+  ChevronRight,
+  Clock,
+  CreditCard,
+  FileText,
+  Inbox,
+  Loader2,
+  MapPin,
+  MonitorCheck,
+  RefreshCcw,
+  Search,
+  ShieldCheck,
+  Tag,
+  Users,
+  XCircle,
 } from "lucide-react";
 
-const JadwalSaya = () => {
-  const [jadwalSaya, setJadwalSaya] = useState([]);
+export default function JadwalSaya() {
+  const [jadwal, setJadwal] = useState([]);
+  const [myJadwal, setMyJadwal] = useState([]);
+  const [pembayaran, setPembayaran] = useState({});
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [choosingId, setChoosingId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("semua");
+  const [error, setError] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
 
   const navigate = useNavigate();
-  const API_BASE = import.meta.env.VITE_API_BASE;
+  const API = import.meta.env.VITE_API_BASE;
+  const token = localStorage.getItem("token");
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+  };
 
   useEffect(() => {
-    const fetchJadwal = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return navigate("/login");
+    loadData();
+  }, []);
 
-        const res = await axios.get(`${API_BASE}/asesi/jadwal-saya`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+  const loadData = async () => {
+    setLoading(true);
+    setError("");
 
-        setJadwalSaya(res.data.data || []);
-      } catch (err) {
-        console.error("Error fetching jadwal saya:", err);
-      } finally {
-        setLoading(false);
+    try {
+      const [jadwalRes, sayaRes] = await Promise.all([
+        axios.get(`${API}/asesi/jadwal/tersedia`, { headers }),
+        axios.get(`${API}/asesi/jadwal-saya`, { headers }),
+      ]);
+
+      const jadwalData = jadwalRes.data.data || [];
+      const sayaData = sayaRes.data.data || [];
+
+      setJadwal(jadwalData);
+
+      const selected = sayaData
+        .map((item) => ({
+          id_jadwal: item.id_jadwal || item.jadwal?.id_jadwal,
+          status: item.status || item.status_peserta || item.status_pendaftaran,
+        }))
+        .filter((item) => item.id_jadwal);
+
+      setMyJadwal(selected);
+
+      await loadStatusPembayaran(jadwalData);
+    } catch (err) {
+      console.error(err);
+      setError("Gagal memuat jadwal.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStatusPembayaran = async (jadwalData) => {
+    const result = {};
+
+    await Promise.all(
+      jadwalData.map(async (item) => {
+        const idSkema = getIdSkema(item);
+
+        if (!idSkema) return;
+
+        try {
+          const res = await axios.get(
+            `${API}/asesi/pembayaran/${idSkema}/status`,
+            { headers }
+          );
+
+          result[idSkema] = res.data?.data?.status || "belum bayar";
+        } catch (err) {
+          result[idSkema] = "belum bayar";
+        }
+      })
+    );
+
+    setPembayaran(result);
+  };
+
+  const getIdSkema = (item) => {
+    return item.id_skema || item.skema?.id_skema;
+  };
+
+  const isSudahDipilih = (id_jadwal) => {
+    return myJadwal.some((item) => item.id_jadwal === id_jadwal);
+  };
+
+  const getStatusPembayaran = (item) => {
+    const idSkema = getIdSkema(item);
+    return pembayaran[idSkema] || "belum bayar";
+  };
+
+  const pilihJadwal = async (id_jadwal) => {
+    setChoosingId(id_jadwal);
+
+    try {
+      await axios.post(
+        `${API}/asesi/jadwal/pilih`,
+        { id_jadwal },
+        { headers }
+      );
+
+      alert("Jadwal berhasil dipilih. Silakan lanjut pembayaran.");
+
+      setMyJadwal((prev) =>
+        prev.some((item) => item.id_jadwal === id_jadwal)
+          ? prev
+          : [...prev, { id_jadwal, status: "menunggu" }]
+      );
+    } catch (err) {
+      const message = err.response?.data?.message;
+
+      if (message?.toLowerCase().includes("sudah terdaftar")) {
+        alert("Anda sudah memilih jadwal ini.");
+
+        setMyJadwal((prev) =>
+          prev.some((item) => item.id_jadwal === id_jadwal)
+            ? prev
+            : [...prev, { id_jadwal, status: "menunggu" }]
+        );
+      } else {
+        alert(message || "Gagal memilih jadwal.");
       }
-    };
+    } finally {
+      setChoosingId(null);
+    }
+  };
 
-    fetchJadwal();
-  }, [API_BASE, navigate]);
+  const pergiBayar = (item) => {
+    const idSkema = getIdSkema(item);
 
-  const formatDate = (date) => {
+    if (!idSkema) {
+      alert("ID skema tidak ditemukan.");
+      return;
+    }
+
+    navigate(`/asesi/pembayaran/${idSkema}`);
+  };
+
+  const formatTanggal = (date) => {
     if (!date) return "-";
 
-    return new Date(date).toLocaleDateString("id-ID", {
+    const parsed = new Date(date);
+
+    if (Number.isNaN(parsed.getTime())) return "-";
+
+    return parsed.toLocaleDateString("id-ID", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
   };
 
+  const filteredJadwal = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+
+    return jadwal.filter((item) => {
+      const skema = item.skema || {};
+      const tuk = item.tuk || {};
+      const sudahDipilih = isSudahDipilih(item.id_jadwal);
+      const statusBayar = getStatusPembayaran(item);
+
+      const matchSearch =
+        !keyword ||
+        skema.judul_skema?.toLowerCase().includes(keyword) ||
+        skema.kode_skema?.toLowerCase().includes(keyword) ||
+        tuk.nama_tuk?.toLowerCase().includes(keyword) ||
+        item.nama_kegiatan?.toLowerCase().includes(keyword) ||
+        item.pelaksanaan_uji?.toLowerCase().includes(keyword);
+
+      const matchFilter =
+        filter === "semua" ||
+        (filter === "dipilih" && sudahDipilih) ||
+        (filter === "belum" && !sudahDipilih) ||
+        (filter === "paid" && statusBayar === "paid");
+
+      return matchSearch && matchFilter;
+    });
+  }, [jadwal, myJadwal, pembayaran, search, filter]);
+
+  const totalDipilih = myJadwal.length;
+
+  const totalPaid = jadwal.filter((item) => getStatusPembayaran(item) === "paid")
+    .length;
+
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center">
-          <Loader2 className="animate-spin text-orange-500 mx-auto mb-5" size={44} />
-          <p className="text-[#071E3D] font-black text-lg">
-            Memuat Jadwal Saya
-          </p>
-          <p className="text-slate-400 text-sm mt-1 font-medium">
-            Mohon tunggu sebentar...
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
-      <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+    <div className="min-h-screen bg-[#EEF2F7] flex">
+      <SidebarAsesi isOpen={isOpen} setIsOpen={setIsOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <section className="relative overflow-hidden bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 lg:p-8 mb-6">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-[90px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#071E3D]/5 rounded-full blur-[90px] pointer-events-none" />
+      <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <HeaderSection
+            totalJadwal={jadwal.length}
+            totalDipilih={totalDipilih}
+            totalPaid={totalPaid}
+          />
 
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 mb-4">
-                  <ClipboardList size={15} className="text-orange-500" />
-                  <span className="text-orange-500 text-[10px] font-black uppercase tracking-widest">
-                    Dashboard Asesi
-                  </span>
-                </div>
+          <FilterSection
+            search={search}
+            setSearch={setSearch}
+            filter={filter}
+            setFilter={setFilter}
+            loadData={loadData}
+          />
 
-                <h1 className="text-3xl lg:text-4xl font-black text-[#071E3D] leading-tight">
-                  Jadwal Saya
-                </h1>
+          {error && <ErrorAlert message={error} />}
 
-                <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
-                  Pantau jadwal sertifikasi yang sudah Anda daftar dan lanjutkan
-                  proses asesmen dari satu halaman.
-                </p>
-              </div>
-
-              <div className="bg-[#071E3D] text-white rounded-[26px] p-5 min-w-[230px] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/20 rounded-full blur-3xl -mr-12 -mt-12" />
-
-                <div className="relative z-10">
-                  <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">
-                    Total Jadwal
-                  </p>
-
-                  <div className="flex items-end justify-between mt-2">
-                    <h2 className="text-4xl font-black">
-                      {jadwalSaya.length}
-                    </h2>
-                    <Calendar className="text-orange-400" size={30} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Content */}
-          {jadwalSaya.length === 0 ? (
-            <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-12 lg:p-16 text-center">
-              <div className="w-20 h-20 rounded-[28px] bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-5">
-                <Inbox className="text-slate-300" size={38} />
-              </div>
-
-              <h2 className="text-2xl font-black text-[#071E3D] mb-2">
-                Belum Ada Jadwal
-              </h2>
-
-              <p className="text-slate-500 font-medium mb-7">
-                Anda belum terdaftar pada jadwal sertifikasi apa pun.
-              </p>
-
-              <button
-                onClick={() => navigate("/asesi/jadwal")}
-                className="px-7 py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all inline-flex items-center gap-2"
-              >
-                Lihat Skema Sertifikasi
-                <ChevronRight size={17} />
-              </button>
-            </div>
+          {filteredJadwal.length === 0 ? (
+            <EmptyState search={search} />
           ) : (
-            <div className="space-y-5">
-              {jadwalSaya.map((item) => {
-                const jadwal = item.jadwal || {};
-                const skema = jadwal.skema || {};
-                const tuk = jadwal.tuk || {};
+            <section className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              {filteredJadwal.map((item) => {
+                const skema = item.skema || {};
+                const tuk = item.tuk || {};
+                const idSkema = getIdSkema(item);
+                const sudahDipilih = isSudahDipilih(item.id_jadwal);
+                const sedangMemilih = choosingId === item.id_jadwal;
+                const statusBayar = getStatusPembayaran(item);
+                const sudahPaid = statusBayar === "paid";
 
                 return (
-                  <article
-                    key={`${item.id_user}-${item.id_jadwal}`}
-                    className="bg-white rounded-[30px] border border-slate-100 shadow-sm hover:shadow-[0_20px_50px_-30px_rgba(7,30,61,0.35)] transition-all overflow-hidden"
-                  >
-                    <div className="p-5 lg:p-6">
-                      <div className="flex flex-col xl:flex-row xl:items-start gap-6">
-                        {/* Main */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
-                              <BookOpen size={26} />
-                            </div>
-
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-2">
-                                {skema.kode_skema && (
-                                  <span className="px-3 py-1.5 rounded-full bg-orange-50 border border-orange-100 text-orange-500 text-[10px] font-black uppercase tracking-widest">
-                                    {skema.kode_skema}
-                                  </span>
-                                )}
-
-                                {jadwal.pelaksanaan_uji && (
-                                  <span className="px-3 py-1.5 rounded-full bg-slate-50 border border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
-                                    {jadwal.pelaksanaan_uji}
-                                  </span>
-                                )}
-                              </div>
-
-                              <h2 className="text-xl lg:text-2xl font-black text-[#071E3D] leading-tight">
-                                {skema.judul_skema || "Skema Sertifikasi"}
-                              </h2>
-
-                              <p className="text-slate-500 text-sm font-medium mt-2">
-                                {jadwal.nama_kegiatan || "Jadwal sertifikasi"}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                            <InfoCard label="Tempat Uji Kompetensi">
-                              <div className="flex items-start gap-2">
-                                <Building2
-                                  size={18}
-                                  className="text-orange-500 mt-0.5 shrink-0"
-                                />
-                                <p className="text-sm font-black text-[#071E3D] leading-snug">
-                                  {tuk.nama_tuk || "-"}
-                                </p>
-                              </div>
-                            </InfoCard>
-
-                            <InfoCard label="Tanggal Uji">
-                              <div className="flex items-start gap-2">
-                                <Calendar
-                                  size={18}
-                                  className="text-orange-500 mt-0.5 shrink-0"
-                                />
-                                <p className="text-sm font-black text-[#071E3D] leading-snug">
-                                  {formatDate(jadwal.tgl_awal)} -{" "}
-                                  {formatDate(jadwal.tgl_akhir)}
-                                </p>
-                              </div>
-                            </InfoCard>
-
-                            <InfoCard label="Jenis Pelaksanaan">
-                              <div className="flex items-start gap-2">
-                                <MonitorCheck
-                                  size={18}
-                                  className="text-orange-500 mt-0.5 shrink-0"
-                                />
-                                <p className="text-sm font-black text-[#071E3D] leading-snug capitalize">
-                                  {jadwal.pelaksanaan_uji || "-"}
-                                </p>
-                              </div>
-                            </InfoCard>
-                          </div>
-                        </div>
-
-                        {/* Action Panel */}
-                        <div className="xl:w-[270px] shrink-0">
-                          <div className="grid grid-cols-2 xl:grid-cols-1 gap-2">
-                            <ActionButton
-                              onClick={() =>
-                                navigate(`/asesi/apl01/${skema.id_skema}`)
-                              }
-                              icon={<FileCheck size={16} />}
-                              label="Kerjakan APL01"
-                              className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                            />
-
-                            <ActionButton
-                              onClick={() =>
-                                navigate(`/asesi/pembayaran/${skema.id_skema}`)
-                              }
-                              icon={<CreditCard size={16} />}
-                              label="Bayar Sekarang"
-                              className="bg-[#071E3D] hover:bg-[#0B2A55] text-white"
-                            />
-
-                            <ActionButton
-                              onClick={() =>
-                                navigate(`/asesi/apl02/${skema.id_skema}`)
-                              }
-                              icon={<ClipboardList size={16} />}
-                              label="Kerjakan APL02"
-                              className="bg-purple-600 hover:bg-purple-700 text-white"
-                            />
-
-                            <ActionButton
-                              onClick={() =>
-                                navigate(`/asesi/pra-asesmen/${skema.id_skema}`)
-                              }
-                              icon={<ShieldCheck size={16} />}
-                              label="Pra Asesmen"
-                              className="bg-orange-500 hover:bg-orange-600 text-white"
-                            />
-
-                            <ActionButton
-                              onClick={() =>
-                                navigate(
-                                  `/asesi/banding?jadwal=${item.id_jadwal}&skema=${skema.id_skema}`
-                                )
-                              }
-                              icon={<AlertTriangle size={16} />}
-                              label="Ajukan Banding"
-                              className="bg-red-500 hover:bg-red-600 text-white col-span-2 xl:col-span-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="px-5 lg:px-6 py-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                        ID Jadwal: {item.id_jadwal || "-"}
-                      </span>
-
-                      <button
-                        onClick={() => navigate(`/asesi/jadwal-saya`)}
-                        className="text-[10px] text-orange-500 hover:text-[#071E3D] font-black uppercase tracking-widest inline-flex items-center gap-1 transition-colors"
-                      >
-                        Detail Proses
-                        <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  </article>
+                  <ScheduleCard
+                    key={item.id_jadwal}
+                    item={item}
+                    skema={skema}
+                    tuk={tuk}
+                    idSkema={idSkema}
+                    sudahDipilih={sudahDipilih}
+                    sedangMemilih={sedangMemilih}
+                    statusBayar={statusBayar}
+                    sudahPaid={sudahPaid}
+                    formatTanggal={formatTanggal}
+                    pilihJadwal={pilihJadwal}
+                    pergiBayar={pergiBayar}
+                    navigate={navigate}
+                  />
                 );
               })}
-            </div>
+            </section>
           )}
         </div>
       </main>
     </div>
   );
-};
+}
 
-const InfoCard = ({ label, children }) => {
+const LoadingScreen = () => {
   return (
-    <div className="rounded-[22px] bg-slate-50 border border-slate-100 p-4">
-      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2">
-        {label}
-      </p>
+    <div className="min-h-screen bg-[#EEF2F7] flex items-center justify-center px-5">
+      <div className="bg-white rounded-[28px] border border-slate-200 shadow-lg p-10 text-center max-w-sm w-full">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
+          <Loader2 className="animate-spin text-white" size={34} />
+        </div>
 
-      {children}
+        <h2 className="text-[#071E3D] font-bold text-lg">Memuat Jadwal</h2>
+
+        <p className="text-slate-500 text-sm mt-2">
+          Mengambil data jadwal Anda.
+        </p>
+      </div>
     </div>
   );
 };
 
-const ActionButton = ({ onClick, icon, label, className = "" }) => {
+const HeaderSection = ({ totalJadwal, totalDipilih, totalPaid }) => {
+  return (
+    <section className="overflow-hidden rounded-[30px] bg-white border border-slate-200 shadow-md">
+      <div className="bg-[#071E3D] px-6 lg:px-8 py-7">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1.5 mb-4">
+              <CalendarDays size={14} className="text-orange-400" />
+              <span className="text-white/80 text-xs font-semibold">
+                Dashboard Asesi
+              </span>
+            </div>
+
+            <h1 className="text-3xl md:text-4xl font-bold text-white">
+              Jadwal Saya
+            </h1>
+
+            <p className="text-slate-300 mt-2 text-sm">
+              Kelola jadwal, pembayaran, dan formulir asesmen.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard label="Jadwal" value={totalJadwal} />
+            <StatCard label="Dipilih" value={totalDipilih} />
+            <StatCard label="Paid" value={totalPaid} />
+          </div>
+        </div>
+      </div>
+
+      <div className="h-2 bg-orange-500" />
+    </section>
+  );
+};
+
+const FilterSection = ({
+  search,
+  setSearch,
+  filter,
+  setFilter,
+  loadData,
+}) => {
+  return (
+    <section className="bg-white rounded-[28px] border border-slate-200 shadow-md p-4">
+      <div className="flex flex-col xl:flex-row gap-4 xl:items-center xl:justify-between">
+        <div className="relative flex-1">
+          <Search
+            size={19}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari skema, kegiatan, atau TUK..."
+            className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-200 outline-none text-sm font-medium text-[#071E3D] placeholder:text-slate-400 focus:bg-white focus:border-[#071E3D] transition"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <FilterButton
+            active={filter === "semua"}
+            onClick={() => setFilter("semua")}
+          >
+            Semua
+          </FilterButton>
+
+          <FilterButton
+            active={filter === "dipilih"}
+            onClick={() => setFilter("dipilih")}
+          >
+            Dipilih
+          </FilterButton>
+
+          <FilterButton
+            active={filter === "belum"}
+            onClick={() => setFilter("belum")}
+          >
+            Belum
+          </FilterButton>
+
+          <FilterButton
+            active={filter === "paid"}
+            onClick={() => setFilter("paid")}
+          >
+            Paid
+          </FilterButton>
+
+          <button
+            onClick={loadData}
+            className="px-4 py-3 rounded-2xl bg-orange-500 text-white font-semibold text-sm hover:bg-orange-600 transition inline-flex items-center gap-2"
+          >
+            <RefreshCcw size={16} />
+            Refresh
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const ScheduleCard = ({
+  item,
+  skema,
+  tuk,
+  idSkema,
+  sudahDipilih,
+  sedangMemilih,
+  statusBayar,
+  sudahPaid,
+  formatTanggal,
+  pilihJadwal,
+  pergiBayar,
+  navigate,
+}) => {
+  return (
+    <article className="bg-white rounded-[28px] border border-slate-200 shadow-md hover:shadow-lg transition overflow-hidden">
+      <div className="bg-[#071E3D] px-5 lg:px-6 py-4">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 text-orange-400 flex items-center justify-center shrink-0">
+            <BookOpen size={25} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <Badge variant="code">{skema.kode_skema || "SKEMA"}</Badge>
+
+              {sudahDipilih ? (
+                <Badge variant="success">
+                  <CheckCircle size={13} />
+                  Dipilih
+                </Badge>
+              ) : (
+                <Badge variant="light">
+                  <Clock size={13} />
+                  Tersedia
+                </Badge>
+              )}
+
+              {statusBayar === "pending" && (
+                <Badge variant="warning">Menunggu ACC</Badge>
+              )}
+
+              {statusBayar === "paid" && (
+                <Badge variant="success">
+                  <CheckCircle size={13} />
+                  Paid
+                </Badge>
+              )}
+            </div>
+
+            <h2 className="text-lg lg:text-xl font-bold text-white leading-snug">
+              {skema.judul_skema || "Skema tidak tersedia"}
+            </h2>
+
+            <p className="text-slate-300 text-sm mt-1">
+              {item.nama_kegiatan || "Jadwal uji kompetensi"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-1.5 bg-orange-500" />
+
+      <div className="p-5 lg:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <InfoItem
+            icon={<MapPin size={17} />}
+            label="TUK"
+            value={tuk.nama_tuk || "-"}
+          />
+
+          <InfoItem
+            icon={<MonitorCheck size={17} />}
+            label="Pelaksanaan"
+            value={item.pelaksanaan_uji || "-"}
+          />
+
+          <InfoItem
+            icon={<CalendarDays size={17} />}
+            label="Tanggal"
+            value={`${formatTanggal(item.tgl_awal)} - ${formatTanggal(
+              item.tgl_akhir
+            )}`}
+          />
+
+          <InfoItem
+            icon={<Users size={17} />}
+            label="Kuota"
+            value={`${item.kuota || 0} peserta`}
+          />
+        </div>
+      </div>
+
+      <div className="px-5 lg:px-6 py-4 bg-[#F8FAFC] border-t border-slate-200 flex flex-col gap-4">
+        <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
+          <Tag size={14} />
+          ID: {item.id_jadwal || "-"}
+        </div>
+
+        {!sudahDipilih ? (
+          <button
+            disabled={sedangMemilih}
+            onClick={() => pilihJadwal(item.id_jadwal)}
+            className="w-full sm:w-fit px-5 py-3 rounded-2xl bg-[#071E3D] hover:bg-orange-500 text-white font-semibold text-sm transition inline-flex items-center justify-center gap-2"
+          >
+            {sedangMemilih ? (
+              <>
+                <Loader2 size={17} className="animate-spin" />
+                Memilih
+              </>
+            ) : (
+              <>
+                <ShieldCheck size={17} />
+                Pilih Jadwal
+                <ChevronRight size={16} />
+              </>
+            )}
+          </button>
+        ) : sudahPaid ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <ActionButton
+              title="APL01"
+              onClick={() => navigate(`/asesi/apl01/${idSkema}`)}
+            />
+
+            <ActionButton
+              title="APL02"
+              onClick={() => navigate(`/asesi/apl02/${idSkema}`)}
+            />
+
+            <ActionButton
+              title="Pra Asesmen"
+              onClick={() => navigate(`/asesi/pra-asesmen/${idSkema}`)}
+            />
+          </div>
+        ) : (
+          <button
+            onClick={() => pergiBayar(item)}
+            className="w-full sm:w-fit px-5 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition inline-flex items-center justify-center gap-2"
+          >
+            <CreditCard size={17} />
+            Bayar Sekarang
+          </button>
+        )}
+      </div>
+    </article>
+  );
+};
+
+const StatCard = ({ label, value }) => {
+  return (
+    <div className="min-w-[92px] rounded-2xl bg-white/10 border border-white/15 p-4 text-white">
+      <p className="text-xs text-slate-300 font-medium">{label}</p>
+      <h3 className="text-2xl font-bold mt-1">{value}</h3>
+    </div>
+  );
+};
+
+const FilterButton = ({ active, onClick, children }) => {
   return (
     <button
       onClick={onClick}
-      className={`w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm ${className}`}
+      className={`px-4 py-3 rounded-2xl font-semibold text-sm transition ${
+        active
+          ? "bg-[#071E3D] text-white"
+          : "bg-[#F8FAFC] text-slate-600 border border-slate-200 hover:bg-slate-100"
+      }`}
     >
-      {icon}
-      {label}
+      {children}
     </button>
   );
 };
 
-export default JadwalSaya;
+const Badge = ({ variant = "light", children }) => {
+  const variants = {
+    code: "bg-orange-500 text-white border-orange-500",
+    success: "bg-emerald-500 text-white border-emerald-500",
+    warning: "bg-amber-400 text-[#071E3D] border-amber-400",
+    light: "bg-white/10 text-white border-white/20",
+  };
+
+  return (
+    <span
+      className={`px-3 py-1.5 rounded-full border text-xs font-semibold inline-flex items-center gap-1.5 ${
+        variants[variant] || variants.light
+      }`}
+    >
+      {children}
+    </span>
+  );
+};
+
+const InfoItem = ({ icon, label, value }) => {
+  return (
+    <div className="rounded-2xl bg-[#F8FAFC] border border-slate-200 p-4">
+      <div className="flex gap-3">
+        <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-[#071E3D] flex items-center justify-center shrink-0">
+          {icon}
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-xs text-slate-400 font-semibold mb-1">{label}</p>
+
+          <p className="text-sm font-semibold text-[#071E3D] leading-snug capitalize break-words">
+            {value}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ActionButton = ({ title, onClick }) => {
+  return (
+    <button
+      onClick={onClick}
+      className="px-4 py-3 rounded-2xl bg-[#071E3D] hover:bg-orange-500 text-white font-semibold text-sm transition inline-flex items-center justify-center gap-2"
+    >
+      <FileText size={17} />
+      {title}
+    </button>
+  );
+};
+
+const ErrorAlert = ({ message }) => {
+  return (
+    <div className="rounded-[24px] bg-red-50 border border-red-100 p-5 flex gap-3 items-start shadow-sm">
+      <AlertCircle className="text-red-500 shrink-0" size={22} />
+
+      <div>
+        <h3 className="font-bold text-red-700">Terjadi Kesalahan</h3>
+        <p className="text-red-500 text-sm mt-1">{message}</p>
+      </div>
+    </div>
+  );
+};
+
+const EmptyState = ({ search }) => {
+  return (
+    <section className="bg-white rounded-[28px] border border-slate-200 shadow-md overflow-hidden">
+      <div className="bg-[#071E3D] px-6 py-5">
+        <h2 className="text-white text-xl font-bold">
+          {search ? "Jadwal Tidak Ditemukan" : "Belum Ada Jadwal"}
+        </h2>
+      </div>
+
+      <div className="h-1.5 bg-orange-500" />
+
+      <div className="p-10 lg:p-14 text-center">
+        <div className="w-20 h-20 rounded-3xl bg-[#F8FAFC] border border-slate-200 flex items-center justify-center mx-auto mb-5">
+          {search ? (
+            <XCircle className="text-slate-400" size={40} />
+          ) : (
+            <Inbox className="text-slate-400" size={40} />
+          )}
+        </div>
+
+        <p className="text-slate-500 text-sm max-w-md mx-auto">
+          {search
+            ? "Coba gunakan kata kunci lain."
+            : "Saat ini belum ada jadwal sertifikasi yang tersedia."}
+        </p>
+      </div>
+    </section>
+  );
+};
