@@ -64,8 +64,10 @@ export default function Login() {
           navigate("/asesi");
         } else if (role === "tuk") {
           navigate("/tuk");
+        } else if (role === "asesor") {
+          navigate("/asesor");
         } else {
-          navigate("/dashboard");
+          navigate("/login");
         }
       }, 1200);
 

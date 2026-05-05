@@ -9,22 +9,28 @@ import AsesiRoutes from "./routes/AsesiRoutes";
 import AdminRoutes from "./routes/AdminRoutes";
 import AsesorRoutes from "./routes/AsesorRoutes";
 
-/* =========================
-   PROTECTED ROUTE HELPERS
-========================= */
+function getStoredRole() {
+  const role = localStorage.getItem("role");
 
-function ProtectedAdmin({ children }) {
-  const user = localStorage.getItem("user");
-
-  let parsedUser = null;
-
-  try {
-    parsedUser = user ? JSON.parse(user) : null;
-  } catch (err) {
-    parsedUser = null;
+  if (role) {
+    return role.toLowerCase();
   }
 
-  if (!parsedUser || parsedUser.role?.toLowerCase() !== "admin") {
+  const user = localStorage.getItem("user");
+
+  try {
+    const parsedUser = user ? JSON.parse(user) : null;
+    return parsedUser?.role?.toLowerCase() || "";
+  } catch (err) {
+    return "";
+  }
+}
+
+function ProtectedAdmin({ children }) {
+  const token = localStorage.getItem("token");
+  const role = getStoredRole();
+
+  if (!token || role !== "admin") {
     return <Navigate to="/login" replace />;
   }
 
@@ -33,7 +39,7 @@ function ProtectedAdmin({ children }) {
 
 function ProtectedTuk({ children }) {
   const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
+  const role = getStoredRole();
 
   if (!token || role !== "tuk") {
     return <Navigate to="/login" replace />;
@@ -44,7 +50,7 @@ function ProtectedTuk({ children }) {
 
 function ProtectedAsesi({ children }) {
   const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
+  const role = getStoredRole();
 
   if (!token || role !== "asesi") {
     return <Navigate to="/login" replace />;
@@ -55,7 +61,7 @@ function ProtectedAsesi({ children }) {
 
 function ProtectedAsesor({ children }) {
   const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
+  const role = getStoredRole();
 
   if (!token || role !== "asesor") {
     return <Navigate to="/login" replace />;
@@ -63,10 +69,6 @@ function ProtectedAsesor({ children }) {
 
   return children;
 }
-
-/* =========================
-   APP ROUTES
-========================= */
 
 function App() {
   return (
