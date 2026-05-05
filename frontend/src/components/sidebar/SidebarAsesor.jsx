@@ -6,14 +6,14 @@ import {
   Home,
   User,
   CalendarDays,
+  ShieldCheck,
   ClipboardCheck,
-  FileText,
+  FileSearch,
   Key,
   Menu,
   LogOut,
   X,
   ChevronRight,
-  PenLine,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -56,37 +56,37 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
       },
       {
         id: "profile",
-        name: "Profile Asesor",
+        name: "Profile",
         path: "/asesor/profile",
         icon: <User size={21} />,
       },
       {
-        id: "jadwal",
-        name: "Jadwal Saya",
+        id: "jadwal-uji-kompetensi",
+        name: "Jadwal Uji Kompetensi",
         path: "/asesor/jadwal-saya",
         icon: <CalendarDays size={21} />,
       },
       {
-        id: "penilaian",
-        name: "Penilaian",
-        path: "/asesor/penilaian",
+        id: "jadwal-verifikasi-tuk",
+        name: "Jadwal Verifikasi TUK",
+        path: "/asesor/verifikasi-tuk",
+        icon: <ShieldCheck size={21} />,
+      },
+      {
+        id: "jadwal-komite-teknis",
+        name: "Jadwal Komite Teknis",
+        path: "/asesor/komite-teknis",
+        icon: <FileSearch size={21} />,
+      },
+      {
+        id: "jadwal-mkva",
+        name: "Jadwal MKVA",
+        path: "/asesor/mkva",
         icon: <ClipboardCheck size={21} />,
       },
       {
-        id: "form-fr",
-        name: "Form FR",
-        path: "/asesor/fr",
-        icon: <FileText size={21} />,
-      },
-      {
-        id: "catatan",
-        name: "Catatan Asesmen",
-        path: "/asesor/catatan",
-        icon: <PenLine size={21} />,
-      },
-      {
-        id: "ubah-password",
-        name: "Ubah Password",
+        id: "ubah-sandi",
+        name: "Ubah Sandi",
         path: "/asesor/ubah-password",
         icon: <Key size={21} />,
       },
@@ -108,15 +108,32 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
       );
     }
 
-    if (path === "/asesor/penilaian") {
+    if (path === "/asesor/verifikasi-tuk") {
       return (
-        currentPath === "/asesor/penilaian" ||
-        currentPath.startsWith("/asesor/penilaian/")
+        currentPath === "/asesor/verifikasi-tuk" ||
+        currentPath.startsWith("/asesor/verifikasi-tuk/")
       );
     }
 
-    if (path === "/asesor/fr") {
-      return currentPath === "/asesor/fr" || currentPath.startsWith("/asesor/fr/");
+    if (path === "/asesor/komite-teknis") {
+      return (
+        currentPath === "/asesor/komite-teknis" ||
+        currentPath.startsWith("/asesor/komite-teknis/")
+      );
+    }
+
+    if (path === "/asesor/mkva") {
+      return (
+        currentPath === "/asesor/mkva" ||
+        currentPath.startsWith("/asesor/mkva/")
+      );
+    }
+
+    if (path === "/asesor/ubah-password") {
+      return (
+        currentPath === "/asesor/ubah-password" ||
+        currentPath.startsWith("/asesor/ubah-password/")
+      );
     }
 
     return currentPath === path || currentPath.startsWith(`${path}/`);
@@ -143,6 +160,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
   return (
     <>
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
         className="fixed top-4 left-4 z-[55] lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 shadow-lg text-[#071E3D] flex items-center justify-center"
       >
@@ -186,7 +204,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={`hidden lg:flex fixed left-0 top-0 h-screen bg-white text-[#071E3D] flex-col z-[70] border-r border-slate-100 shadow-[16px_0_40px_-30px_rgba(7,30,61,0.35)] overflow-hidden transition-[width] duration-200 ease-linear ${
-          isExpanded ? "w-72" : "w-24"
+          isExpanded ? "w-80" : "w-24"
         }`}
       >
         <SidebarContent
@@ -201,7 +219,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
 
       <div
         className={`hidden lg:block shrink-0 pointer-events-none transition-[width] duration-200 ease-linear ${
-          isExpanded ? "w-72" : "w-24"
+          isExpanded ? "w-80" : "w-24"
         }`}
       />
 
@@ -281,7 +299,7 @@ const SidebarContent = ({
             isExpanded ? "opacity-100" : "opacity-0"
           }`}
         >
-          <h1 className="text-xl font-black text-[#071E3D] uppercase truncate max-w-[165px] leading-tight">
+          <h1 className="text-xl font-black text-[#071E3D] uppercase truncate max-w-[190px] leading-tight">
             {displayName}
           </h1>
 
@@ -292,6 +310,7 @@ const SidebarContent = ({
 
         {isMobile && (
           <button
+            type="button"
             onClick={onClose}
             className="ml-auto mr-5 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
           >
@@ -308,9 +327,10 @@ const SidebarContent = ({
             return (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => handleClick(item.path)}
                 title={!isExpanded ? item.name : ""}
-                className="group w-full h-16 flex items-center"
+                className="group w-full min-h-16 flex items-center"
               >
                 <div className="w-24 h-16 flex items-center justify-center shrink-0">
                   <div
@@ -325,12 +345,12 @@ const SidebarContent = ({
                 </div>
 
                 <div
-                  className={`h-16 flex-1 pr-5 flex items-center justify-between overflow-hidden transition-opacity duration-150 ${
+                  className={`min-h-16 flex-1 pr-5 flex items-center justify-between gap-3 overflow-hidden transition-opacity duration-150 ${
                     isExpanded ? "opacity-100" : "opacity-0"
                   }`}
                 >
                   <span
-                    className={`text-[15px] whitespace-nowrap ${
+                    className={`text-[14px] text-left leading-snug ${
                       active
                         ? "font-black text-orange-500"
                         : "font-medium text-slate-600"
@@ -341,11 +361,11 @@ const SidebarContent = ({
 
                   <ChevronRight
                     size={16}
-                    className={
+                    className={`shrink-0 ${
                       active
                         ? "text-orange-500"
                         : "text-slate-300 group-hover:text-orange-500"
-                    }
+                    }`}
                   />
                 </div>
               </button>
@@ -357,6 +377,7 @@ const SidebarContent = ({
       <div className="h-28 border-t border-slate-100 bg-slate-50/50 shrink-0 flex items-center">
         <div className="w-24 h-full flex items-center justify-center shrink-0">
           <button
+            type="button"
             onClick={handleLogout}
             title={!isExpanded ? "Keluar" : ""}
             className="w-14 h-14 rounded-2xl bg-white border border-slate-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 shadow-sm flex items-center justify-center transition-colors duration-150"
@@ -366,6 +387,7 @@ const SidebarContent = ({
         </div>
 
         <button
+          type="button"
           onClick={handleLogout}
           className={`h-14 flex-1 mr-5 rounded-2xl flex items-center justify-between overflow-hidden text-red-500 transition-opacity duration-150 ${
             isExpanded ? "opacity-100" : "opacity-0"

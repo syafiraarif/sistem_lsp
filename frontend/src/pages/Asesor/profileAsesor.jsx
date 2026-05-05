@@ -1,16 +1,17 @@
 // frontend/src/pages/asesor/ProfileAsesor.jsx
 
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import SidebarAsesor from "../../components/sidebar/SidebarAsesor";
 import {
-  ArrowLeft,
   BadgeCheck,
   Camera,
+  CheckCircle2,
   ChevronRight,
   FileSignature,
   IdCard,
   ImagePlus,
+  Info,
   Loader2,
   MapPin,
   PenLine,
@@ -67,10 +68,8 @@ export default function ProfileAsesor() {
   const [fotoProfil, setFotoProfil] = useState(null);
   const [previewFoto, setPreviewFoto] = useState("");
   const [previewTtd, setPreviewTtd] = useState("");
-
   const [isEditingTtd, setIsEditingTtd] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [pesan, setPesan] = useState("");
   const [error, setError] = useState("");
@@ -136,13 +135,7 @@ export default function ProfileAsesor() {
 
       setPreviewFoto(fotoUrl);
       setPreviewTtd(ttdUrl);
-
-      if (ttdUrl) {
-        setIsEditingTtd(false);
-      } else {
-        setIsEditingTtd(true);
-      }
-
+      setIsEditingTtd(!ttdUrl);
       setHasSignature(false);
     } catch (err) {
       console.error(err);
@@ -160,9 +153,7 @@ export default function ProfileAsesor() {
 
   useEffect(() => {
     if (isEditingTtd) {
-      setTimeout(() => {
-        setupSignatureCanvas();
-      }, 50);
+      setTimeout(setupSignatureCanvas, 50);
     }
   }, [isEditingTtd]);
 
@@ -195,7 +186,6 @@ export default function ProfileAsesor() {
     event.preventDefault();
 
     const point = getCanvasPoint(event);
-
     isDrawingRef.current = true;
     lastPointRef.current = point;
   };
@@ -207,7 +197,6 @@ export default function ProfileAsesor() {
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-
     const currentPoint = getCanvasPoint(event);
     const lastPoint = lastPointRef.current;
 
@@ -232,10 +221,7 @@ export default function ProfileAsesor() {
   const handleEditTtd = () => {
     setIsEditingTtd(true);
     setHasSignature(false);
-
-    setTimeout(() => {
-      setupSignatureCanvas();
-    }, 50);
+    setTimeout(setupSignatureCanvas, 50);
   };
 
   const handleCancelEditTtd = () => {
@@ -256,13 +242,7 @@ export default function ProfileAsesor() {
         return;
       }
 
-      canvas.toBlob(
-        (blob) => {
-          resolve(blob);
-        },
-        "image/png",
-        1
-      );
+      canvas.toBlob((blob) => resolve(blob), "image/png", 1);
     });
   };
 
@@ -415,82 +395,34 @@ export default function ProfileAsesor() {
       <SidebarAsesor isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto">
-          {/* NAVBAR */}
-          <nav className="sticky top-4 z-40 mb-6 rounded-[28px] border border-slate-100 bg-white/90 backdrop-blur-xl shadow-sm px-5 py-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => navigate("/asesor/dashboard")}
-                  className="w-12 h-12 rounded-2xl bg-slate-50 hover:bg-orange-50 border border-slate-100 text-[#071E3D] hover:text-orange-500 flex items-center justify-center transition-all"
-                >
-                  <ArrowLeft size={20} />
-                </button>
-
-                <div>
-                  <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">
-                    Dashboard Asesor
-                  </p>
-                  <h1 className="text-xl md:text-2xl font-black text-[#071E3D]">
-                    Profile Asesor
-                  </h1>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  to="/asesor/dashboard"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-[#071E3D] hover:bg-[#071E3D] hover:text-white transition-all"
-                >
-                  Dashboard
-                  <ChevronRight size={15} />
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={handleSubmitProfile}
-                  disabled={loading}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300 transition-all"
-                >
-                  {loading ? (
-                    <Loader2 size={15} className="animate-spin" />
-                  ) : (
-                    <Save size={15} />
-                  )}
-                  Simpan Data
-                </button>
-              </div>
-            </div>
-          </nav>
-
+        <div className="max-w-7xl mx-auto space-y-6">
           {/* HERO */}
-          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white p-6 lg:p-9 shadow-sm mb-6">
-            <div className="absolute top-0 right-0 w-[420px] h-[420px] bg-orange-500/10 rounded-full blur-[110px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-[360px] h-[360px] bg-[#071E3D]/5 rounded-full blur-[100px] pointer-events-none" />
+          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
+            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
+            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.45fr_0.85fr] gap-8 items-center">
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 mb-5">
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
+              <div className="flex flex-col justify-center">
+                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <ShieldCheck size={15} className="text-orange-500" />
-                  <span className="text-orange-500 text-[10px] font-black uppercase tracking-widest">
-                    Kelola Identitas Asesor
+                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                    Profile Asesor
                   </span>
                 </div>
 
-                <h2 className="text-4xl lg:text-5xl font-black text-[#071E3D] leading-tight">
-                  Lengkapi Profile,
+                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
+                  Lengkapi Identitas
                   <br />
                   <span className="text-orange-500">{displayName}</span>
-                </h2>
+                </h1>
 
-                <p className="text-slate-500 mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed">
-                  Pastikan data pribadi, informasi lisensi, foto profil, dan
-                  tanda tangan asesor sudah lengkap untuk mendukung proses
-                  asesmen.
+                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
+                  Satu halaman untuk mengelola data asesor, lisensi, foto
+                  profil, dan tanda tangan digital agar seluruh dokumen asesmen
+                  siap digunakan.
                 </p>
 
-                <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <div className="mt-7 flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
                     onClick={() =>
@@ -498,7 +430,7 @@ export default function ProfileAsesor() {
                         .getElementById("form-profile")
                         ?.scrollIntoView({ behavior: "smooth" })
                     }
-                    className="px-7 py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
                   >
                     Edit Profile
                     <ChevronRight size={17} />
@@ -511,53 +443,56 @@ export default function ProfileAsesor() {
                         .getElementById("upload-section")
                         ?.scrollIntoView({ behavior: "smooth" })
                     }
-                    className="px-7 py-4 rounded-2xl bg-slate-50 hover:bg-[#071E3D] border border-slate-100 text-[#071E3D] hover:text-white font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
                   >
-                    Upload Dokumen
+                    Dokumen Digital
                     <ChevronRight size={17} />
                   </button>
                 </div>
               </div>
 
-              <div className="relative">
-                <div className="bg-[#071E3D] rounded-[32px] p-6 text-white relative overflow-hidden shadow-2xl shadow-[#071E3D]/15">
-                  <div className="absolute top-0 right-0 w-44 h-44 bg-orange-500/20 rounded-full blur-3xl -mr-20 -mt-20" />
+              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
+                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
 
-                  <div className="relative z-10">
-                    <div className="w-14 h-14 rounded-2xl bg-white/10 text-orange-400 flex items-center justify-center mb-6">
-                      <Sparkles size={28} />
-                    </div>
-
-                    <p className="text-white/50 text-[10px] font-black uppercase tracking-widest mb-2">
-                      Status Profile
-                    </p>
-
-                    <h3 className="text-2xl font-black mb-4">
-                      {statusLabel}
-                    </h3>
-
-                    <p className="text-white/60 text-sm leading-relaxed font-medium">
-                      Data asesor digunakan untuk validasi penugasan, dokumen
-                      asesmen, dan tanda tangan pada proses sertifikasi.
-                    </p>
-
-                    <div className="mt-6 grid grid-cols-2 gap-3">
-                      <InfoPill
-                        label="Foto"
-                        value={previewFoto ? "Ada" : "Belum"}
-                      />
-                      <InfoPill
-                        label="TTD"
-                        value={previewTtd ? "Ada" : "Belum"}
-                      />
-                    </div>
+                <div className="relative z-10">
+                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
+                    <Sparkles size={28} />
                   </div>
+
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
+                    Ringkasan Profile
+                  </p>
+
+                  <h2 className="mb-4 text-2xl font-black">{statusLabel}</h2>
+
+                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                    Pastikan foto dan tanda tangan digital sudah tersedia agar
+                    proses administrasi asesmen berjalan lebih cepat.
+                  </p>
+
+                  <div className="mt-6 grid grid-cols-2 gap-3">
+                    <InfoPill
+                      label="Foto Profil"
+                      value={previewFoto ? "Tersedia" : "Belum Ada"}
+                    />
+                    <InfoPill
+                      label="TTD Digital"
+                      value={previewTtd ? "Tersedia" : "Belum Ada"}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/asesor/dashboard")}
+                    className="mt-5 w-full rounded-2xl bg-white/10 px-5 py-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-white/15"
+                  >
+                    Kembali ke Dashboard
+                  </button>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* ALERT */}
           {pesan && (
             <AlertBox
               type="success"
@@ -582,58 +517,48 @@ export default function ProfileAsesor() {
             />
           )}
 
-          {/* UPLOAD SECTION */}
+          {/* DOKUMEN DIGITAL */}
           <section
             id="upload-section"
-            className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-6 mb-6"
+            className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch"
           >
             {/* FOTO */}
-            <div className="rounded-[32px] bg-white border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-2xl font-black text-[#071E3D]">
-                    Foto Profil
-                  </h3>
-                  <p className="text-slate-400 text-sm font-medium mt-1">
-                    Upload foto resmi asesor.
-                  </p>
-                </div>
-
-                <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
-                  <Camera size={22} />
-                </div>
-              </div>
-
-              <div className="p-6">
-                <div className="flex flex-col sm:flex-row items-center gap-6">
-                  <div className="relative">
-                    <div className="h-40 w-40 rounded-[34px] bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center shadow-inner">
-                      {previewFoto ? (
-                        <img
-                          src={previewFoto}
-                          alt="Foto Profil"
-                          className="h-full w-full object-cover"
+            <UploadCard
+              title="Foto Profil"
+              description="Gunakan foto resmi asesor untuk kebutuhan identitas dan dokumen."
+              icon={<Camera size={22} />}
+            >
+              <div className="flex h-full flex-col justify-between gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-5 items-center">
+                  <div className="relative h-[210px] rounded-[30px] border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden shadow-inner">
+                    {previewFoto ? (
+                      <img
+                        src={previewFoto}
+                        alt="Foto Profil"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center px-4">
+                        <User
+                          size={38}
+                          className="mx-auto mb-3 text-slate-300"
                         />
-                      ) : (
-                        <div className="text-center px-4">
-                          <User
-                            size={34}
-                            className="mx-auto text-slate-300 mb-2"
-                          />
-                          <span className="text-xs font-bold text-slate-400">
-                            Belum ada foto
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                        <p className="text-sm font-black text-slate-400">
+                          Belum ada foto
+                        </p>
+                        <p className="mt-1 text-xs font-medium text-slate-400">
+                          Upload foto profil asesor.
+                        </p>
+                      </div>
+                    )}
 
-                    <div className="absolute -bottom-3 -right-3 w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/20">
-                      <ImagePlus size={22} />
+                    <div className="absolute bottom-4 right-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-500/20">
+                      <ImagePlus size={20} />
                     </div>
                   </div>
 
-                  <div className="flex-1 w-full">
-                    <label className="block rounded-[24px] border border-dashed border-slate-200 bg-slate-50/60 p-5 cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition-all">
+                  <div className="flex flex-col gap-4">
+                    <label className="cursor-pointer rounded-[28px] border border-dashed border-slate-200 bg-slate-50/60 p-5 transition-all hover:border-orange-200 hover:bg-orange-50">
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/jpg"
@@ -642,7 +567,7 @@ export default function ProfileAsesor() {
                       />
 
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 text-orange-500 flex items-center justify-center">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-white text-orange-500">
                           <UploadCloud size={22} />
                         </div>
 
@@ -650,7 +575,7 @@ export default function ProfileAsesor() {
                           <p className="font-black text-[#071E3D]">
                             Pilih Foto Profil
                           </p>
-                          <p className="text-xs font-medium text-slate-400 mt-1">
+                          <p className="mt-1 text-xs font-medium text-slate-400">
                             Format PNG, JPG, atau JPEG
                           </p>
                         </div>
@@ -661,7 +586,7 @@ export default function ProfileAsesor() {
                       type="button"
                       onClick={handleUploadFoto}
                       disabled={loading}
-                      className="mt-4 w-full rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300 transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
                       {loading ? (
                         <Loader2 size={16} className="animate-spin" />
@@ -672,156 +597,152 @@ export default function ProfileAsesor() {
                     </button>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <SmallInfoCard
+                    icon={<CheckCircle2 size={18} />}
+                    label="Status Foto"
+                    value={previewFoto ? "Sudah tersedia" : "Belum tersedia"}
+                  />
+                  <SmallInfoCard
+                    icon={<Info size={18} />}
+                    label="Rekomendasi"
+                    value="Gunakan foto formal"
+                  />
+                </div>
               </div>
-            </div>
+            </UploadCard>
 
             {/* TTD */}
-            <div className="rounded-[32px] bg-white border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-2xl font-black text-[#071E3D]">
-                    Tanda Tangan Digital
-                  </h3>
-                  <p className="text-slate-400 text-sm font-medium mt-1">
-                    {isEditingTtd
-                      ? "Coret tanda tangan baru pada canvas."
-                      : "Tanda tangan sudah tersimpan. Klik ganti untuk ubah."}
-                  </p>
-                </div>
+            <UploadCard
+              title="Tanda Tangan Digital"
+              description={
+                isEditingTtd
+                  ? "Coret tanda tangan baru pada area canvas."
+                  : "Tanda tangan sudah tersimpan. Klik ganti untuk mengubah."
+              }
+              icon={<FileSignature size={22} />}
+            >
+              <div className="rounded-[30px] border border-dashed border-orange-200 bg-orange-50/30 p-4">
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-[#071E3D]">
+                      {isEditingTtd
+                        ? "Area Tanda Tangan"
+                        : "TTD Tersimpan Saat Ini"}
+                    </p>
+                    <p className="text-xs font-medium text-slate-400">
+                      {isEditingTtd
+                        ? "Gunakan mouse, trackpad, atau layar sentuh."
+                        : "Klik Ganti TTD untuk membuat tanda tangan baru."}
+                    </p>
+                  </div>
 
-                <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
-                  <FileSignature size={22} />
-                </div>
-              </div>
-
-              <div className="p-6">
-                <div className="rounded-[28px] border border-dashed border-orange-200 bg-orange-50/30 p-4">
-                  <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-black text-[#071E3D]">
-                        {isEditingTtd
-                          ? "Area Tanda Tangan"
-                          : "TTD Tersimpan Saat Ini"}
-                      </p>
-                      <p className="text-xs font-medium text-slate-400">
-                        {isEditingTtd
-                          ? "Gunakan mouse, trackpad, atau layar sentuh."
-                          : "Klik tombol Ganti TTD untuk membuat tanda tangan baru."}
-                      </p>
-                    </div>
-
-                    {isEditingTtd ? (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={clearSignature}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all"
-                        >
-                          <RotateCcw size={14} />
-                          Hapus
-                        </button>
-
-                        {previewTtd && (
-                          <button
-                            type="button"
-                            onClick={handleCancelEditTtd}
-                            className="inline-flex items-center justify-center rounded-2xl border border-slate-100 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#071E3D] hover:bg-slate-50 transition-all"
-                          >
-                            Batal
-                          </button>
-                        )}
-                      </div>
-                    ) : (
+                  {isEditingTtd ? (
+                    <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={handleEditTtd}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#071E3D] transition-all"
+                        onClick={clearSignature}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all hover:bg-red-50 hover:text-red-500"
                       >
-                        <PenLine size={14} />
-                        Ganti TTD
+                        <RotateCcw size={14} />
+                        Hapus
                       </button>
-                    )}
-                  </div>
 
-                  <div className="relative h-52 w-full rounded-[24px] border border-slate-100 bg-white shadow-inner overflow-hidden">
-                    {!isEditingTtd && previewTtd ? (
-                      <div className="h-full w-full flex items-center justify-center">
-                        <img
-                          src={previewTtd}
-                          alt="Tanda Tangan Tersimpan"
-                          className="max-h-full max-w-full object-contain p-5"
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        {!hasSignature && (
-                          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                            <div className="rounded-2xl bg-white/80 px-4 py-3 text-center backdrop-blur-sm border border-slate-100">
-                              <PenLine
-                                size={24}
-                                className="mx-auto text-slate-300 mb-2"
-                              />
-                              <p className="text-xs font-bold text-slate-400">
-                                Coret tanda tangan di area ini
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        <canvas
-                          ref={canvasRef}
-                          onPointerDown={startDrawing}
-                          onPointerMove={drawSignature}
-                          onPointerUp={stopDrawing}
-                          onPointerLeave={stopDrawing}
-                          onPointerCancel={stopDrawing}
-                          className="h-full w-full bg-white cursor-crosshair touch-none"
-                        />
-                      </>
-                    )}
-                  </div>
+                      {previewTtd && (
+                        <button
+                          type="button"
+                          onClick={handleCancelEditTtd}
+                          className="rounded-2xl border border-slate-100 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-slate-50"
+                        >
+                          Batal
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleEditTtd}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-[#071E3D]"
+                    >
+                      <PenLine size={14} />
+                      Ganti TTD
+                    </button>
+                  )}
                 </div>
 
-                {isEditingTtd ? (
-                  <button
-                    type="button"
-                    onClick={handleUploadTtd}
-                    disabled={loading}
-                    className="mt-5 w-full rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300 transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
-                  >
-                    {loading ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <FileSignature size={16} />
-                    )}
-                    Simpan TTD
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleEditTtd}
-                    disabled={loading}
-                    className="mt-5 w-full rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200 transition-all flex items-center justify-center gap-2"
-                  >
-                    <PenLine size={16} />
-                    Ganti TTD
-                  </button>
-                )}
+                <div className="relative h-[230px] w-full overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-inner">
+                  {!isEditingTtd && previewTtd ? (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <img
+                        src={previewTtd}
+                        alt="Tanda Tangan Tersimpan"
+                        className="max-h-full max-w-full object-contain p-5"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      {!hasSignature && (
+                        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                          <div className="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 text-center backdrop-blur-sm">
+                            <PenLine
+                              size={24}
+                              className="mx-auto mb-2 text-slate-300"
+                            />
+                            <p className="text-xs font-bold text-slate-400">
+                              Coret tanda tangan di area ini
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <canvas
+                        ref={canvasRef}
+                        onPointerDown={startDrawing}
+                        onPointerMove={drawSignature}
+                        onPointerUp={stopDrawing}
+                        onPointerLeave={stopDrawing}
+                        onPointerCancel={stopDrawing}
+                        className="h-full w-full cursor-crosshair bg-white touch-none"
+                      />
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+
+              <button
+                type="button"
+                onClick={isEditingTtd ? handleUploadTtd : handleEditTtd}
+                disabled={loading}
+                className={`mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest transition-all disabled:cursor-not-allowed disabled:bg-slate-300 ${
+                  isEditingTtd
+                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-[#071E3D]"
+                    : "border border-slate-100 bg-slate-50 text-[#071E3D] hover:bg-[#071E3D] hover:text-white"
+                }`}
+              >
+                {loading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : isEditingTtd ? (
+                  <FileSignature size={16} />
+                ) : (
+                  <PenLine size={16} />
+                )}
+                {isEditingTtd ? "Simpan TTD" : "Ganti TTD"}
+              </button>
+            </UploadCard>
           </section>
 
           {/* FORM */}
           <form
             id="form-profile"
             onSubmit={handleSubmitProfile}
-            className="rounded-[36px] bg-white border border-slate-100 shadow-sm overflow-hidden"
+            className="overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm"
           >
-            <div className="p-6 lg:p-8 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between lg:p-8">
               <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 mb-4">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <UserRoundCheck size={15} className="text-orange-500" />
-                  <span className="text-orange-500 text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
                     Data Profile
                   </span>
                 </div>
@@ -830,7 +751,7 @@ export default function ProfileAsesor() {
                   Informasi Asesor
                 </h2>
 
-                <p className="text-slate-400 text-sm font-medium mt-2">
+                <p className="mt-2 text-sm font-medium text-slate-400">
                   Lengkapi data sesuai identitas dan lisensi asesor.
                 </p>
               </div>
@@ -838,7 +759,7 @@ export default function ProfileAsesor() {
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300 transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
+                className="flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {loading ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -849,7 +770,7 @@ export default function ProfileAsesor() {
               </button>
             </div>
 
-            <div className="p-6 lg:p-8 space-y-8">
+            <div className="space-y-8 p-6 lg:p-8">
               <FormSection
                 icon={<IdCard size={22} />}
                 title="Identitas Pribadi"
@@ -1048,7 +969,7 @@ export default function ProfileAsesor() {
               </FormSection>
             </div>
 
-            <div className="p-6 lg:p-8 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/50 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8">
               <p className="text-sm font-medium text-slate-500">
                 Pastikan semua data sudah benar sebelum menyimpan perubahan.
               </p>
@@ -1056,7 +977,7 @@ export default function ProfileAsesor() {
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300 transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
+                className="flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {loading ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -1075,11 +996,11 @@ export default function ProfileAsesor() {
 
 function InfoPill({ label, value }) {
   return (
-    <div className="rounded-2xl bg-white/10 border border-white/10 px-4 py-3">
+    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
       <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
         {label}
       </p>
-      <p className="text-sm font-black text-white mt-1">{value}</p>
+      <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );
 }
@@ -1093,7 +1014,7 @@ function AlertBox({ type, icon, message }) {
 
   return (
     <div
-      className={`mb-6 rounded-[24px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
+      className={`rounded-[24px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
         styles[type] || styles.loading
       }`}
     >
@@ -1103,21 +1024,57 @@ function AlertBox({ type, icon, message }) {
   );
 }
 
+function UploadCard({ title, description, icon, children }) {
+  return (
+    <div className="h-full overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
+      <div className="flex items-center justify-between gap-4 border-b border-slate-100 p-6">
+        <div>
+          <h3 className="text-2xl font-black text-[#071E3D]">{title}</h3>
+          <p className="mt-1 text-sm font-medium text-slate-400">
+            {description}
+          </p>
+        </div>
+
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+          {icon}
+        </div>
+      </div>
+
+      <div className="h-[calc(100%-97px)] p-6">{children}</div>
+    </div>
+  );
+}
+
+function SmallInfoCard({ icon, label, value }) {
+  return (
+    <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-4">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
+        {icon}
+      </div>
+
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black text-[#071E3D]">{value}</p>
+    </div>
+  );
+}
+
 function FormSection({ icon, title, desc, children }) {
   return (
-    <section className="rounded-[30px] border border-slate-100 bg-slate-50/50 overflow-hidden">
-      <div className="p-5 border-b border-slate-100 bg-white flex items-start gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+    <section className="overflow-hidden rounded-[30px] border border-slate-100 bg-slate-50/50">
+      <div className="flex items-start gap-4 border-b border-slate-100 bg-white p-5">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
           {icon}
         </div>
 
         <div>
           <h3 className="text-lg font-black text-[#071E3D]">{title}</h3>
-          <p className="text-sm font-medium text-slate-400 mt-1">{desc}</p>
+          <p className="mt-1 text-sm font-medium text-slate-400">{desc}</p>
         </div>
       </div>
 
-      <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2">
         {children}
       </div>
     </section>
