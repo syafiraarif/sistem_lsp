@@ -1,6 +1,6 @@
 // src/pages/asesi/APL01.jsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import axios from "axios";
@@ -14,8 +14,12 @@ import {
   ClipboardList,
   PenLine,
   Send,
-  ChevronRight,
   Inbox,
+  CalendarDays,
+  Hash,
+  RefreshCcw,
+  User,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 const APL01 = () => {
@@ -27,9 +31,12 @@ const APL01 = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [peserta, setPeserta] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [persyaratan, setPersyaratan] = useState([]);
+  const [unitKompetensi, setUnitKompetensi] = useState([]);
   const [apl01, setApl01] = useState(null);
 
   const [selectedPersyaratan, setSelectedPersyaratan] = useState([]);
@@ -41,6 +48,7 @@ const APL01 = () => {
   const [tujuanLainnya, setTujuanLainnya] = useState("");
 
   const ENDPOINT = {
+    getProfile: `${API_BASE}/asesi/profile`,
     getForm: `${API_BASE}/asesi/apl01/form/${id_peserta}`,
     getApl01: `${API_BASE}/asesi/apl01/${id_peserta}`,
     createApl01: `${API_BASE}/asesi/apl01/create`,
@@ -80,8 +88,32 @@ const APL01 = () => {
         headers: getHeaders(),
       });
 
-      setPeserta(formRes.data?.peserta || null);
-      setPersyaratan(formRes.data?.persyaratan || []);
+      const pesertaData = formRes.data?.peserta || null;
+      const profileFromForm = formRes.data?.profile || null;
+      const persyaratanData = formRes.data?.persyaratan || [];
+      const unitKompetensiData =
+        formRes.data?.unit_kompetensi ||
+        formRes.data?.unitKompetensi ||
+        formRes.data?.unit ||
+        formRes.data?.units ||
+        [];
+
+      setPeserta(pesertaData);
+      setProfile(profileFromForm);
+      setPersyaratan(persyaratanData);
+      setUnitKompetensi(unitKompetensiData);
+
+      if (!profileFromForm) {
+        try {
+          const profileRes = await axios.get(ENDPOINT.getProfile, {
+            headers: getHeaders(),
+          });
+
+          setProfile(profileRes.data?.data || profileRes.data || null);
+        } catch (profileErr) {
+          console.error("Gagal mengambil profile asesi:", profileErr);
+        }
+      }
 
       try {
         const apl01Res = await axios.get(ENDPOINT.getApl01, {
@@ -95,45 +127,76 @@ const APL01 = () => {
           setTujuan(existingApl01.tujuan_asesmen || "");
           setTujuanLainnya(existingApl01.tujuan_lainnya || "");
 
-          const dokumenList =
-            existingApl01.dokumen ||
-            existingApl01.Apl01Dokumens ||
-            existingApl01.Apl01Dokumen ||
-            existingApl01.apl01_dokumen ||
-            existingApl01.apl01_dokumens ||
-            [];
+          const dokumenList = getDokumenList(existingApl01);
 
           const uploadedPersyaratanIds = dokumenList
-            .map((d) => d.id_persyaratan)
+            .map((dokumen) => Number(dokumen.id_persyaratan))
             .filter(Boolean);
 
           setSelectedPersyaratan(uploadedPersyaratanIds);
+
+          const nomorMap = {};
+          const tanggalMap = {};
+
+          dokumenList.forEach((dokumen) => {
+            if (dokumen.id_persyaratan) {
+              nomorMap[dokumen.id_persyaratan] = dokumen.nomor_dokumen || "";
+              tanggalMap[dokumen.id_persyaratan] =
+                dokumen.tanggal_dokumen || "";
+            }
+          });
+
+          setNomorDokumen(nomorMap);
+          setTanggalDokumen(tanggalMap);
         }
       } catch (err) {
         if (err.response?.status !== 404) {
           console.error(err);
         }
+
+        setApl01(null);
       }
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Gagal mengambil data APL01.");
+      alert(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Gagal mengambil data APL01."
+      );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchAPL01Data();
+  };
+
+  const getDokumenList = (dataApl01) => {
+    return (
+      dataApl01?.dokumen ||
+      dataApl01?.Apl01Dokumens ||
+      dataApl01?.Apl01Dokumen ||
+      dataApl01?.apl01_dokumen ||
+      dataApl01?.apl01_dokumens ||
+      []
+    );
   };
 
   const getPersyaratanInfo = (item) => {
     const dataPersyaratan =
-      item.Persyaratan ||
       item.persyaratan ||
+      item.Persyaratan ||
       item.persyaratan_data ||
       item;
 
     return {
       id_persyaratan:
-        item.id_persyaratan ||
-        dataPersyaratan.id_persyaratan ||
-        dataPersyaratan.id,
+        Number(item.id_persyaratan) ||
+        Number(dataPersyaratan.id_persyaratan) ||
+        Number(dataPersyaratan.id),
 
       nama_persyaratan:
         dataPersyaratan.nama_persyaratan ||
@@ -151,8 +214,131 @@ const APL01 = () => {
     };
   };
 
+  const uploadedDokumenIds = useMemo(() => {
+    const dokumenList = getDokumenList(apl01);
+
+    return dokumenList
+      .map((dokumen) => Number(dokumen.id_persyaratan))
+      .filter(Boolean);
+  }, [apl01]);
+
+  const isSubmitted = apl01?.status === "submit";
+
+  const getSkemaData = () => {
+    return (
+      peserta?.jadwal?.skema ||
+      peserta?.Jadwal?.skema ||
+      peserta?.Jadwal?.Skema ||
+      peserta?.skema ||
+      apl01?.skema ||
+      {}
+    );
+  };
+
+  const getIdSkema = () => {
+    return (
+      peserta?.id_skema ||
+      peserta?.jadwal?.id_skema ||
+      peserta?.Jadwal?.id_skema ||
+      apl01?.id_skema ||
+      "-"
+    );
+  };
+
+  const getIdJadwal = () => {
+    return peserta?.id_jadwal || apl01?.id_jadwal || "-";
+  };
+
+  const getJudulSkema = () => {
+    const skema = getSkemaData();
+
+    return (
+      skema.judul_skema ||
+      skema.nama_skema ||
+      skema.judul ||
+      peserta?.jadwal?.skema?.judul_skema ||
+      "-"
+    );
+  };
+
+  const getNomorSkema = () => {
+    const skema = getSkemaData();
+
+    return (
+      skema.kode_skema ||
+      skema.nomor_skema ||
+      skema.nomor ||
+      peserta?.jadwal?.skema?.kode_skema ||
+      "-"
+    );
+  };
+
+  const getUnitKode = (unit) => {
+    return (
+      unit.kode_unit ||
+      unit.kode ||
+      unit.kode_unit_kompetensi ||
+      unit.kode_uk ||
+      "-"
+    );
+  };
+
+  const getUnitJudul = (unit) => {
+    return (
+      unit.judul_unit ||
+      unit.nama_unit ||
+      unit.nama_unit_kompetensi ||
+      unit.judul ||
+      unit.nama ||
+      "-"
+    );
+  };
+
+  const getUnitStandar = (unit) => {
+    return (
+      unit.jenis_standar ||
+      unit.standar ||
+      unit.nama_skkni ||
+      unit.no_skkni ||
+      unit.nomor_skkni ||
+      unit.skkni?.judul_skkni ||
+      unit.skkni?.nomor_skkni ||
+      unit.Skkni?.judul_skkni ||
+      unit.Skkni?.nomor_skkni ||
+      "-"
+    );
+  };
+
+  const getProfileValue = (...keys) => {
+    for (const key of keys) {
+      if (
+        profile?.[key] !== undefined &&
+        profile?.[key] !== null &&
+        profile?.[key] !== ""
+      ) {
+        return profile[key];
+      }
+    }
+
+    return "-";
+  };
+
+  const formatTanggal = (date) => {
+    if (!date || date === "-") return "-";
+
+    const parsed = new Date(date);
+
+    if (Number.isNaN(parsed.getTime())) return "-";
+
+    return parsed.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
   const handlePersyaratanChange = (e) => {
-    const id = parseInt(e.target.value, 10);
+    const id = Number(e.target.value);
     const checked = e.target.checked;
 
     if (checked) {
@@ -191,7 +377,7 @@ const APL01 = () => {
   const handleDokumenChange = (id_persyaratan, file) => {
     setDokumenTambahan((prev) => ({
       ...prev,
-      [id_persyaratan]: file,
+      [id_persyaratan]: file || null,
     }));
   };
 
@@ -210,7 +396,7 @@ const APL01 = () => {
   };
 
   const validateForm = () => {
-    if (apl01?.status === "submit") {
+    if (isSubmitted) {
       alert("APL01 sudah disubmit.");
       return false;
     }
@@ -231,7 +417,10 @@ const APL01 = () => {
     }
 
     for (const id of selectedPersyaratan) {
-      if (!apl01 && !dokumenTambahan[id]) {
+      const alreadyUploaded = uploadedDokumenIds.includes(Number(id));
+      const newFile = dokumenTambahan[id];
+
+      if (!alreadyUploaded && !newFile) {
         alert("Semua persyaratan yang dipilih wajib upload dokumen.");
         return false;
       }
@@ -241,17 +430,15 @@ const APL01 = () => {
   };
 
   const createAPL01 = async () => {
-    const res = await axios.post(
-      ENDPOINT.createApl01,
-      {
-        id_peserta,
-        tujuan_asesmen: tujuan,
-        tujuan_lainnya: tujuan === "lainnya" ? tujuanLainnya : null,
-      },
-      {
-        headers: getHeaders(),
-      }
-    );
+    const payload = {
+      id_peserta: Number(id_peserta),
+      tujuan_asesmen: tujuan,
+      tujuan_lainnya: tujuan === "lainnya" ? tujuanLainnya : null,
+    };
+
+    const res = await axios.post(ENDPOINT.createApl01, payload, {
+      headers: getHeaders(),
+    });
 
     return res.data?.data;
   };
@@ -302,7 +489,7 @@ const APL01 = () => {
       if (!currentApl01) {
         currentApl01 = await createAPL01();
 
-        if (!currentApl01 || !currentApl01.id_apl01) {
+        if (!currentApl01?.id_apl01) {
           alert("APL01 berhasil dibuat, tapi ID APL01 tidak ditemukan.");
           return;
         }
@@ -317,7 +504,11 @@ const APL01 = () => {
       navigate("/asesi/jadwal-saya");
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Gagal submit APL01.");
+      alert(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Gagal submit APL01."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -329,7 +520,10 @@ const APL01 = () => {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
         <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center">
-          <Loader2 className="animate-spin text-orange-500 mx-auto mb-5" size={44} />
+          <Loader2
+            className="animate-spin text-orange-500 mx-auto mb-5"
+            size={44}
+          />
           <p className="text-[#071E3D] font-black text-lg">Memuat APL01</p>
           <p className="text-slate-400 text-sm mt-1 font-medium">
             Mohon tunggu sebentar...
@@ -363,29 +557,19 @@ const APL01 = () => {
                 </h1>
 
                 <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
-                  Lengkapi tujuan asesmen, pilih persyaratan, upload dokumen,
-                  lalu submit aplikasi asesmen.
+                  Lengkapi tujuan asesmen, data persyaratan, dan dokumen
+                  pendukung sesuai kebutuhan aplikasi asesmen.
                 </p>
 
-                {peserta && (
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    <InfoBadge label="ID Peserta" value={peserta.id_peserta} />
-                    <InfoBadge label="ID Jadwal" value={peserta.id_jadwal} />
-                    <InfoBadge
-                      label="ID Skema"
-                      value={
-                        peserta.id_skema ||
-                        peserta.jadwal?.id_skema ||
-                        peserta.Jadwal?.id_skema ||
-                        "-"
-                      }
-                    />
-                    <InfoBadge
-                      label="Status APL01"
-                      value={apl01?.status || "Belum Dibuat"}
-                    />
-                  </div>
-                )}
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <InfoBadge label="ID Peserta" value={id_peserta || "-"} />
+                  <InfoBadge label="ID Jadwal" value={getIdJadwal()} />
+                  <InfoBadge label="ID Skema" value={getIdSkema()} />
+                  <InfoBadge
+                    label="Status APL01"
+                    value={apl01?.status || "Belum Dibuat"}
+                  />
+                </div>
               </div>
 
               <div className="bg-[#071E3D] text-white rounded-[26px] p-5 min-w-[240px] relative overflow-hidden">
@@ -400,59 +584,327 @@ const APL01 = () => {
                     <h2 className="text-4xl font-black">{selectedCount}</h2>
                     <FileText className="text-orange-400" size={30} />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="mt-4 w-full px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {refreshing ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <RefreshCcw size={15} />
+                    )}
+                    Refresh
+                  </button>
                 </div>
               </div>
             </div>
           </section>
 
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 xl:grid-cols-3 gap-6"
+          >
             <section className="xl:col-span-2 space-y-6">
-              <Card title="Tujuan Asesmen" icon={<ShieldCheck size={22} />}>
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
-                      Pilih Tujuan Asesmen
-                    </label>
+              <Card title="Data Pribadi Asesi" icon={<User size={22} />}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DataItem
+                    label="Nama Lengkap"
+                    value={getProfileValue(
+                      "nama_lengkap",
+                      "nama",
+                      "nama_asesi"
+                    )}
+                  />
 
-                    <div className="relative">
-                      <select
-                        value={tujuan}
-                        onChange={(e) => setTujuan(e.target.value)}
-                        required
-                        disabled={apl01?.status === "submit"}
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D] appearance-none cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                      >
-                        <option value="">Pilih Tujuan</option>
-                        <option value="sertifikasi">Sertifikasi</option>
-                        <option value="sertifikasi_ulang">Sertifikasi Ulang</option>
-                        <option value="pkk">Pengakuan Kompetensi Terkini</option>
-                        <option value="rpl">Rekognisi Pembelajaran Lampau</option>
-                        <option value="lainnya">Lainnya</option>
-                      </select>
+                  <DataItem
+                    label="Tempat Lahir"
+                    value={getProfileValue("tempat_lahir")}
+                  />
 
-                      <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <ChevronRight size={18} className="rotate-90" />
+                  <DataItem
+                    label="Tanggal Lahir"
+                    value={formatTanggal(
+                      getProfileValue("tanggal_lahir", "tgl_lahir")
+                    )}
+                  />
+
+                  <DataItem
+                    label="Jenis Kelamin"
+                    value={getProfileValue("jenis_kelamin", "gender")}
+                  />
+
+                  <DataItem
+                    label="Kebangsaan"
+                    value={getProfileValue(
+                      "kebangsaan",
+                      "kewarganegaraan",
+                      "warga_negara"
+                    )}
+                  />
+
+                  <DataItem
+                    label="Pendidikan Terakhir"
+                    value={getProfileValue(
+                      "pendidikan_terakhir",
+                      "pendidikan"
+                    )}
+                  />
+
+                  <div className="md:col-span-2">
+                    <DataItem
+                      label="Alamat Rumah"
+                      value={getProfileValue("alamat_rumah", "alamat")}
+                    />
+                  </div>
+                </div>
+              </Card>
+
+              <Card
+                title="Data Pekerjaan / Perusahaan"
+                icon={<BriefcaseBusiness size={22} />}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DataItem
+                    label="Jabatan"
+                    value={getProfileValue("jabatan", "pekerjaan")}
+                  />
+
+                  <DataItem
+                    label="Nama Lembaga / Perusahaan"
+                    value={getProfileValue(
+                      "nama_lembaga",
+                      "nama_perusahaan",
+                      "lembaga",
+                      "perusahaan"
+                    )}
+                  />
+
+                  <div className="md:col-span-2">
+                    <DataItem
+                      label="Alamat Perusahaan"
+                      value={getProfileValue(
+                        "alamat_perusahaan",
+                        "alamat_kantor"
+                      )}
+                    />
+                  </div>
+
+                  <DataItem
+                    label="No. Telp Perusahaan"
+                    value={getProfileValue(
+                      "no_telp_perusahaan",
+                      "telp_perusahaan",
+                      "no_telp_kantor",
+                      "telepon_perusahaan"
+                    )}
+                  />
+
+                  <DataItem
+                    label="Fax Perusahaan"
+                    value={getProfileValue(
+                      "fax",
+                      "no_fax",
+                      "fax_perusahaan",
+                      "no_fax_perusahaan"
+                    )}
+                  />
+
+                  <DataItem
+                    label="Email Perusahaan"
+                    value={getProfileValue(
+                      "email_perusahaan",
+                      "email_kantor",
+                      "email_lembaga"
+                    )}
+                  />
+                </div>
+              </Card>
+
+              <Card
+                title="Bagian 2: Data Sertifikasi"
+                icon={<ShieldCheck size={22} />}
+              >
+                <div className="space-y-6">
+                  <div className="overflow-hidden rounded-2xl border border-slate-100">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-slate-100">
+                      <div className="lg:col-span-4 bg-slate-50 p-4">
+                        <p className="text-sm font-black text-[#071E3D]">
+                          Skema Sertifikasi
+                        </p>
+                        <p className="text-xs text-slate-400 font-bold mt-1">
+                          KKNI / Okupasi / Klaster
+                        </p>
+                      </div>
+
+                      <div className="lg:col-span-8 bg-white">
+                        <div className="grid grid-cols-1 md:grid-cols-4 border-b border-slate-100">
+                          <div className="md:col-span-1 bg-slate-50/60 p-4">
+                            <p className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                              Judul
+                            </p>
+                          </div>
+
+                          <div className="md:col-span-3 p-4">
+                            <p className="text-sm font-black text-[#071E3D]">
+                              {getJudulSkema()}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4">
+                          <div className="md:col-span-1 bg-slate-50/60 p-4">
+                            <p className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                              Nomor
+                            </p>
+                          </div>
+
+                          <div className="md:col-span-3 p-4">
+                            <p className="text-sm font-black text-[#071E3D]">
+                              {getNomorSkema()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12">
+                      <div className="lg:col-span-4 bg-slate-50 p-4">
+                        <p className="text-sm font-black text-[#071E3D]">
+                          Tujuan Asesmen
+                        </p>
+                      </div>
+
+                      <div className="lg:col-span-8 bg-white p-4">
+                        <div className="space-y-3">
+                          <RadioTujuan
+                            label="Sertifikasi"
+                            value="sertifikasi"
+                            tujuan={tujuan}
+                            setTujuan={setTujuan}
+                            disabled={isSubmitted}
+                          />
+
+                          <RadioTujuan
+                            label="Sertifikasi Ulang"
+                            value="sertifikasi_ulang"
+                            tujuan={tujuan}
+                            setTujuan={setTujuan}
+                            disabled={isSubmitted}
+                          />
+
+                          <RadioTujuan
+                            label="Pengakuan Kompetensi Terkini (PKT)"
+                            value="pkk"
+                            tujuan={tujuan}
+                            setTujuan={setTujuan}
+                            disabled={isSubmitted}
+                          />
+
+                          <RadioTujuan
+                            label="Rekognisi Pembelajaran Lampau"
+                            value="rpl"
+                            tujuan={tujuan}
+                            setTujuan={setTujuan}
+                            disabled={isSubmitted}
+                          />
+
+                          <RadioTujuan
+                            label="Lainnya"
+                            value="lainnya"
+                            tujuan={tujuan}
+                            setTujuan={setTujuan}
+                            disabled={isSubmitted}
+                          />
+
+                          {tujuan === "lainnya" && (
+                            <input
+                              type="text"
+                              placeholder="Tuliskan tujuan asesmen lainnya"
+                              value={tujuanLainnya}
+                              onChange={(e) =>
+                                setTujuanLainnya(e.target.value)
+                              }
+                              disabled={isSubmitted}
+                              className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
+                              required
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {tujuan === "lainnya" && (
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
-                        Tujuan Lainnya
-                      </label>
+                  <div>
+                    <h3 className="text-xl font-black text-[#071E3D] mb-4">
+                      Daftar Unit Kompetensi sesuai kemasan:
+                    </h3>
 
-                      <input
-                        type="text"
-                        placeholder="Tuliskan tujuan asesmen lainnya"
-                        value={tujuanLainnya}
-                        onChange={(e) => setTujuanLainnya(e.target.value)}
-                        disabled={apl01?.status === "submit"}
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
-                        required
+                    {unitKompetensi.length > 0 ? (
+                      <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                        <table className="w-full min-w-[760px] text-sm">
+                          <thead className="bg-slate-50">
+                            <tr>
+                              <th className="p-4 text-left text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
+                                No
+                              </th>
+                              <th className="p-4 text-left text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
+                                Kode Unit
+                              </th>
+                              <th className="p-4 text-left text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
+                                Judul Unit
+                              </th>
+                              <th className="p-4 text-left text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
+                                Jenis Standar
+                              </th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {unitKompetensi.map((unit, index) => (
+                              <tr
+                                key={
+                                  unit.id_unit ||
+                                  unit.id_unit_kompetensi ||
+                                  index
+                                }
+                                className={
+                                  index % 2 === 0
+                                    ? "bg-white"
+                                    : "bg-slate-50/60"
+                                }
+                              >
+                                <td className="p-4 border-b border-slate-100 font-bold text-slate-500">
+                                  {index + 1}
+                                </td>
+
+                                <td className="p-4 border-b border-slate-100 font-black text-[#071E3D]">
+                                  {getUnitKode(unit)}
+                                </td>
+
+                                <td className="p-4 border-b border-slate-100 font-bold text-[#071E3D]">
+                                  {getUnitJudul(unit)}
+                                  <span className="ml-2 text-red-500">✅</span>
+                                </td>
+
+                                <td className="p-4 border-b border-slate-100 font-medium text-slate-500">
+                                  {getUnitStandar(unit)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <EmptyState
+                        icon={<Inbox size={38} />}
+                        title="Unit Kompetensi Belum Ada"
+                        desc="Backend belum mengirim data unit_kompetensi untuk skema ini."
                       />
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </Card>
 
@@ -461,12 +913,13 @@ const APL01 = () => {
                   <div className="space-y-4">
                     {persyaratan.map((item, index) => {
                       const p = getPersyaratanInfo(item);
-                      const id = p.id_persyaratan;
+                      const id = Number(p.id_persyaratan);
 
                       if (!id) return null;
 
                       const checked = selectedPersyaratan.includes(id);
                       const uploadedFile = dokumenTambahan[id];
+                      const alreadyUploaded = uploadedDokumenIds.includes(id);
 
                       return (
                         <div
@@ -483,7 +936,7 @@ const APL01 = () => {
                               value={id}
                               checked={checked}
                               onChange={handlePersyaratanChange}
-                              disabled={apl01?.status === "submit"}
+                              disabled={isSubmitted}
                               className="mt-1 w-5 h-5 accent-orange-500 disabled:cursor-not-allowed"
                             />
 
@@ -499,23 +952,24 @@ const APL01 = () => {
                                   </span>
                                 )}
 
-                                {checked && uploadedFile && (
-                                  <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1">
+                                {alreadyUploaded && (
+                                  <span className="px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1">
                                     <CheckCircle size={13} />
-                                    File siap
+                                    Sudah Upload
                                   </span>
                                 )}
 
-                                {checked && !uploadedFile && apl01 && (
-                                  <span className="px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1">
+                                {checked && uploadedFile && (
+                                  <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1">
                                     <CheckCircle size={13} />
-                                    Sudah tersimpan
+                                    File Siap
                                   </span>
                                 )}
                               </div>
 
                               <p className="text-slate-400 text-xs font-medium">
-                                Centang persyaratan lalu upload dokumen pendukung.
+                                Centang persyaratan lalu upload dokumen
+                                pendukung.
                               </p>
                             </div>
                           </label>
@@ -528,16 +982,25 @@ const APL01 = () => {
                                     Nomor Dokumen
                                   </label>
 
-                                  <input
-                                    type="text"
-                                    placeholder="Masukkan nomor dokumen"
-                                    value={nomorDokumen[id] || ""}
-                                    onChange={(e) =>
-                                      handleNomorDokumenChange(id, e.target.value)
-                                    }
-                                    disabled={apl01?.status === "submit"}
-                                    className="w-full px-5 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
-                                  />
+                                  <div className="relative">
+                                    <Hash
+                                      size={16}
+                                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                    />
+                                    <input
+                                      type="text"
+                                      placeholder="Masukkan nomor dokumen"
+                                      value={nomorDokumen[id] || ""}
+                                      onChange={(e) =>
+                                        handleNomorDokumenChange(
+                                          id,
+                                          e.target.value
+                                        )
+                                      }
+                                      disabled={isSubmitted}
+                                      className="w-full pl-11 pr-5 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
+                                    />
+                                  </div>
                                 </div>
 
                                 <div>
@@ -545,52 +1008,67 @@ const APL01 = () => {
                                     Tanggal Dokumen
                                   </label>
 
-                                  <input
-                                    type="date"
-                                    value={tanggalDokumen[id] || ""}
-                                    onChange={(e) =>
-                                      handleTanggalDokumenChange(id, e.target.value)
-                                    }
-                                    disabled={apl01?.status === "submit"}
-                                    className="w-full px-5 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
-                                  />
+                                  <div className="relative">
+                                    <CalendarDays
+                                      size={16}
+                                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                    />
+                                    <input
+                                      type="date"
+                                      value={tanggalDokumen[id] || ""}
+                                      onChange={(e) =>
+                                        handleTanggalDokumenChange(
+                                          id,
+                                          e.target.value
+                                        )
+                                      }
+                                      disabled={isSubmitted}
+                                      className="w-full pl-11 pr-5 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
+                                    />
+                                  </div>
                                 </div>
                               </div>
 
-                              <div>
-                                <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
-                                  Upload Dokumen
-                                </label>
+                              {!isSubmitted && (
+                                <div>
+                                  <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
+                                    Upload Dokumen
+                                  </label>
 
-                                <label className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 cursor-pointer hover:border-orange-200 transition-all">
-                                  <div className="w-11 h-11 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
-                                    <Upload size={20} />
-                                  </div>
+                                  <label className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 cursor-pointer hover:border-orange-200 transition-all">
+                                    <div className="w-11 h-11 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+                                      <Upload size={20} />
+                                    </div>
 
-                                  <div className="flex-1">
-                                    <p className="text-sm font-black text-[#071E3D]">
-                                      {uploadedFile
-                                        ? uploadedFile.name
-                                        : apl01
-                                        ? "Pilih file baru jika ingin upload ulang"
-                                        : "Pilih file dokumen"}
-                                    </p>
-                                    <p className="text-xs text-slate-400 font-medium mt-1">
-                                      File dikirim ke backend sebagai file_dokumen.
-                                    </p>
-                                  </div>
+                                    <div className="flex-1">
+                                      <p className="text-sm font-black text-[#071E3D]">
+                                        {uploadedFile
+                                          ? uploadedFile.name
+                                          : alreadyUploaded
+                                          ? "Pilih file baru jika ingin upload ulang"
+                                          : "Pilih file dokumen"}
+                                      </p>
+                                      <p className="text-xs text-slate-400 font-medium mt-1">
+                                        File akan dikirim sebagai field
+                                        file_dokumen. Backend menyimpan path ke
+                                        kolom file_path.
+                                      </p>
+                                    </div>
 
-                                  <input
-                                    type="file"
-                                    onChange={(e) =>
-                                      handleDokumenChange(id, e.target.files[0])
-                                    }
-                                    disabled={apl01?.status === "submit"}
-                                    className="hidden"
-                                    required={!apl01}
-                                  />
-                                </label>
-                              </div>
+                                    <input
+                                      type="file"
+                                      onChange={(e) =>
+                                        handleDokumenChange(
+                                          id,
+                                          e.target.files?.[0] || null
+                                        )
+                                      }
+                                      className="hidden"
+                                      required={!alreadyUploaded}
+                                    />
+                                  </label>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -615,10 +1093,10 @@ const APL01 = () => {
                       <div className="flex items-start gap-3">
                         <AlertCircle size={22} className="shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-black">Alur Backend</p>
+                          <p className="font-black">Sesuai Model Database</p>
                           <p className="text-sm font-medium mt-1">
-                            Sistem akan membuat APL01, upload dokumen satu per satu,
-                            lalu submit final.
+                            Data asesmen masuk ke apl01_asesmen. Dokumen masuk
+                            ke apl01_dokumen.
                           </p>
                         </div>
                       </div>
@@ -647,22 +1125,38 @@ const APL01 = () => {
                   <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl -mr-20 -mt-20" />
 
                   <div className="relative z-10">
-                    <h3 className="font-black text-xl mb-2">Ringkasan APL01</h3>
+                    <h3 className="font-black text-xl mb-2">
+                      Ringkasan APL01
+                    </h3>
 
                     <div className="space-y-3 mt-5">
-                      <SummaryItem label="ID Peserta" value={id_peserta || "-"} />
-                      <SummaryItem label="Persyaratan Dipilih" value={selectedCount} />
-                      <SummaryItem label="Tujuan Asesmen" value={tujuan || "-"} />
-                      <SummaryItem label="Status" value={apl01?.status || "Draft Baru"} />
+                      <SummaryItem
+                        label="ID Peserta"
+                        value={id_peserta || "-"}
+                      />
+                      <SummaryItem label="ID Jadwal" value={getIdJadwal()} />
+                      <SummaryItem label="ID Skema" value={getIdSkema()} />
+                      <SummaryItem
+                        label="Persyaratan Dipilih"
+                        value={selectedCount}
+                      />
+                      <SummaryItem
+                        label="Tujuan Asesmen"
+                        value={tujuan || "-"}
+                      />
+                      <SummaryItem
+                        label="Status"
+                        value={apl01?.status || "Draft Baru"}
+                      />
                     </div>
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={submitting || apl01?.status === "submit"}
+                  disabled={submitting || isSubmitted}
                   className={`w-full px-7 py-5 rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 ${
-                    submitting || apl01?.status === "submit"
+                    submitting || isSubmitted
                       ? "bg-orange-300 cursor-not-allowed"
                       : "bg-orange-500 hover:bg-[#071E3D] shadow-orange-500/20"
                   }`}
@@ -673,7 +1167,7 @@ const APL01 = () => {
                     <Send size={18} />
                   )}
 
-                  {apl01?.status === "submit"
+                  {isSubmitted
                     ? "Sudah Submit"
                     : submitting
                     ? "Mengirim..."
@@ -716,6 +1210,37 @@ const InfoBadge = ({ label, value }) => {
         {label}
       </p>
       <p className="text-sm font-black text-[#071E3D] mt-1">{value || "-"}</p>
+    </div>
+  );
+};
+
+const RadioTujuan = ({ label, value, tujuan, setTujuan, disabled }) => {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer">
+      <input
+        type="radio"
+        name="tujuan_asesmen"
+        value={value}
+        checked={tujuan === value}
+        onChange={(e) => setTujuan(e.target.value)}
+        disabled={disabled}
+        className="w-4 h-4 accent-orange-500 disabled:cursor-not-allowed"
+      />
+
+      <span className="text-sm font-bold text-[#071E3D]">{label}</span>
+    </label>
+  );
+};
+
+const DataItem = ({ label, value }) => {
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+        {label}
+      </p>
+      <p className="text-sm font-black text-[#071E3D] break-words">
+        {value || "-"}
+      </p>
     </div>
   );
 };

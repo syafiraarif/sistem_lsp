@@ -1336,6 +1336,16 @@ BiayaUji.belongsTo(Skema, { foreignKey: "id_skema" });
 Skema.belongsToMany(Persyaratan, { through: SkemaPersyaratan, foreignKey: "id_skema"});
 Persyaratan.belongsToMany(Skema, { through: SkemaPersyaratan, foreignKey: "id_persyaratan"});
 
+SkemaPersyaratan.belongsTo(Persyaratan, {
+  foreignKey: "id_persyaratan",
+  as: "persyaratan"
+});
+
+Persyaratan.hasMany(SkemaPersyaratan, {
+  foreignKey: "id_persyaratan",
+  as: "skema_persyaratan"
+});
+
 Skema.belongsToMany(PersyaratanTuk, { through: SkemaPersyaratanTuk, foreignKey: "id_skema"});
 PersyaratanTuk.belongsToMany(Skema, { through: SkemaPersyaratanTuk, foreignKey: "id_persyaratan_tuk"});
 

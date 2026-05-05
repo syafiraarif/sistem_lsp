@@ -7,6 +7,16 @@ import AppRoutes from "./routes/AppRoutes";
 import TukRoutes from "./routes/TukRoutes";
 import AsesiRoutes from "./routes/AsesiRoutes";
 import AdminRoutes from "./routes/AdminRoutes";
+import AsesorRoutes from "./routes/AsesorRoutes";
+
+function ProtectedAsesor({ children }) {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
+  if (!token || role !== "asesor") return <Navigate to="/login" replace />;
+
+  return children;
+}
 
 /* Protected Route Helpers */
 function ProtectedTuk({ children }) {
@@ -57,6 +67,17 @@ function App() {
           </ProtectedTuk>
         }
       />
+
+
+      {/* ASESOR */}
+        <Route
+          path="/asesor/*"
+          element={
+            <ProtectedAsesor>
+              <AsesorRoutes />
+            </ProtectedAsesor>
+          }
+        />
 
       {/* ASESI */}
       <Route

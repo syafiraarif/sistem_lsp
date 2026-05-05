@@ -17,6 +17,7 @@ exports.getFormApl01 = async (req, res) => {
       include: [
         {
           model: Jadwal,
+          as: "jadwal",
           include: [
             { model: Skema, as: "skema" },
             { model: Tuk, as: "tuk" }
@@ -26,36 +27,54 @@ exports.getFormApl01 = async (req, res) => {
     });
 
     if (!peserta) {
-      return res.status(404).json({ message: "Peserta tidak ditemukan" });
+      return res.status(404).json({
+        message: "Peserta tidak ditemukan"
+      });
     }
 
-    // ambil persyaratan sesuai skema
+    if (!peserta.jadwal) {
+      return res.status(404).json({
+        message: "Jadwal peserta tidak ditemukan"
+      });
+    }
+
+    const id_skema = peserta.jadwal.id_skema;
+
     const persyaratan = await SkemaPersyaratan.findAll({
-      where: { id_skema: peserta.Jadwal.id_skema },
-      include: [{ model: Persyaratan }]
-    });
+  where: { id_skema },
+  include: [
+    {
+      model: Persyaratan,
+      as: "persyaratan"
+    }
+  ]
+});
 
     return res.json({
       peserta,
       persyaratan
     });
-
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Gagal ambil form APL01" });
+    console.error("GET FORM APL01 ERROR:", error);
+    return res.status(500).json({
+      message: "Gagal ambil form APL01",
+      error: error.message
+    });
   }
 };
 
 exports.createApl01 = async (req, res) => {
   try {
-    const {
-      id_peserta,
-      tujuan_asesmen,
-      tujuan_lainnya
-    } = req.body;
+    const { id_peserta, tujuan_asesmen, tujuan_lainnya } = req.body;
 
-    // ambil data peserta
-    const peserta = await PesertaJadwal.findByPk(id_peserta);
+    const peserta = await PesertaJadwal.findByPk(id_peserta, {
+      include: [
+        {
+          model: Jadwal,
+          as: "jadwal"
+        }
+      ]
+    });
 
     if (!peserta) {
       return res.status(404).json({
@@ -63,7 +82,12 @@ exports.createApl01 = async (req, res) => {
       });
     }
 
-    // cek sudah ada belum
+    if (!peserta.jadwal) {
+      return res.status(404).json({
+        message: "Jadwal peserta tidak ditemukan"
+      });
+    }
+
     const existing = await Apl01Asesmen.findOne({
       where: { id_peserta }
     });
@@ -77,25 +101,24 @@ exports.createApl01 = async (req, res) => {
     const apl01 = await Apl01Asesmen.create({
       id_peserta,
       id_jadwal: peserta.id_jadwal,
-      id_skema: peserta.id_skema || null,
+      id_skema: peserta.jadwal.id_skema,
       tujuan_asesmen,
       tujuan_lainnya,
       status: "draft"
     });
 
-    res.json({
+    return res.json({
       message: "APL01 berhasil dibuat",
       data: apl01
     });
-
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Gagal membuat APL01"
+    console.error("CREATE APL01 ERROR:", error);
+    return res.status(500).json({
+      message: "Gagal membuat APL01",
+      error: error.message
     });
   }
 };
-
 
 exports.uploadDokumenApl01 = async (req, res) => {
   try {
@@ -117,24 +140,23 @@ exports.uploadDokumenApl01 = async (req, res) => {
     const dokumen = await Apl01Dokumen.create({
       id_apl01,
       id_persyaratan,
-      nomor_dokumen,
-      tanggal_dokumen,
+      nomor_dokumen: nomor_dokumen || null,
+      tanggal_dokumen: tanggal_dokumen || null,
       file_path: filePath
     });
 
-    res.json({
+    return res.json({
       message: "Dokumen berhasil diupload",
       data: dokumen
     });
-
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Gagal upload dokumen"
+    console.error("UPLOAD DOKUMEN APL01 ERROR:", error);
+    return res.status(500).json({
+      message: "Gagal upload dokumen",
+      error: error.message
     });
   }
 };
-
 
 exports.getApl01 = async (req, res) => {
   try {
@@ -145,9 +167,11 @@ exports.getApl01 = async (req, res) => {
       include: [
         {
           model: Apl01Dokumen,
+          as: "dokumen",
           include: [
             {
-              model: Persyaratan
+              model: Persyaratan,
+              as: "persyaratan"
             }
           ]
         }
@@ -160,18 +184,17 @@ exports.getApl01 = async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       data: apl01
     });
-
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Gagal ambil data APL01"
+    console.error("GET APL01 ERROR:", error);
+    return res.status(500).json({
+      message: "Gagal ambil data APL01",
+      error: error.message
     });
   }
 };
-
 
 exports.submitFinalApl01 = async (req, res) => {
   try {
@@ -185,7 +208,6 @@ exports.submitFinalApl01 = async (req, res) => {
       });
     }
 
-    // cek semua dokumen wajib sudah ada
     const dokumen = await Apl01Dokumen.findAll({
       where: { id_apl01 }
     });
@@ -200,14 +222,14 @@ exports.submitFinalApl01 = async (req, res) => {
       status: "submit"
     });
 
-    res.json({
+    return res.json({
       message: "APL01 berhasil disubmit"
     });
-
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Gagal submit APL01"
+    console.error("SUBMIT APL01 ERROR:", error);
+    return res.status(500).json({
+      message: "Gagal submit APL01",
+      error: error.message
     });
   }
 };
