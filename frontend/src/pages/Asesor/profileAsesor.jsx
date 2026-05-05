@@ -1,16 +1,40 @@
+// src/pages/asesor/ProfileAsesor.jsx
 import React, { useEffect, useState } from "react";
 import api from "../../services/api";
 
-const ProfileAsesor = () => {
-  const [profile, setProfile] = useState({
-    nama_lengkap: "",
-    no_reg: "",
-    no_hp: "",
-    email: "",
-    alamat: "",
-    ttd_path: "",
-    foto_profil: "",
-  });
+const BASE_URL = "http://localhost:3000";
+
+const initialProfile = {
+  nik: "",
+  gelar_depan: "",
+  nama_lengkap: "",
+  gelar_belakang: "",
+  jenis_kelamin: "",
+  tempat_lahir: "",
+  tanggal_lahir: "",
+  kebangsaan: "",
+  pendidikan_terakhir: "",
+  tahun_lulus: "",
+  institut_asal: "",
+  alamat: "",
+  rt: "",
+  rw: "",
+  provinsi: "",
+  kota: "",
+  kecamatan: "",
+  kelurahan: "",
+  kode_pos: "",
+  bidang_keahlian: "",
+  no_reg_asesor: "",
+  no_lisensi: "",
+  masa_berlaku: "",
+  status_asesor: "",
+  ttd_path: "",
+  foto_profil: "",
+};
+
+export default function ProfileAsesor() {
+  const [profile, setProfile] = useState(initialProfile);
 
   const [fotoProfil, setFotoProfil] = useState(null);
   const [ttd, setTtd] = useState(null);
@@ -19,10 +43,8 @@ const ProfileAsesor = () => {
   const [previewTtd, setPreviewTtd] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [pesan, setPesan] = useState("");
   const [error, setError] = useState("");
-
-  const BASE_URL = "http://localhost:3000";
 
   const getFileUrl = (filePath) => {
     if (!filePath) return "";
@@ -36,24 +58,26 @@ const ProfileAsesor = () => {
     return `${BASE_URL}/${cleanPath}`;
   };
 
-  const getProfile = async () => {
+  const formatDateForInput = (dateValue) => {
+    if (!dateValue) return "";
+    return String(dateValue).slice(0, 10);
+  };
+
+  const fetchProfile = async () => {
     try {
       setLoading(true);
       setError("");
-      setMessage("");
+      setPesan("");
 
       const res = await api.get("/asesor/profile");
-
-      const data = res.data?.data || res.data || {};
+      const data = res.data?.data || {};
 
       setProfile({
-        nama_lengkap: data.nama_lengkap || "",
-        no_reg: data.no_reg || "",
-        no_hp: data.no_hp || "",
-        email: data.email || "",
-        alamat: data.alamat || "",
-        ttd_path: data.ttd_path || "",
-        foto_profil: data.foto_profil || "",
+        ...initialProfile,
+        ...data,
+        tanggal_lahir: formatDateForInput(data.tanggal_lahir),
+        masa_berlaku: formatDateForInput(data.masa_berlaku),
+        tahun_lulus: data.tahun_lulus || "",
       });
 
       setPreviewFoto(getFileUrl(data.foto_profil));
@@ -70,7 +94,7 @@ const ProfileAsesor = () => {
   };
 
   useEffect(() => {
-    getProfile();
+    fetchProfile();
   }, []);
 
   const handleChange = (e) => {
@@ -82,24 +106,43 @@ const ProfileAsesor = () => {
     }));
   };
 
-  const handleUpdateProfile = async (e) => {
+  const handleSubmitProfile = async (e) => {
     e.preventDefault();
 
     try {
       setLoading(true);
       setError("");
-      setMessage("");
+      setPesan("");
 
       await api.put("/asesor/profile", {
+        nik: profile.nik,
+        gelar_depan: profile.gelar_depan,
         nama_lengkap: profile.nama_lengkap,
-        no_reg: profile.no_reg,
-        no_hp: profile.no_hp,
-        email: profile.email,
+        gelar_belakang: profile.gelar_belakang,
+        jenis_kelamin: profile.jenis_kelamin || null,
+        tempat_lahir: profile.tempat_lahir,
+        tanggal_lahir: profile.tanggal_lahir || null,
+        kebangsaan: profile.kebangsaan,
+        pendidikan_terakhir: profile.pendidikan_terakhir,
+        tahun_lulus: profile.tahun_lulus || null,
+        institut_asal: profile.institut_asal,
         alamat: profile.alamat,
+        rt: profile.rt,
+        rw: profile.rw,
+        provinsi: profile.provinsi,
+        kota: profile.kota,
+        kecamatan: profile.kecamatan,
+        kelurahan: profile.kelurahan,
+        kode_pos: profile.kode_pos,
+        bidang_keahlian: profile.bidang_keahlian,
+        no_reg_asesor: profile.no_reg_asesor,
+        no_lisensi: profile.no_lisensi,
+        masa_berlaku: profile.masa_berlaku || null,
+        status_asesor: profile.status_asesor || null,
       });
 
-      setMessage("Profil asesor berhasil diperbarui");
-      await getProfile();
+      setPesan("Profil asesor berhasil diperbarui");
+      await fetchProfile();
     } catch (err) {
       console.error(err);
       setError(
@@ -112,7 +155,7 @@ const ProfileAsesor = () => {
   };
 
   const handleFotoChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
 
     if (!file) return;
 
@@ -121,7 +164,7 @@ const ProfileAsesor = () => {
   };
 
   const handleTtdChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
 
     if (!file) return;
 
@@ -131,14 +174,14 @@ const ProfileAsesor = () => {
 
   const handleUploadFoto = async () => {
     if (!fotoProfil) {
-      setError("Pilih file foto profil terlebih dahulu");
+      setError("Pilih foto profil terlebih dahulu");
       return;
     }
 
     try {
       setLoading(true);
       setError("");
-      setMessage("");
+      setPesan("");
 
       const formData = new FormData();
       formData.append("foto_profil", fotoProfil);
@@ -149,9 +192,9 @@ const ProfileAsesor = () => {
         },
       });
 
-      setMessage("Foto profil berhasil disimpan");
+      setPesan("Foto profil berhasil disimpan");
       setFotoProfil(null);
-      await getProfile();
+      await fetchProfile();
     } catch (err) {
       console.error(err);
       setError(
@@ -172,7 +215,7 @@ const ProfileAsesor = () => {
     try {
       setLoading(true);
       setError("");
-      setMessage("");
+      setPesan("");
 
       const formData = new FormData();
       formData.append("ttd", ttd);
@@ -183,9 +226,9 @@ const ProfileAsesor = () => {
         },
       });
 
-      setMessage("Tanda tangan berhasil disimpan");
+      setPesan("Tanda tangan berhasil disimpan");
       setTtd(null);
-      await getProfile();
+      await fetchProfile();
     } catch (err) {
       console.error(err);
       setError(
@@ -199,19 +242,19 @@ const ProfileAsesor = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-6xl">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">
             Profil Asesor
           </h1>
           <p className="text-sm text-gray-500">
-            Kelola data profil, foto profil, dan tanda tangan asesor.
+            Kelola data pribadi, foto profil, dan tanda tangan asesor.
           </p>
         </div>
 
-        {message && (
+        {pesan && (
           <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-            {message}
+            {pesan}
           </div>
         )}
 
@@ -233,8 +276,8 @@ const ProfileAsesor = () => {
               Foto Profil
             </h2>
 
-            <div className="mb-4 flex items-center gap-4">
-              <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gray-200">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-full bg-gray-200">
                 {previewFoto ? (
                   <img
                     src={previewFoto}
@@ -242,7 +285,7 @@ const ProfileAsesor = () => {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="text-center text-sm text-gray-500">
+                  <span className="px-3 text-center text-sm text-gray-500">
                     Belum ada foto
                   </span>
                 )}
@@ -251,7 +294,7 @@ const ProfileAsesor = () => {
               <div className="flex-1">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/jpg"
                   onChange={handleFotoChange}
                   className="mb-3 block w-full text-sm text-gray-700"
                 />
@@ -273,7 +316,7 @@ const ProfileAsesor = () => {
               Tanda Tangan
             </h2>
 
-            <div className="mb-4 flex h-32 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50">
+            <div className="mb-4 flex h-36 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50">
               {previewTtd ? (
                 <img
                   src={previewTtd}
@@ -289,7 +332,7 @@ const ProfileAsesor = () => {
 
             <input
               type="file"
-              accept="image/*"
+              accept="image/png,image/jpeg,image/jpg"
               onChange={handleTtdChange}
               className="mb-3 block w-full text-sm text-gray-700"
             />
@@ -306,7 +349,7 @@ const ProfileAsesor = () => {
         </div>
 
         <form
-          onSubmit={handleUpdateProfile}
+          onSubmit={handleSubmitProfile}
           className="rounded-xl bg-white p-6 shadow"
         >
           <h2 className="mb-5 text-lg font-semibold text-gray-800">
@@ -314,60 +357,138 @@ const ProfileAsesor = () => {
           </h2>
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Nama Lengkap
-              </label>
-              <input
-                type="text"
-                name="nama_lengkap"
-                value={profile.nama_lengkap}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                placeholder="Masukkan nama lengkap"
-              />
-            </div>
+            <Input
+              label="NIK"
+              name="nik"
+              value={profile.nik}
+              onChange={handleChange}
+              maxLength={16}
+            />
+
+            <Input
+              label="Nama Lengkap"
+              name="nama_lengkap"
+              value={profile.nama_lengkap}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Gelar Depan"
+              name="gelar_depan"
+              value={profile.gelar_depan}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Gelar Belakang"
+              name="gelar_belakang"
+              value={profile.gelar_belakang}
+              onChange={handleChange}
+            />
 
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Nomor Registrasi
+                Jenis Kelamin
               </label>
-              <input
-                type="text"
-                name="no_reg"
-                value={profile.no_reg}
+              <select
+                name="jenis_kelamin"
+                value={profile.jenis_kelamin || ""}
                 onChange={handleChange}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                placeholder="Masukkan nomor registrasi"
-              />
+              >
+                <option value="">Pilih jenis kelamin</option>
+                <option value="laki-laki">Laki-laki</option>
+                <option value="perempuan">Perempuan</option>
+              </select>
             </div>
+
+            <Input
+              label="Tempat Lahir"
+              name="tempat_lahir"
+              value={profile.tempat_lahir}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Tanggal Lahir"
+              name="tanggal_lahir"
+              type="date"
+              value={profile.tanggal_lahir}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Kebangsaan"
+              name="kebangsaan"
+              value={profile.kebangsaan}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Pendidikan Terakhir"
+              name="pendidikan_terakhir"
+              value={profile.pendidikan_terakhir}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Tahun Lulus"
+              name="tahun_lulus"
+              type="number"
+              value={profile.tahun_lulus}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Institut Asal"
+              name="institut_asal"
+              value={profile.institut_asal}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Bidang Keahlian"
+              name="bidang_keahlian"
+              value={profile.bidang_keahlian}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Nomor Registrasi Asesor"
+              name="no_reg_asesor"
+              value={profile.no_reg_asesor}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Nomor Lisensi"
+              name="no_lisensi"
+              value={profile.no_lisensi}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Masa Berlaku"
+              name="masa_berlaku"
+              type="date"
+              value={profile.masa_berlaku}
+              onChange={handleChange}
+            />
 
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Nomor HP
+                Status Asesor
               </label>
-              <input
-                type="text"
-                name="no_hp"
-                value={profile.no_hp}
+              <select
+                name="status_asesor"
+                value={profile.status_asesor || ""}
                 onChange={handleChange}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                placeholder="Masukkan nomor HP"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={profile.email}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                placeholder="Masukkan email"
-              />
+              >
+                <option value="">Pilih status</option>
+                <option value="aktif">Aktif</option>
+                <option value="nonaktif">Nonaktif</option>
+              </select>
             </div>
 
             <div className="md:col-span-2">
@@ -376,13 +497,62 @@ const ProfileAsesor = () => {
               </label>
               <textarea
                 name="alamat"
-                value={profile.alamat}
+                value={profile.alamat || ""}
                 onChange={handleChange}
-                rows="4"
+                rows="3"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
                 placeholder="Masukkan alamat"
               />
             </div>
+
+            <Input
+              label="RT"
+              name="rt"
+              value={profile.rt}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="RW"
+              name="rw"
+              value={profile.rw}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Provinsi"
+              name="provinsi"
+              value={profile.provinsi}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Kota"
+              name="kota"
+              value={profile.kota}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Kecamatan"
+              name="kecamatan"
+              value={profile.kecamatan}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Kelurahan"
+              name="kelurahan"
+              value={profile.kelurahan}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Kode Pos"
+              name="kode_pos"
+              value={profile.kode_pos}
+              onChange={handleChange}
+            />
           </div>
 
           <div className="mt-6 flex justify-end">
@@ -398,6 +568,31 @@ const ProfileAsesor = () => {
       </div>
     </div>
   );
-};
+}
 
-export default ProfileAsesor;
+function Input({
+  label,
+  name,
+  value,
+  onChange,
+  type = "text",
+  maxLength,
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-gray-700">
+        {label}
+      </label>
+
+      <input
+        type={type}
+        name={name}
+        value={value || ""}
+        onChange={onChange}
+        maxLength={maxLength}
+        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+        placeholder={`Masukkan ${label.toLowerCase()}`}
+      />
+    </div>
+  );
+}

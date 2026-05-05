@@ -9,41 +9,64 @@ import AsesiRoutes from "./routes/AsesiRoutes";
 import AdminRoutes from "./routes/AdminRoutes";
 import AsesorRoutes from "./routes/AsesorRoutes";
 
-function ProtectedAsesor({ children }) {
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
+/* =========================
+   PROTECTED ROUTE HELPERS
+========================= */
 
-  if (!token || role !== "asesor") return <Navigate to="/login" replace />;
+function ProtectedAdmin({ children }) {
+  const user = localStorage.getItem("user");
+
+  let parsedUser = null;
+
+  try {
+    parsedUser = user ? JSON.parse(user) : null;
+  } catch (err) {
+    parsedUser = null;
+  }
+
+  if (!parsedUser || parsedUser.role?.toLowerCase() !== "admin") {
+    return <Navigate to="/login" replace />;
+  }
 
   return children;
 }
 
-/* Protected Route Helpers */
 function ProtectedTuk({ children }) {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
-  if (!token || role !== "tuk") return <Navigate to="/login" replace />;
+
+  if (!token || role !== "tuk") {
+    return <Navigate to="/login" replace />;
+  }
+
   return children;
 }
 
 function ProtectedAsesi({ children }) {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
-  if (!token || role !== "asesi") return <Navigate to="/login" replace />;
+
+  if (!token || role !== "asesi") {
+    return <Navigate to="/login" replace />;
+  }
+
   return children;
 }
 
-function ProtectedAdmin({ children }) {
-  const user = localStorage.getItem("user");
-  let parsedUser = null;
-  try {
-    parsedUser = user ? JSON.parse(user) : null;
-  } catch (err) {
-    parsedUser = null;
+function ProtectedAsesor({ children }) {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
+  if (!token || role !== "asesor") {
+    return <Navigate to="/login" replace />;
   }
-  if (!parsedUser || parsedUser.role?.toLowerCase() !== "admin") return <Navigate to="/login" replace />;
+
   return children;
 }
+
+/* =========================
+   APP ROUTES
+========================= */
 
 function App() {
   return (
@@ -68,16 +91,15 @@ function App() {
         }
       />
 
-
       {/* ASESOR */}
-        <Route
-          path="/asesor/*"
-          element={
-            <ProtectedAsesor>
-              <AsesorRoutes />
-            </ProtectedAsesor>
-          }
-        />
+      <Route
+        path="/asesor/*"
+        element={
+          <ProtectedAsesor>
+            <AsesorRoutes />
+          </ProtectedAsesor>
+        }
+      />
 
       {/* ASESI */}
       <Route
