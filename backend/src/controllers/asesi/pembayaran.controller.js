@@ -19,7 +19,16 @@ exports.getDetailPembayaran = async (req, res) => {
       attributes: ["id_biaya", "nominal", "jenis_biaya", "metode_uji", "keterangan"],
     });
 
-    const tujuanTransfer = await TujuanTransfer.findAll({ where: { status: "aktif" } });
+    const tujuanTransfer = await TujuanTransfer.findAll({
+  where: { status: "aktif" },
+  attributes: [
+    ["id_tujuan", "id_tujuan_transfer"],
+    ["bank", "nama_bank"],
+    ["nomor_rekening", "nomor_rekening"],
+    ["nama_tujuan", "atas_nama"],
+    "status",
+  ],
+});
 
     response.success(res, "Detail pembayaran", {
       skema: skema.judul_skema,
