@@ -1,190 +1,242 @@
-const AplikasiAsesmen = require("../../models/apl01Asesmen.model");
-const UnitKompetensi = require("../../models/unitKompetensi.model");
-const Apl02AsesmenMandiri = require("../../models/apl02AsesmenMandiri.model");
-const Pembayaran = require("../../models/pembayaran.model");
-const response = require("../../utils/response.util");
+const { 
+  apl02: Apl02, 
+  apl02_detail: Apl02Detail, 
+  apl02_bukti: Apl02Bukti,
+  skema_unit: SkemaUnit,
+  unit_kompetensi: UnitKompetensi,
+  unit_elemen: UnitElemen,
+  unit_kuk: UnitKuk
+} = require("../../models");
 
-exports.getUnitsForApl02 = async (req, res) => {
+/* =========================
+   GET FORM APL02
+========================= */
+exports.getFormApl02 = async (req, res) => {
   try {
-    const { id_aplikasi } = req.params;
+    const { id_skema } = req.params;
 
-    const aplikasi = await AplikasiAsesmen.findOne({
-      where: { id_aplikasi, id_user: req.user.id_user, status: ["draft", "submitted"] } 
-    });
-    if (!aplikasi) {
-      return response.error(res, "Aplikasi tidak ditemukan, tidak milik Anda, atau tidak dalam status yang valid untuk APL02", 404);
-    }
-
-    const pembayaran = await Pembayaran.findOne({ where: { id_aplikasi, status: "paid" } });
-    if (!pembayaran) {
-      return response.error(res, "Pembayaran belum dilakukan atau belum dikonfirmasi. Selesaikan pembayaran terlebih dahulu.", 403);
-    }
-
-    const selectedUnits = aplikasi.selected_units || [];
-    if (selectedUnits.length === 0) {
-      return response.error(res, "Tidak ada unit kompetensi yang dipilih untuk aplikasi ini", 400);
-    }
-
-    const units = await UnitKompetensi.findAll({
-      where: { id_unit: selectedUnits },
-      attributes: ["id_unit", "kode_unit", "judul_unit", "elemen_kriteria"] 
-    });
-
-    const unitsWithNumbers = units.map((unit, unitIndex) => {
-      const elemenKriteria = unit.elemen_kriteria;
-      if (!elemenKriteria) return unit;
-
-      const elemenNumber = `${unitIndex + 1}.1`;
-      const elemenKompetensiWithNumber = `${elemenNumber}. ${elemenKriteria.elemen_kompetensi}`;
-
-      const kriteriaWithNumbers = elemenKriteria.kriteria_unjuk_kerja.map((kriteria, kriteriaIndex) => {
-        const kriteriaNumber = `${elemenNumber}.${kriteriaIndex + 1}`;
-        return `${kriteriaNumber}. ${kriteria}`;
-      });
-
-      return {
-        ...unit.toJSON(),
-        elemen_kriteria: {
-          elemen_kompetensi: elemenKompetensiWithNumber,
-          kriteria_unjuk_kerja: kriteriaWithNumbers
-        }
-      };
-    });
-
-    response.success(res, "Unit kompetensi untuk APL02", unitsWithNumbers);
-  } catch (err) {
-    response.error(res, err.message);
-  }
-};
-
-exports.submitApl02 = async (req, res) => {
-  try {
-    const { id_aplikasi, id_unit, elemen_kompetensi, kriteria_unjuk_kerja, jawaban, jenis_pengalaman, nama_dokumen, nomor_dokumen, tanggal_dokumen, catatan_bukti } = req.body;
-    const files = req.files;
-
-    if (!id_aplikasi || !id_unit || !elemen_kompetensi || !kriteria_unjuk_kerja || !jawaban || !jenis_pengalaman) {
-      return response.error(res, "Semua field wajib diisi kecuali file dan catatan", 400);
-    }
-
-    const aplikasi = await AplikasiAsesmen.findOne({
-      where: { id_aplikasi, id_user: req.user.id_user, status: ["draft", "submitted"] }
-    });
-    if (!aplikasi) {
-      return response.error(res, "Aplikasi tidak ditemukan, tidak milik Anda, atau tidak dalam status yang valid", 404);
-    }
-
-    const pembayaran = await Pembayaran.findOne({ where: { id_aplikasi, status: "paid" } });
-    if (!pembayaran) {
-      return response.error(res, "Pembayaran belum dilakukan atau belum dikonfirmasi. Selesaikan pembayaran terlebih dahulu.", 403);
-    }
-
-    const selectedUnits = aplikasi.selected_units || [];
-    if (!selectedUnits.includes(parseInt(id_unit))) {
-      return response.error(res, "Unit kompetensi tidak valid untuk aplikasi ini", 400);
-    }
-
-    const existing = await Apl02AsesmenMandiri.findOne({
-      where: { id_aplikasi, id_unit, kriteria_unjuk_kerja }
-    });
-    if (existing) {
-      return response.error(res, "Jawaban untuk kriteria ini sudah ada. Gunakan update jika perlu.", 409);
-    }
-
-    let fileBuktiPath = null;
-    if (files && files.file_bukti && files.file_bukti[0]) {
-      fileBuktiPath = files.file_bukti[0].path;
-    }
-
-    const apl02 = await Apl02AsesmenMandiri.create({
-      id_aplikasi,
-      id_unit,
-      elemen_kompetensi, 
-      kriteria_unjuk_kerja,  
-      jawaban,
-      jenis_pengalaman,
-      nama_dokumen,
-      nomor_dokumen,
-      tanggal_dokumen,
-      file_bukti: fileBuktiPath,
-      catatan_bukti
-    });
-
-    response.success(res, "Jawaban APL02 berhasil disimpan", apl02);
-  } catch (err) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return response.error(res, "File terlalu besar. Maksimal 10MB.", 400);
-    }
-    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-      return response.error(res, "File tidak valid atau terlalu banyak.", 400);
-    }
-    response.error(res, err.message);
-  }
-};
-
-exports.getApl02Data = async (req, res) => {
-  try {
-    const { id_aplikasi } = req.params;
-
-    const aplikasi = await AplikasiAsesmen.findOne({
-      where: { id_aplikasi, id_user: req.user.id_user }
-    });
-    if (!aplikasi) {
-      return response.error(res, "Aplikasi tidak ditemukan atau tidak milik Anda", 404);
-    }
-
-    const data = await Apl02AsesmenMandiri.findAll({
-      where: { id_aplikasi },
+    const data = await SkemaUnit.findAll({
+      where: { id_skema },
       include: [
-        { 
-          model: UnitKompetensi, 
-          attributes: ["kode_unit", "judul_unit", "elemen_kriteria"]  
+        {
+          model: UnitKompetensi,
+          as: "unit",
+          include: [
+            {
+              model: UnitElemen,
+              as: "elemen",
+              include: [
+                {
+                  model: UnitKuk,
+                  as: "kuk"
+                }
+              ]
+            }
+          ]
         }
       ],
-      order: [["created_at", "ASC"]]  
+      order: [["urutan", "ASC"]]
     });
 
-    response.success(res, "Data APL02", data);
-  } catch (err) {
-    response.error(res, err.message);
+    res.json({
+      message: "Form APL02",
+      data
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Gagal ambil form APL02" });
   }
 };
 
-exports.updateApl02 = async (req, res) => {
+
+/* =========================
+   CREATE APL02
+========================= */
+exports.createApl02 = async (req, res) => {
   try {
-    const { id_apl02 } = req.params;
-    const {
-      jawaban,
-      jenis_pengalaman,
-      nama_dokumen,
-      nomor_dokumen,
-      tanggal_dokumen,
-      catatan_bukti
-    } = req.body;
+    const { id_peserta } = req.body;
 
-    const files = req.files;
-
-    const apl02 = await Apl02AsesmenMandiri.findByPk(id_apl02);
-    if (!apl02) {
-      return response.error(res, "Data APL02 tidak ditemukan", 404);
-    }
-
-    let fileBuktiPath = apl02.file_bukti;
-    if (files && files.file_bukti && files.file_bukti[0]) {
-      fileBuktiPath = files.file_bukti[0].path;
-    }
-
-    await apl02.update({
-      jawaban,
-      jenis_pengalaman,
-      nama_dokumen,
-      nomor_dokumen,
-      tanggal_dokumen,
-      catatan_bukti,
-      file_bukti: fileBuktiPath
+    const existing = await Apl02.findOne({
+      where: { id_peserta }
     });
 
-    response.success(res, "APL02 berhasil diupdate", apl02);
-  } catch (err) {
-    response.error(res, err.message);
+    if (existing) {
+      return res.status(400).json({
+        message: "APL02 sudah pernah dibuat"
+      });
+    }
+
+    const apl02 = await Apl02.create({
+      id_peserta
+    });
+
+    res.json({
+      message: "APL02 berhasil dibuat",
+      data: apl02
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Gagal create APL02" });
+  }
+};
+
+
+/* =========================
+   SIMPAN PENILAIAN (K / BK)
+========================= */
+exports.savePenilaian = async (req, res) => {
+  try {
+    const { id_apl02, id_elemen, kompeten, catatan } = req.body;
+
+    let data = await Apl02Detail.findOne({
+      where: { id_apl02, id_elemen }
+    });
+
+    if (data) {
+      await data.update({
+        kompeten,
+        catatan
+      });
+    } else {
+      data = await Apl02Detail.create({
+        id_apl02,
+        id_elemen,
+        kompeten,
+        catatan
+      });
+    }
+
+    res.json({
+      message: "Penilaian berhasil disimpan",
+      data
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Gagal simpan penilaian" });
+  }
+};
+
+
+/* =========================
+   UPLOAD BUKTI
+========================= */
+exports.uploadBukti = async (req, res) => {
+  try {
+    const {
+      id_detail,
+      jenis_portofolio,
+      nama_dokumen,
+      nomor_dokumen,
+      tanggal_dokumen
+    } = req.body;
+
+    if (!req.files || !req.files.file_dokumen) {
+      return res.status(400).json({
+        message: "File wajib diupload"
+      });
+    }
+
+    const file = req.files.file_dokumen[0];
+
+    const bukti = await Apl02Bukti.create({
+      id_detail,
+      jenis_portofolio,
+      nama_dokumen,
+      nomor_dokumen,
+      tanggal_dokumen,
+      file_path: file.path
+    });
+
+    res.json({
+      message: "Bukti berhasil diupload",
+      data: bukti
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Gagal upload bukti" });
+  }
+};
+
+
+/* =========================
+   GET DATA APL02 (VIEW)
+========================= */
+exports.getApl02 = async (req, res) => {
+  try {
+    const { id_peserta } = req.params;
+
+    const data = await Apl02.findOne({
+      where: { id_peserta },
+      include: [
+        {
+          model: Apl02Detail,
+          as: "detail",
+          include: [
+            {
+              model: Apl02Bukti,
+              as: "bukti"
+            }
+          ]
+        }
+      ]
+    });
+
+    res.json({
+      message: "Data APL02",
+      data
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Gagal ambil data APL02" });
+  }
+};
+
+
+/* =========================
+   DELETE BUKTI
+========================= */
+exports.deleteBukti = async (req, res) => {
+  try {
+    const { id_bukti } = req.params;
+
+    await Apl02Bukti.destroy({
+      where: { id_bukti }
+    });
+
+    res.json({
+      message: "Bukti berhasil dihapus"
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Gagal hapus bukti" });
+  }
+};
+
+
+/* =========================
+   SUBMIT FINAL
+========================= */
+exports.submitApl02 = async (req, res) => {
+  try {
+    const { id_apl02 } = req.params;
+
+    await Apl02.update(
+      { status: "submitted" },
+      { where: { id_apl02 } }
+    );
+
+    res.json({
+      message: "APL02 berhasil disubmit"
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Gagal submit APL02" });
   }
 };
