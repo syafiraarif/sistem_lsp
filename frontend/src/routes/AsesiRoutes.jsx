@@ -1,4 +1,5 @@
 // src/routes/AsesiRoutes.jsx
+
 import { Routes, Route } from "react-router-dom";
 
 /* Pages */
@@ -14,9 +15,9 @@ import JadwalAsesi from "../pages/asesi/JadwalAsesi";
 import JadwalSaya from "../pages/asesi/JadwalSaya";
 import BayarSkema from "../pages/asesi/BayarSkema";
 import APL01 from "../pages/asesi/APL01";
-import APL02 from "../pages/asesi/APL02"; 
-import PraAsesmenAsesi from "../pages/asesi/PraAsesmenAsesi"; // halaman Pra Asesmen
-import Banding from "../pages/asesi/Banding"; // <<< tambahan
+import APL02 from "../pages/asesi/APL02";
+import PraAsesmenAsesi from "../pages/asesi/PraAsesmenAsesi";
+import Banding from "../pages/asesi/Banding";
 
 /* Lupa Password */
 import LupaPasswordAsesi from "../pages/asesi/LupaPasswordAsesi";
@@ -37,13 +38,13 @@ export default function AsesiRoutes() {
       <Route path="jadwal-saya" element={<JadwalSaya />} />
 
       {/* APLIKASI ASESMEN */}
-      <Route path="apl01/:id_skema" element={<APL01 />} />
+      <Route path="apl01/:id_peserta" element={<APL01 />} />
       <Route path="apl02/:id_skema" element={<APL02 />} />
       <Route path="pembayaran/:id_skema" element={<BayarSkema />} />
-      <Route path="pra-asesmen/:id_skema" element={<PraAsesmenAsesi />} /> {/* PRA ASESMEN */}
+      <Route path="pra-asesmen/:id_skema" element={<PraAsesmenAsesi />} />
 
       {/* BANDING */}
-      <Route path="banding" element={<Banding />} /> {/* <<< route baru */}
+      <Route path="banding" element={<Banding />} />
 
       {/* PASSWORD */}
       <Route path="ubah-password" element={<LupaPasswordAsesi />} />

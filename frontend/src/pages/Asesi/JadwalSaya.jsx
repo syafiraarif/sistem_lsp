@@ -38,36 +38,76 @@ export default function JadwalSaya() {
 
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API_BASE;
-  const token = localStorage.getItem("token");
 
-  const headers = {
-    Authorization: `Bearer ${token}`,
-  };
+  const getToken = () => localStorage.getItem("token");
+
+  const getHeaders = () => ({
+    Authorization: `Bearer ${getToken()}`,
+  });
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const normalizePesertaJadwal = (item) => {
+    const jadwalItem = item.jadwal || item.Jadwal || {};
+
+    return {
+      id_peserta:
+        item.id_peserta ||
+        item.id_peserta_jadwal ||
+        item.id ||
+        item.id_pendaftaran,
+
+      id_jadwal:
+        item.id_jadwal ||
+        jadwalItem.id_jadwal,
+
+      id_skema:
+        item.id_skema ||
+        jadwalItem.id_skema ||
+        jadwalItem.skema?.id_skema ||
+        jadwalItem.Skema?.id_skema,
+
+      status:
+        item.status ||
+        item.status_peserta ||
+        item.status_pendaftaran ||
+        "menunggu",
+
+      raw: item,
+    };
+  };
 
   const loadData = async () => {
     setLoading(true);
     setError("");
 
     try {
+      const token = getToken();
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
       const [jadwalRes, sayaRes] = await Promise.all([
-        axios.get(`${API}/asesi/jadwal/tersedia`, { headers }),
-        axios.get(`${API}/asesi/jadwal-saya`, { headers }),
+        axios.get(`${API}/asesi/jadwal/tersedia`, {
+          headers: getHeaders(),
+        }),
+        axios.get(`${API}/asesi/jadwal-saya`, {
+          headers: getHeaders(),
+        }),
       ]);
 
-      const jadwalData = jadwalRes.data.data || [];
-      const sayaData = sayaRes.data.data || [];
+      const jadwalData = jadwalRes.data?.data || [];
+      const sayaData = sayaRes.data?.data || [];
 
       setJadwal(jadwalData);
 
       const selected = sayaData
-        .map((item) => ({
-          id_jadwal: item.id_jadwal || item.jadwal?.id_jadwal,
-          status: item.status || item.status_peserta || item.status_pendaftaran,
-        }))
+        .map(normalizePesertaJadwal)
         .filter((item) => item.id_jadwal);
 
       setMyJadwal(selected);
@@ -75,7 +115,7 @@ export default function JadwalSaya() {
       await loadStatusPembayaran(jadwalData);
     } catch (err) {
       console.error(err);
-      setError("Gagal memuat jadwal.");
+      setError(err.response?.data?.message || "Gagal memuat jadwal.");
     } finally {
       setLoading(false);
     }
@@ -93,7 +133,7 @@ export default function JadwalSaya() {
         try {
           const res = await axios.get(
             `${API}/asesi/pembayaran/${idSkema}/status`,
-            { headers }
+            { headers: getHeaders() }
           );
 
           result[idSkema] = res.data?.data?.status || "belum bayar";
@@ -107,11 +147,37 @@ export default function JadwalSaya() {
   };
 
   const getIdSkema = (item) => {
-    return item.id_skema || item.skema?.id_skema;
+    return (
+      item.id_skema ||
+      item.skema?.id_skema ||
+      item.Skema?.id_skema ||
+      item.jadwal?.id_skema ||
+      item.Jadwal?.id_skema
+    );
+  };
+
+  const getSelectedJadwal = (id_jadwal) => {
+    return myJadwal.find(
+      (item) => Number(item.id_jadwal) === Number(id_jadwal)
+    );
+  };
+
+  const getIdPesertaByJadwal = (id_jadwal) => {
+    const selected = getSelectedJadwal(id_jadwal);
+
+    return (
+      selected?.id_peserta ||
+      selected?.raw?.id_peserta ||
+      selected?.raw?.id_peserta_jadwal ||
+      selected?.raw?.id ||
+      selected?.raw?.id_pendaftaran
+    );
   };
 
   const isSudahDipilih = (id_jadwal) => {
-    return myJadwal.some((item) => item.id_jadwal === id_jadwal);
+    return myJadwal.some(
+      (item) => Number(item.id_jadwal) === Number(id_jadwal)
+    );
   };
 
   const getStatusPembayaran = (item) => {
@@ -123,30 +189,42 @@ export default function JadwalSaya() {
     setChoosingId(id_jadwal);
 
     try {
-      await axios.post(
+      const res = await axios.post(
         `${API}/asesi/jadwal/pilih`,
         { id_jadwal },
-        { headers }
+        { headers: getHeaders() }
       );
 
       alert("Jadwal berhasil dipilih. Silakan lanjut pembayaran.");
 
+      const data = res.data?.data || {};
+
       setMyJadwal((prev) =>
-        prev.some((item) => item.id_jadwal === id_jadwal)
+        prev.some((item) => Number(item.id_jadwal) === Number(id_jadwal))
           ? prev
-          : [...prev, { id_jadwal, status: "menunggu" }]
+          : [
+              ...prev,
+              {
+                id_peserta:
+                  data.id_peserta ||
+                  data.id_peserta_jadwal ||
+                  data.id ||
+                  data.id_pendaftaran,
+                id_jadwal,
+                id_skema: data.id_skema,
+                status: data.status || "menunggu",
+                raw: data,
+              },
+            ]
       );
+
+      await loadData();
     } catch (err) {
       const message = err.response?.data?.message;
 
       if (message?.toLowerCase().includes("sudah terdaftar")) {
         alert("Anda sudah memilih jadwal ini.");
-
-        setMyJadwal((prev) =>
-          prev.some((item) => item.id_jadwal === id_jadwal)
-            ? prev
-            : [...prev, { id_jadwal, status: "menunggu" }]
-        );
+        await loadData();
       } else {
         alert(message || "Gagal memilih jadwal.");
       }
@@ -164,6 +242,39 @@ export default function JadwalSaya() {
     }
 
     navigate(`/asesi/pembayaran/${idSkema}`);
+  };
+
+  const pergiAPL01 = (item) => {
+    const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
+
+    if (!idPeserta) {
+      alert("ID peserta tidak ditemukan. Silakan klik Refresh lalu coba lagi.");
+      return;
+    }
+
+    navigate(`/asesi/apl01/${idPeserta}`);
+  };
+
+  const pergiAPL02 = (item) => {
+    const idSkema = getIdSkema(item);
+
+    if (!idSkema) {
+      alert("ID skema tidak ditemukan.");
+      return;
+    }
+
+    navigate(`/asesi/apl02/${idSkema}`);
+  };
+
+  const pergiPraAsesmen = (item) => {
+    const idSkema = getIdSkema(item);
+
+    if (!idSkema) {
+      alert("ID skema tidak ditemukan.");
+      return;
+    }
+
+    navigate(`/asesi/pra-asesmen/${idSkema}`);
   };
 
   const formatTanggal = (date) => {
@@ -184,8 +295,8 @@ export default function JadwalSaya() {
     const keyword = search.trim().toLowerCase();
 
     return jadwal.filter((item) => {
-      const skema = item.skema || {};
-      const tuk = item.tuk || {};
+      const skema = item.skema || item.Skema || {};
+      const tuk = item.tuk || item.Tuk || {};
       const sudahDipilih = isSudahDipilih(item.id_jadwal);
       const statusBayar = getStatusPembayaran(item);
 
@@ -243,9 +354,10 @@ export default function JadwalSaya() {
           ) : (
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               {filteredJadwal.map((item) => {
-                const skema = item.skema || {};
-                const tuk = item.tuk || {};
+                const skema = item.skema || item.Skema || {};
+                const tuk = item.tuk || item.Tuk || {};
                 const idSkema = getIdSkema(item);
+                const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
                 const sudahDipilih = isSudahDipilih(item.id_jadwal);
                 const sedangMemilih = choosingId === item.id_jadwal;
                 const statusBayar = getStatusPembayaran(item);
@@ -258,6 +370,7 @@ export default function JadwalSaya() {
                     skema={skema}
                     tuk={tuk}
                     idSkema={idSkema}
+                    idPeserta={idPeserta}
                     sudahDipilih={sudahDipilih}
                     sedangMemilih={sedangMemilih}
                     statusBayar={statusBayar}
@@ -265,7 +378,9 @@ export default function JadwalSaya() {
                     formatTanggal={formatTanggal}
                     pilihJadwal={pilihJadwal}
                     pergiBayar={pergiBayar}
-                    navigate={navigate}
+                    pergiAPL01={pergiAPL01}
+                    pergiAPL02={pergiAPL02}
+                    pergiPraAsesmen={pergiPraAsesmen}
                   />
                 );
               })}
@@ -401,7 +516,7 @@ const ScheduleCard = ({
   item,
   skema,
   tuk,
-  idSkema,
+  idPeserta,
   sudahDipilih,
   sedangMemilih,
   statusBayar,
@@ -409,7 +524,9 @@ const ScheduleCard = ({
   formatTanggal,
   pilihJadwal,
   pergiBayar,
-  navigate,
+  pergiAPL01,
+  pergiAPL02,
+  pergiPraAsesmen,
 }) => {
   return (
     <article className="bg-white rounded-[28px] border border-slate-200 shadow-md hover:shadow-lg transition overflow-hidden">
@@ -491,9 +608,18 @@ const ScheduleCard = ({
       </div>
 
       <div className="px-5 lg:px-6 py-4 bg-[#F8FAFC] border-t border-slate-200 flex flex-col gap-4">
-        <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
-          <Tag size={14} />
-          ID: {item.id_jadwal || "-"}
+        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-semibold">
+          <span className="inline-flex items-center gap-2">
+            <Tag size={14} />
+            ID Jadwal: {item.id_jadwal || "-"}
+          </span>
+
+          {sudahDipilih && (
+            <span className="inline-flex items-center gap-2">
+              <Tag size={14} />
+              ID Peserta: {idPeserta || "-"}
+            </span>
+          )}
         </div>
 
         {!sudahDipilih ? (
@@ -517,19 +643,11 @@ const ScheduleCard = ({
           </button>
         ) : sudahPaid ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <ActionButton
-              title="APL01"
-              onClick={() => navigate(`/asesi/apl01/${idSkema}`)}
-            />
-
-            <ActionButton
-              title="APL02"
-              onClick={() => navigate(`/asesi/apl02/${idSkema}`)}
-            />
-
+            <ActionButton title="APL01" onClick={() => pergiAPL01(item)} />
+            <ActionButton title="APL02" onClick={() => pergiAPL02(item)} />
             <ActionButton
               title="Pra Asesmen"
-              onClick={() => navigate(`/asesi/pra-asesmen/${idSkema}`)}
+              onClick={() => pergiPraAsesmen(item)}
             />
           </div>
         ) : (

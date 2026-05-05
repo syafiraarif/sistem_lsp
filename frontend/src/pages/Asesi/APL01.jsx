@@ -19,69 +19,168 @@ import {
 } from "lucide-react";
 
 const APL01 = () => {
-  const { id_skema } = useParams();
+  const { id_peserta } = useParams();
   const navigate = useNavigate();
+
+  const API_BASE = import.meta.env.VITE_API_BASE;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const [skema, setSkema] = useState(null);
+  const [peserta, setPeserta] = useState(null);
   const [persyaratan, setPersyaratan] = useState([]);
+  const [apl01, setApl01] = useState(null);
+
   const [selectedPersyaratan, setSelectedPersyaratan] = useState([]);
   const [dokumenTambahan, setDokumenTambahan] = useState({});
+  const [nomorDokumen, setNomorDokumen] = useState({});
+  const [tanggalDokumen, setTanggalDokumen] = useState({});
+
   const [tujuan, setTujuan] = useState("");
   const [tujuanLainnya, setTujuanLainnya] = useState("");
-  const [useTTD, setUseTTD] = useState(false);
-  const [profileTTD, setProfileTTD] = useState(null);
 
-  const API_BASE = import.meta.env.VITE_API_BASE;
+  const ENDPOINT = {
+    getForm: `${API_BASE}/asesi/apl01/form/${id_peserta}`,
+    getApl01: `${API_BASE}/asesi/apl01/${id_peserta}`,
+    createApl01: `${API_BASE}/asesi/apl01/create`,
+    uploadDokumen: `${API_BASE}/asesi/apl01/upload`,
+    submitFinal: (id_apl01) => `${API_BASE}/asesi/apl01/submit/${id_apl01}`,
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
+    fetchAPL01Data();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id_peserta]);
+
+  const getToken = () => localStorage.getItem("token");
+
+  const getHeaders = () => ({
+    Authorization: `Bearer ${getToken()}`,
+  });
+
+  const fetchAPL01Data = async () => {
+    try {
+      setLoading(true);
+
+      const token = getToken();
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      if (!id_peserta) {
+        alert("ID peserta tidak ditemukan di URL.");
+        navigate("/asesi/jadwal-saya");
+        return;
+      }
+
+      const formRes = await axios.get(ENDPOINT.getForm, {
+        headers: getHeaders(),
+      });
+
+      setPeserta(formRes.data?.peserta || null);
+      setPersyaratan(formRes.data?.persyaratan || []);
+
       try {
-        const token = localStorage.getItem("token");
-        if (!token) return navigate("/login");
-
-        const skemaRes = await axios.get(
-          `${API_BASE}/asesi/skema/${id_skema}/persyaratan`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        setPersyaratan(skemaRes.data.data || []);
-        setSkema({ id_skema });
-
-        const ttdRes = await axios.get(`${API_BASE}/asesi/profile/files`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const apl01Res = await axios.get(ENDPOINT.getApl01, {
+          headers: getHeaders(),
         });
 
-        const ttdData = ttdRes.data?.data?.ttd || null;
-        setProfileTTD(ttdData);
+        const existingApl01 = apl01Res.data?.data || null;
 
-        if (ttdData) setUseTTD(true);
+        if (existingApl01) {
+          setApl01(existingApl01);
+          setTujuan(existingApl01.tujuan_asesmen || "");
+          setTujuanLainnya(existingApl01.tujuan_lainnya || "");
+
+          const dokumenList =
+            existingApl01.dokumen ||
+            existingApl01.Apl01Dokumens ||
+            existingApl01.Apl01Dokumen ||
+            existingApl01.apl01_dokumen ||
+            existingApl01.apl01_dokumens ||
+            [];
+
+          const uploadedPersyaratanIds = dokumenList
+            .map((d) => d.id_persyaratan)
+            .filter(Boolean);
+
+          setSelectedPersyaratan(uploadedPersyaratanIds);
+        }
       } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+        if (err.response?.status !== 404) {
+          console.error(err);
+        }
       }
-    };
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Gagal mengambil data APL01.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchData();
-  }, [API_BASE, id_skema, navigate]);
+  const getPersyaratanInfo = (item) => {
+    const dataPersyaratan =
+      item.Persyaratan ||
+      item.persyaratan ||
+      item.persyaratan_data ||
+      item;
+
+    return {
+      id_persyaratan:
+        item.id_persyaratan ||
+        dataPersyaratan.id_persyaratan ||
+        dataPersyaratan.id,
+
+      nama_persyaratan:
+        dataPersyaratan.nama_persyaratan ||
+        dataPersyaratan.nama ||
+        item.nama_persyaratan ||
+        "Persyaratan",
+
+      wajib:
+        item.wajib === true ||
+        item.wajib === 1 ||
+        item.wajib === "1" ||
+        dataPersyaratan.wajib === true ||
+        dataPersyaratan.wajib === 1 ||
+        dataPersyaratan.wajib === "1",
+    };
+  };
 
   const handlePersyaratanChange = (e) => {
-    const id = parseInt(e.target.value);
+    const id = parseInt(e.target.value, 10);
+    const checked = e.target.checked;
 
-    setSelectedPersyaratan((prev) =>
-      e.target.checked ? [...prev, id] : prev.filter((v) => v !== id)
-    );
+    if (checked) {
+      setSelectedPersyaratan((prev) => {
+        if (prev.includes(id)) return prev;
+        return [...prev, id];
+      });
 
-    if (e.target.checked && !dokumenTambahan[id]) {
-      setDokumenTambahan((prev) => ({ ...prev, [id]: null }));
-    }
+      setDokumenTambahan((prev) => ({
+        ...prev,
+        [id]: prev[id] || null,
+      }));
+    } else {
+      setSelectedPersyaratan((prev) => prev.filter((value) => value !== id));
 
-    if (!e.target.checked) {
       setDokumenTambahan((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+
+      setNomorDokumen((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+
+      setTanggalDokumen((prev) => {
         const copy = { ...prev };
         delete copy[id];
         return copy;
@@ -89,54 +188,136 @@ const APL01 = () => {
     }
   };
 
-  const handleDokumenChange = (id, file) => {
-    setDokumenTambahan((prev) => ({ ...prev, [id]: file }));
+  const handleDokumenChange = (id_persyaratan, file) => {
+    setDokumenTambahan((prev) => ({
+      ...prev,
+      [id_persyaratan]: file,
+    }));
+  };
+
+  const handleNomorDokumenChange = (id_persyaratan, value) => {
+    setNomorDokumen((prev) => ({
+      ...prev,
+      [id_persyaratan]: value,
+    }));
+  };
+
+  const handleTanggalDokumenChange = (id_persyaratan, value) => {
+    setTanggalDokumen((prev) => ({
+      ...prev,
+      [id_persyaratan]: value,
+    }));
+  };
+
+  const validateForm = () => {
+    if (apl01?.status === "submit") {
+      alert("APL01 sudah disubmit.");
+      return false;
+    }
+
+    if (!tujuan) {
+      alert("Tujuan asesmen wajib dipilih.");
+      return false;
+    }
+
+    if (tujuan === "lainnya" && !tujuanLainnya.trim()) {
+      alert("Tujuan lainnya wajib diisi.");
+      return false;
+    }
+
+    if (selectedPersyaratan.length === 0) {
+      alert("Pilih minimal satu persyaratan.");
+      return false;
+    }
+
+    for (const id of selectedPersyaratan) {
+      if (!apl01 && !dokumenTambahan[id]) {
+        alert("Semua persyaratan yang dipilih wajib upload dokumen.");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const createAPL01 = async () => {
+    const res = await axios.post(
+      ENDPOINT.createApl01,
+      {
+        id_peserta,
+        tujuan_asesmen: tujuan,
+        tujuan_lainnya: tujuan === "lainnya" ? tujuanLainnya : null,
+      },
+      {
+        headers: getHeaders(),
+      }
+    );
+
+    return res.data?.data;
+  };
+
+  const uploadDokumen = async (id_apl01) => {
+    for (const id_persyaratan of selectedPersyaratan) {
+      const file = dokumenTambahan[id_persyaratan];
+
+      if (!file) continue;
+
+      const formData = new FormData();
+
+      formData.append("id_apl01", id_apl01);
+      formData.append("id_persyaratan", id_persyaratan);
+      formData.append("nomor_dokumen", nomorDokumen[id_persyaratan] || "");
+      formData.append("tanggal_dokumen", tanggalDokumen[id_persyaratan] || "");
+      formData.append("file_dokumen", file);
+
+      await axios.post(ENDPOINT.uploadDokumen, formData, {
+        headers: {
+          ...getHeaders(),
+          "Content-Type": "multipart/form-data",
+        },
+      });
+    }
+  };
+
+  const submitFinalAPL01 = async (id_apl01) => {
+    await axios.put(
+      ENDPOINT.submitFinal(id_apl01),
+      {},
+      {
+        headers: getHeaders(),
+      }
+    );
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    for (const id of selectedPersyaratan) {
-      if (!dokumenTambahan[id]) {
-        alert("Semua persyaratan yang dicentang harus dilengkapi dengan dokumen!");
-        return;
-      }
-    }
+    if (!validateForm()) return;
 
     try {
       setSubmitting(true);
 
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
+      let currentApl01 = apl01;
 
-      formData.append("id_skema", skema.id_skema);
-      formData.append("selected_persyaratan", JSON.stringify(selectedPersyaratan));
-      formData.append("tujuan_asesmen", tujuan);
+      if (!currentApl01) {
+        currentApl01 = await createAPL01();
 
-      if (tujuan === "lainnya") {
-        formData.append("tujuan_asesmen_lainnya", tujuanLainnya);
+        if (!currentApl01 || !currentApl01.id_apl01) {
+          alert("APL01 berhasil dibuat, tapi ID APL01 tidak ditemukan.");
+          return;
+        }
+
+        setApl01(currentApl01);
       }
 
-      selectedPersyaratan.forEach((id) => {
-        formData.append(`dokumen_tambahan[${id}]`, dokumenTambahan[id]);
-      });
+      await uploadDokumen(currentApl01.id_apl01);
+      await submitFinalAPL01(currentApl01.id_apl01);
 
-      if (useTTD && profileTTD) {
-        formData.append("tanda_tangan", profileTTD);
-      }
-
-      await axios.post(`${API_BASE}/asesi/aplikasi`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      alert("Aplikasi APL01 berhasil disubmit!");
+      alert("APL01 berhasil disubmit.");
       navigate("/asesi/jadwal-saya");
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Terjadi kesalahan saat submit.");
+      alert(err.response?.data?.message || "Gagal submit APL01.");
     } finally {
       setSubmitting(false);
     }
@@ -182,9 +363,29 @@ const APL01 = () => {
                 </h1>
 
                 <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
-                  Lengkapi tujuan asesmen, pilih persyaratan skema, unggah
-                  dokumen pendukung, lalu submit aplikasi asesmen Anda.
+                  Lengkapi tujuan asesmen, pilih persyaratan, upload dokumen,
+                  lalu submit aplikasi asesmen.
                 </p>
+
+                {peserta && (
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <InfoBadge label="ID Peserta" value={peserta.id_peserta} />
+                    <InfoBadge label="ID Jadwal" value={peserta.id_jadwal} />
+                    <InfoBadge
+                      label="ID Skema"
+                      value={
+                        peserta.id_skema ||
+                        peserta.jadwal?.id_skema ||
+                        peserta.Jadwal?.id_skema ||
+                        "-"
+                      }
+                    />
+                    <InfoBadge
+                      label="Status APL01"
+                      value={apl01?.status || "Belum Dibuat"}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="bg-[#071E3D] text-white rounded-[26px] p-5 min-w-[240px] relative overflow-hidden">
@@ -206,106 +407,6 @@ const APL01 = () => {
 
           <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <section className="xl:col-span-2 space-y-6">
-              <Card title="Persyaratan Skema" icon={<FileText size={22} />}>
-                {persyaratan.length > 0 ? (
-                  <div className="space-y-4">
-                    {persyaratan.map((p) => {
-                      const id = p.id_persyaratan;
-                      const checked = selectedPersyaratan.includes(id);
-                      const uploadedFile = dokumenTambahan[id];
-
-                      return (
-                        <div
-                          key={id}
-                          className={`rounded-[26px] border p-5 transition-all ${
-                            checked
-                              ? "bg-orange-50/60 border-orange-200"
-                              : "bg-slate-50 border-slate-100 hover:bg-white"
-                          }`}
-                        >
-                          <label className="flex items-start gap-4 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              value={id}
-                              onChange={handlePersyaratanChange}
-                              checked={checked}
-                              className="mt-1 w-5 h-5 accent-orange-500"
-                            />
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-2">
-                                <h3 className="font-black text-[#071E3D]">
-                                  {p.nama_persyaratan ||
-                                    `Persyaratan ${p.id_persyaratan}`}
-                                </h3>
-
-                                {p.wajib && (
-                                  <span className="px-3 py-1 rounded-full bg-red-50 border border-red-100 text-red-500 text-[10px] font-black uppercase tracking-widest">
-                                    Wajib
-                                  </span>
-                                )}
-
-                                {checked && uploadedFile && (
-                                  <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1">
-                                    <CheckCircle size={13} />
-                                    File siap
-                                  </span>
-                                )}
-                              </div>
-
-                              <p className="text-slate-400 text-xs font-medium">
-                                Centang persyaratan lalu unggah dokumen
-                                pendukung yang sesuai.
-                              </p>
-                            </div>
-                          </label>
-
-                          {checked && (
-                            <div className="mt-5 ml-0 md:ml-9">
-                              <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
-                                Upload Dokumen
-                              </label>
-
-                              <label className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 cursor-pointer hover:border-orange-200 transition-all">
-                                <div className="w-11 h-11 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
-                                  <Upload size={20} />
-                                </div>
-
-                                <div className="flex-1">
-                                  <p className="text-sm font-black text-[#071E3D]">
-                                    {uploadedFile
-                                      ? uploadedFile.name
-                                      : "Pilih file dokumen"}
-                                  </p>
-                                  <p className="text-xs text-slate-400 font-medium mt-1">
-                                    Upload file persyaratan sesuai ketentuan.
-                                  </p>
-                                </div>
-
-                                <input
-                                  type="file"
-                                  onChange={(e) =>
-                                    handleDokumenChange(id, e.target.files[0])
-                                  }
-                                  className="hidden"
-                                  required
-                                />
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <EmptyState
-                    icon={<Inbox size={38} />}
-                    title="Tidak Ada Persyaratan"
-                    desc="Tidak ada persyaratan untuk skema ini."
-                  />
-                )}
-              </Card>
-
               <Card title="Tujuan Asesmen" icon={<ShieldCheck size={22} />}>
                 <div className="space-y-5">
                   <div>
@@ -318,17 +419,14 @@ const APL01 = () => {
                         value={tujuan}
                         onChange={(e) => setTujuan(e.target.value)}
                         required
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D] appearance-none cursor-pointer"
+                        disabled={apl01?.status === "submit"}
+                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D] appearance-none cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                       >
                         <option value="">Pilih Tujuan</option>
                         <option value="sertifikasi">Sertifikasi</option>
                         <option value="sertifikasi_ulang">Sertifikasi Ulang</option>
-                        <option value="pengakuan_kompetensi_terkini">
-                          Pengakuan Kompetensi Terkini
-                        </option>
-                        <option value="rekognisi_pembelajaran_lampau">
-                          Rekognisi Pembelajaran Lampau
-                        </option>
+                        <option value="pkk">Pengakuan Kompetensi Terkini</option>
+                        <option value="rpl">Rekognisi Pembelajaran Lampau</option>
                         <option value="lainnya">Lainnya</option>
                       </select>
 
@@ -349,101 +447,223 @@ const APL01 = () => {
                         placeholder="Tuliskan tujuan asesmen lainnya"
                         value={tujuanLainnya}
                         onChange={(e) => setTujuanLainnya(e.target.value)}
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D]"
+                        disabled={apl01?.status === "submit"}
+                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 focus:bg-white transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
                         required
                       />
                     </div>
                   )}
                 </div>
               </Card>
+
+              <Card title="Persyaratan Skema" icon={<FileText size={22} />}>
+                {persyaratan.length > 0 ? (
+                  <div className="space-y-4">
+                    {persyaratan.map((item, index) => {
+                      const p = getPersyaratanInfo(item);
+                      const id = p.id_persyaratan;
+
+                      if (!id) return null;
+
+                      const checked = selectedPersyaratan.includes(id);
+                      const uploadedFile = dokumenTambahan[id];
+
+                      return (
+                        <div
+                          key={`${id}-${index}`}
+                          className={`rounded-[26px] border p-5 transition-all ${
+                            checked
+                              ? "bg-orange-50/60 border-orange-200"
+                              : "bg-slate-50 border-slate-100 hover:bg-white"
+                          }`}
+                        >
+                          <label className="flex items-start gap-4 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              value={id}
+                              checked={checked}
+                              onChange={handlePersyaratanChange}
+                              disabled={apl01?.status === "submit"}
+                              className="mt-1 w-5 h-5 accent-orange-500 disabled:cursor-not-allowed"
+                            />
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <h3 className="font-black text-[#071E3D]">
+                                  {p.nama_persyaratan || `Persyaratan ${id}`}
+                                </h3>
+
+                                {p.wajib && (
+                                  <span className="px-3 py-1 rounded-full bg-red-50 border border-red-100 text-red-500 text-[10px] font-black uppercase tracking-widest">
+                                    Wajib
+                                  </span>
+                                )}
+
+                                {checked && uploadedFile && (
+                                  <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1">
+                                    <CheckCircle size={13} />
+                                    File siap
+                                  </span>
+                                )}
+
+                                {checked && !uploadedFile && apl01 && (
+                                  <span className="px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1">
+                                    <CheckCircle size={13} />
+                                    Sudah tersimpan
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="text-slate-400 text-xs font-medium">
+                                Centang persyaratan lalu upload dokumen pendukung.
+                              </p>
+                            </div>
+                          </label>
+
+                          {checked && (
+                            <div className="mt-5 ml-0 md:ml-9 space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
+                                    Nomor Dokumen
+                                  </label>
+
+                                  <input
+                                    type="text"
+                                    placeholder="Masukkan nomor dokumen"
+                                    value={nomorDokumen[id] || ""}
+                                    onChange={(e) =>
+                                      handleNomorDokumenChange(id, e.target.value)
+                                    }
+                                    disabled={apl01?.status === "submit"}
+                                    className="w-full px-5 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
+                                    Tanggal Dokumen
+                                  </label>
+
+                                  <input
+                                    type="date"
+                                    value={tanggalDokumen[id] || ""}
+                                    onChange={(e) =>
+                                      handleTanggalDokumenChange(id, e.target.value)
+                                    }
+                                    disabled={apl01?.status === "submit"}
+                                    className="w-full px-5 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
+                                  Upload Dokumen
+                                </label>
+
+                                <label className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 cursor-pointer hover:border-orange-200 transition-all">
+                                  <div className="w-11 h-11 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+                                    <Upload size={20} />
+                                  </div>
+
+                                  <div className="flex-1">
+                                    <p className="text-sm font-black text-[#071E3D]">
+                                      {uploadedFile
+                                        ? uploadedFile.name
+                                        : apl01
+                                        ? "Pilih file baru jika ingin upload ulang"
+                                        : "Pilih file dokumen"}
+                                    </p>
+                                    <p className="text-xs text-slate-400 font-medium mt-1">
+                                      File dikirim ke backend sebagai file_dokumen.
+                                    </p>
+                                  </div>
+
+                                  <input
+                                    type="file"
+                                    onChange={(e) =>
+                                      handleDokumenChange(id, e.target.files[0])
+                                    }
+                                    disabled={apl01?.status === "submit"}
+                                    className="hidden"
+                                    required={!apl01}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Inbox size={38} />}
+                    title="Tidak Ada Persyaratan"
+                    desc="Tidak ada persyaratan untuk skema ini."
+                  />
+                )}
+              </Card>
             </section>
 
             <aside className="xl:col-span-1">
               <div className="sticky top-6 space-y-6">
-                <Card title="Tanda Tangan" icon={<PenLine size={22} />}>
-                  {profileTTD ? (
-                    <div className="space-y-5">
-                      <label
-                        className={`flex items-center gap-4 rounded-2xl border p-4 cursor-pointer transition-all ${
-                          useTTD
-                            ? "bg-orange-50 border-orange-200"
-                            : "bg-slate-50 border-slate-100"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={useTTD}
-                          onChange={(e) => setUseTTD(e.target.checked)}
-                          className="w-5 h-5 accent-orange-500"
-                        />
-
-                        <div>
-                          <p className="font-black text-[#071E3D]">
-                            Gunakan TTD Profil
-                          </p>
-                          <p className="text-xs text-slate-400 font-medium mt-1">
-                            Tanda tangan akan dilampirkan pada APL01.
-                          </p>
-                        </div>
-                      </label>
-
-                      {useTTD && (
-                        <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                            Preview TTD
-                          </p>
-                          <img
-                            src={profileTTD}
-                            alt="TTD Profil"
-                            className="w-full max-h-40 object-contain bg-white border border-slate-100 rounded-xl p-3"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl bg-red-50 border border-red-100 p-5 text-red-600">
+                <Card title="Informasi Submit" icon={<PenLine size={22} />}>
+                  <div className="space-y-4">
+                    <div className="rounded-2xl bg-orange-50 border border-orange-100 p-5 text-orange-600">
                       <div className="flex items-start gap-3">
                         <AlertCircle size={22} className="shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-black">TTD Belum Tersedia</p>
+                          <p className="font-black">Alur Backend</p>
                           <p className="text-sm font-medium mt-1">
-                            Silakan upload tanda tangan terlebih dahulu di menu
-                            Profile Dokumen.
+                            Sistem akan membuat APL01, upload dokumen satu per satu,
+                            lalu submit final.
                           </p>
                         </div>
                       </div>
                     </div>
-                  )}
+
+                    {apl01 && (
+                      <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-5 text-emerald-600">
+                        <div className="flex items-start gap-3">
+                          <CheckCircle size={22} className="shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-black">APL01 Sudah Dibuat</p>
+                            <p className="text-sm font-medium mt-1">
+                              ID APL01: {apl01.id_apl01}
+                            </p>
+                            <p className="text-sm font-medium mt-1">
+                              Status: {apl01.status}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </Card>
 
                 <div className="bg-[#071E3D] rounded-[30px] p-6 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl -mr-20 -mt-20" />
 
                   <div className="relative z-10">
-                    <h3 className="font-black text-xl mb-2">
-                      Ringkasan APL01
-                    </h3>
+                    <h3 className="font-black text-xl mb-2">Ringkasan APL01</h3>
 
                     <div className="space-y-3 mt-5">
+                      <SummaryItem label="ID Peserta" value={id_peserta || "-"} />
                       <SummaryItem label="Persyaratan Dipilih" value={selectedCount} />
-                      <SummaryItem
-                        label="Tujuan Asesmen"
-                        value={tujuan || "-"}
-                      />
-                      <SummaryItem
-                        label="Status TTD"
-                        value={useTTD && profileTTD ? "Digunakan" : "Belum digunakan"}
-                      />
+                      <SummaryItem label="Tujuan Asesmen" value={tujuan || "-"} />
+                      <SummaryItem label="Status" value={apl01?.status || "Draft Baru"} />
                     </div>
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || apl01?.status === "submit"}
                   className={`w-full px-7 py-5 rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 ${
-                    submitting
-                      ? "bg-orange-300 cursor-wait"
+                    submitting || apl01?.status === "submit"
+                      ? "bg-orange-300 cursor-not-allowed"
                       : "bg-orange-500 hover:bg-[#071E3D] shadow-orange-500/20"
                   }`}
                 >
@@ -452,7 +672,12 @@ const APL01 = () => {
                   ) : (
                     <Send size={18} />
                   )}
-                  {submitting ? "Mengirim..." : "Submit APL01"}
+
+                  {apl01?.status === "submit"
+                    ? "Sudah Submit"
+                    : submitting
+                    ? "Mengirim..."
+                    : "Submit APL01"}
                 </button>
               </div>
             </aside>
@@ -481,6 +706,17 @@ const Card = ({ title, icon, children }) => {
 
       <div className="p-6">{children}</div>
     </section>
+  );
+};
+
+const InfoBadge = ({ label, value }) => {
+  return (
+    <div className="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100">
+      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+        {label}
+      </p>
+      <p className="text-sm font-black text-[#071E3D] mt-1">{value || "-"}</p>
+    </div>
   );
 };
 
