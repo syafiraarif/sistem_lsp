@@ -1,20 +1,23 @@
-// frontend/src/pages/asesi/ChangePasswordAsesi.jsx
+// frontend/src/pages/asesi/LupaPasswordAsesi.jsx
 
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import {
+  BadgeCheck,
+  ChevronRight,
   Eye,
   EyeOff,
-  Lock,
-  Key,
-  Shield,
-  AlertCircle,
-  CheckCircle,
+  KeyRound,
   Loader2,
-  ChevronRight,
+  LockKeyhole,
+  RefreshCcw,
+  Save,
+  ShieldCheck,
   Sparkles,
+  XCircle,
 } from "lucide-react";
+import axios from "axios";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
@@ -24,337 +27,615 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   return config;
 });
 
-export default function ChangePasswordAsesi() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+export default function LupaPasswordAsesi() {
+  const navigate = useNavigate();
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [form, setForm] = useState({
-    old_password: "",
-    new_password: "",
-    confirm_password: "",
+    password_lama: "",
+    password_baru: "",
+    konfirmasi_password: "",
   });
 
-  const [show, setShow] = useState({
-    old: false,
-    new: false,
-    confirm: false,
+  const [showPassword, setShowPassword] = useState({
+    password_lama: false,
+    password_baru: false,
+    konfirmasi_password: false,
   });
 
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState({ type: "", text: "" });
+  const [pesan, setPesan] = useState("");
+  const [error, setError] = useState("");
+
+  const displayName = getDisplayName();
+
+  const passwordStrength = useMemo(() => {
+    return getPasswordStrength(form.password_baru);
+  }, [form.password_baru]);
+
+  const passwordMatch =
+    form.konfirmasi_password &&
+    form.password_baru === form.konfirmasi_password;
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
 
-    if (msg.text) {
-      setMsg({ type: "", text: "" });
-    }
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (pesan) setPesan("");
+    if (error) setError("");
   };
 
-  const togglePw = (field) => {
-    setShow({
-      ...show,
-      [field]: !show[field],
+  const toggleShowPassword = (field) => {
+    setShowPassword((prev) => ({
+      ...prev,
+      [field]: !prev[field],
+    }));
+  };
+
+  const resetForm = () => {
+    setForm({
+      password_lama: "",
+      password_baru: "",
+      konfirmasi_password: "",
     });
+
+    setShowPassword({
+      password_lama: false,
+      password_baru: false,
+      konfirmasi_password: false,
+    });
+
+    setPesan("");
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const { old_password, new_password, confirm_password } = form;
-
-    if (!old_password || !new_password || !confirm_password) {
-      return setMsg({
-        type: "error",
-        text: "Semua field wajib diisi!",
-      });
+    if (!form.password_lama) {
+      setError("Password lama wajib diisi");
+      return;
     }
 
-    if (new_password.length < 6) {
-      return setMsg({
-        type: "error",
-        text: "Password baru minimal 6 karakter!",
-      });
+    if (!form.password_baru) {
+      setError("Password baru wajib diisi");
+      return;
     }
 
-    if (new_password !== confirm_password) {
-      return setMsg({
-        type: "error",
-        text: "Konfirmasi password tidak cocok!",
-      });
+    if (form.password_baru.length < 6) {
+      setError("Password baru minimal 6 karakter");
+      return;
+    }
+
+    if (!form.konfirmasi_password) {
+      setError("Konfirmasi password wajib diisi");
+      return;
+    }
+
+    if (form.password_baru !== form.konfirmasi_password) {
+      setError("Konfirmasi password tidak sama dengan password baru");
+      return;
     }
 
     try {
       setLoading(true);
+      setError("");
+      setPesan("");
 
       const res = await api.put("/asesi/ubah-password", {
-        old_password,
-        new_password,
+        old_password: form.password_lama,
+        new_password: form.password_baru,
+
+        // fallback kalau backend menerima naming lain
+        confirm_password: form.konfirmasi_password,
+        password_lama: form.password_lama,
+        password_baru: form.password_baru,
+        konfirmasi_password: form.konfirmasi_password,
+        passwordLama: form.password_lama,
+        passwordBaru: form.password_baru,
       });
 
-      if (res.data?.success) {
-        setMsg({
-          type: "success",
-          text: res.data.message || "Password berhasil diperbarui!",
-        });
+      setPesan(res.data?.message || "Password asesi berhasil diperbarui");
 
-        setForm({
-          old_password: "",
-          new_password: "",
-          confirm_password: "",
-        });
-      } else {
-        setMsg({
-          type: "error",
-          text: res.data?.message || "Gagal mengubah password.",
-        });
-      }
+      setForm({
+        password_lama: "",
+        password_baru: "",
+        konfirmasi_password: "",
+      });
+
+      setShowPassword({
+        password_lama: false,
+        password_baru: false,
+        konfirmasi_password: false,
+      });
     } catch (err) {
-      console.error("ERROR:", err.response?.data || err.message);
+      console.error(err);
 
-      setMsg({
-        type: "error",
-        text: err.response?.data?.message || "Server tidak merespon.",
-      });
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Gagal mengubah password asesi"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const inputFields = [
-    {
-      label: "Password Lama",
-      name: "old_password",
-      keyShow: "old",
-      icon: Key,
-      placeholder: "Masukkan password lama",
-    },
-    {
-      label: "Password Baru",
-      name: "new_password",
-      keyShow: "new",
-      icon: Lock,
-      placeholder: "Masukkan password baru",
-      hint: "Gunakan minimal 6 karakter untuk keamanan akun.",
-    },
-    {
-      label: "Konfirmasi Password",
-      name: "confirm_password",
-      keyShow: "confirm",
-      icon: Lock,
-      placeholder: "Ulangi password baru",
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex text-slate-800">
-      <SidebarAsesi
-        isOpen={isSidebarOpen}
-        setIsOpen={setIsSidebarOpen}
-      />
+    <div className="min-h-screen bg-[#F8FAFC] flex">
+      <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="flex-1 transition-all duration-300 p-4 lg:p-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Hero Header */}
-          <section className="relative overflow-hidden bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 lg:p-8 mb-6">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-[90px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#071E3D]/5 rounded-full blur-[90px] pointer-events-none" />
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* HERO */}
+          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
+            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
+            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 mb-4">
-                  <Shield size={15} className="text-orange-500" />
-                  <span className="text-orange-500 text-[10px] font-black uppercase tracking-widest">
-                    Keamanan Akun
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
+              <div className="flex flex-col justify-center">
+                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+                  <KeyRound size={15} className="text-orange-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                    Ubah Password
                   </span>
                 </div>
 
-                <h1 className="text-3xl lg:text-4xl font-black text-[#071E3D] leading-tight">
-                  Ubah Password Asesi
+                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
+                  Perbarui Password
+                  <br />
+                  <span className="text-orange-500">{displayName}</span>
                 </h1>
 
-                <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
-                  Perbarui password akun secara berkala untuk menjaga akses
-                  dashboard Asesi tetap aman.
+                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
+                  Jaga keamanan akun asesi dengan mengganti password secara
+                  berkala. Gunakan kombinasi karakter yang kuat dan mudah Anda
+                  ingat.
                 </p>
+
+                <div className="mt-7 flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      document
+                        .getElementById("form-ubah-password")
+                        ?.scrollIntoView({ behavior: "smooth" })
+                    }
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+                  >
+                    Ubah Sekarang
+                    <ChevronRight size={17} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/asesi")}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+                  >
+                    Dashboard
+                    <ChevronRight size={17} />
+                  </button>
+                </div>
               </div>
 
-              <div className="w-full lg:w-auto">
-                <div className="rounded-[26px] bg-[#071E3D] text-white p-5 min-w-[260px] relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/20 rounded-full blur-3xl -mr-12 -mt-12" />
+              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
+                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
 
-                  <div className="relative z-10 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white/10 text-orange-400 flex items-center justify-center">
-                      <Sparkles size={23} />
-                    </div>
+                <div className="relative z-10">
+                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
+                    <Sparkles size={28} />
+                  </div>
 
-                    <div>
-                      <p className="text-[10px] text-white/50 font-black uppercase tracking-widest">
-                        Status Keamanan
-                      </p>
-                      <p className="text-sm font-black mt-1">
-                        Password Terenkripsi
-                      </p>
-                    </div>
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
+                    Keamanan Akun
+                  </p>
+
+                  <h2 className="mb-4 text-2xl font-black">
+                    Akun Terproteksi
+                  </h2>
+
+                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                    Setelah password diperbarui, gunakan password baru saat
+                    login berikutnya. Jangan bagikan password kepada siapapun.
+                  </p>
+
+                  <div className="mt-6 grid grid-cols-2 gap-3">
+                    <HeroPill label="Role" value="Asesi" />
+                    <HeroPill label="Status" value="Aman" />
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Info Panel */}
-            <aside className="xl:col-span-1">
-              <div className="bg-white rounded-[30px] border border-slate-100 shadow-sm p-6 sticky top-6">
-                <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center mb-5">
-                  <Shield size={28} />
+          {pesan && (
+            <AlertBox
+              type="success"
+              icon={<BadgeCheck size={20} />}
+              message={pesan}
+            />
+          )}
+
+          {error && (
+            <AlertBox
+              type="error"
+              icon={<XCircle size={20} />}
+              message={error}
+            />
+          )}
+
+          {loading && (
+            <AlertBox
+              type="loading"
+              icon={<Loader2 size={20} className="animate-spin" />}
+              message="Memproses perubahan password..."
+            />
+          )}
+
+          {/* CONTENT */}
+          <section className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start">
+            {/* FORM */}
+            <form
+              id="form-ubah-password"
+              onSubmit={handleSubmit}
+              className="overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm"
+            >
+              <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between lg:p-8">
+                <div>
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+                    <LockKeyhole size={15} className="text-orange-500" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                      Form Keamanan
+                    </span>
+                  </div>
+
+                  <h2 className="text-2xl lg:text-3xl font-black text-[#071E3D]">
+                    Ubah Password Asesi
+                  </h2>
+
+                  <p className="mt-2 text-sm font-medium text-slate-400">
+                    Masukkan password lama, password baru, dan konfirmasi
+                    password baru.
+                  </p>
                 </div>
 
-                <h2 className="text-xl font-black text-[#071E3D] mb-3">
-                  Tips Password Aman
-                </h2>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={loading}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200"
+                >
+                  <RefreshCcw size={16} />
+                  Reset
+                </button>
+              </div>
 
-                <p className="text-slate-500 text-sm leading-relaxed font-medium mb-5">
-                  Gunakan password yang sulit ditebak dan jangan membagikan
-                  akses akun kepada orang lain.
+              <div className="p-6 lg:p-8 space-y-5">
+                <PasswordInput
+                  label="Password Lama"
+                  name="password_lama"
+                  value={form.password_lama}
+                  show={showPassword.password_lama}
+                  onChange={handleChange}
+                  onToggle={() => toggleShowPassword("password_lama")}
+                  placeholder="Masukkan password lama"
+                />
+
+                <PasswordInput
+                  label="Password Baru"
+                  name="password_baru"
+                  value={form.password_baru}
+                  show={showPassword.password_baru}
+                  onChange={handleChange}
+                  onToggle={() => toggleShowPassword("password_baru")}
+                  placeholder="Masukkan password baru"
+                />
+
+                <PasswordStrength strength={passwordStrength} />
+
+                <PasswordInput
+                  label="Konfirmasi Password Baru"
+                  name="konfirmasi_password"
+                  value={form.konfirmasi_password}
+                  show={showPassword.konfirmasi_password}
+                  onChange={handleChange}
+                  onToggle={() => toggleShowPassword("konfirmasi_password")}
+                  placeholder="Ulangi password baru"
+                />
+
+                {form.konfirmasi_password && (
+                  <div
+                    className={`rounded-[24px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
+                      passwordMatch
+                        ? "border-green-100 bg-green-50 text-green-700"
+                        : "border-red-100 bg-red-50 text-red-600"
+                    }`}
+                  >
+                    {passwordMatch ? (
+                      <BadgeCheck size={20} />
+                    ) : (
+                      <XCircle size={20} />
+                    )}
+
+                    <span>
+                      {passwordMatch
+                        ? "Konfirmasi password sudah sesuai"
+                        : "Konfirmasi password belum sama"}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/50 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8">
+                <p className="text-sm font-medium text-slate-500">
+                  Pastikan password baru sudah benar sebelum menyimpan
+                  perubahan.
                 </p>
 
-                <div className="space-y-3">
-                  <SecurityTip text="Minimal 6 karakter." />
-                  <SecurityTip text="Gunakan kombinasi huruf dan angka." />
-                  <SecurityTip text="Hindari memakai password lama." />
-                  <SecurityTip text="Pastikan konfirmasi password sesuai." />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {loading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Save size={16} />
+                  )}
+                  Simpan Password
+                </button>
+              </div>
+            </form>
+
+            {/* SIDE INFO */}
+            <aside className="space-y-5">
+              <InfoCard
+                icon={<ShieldCheck size={22} />}
+                title="Tips Password Aman"
+                items={[
+                  "Gunakan minimal 6 karakter.",
+                  "Campurkan huruf besar, huruf kecil, angka, dan simbol.",
+                  "Jangan gunakan tanggal lahir atau nama sendiri.",
+                  "Jangan bagikan password kepada pihak lain.",
+                ]}
+              />
+
+              <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+                  <KeyRound size={22} />
+                </div>
+
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Status Form
+                </p>
+
+                <h3 className="mt-2 text-2xl font-black text-[#071E3D]">
+                  {passwordStrength.label}
+                </h3>
+
+                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+                  Kekuatan password akan meningkat jika memakai kombinasi
+                  karakter yang lebih beragam.
+                </p>
+
+                <div className="mt-5">
+                  <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full transition-all ${passwordStrength.colorClass}`}
+                      style={{ width: `${passwordStrength.percent}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </aside>
-
-            {/* Form Card */}
-            <section className="xl:col-span-2">
-              <div className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="p-6 lg:p-8 border-b border-slate-100">
-                  <div className="flex items-center gap-4">
-                    <div className="w-13 h-13 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center">
-                      <Lock size={24} />
-                    </div>
-
-                    <div>
-                      <h2 className="text-2xl font-black text-[#071E3D]">
-                        Form Ubah Password
-                      </h2>
-                      <p className="text-slate-400 text-sm font-medium mt-1">
-                        Isi password lama dan password baru Anda.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 lg:p-8">
-                  {msg.text && (
-                    <div
-                      className={`mb-6 p-4 rounded-2xl flex items-start gap-3 text-sm border ${
-                        msg.type === "success"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                          : "bg-red-50 text-red-600 border-red-100"
-                      }`}
-                    >
-                      {msg.type === "success" ? (
-                        <CheckCircle size={20} className="shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                      )}
-                      <span className="font-bold">{msg.text}</span>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    {inputFields.map(
-                      ({ label, name, keyShow, icon: Icon, hint, placeholder }) => (
-                        <div key={name}>
-                          <label className="block text-[11px] font-black text-[#071E3D] uppercase tracking-widest mb-2">
-                            {label}
-                          </label>
-
-                          <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                              <Icon className="text-slate-400 group-focus-within:text-orange-500 w-5 h-5 transition-colors" />
-                            </div>
-
-                            <input
-                              type={show[keyShow] ? "text" : "password"}
-                              name={name}
-                              value={form[name]}
-                              onChange={handleChange}
-                              className="w-full pl-14 pr-14 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 focus:bg-white transition-all text-[#071E3D] font-bold placeholder:text-slate-300"
-                              placeholder={placeholder}
-                            />
-
-                            <button
-                              type="button"
-                              onClick={() => togglePw(keyShow)}
-                              className="absolute inset-y-0 right-0 pr-5 flex items-center text-slate-400 hover:text-orange-500 transition-colors"
-                            >
-                              {show[keyShow] ? (
-                                <EyeOff size={19} />
-                              ) : (
-                                <Eye size={19} />
-                              )}
-                            </button>
-                          </div>
-
-                          {hint && (
-                            <p className="mt-2 text-xs text-slate-400 font-medium">
-                              {hint}
-                            </p>
-                          )}
-                        </div>
-                      )
-                    )}
-
-                    <div className="pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <p className="text-xs text-slate-400 font-medium">
-                        Pastikan password baru mudah Anda ingat namun sulit
-                        ditebak.
-                      </p>
-
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className={`w-full sm:w-auto px-7 py-4 rounded-2xl font-black text-xs uppercase tracking-widest text-white flex items-center justify-center gap-2 shadow-lg transition-all ${
-                          loading
-                            ? "bg-orange-300 cursor-wait"
-                            : "bg-orange-500 hover:bg-[#071E3D] shadow-orange-500/20"
-                        }`}
-                      >
-                        {loading && <Loader2 className="animate-spin w-4 h-4" />}
-                        {loading ? "Menyimpan..." : "Simpan Perubahan"}
-                        {!loading && <ChevronRight size={17} />}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </section>
-          </div>
+          </section>
         </div>
       </main>
     </div>
   );
 }
 
-const SecurityTip = ({ text }) => {
+function PasswordInput({
+  label,
+  name,
+  value,
+  show,
+  onChange,
+  onToggle,
+  placeholder,
+}) {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-      <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
-        <CheckCircle size={16} />
-      </div>
+    <div>
+      <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+        {label}
+      </label>
 
-      <p className="text-sm text-slate-600 font-bold">{text}</p>
+      <div className="relative">
+        <input
+          type={show ? "text" : "password"}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 pr-14 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+        />
+
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-orange-50 hover:text-orange-500"
+        >
+          {show ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      </div>
     </div>
   );
-};
+}
+
+function PasswordStrength({ strength }) {
+  return (
+    <div className="rounded-[24px] border border-slate-100 bg-slate-50/60 p-5">
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Kekuatan Password
+          </p>
+
+          <p className="mt-1 text-sm font-black text-[#071E3D]">
+            {strength.label}
+          </p>
+        </div>
+
+        <span className="rounded-full bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          {strength.score}/4
+        </span>
+      </div>
+
+      <div className="h-3 overflow-hidden rounded-full bg-white">
+        <div
+          className={`h-full rounded-full transition-all ${strength.colorClass}`}
+          style={{ width: `${strength.percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function InfoCard({ icon, title, items }) {
+  return (
+    <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
+      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+        {icon}
+      </div>
+
+      <h3 className="text-2xl font-black text-[#071E3D]">{title}</h3>
+
+      <div className="mt-5 space-y-3">
+        {items.map((item) => (
+          <div key={item} className="flex items-start gap-3">
+            <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-500">
+              <BadgeCheck size={13} />
+            </div>
+
+            <p className="text-sm font-medium leading-relaxed text-slate-500">
+              {item}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HeroPill({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
+        {label}
+      </p>
+
+      <p className="mt-1 text-sm font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function AlertBox({ type, icon, message }) {
+  const styles = {
+    success: "border-green-100 bg-green-50 text-green-700",
+    error: "border-red-100 bg-red-50 text-red-600",
+    loading: "border-blue-100 bg-blue-50 text-blue-600",
+  };
+
+  return (
+    <div
+      className={`rounded-[24px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
+        styles[type] || styles.loading
+      }`}
+    >
+      <div className="shrink-0">{icon}</div>
+      <span>{message}</span>
+    </div>
+  );
+}
+
+function getPasswordStrength(password) {
+  let score = 0;
+
+  if (password.length >= 6) score += 1;
+  if (/[A-Z]/.test(password)) score += 1;
+  if (/[0-9]/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+  if (!password) {
+    return {
+      score: 0,
+      label: "Belum Diisi",
+      percent: 0,
+      colorClass: "bg-slate-300",
+    };
+  }
+
+  if (score <= 1) {
+    return {
+      score,
+      label: "Lemah",
+      percent: 25,
+      colorClass: "bg-red-500",
+    };
+  }
+
+  if (score === 2) {
+    return {
+      score,
+      label: "Cukup",
+      percent: 50,
+      colorClass: "bg-yellow-500",
+    };
+  }
+
+  if (score === 3) {
+    return {
+      score,
+      label: "Baik",
+      percent: 75,
+      colorClass: "bg-blue-500",
+    };
+  }
+
+  return {
+    score,
+    label: "Kuat",
+    percent: 100,
+    colorClass: "bg-green-500",
+  };
+}
+
+function getDisplayName() {
+  try {
+    const storedUser = localStorage.getItem("user");
+    const user = storedUser ? JSON.parse(storedUser) : null;
+
+    return (
+      user?.nama ||
+      user?.nama_lengkap ||
+      user?.username ||
+      user?.name ||
+      "Asesi"
+    );
+  } catch (err) {
+    return "Asesi";
+  }
+}

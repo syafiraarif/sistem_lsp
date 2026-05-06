@@ -129,8 +129,19 @@ exports.getStatusPembayaran = async (req, res) => {
   try {
     const { id_skema } = req.params;
 
-    const pembayaran = await Pembayaran.findOne({ where: { id_skema } });
-    if (!pembayaran) return response.error(res, "Belum ada pembayaran untuk skema ini", 404);
+    const pembayaran = await Pembayaran.findOne({
+      where: { id_skema },
+      order: [["id_pembayaran", "DESC"]],
+    });
+
+    if (!pembayaran) {
+      return response.success(res, "Belum ada pembayaran untuk skema ini", {
+        id_pembayaran: null,
+        status: "belum bayar",
+        metode_pembayaran: null,
+        waktu_batas: null,
+      });
+    }
 
     response.success(res, "Status pembayaran", {
       id_pembayaran: pembayaran.id_pembayaran,

@@ -6,6 +6,7 @@ import SidebarAsesor from "../../components/sidebar/SidebarAsesor";
 import {
   BadgeCheck,
   Camera,
+  CheckCircle2,
   ChevronRight,
   FileSignature,
   IdCard,
@@ -20,6 +21,7 @@ import {
   UploadCloud,
   User,
   UserRoundCheck,
+  X,
   XCircle,
 } from "lucide-react";
 import api from "../../services/api";
@@ -61,6 +63,7 @@ export default function ProfileAsesor() {
   const canvasRef = useRef(null);
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef({ x: 0, y: 0 });
+  const notificationTimerRef = useRef(null);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profile, setProfile] = useState(initialProfile);
@@ -73,8 +76,44 @@ export default function ProfileAsesor() {
   const [hasSignature, setHasSignature] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [pesan, setPesan] = useState("");
-  const [error, setError] = useState("");
+
+  const [notification, setNotification] = useState({
+    show: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
+
+  const showNotification = ({ type = "success", title, message }) => {
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+    }
+
+    setNotification({
+      show: true,
+      type,
+      title,
+      message,
+    });
+
+    notificationTimerRef.current = setTimeout(() => {
+      setNotification((prev) => ({
+        ...prev,
+        show: false,
+      }));
+    }, 2600);
+  };
+
+  const closeNotification = () => {
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+    }
+
+    setNotification((prev) => ({
+      ...prev,
+      show: false,
+    }));
+  };
 
   const getFileUrl = (filePath) => {
     if (!filePath) return "";
@@ -115,11 +154,9 @@ export default function ProfileAsesor() {
     ctx.strokeStyle = "#071E3D";
   };
 
-  const fetchProfile = async () => {
+  const fetchProfile = async ({ showLoading = true } = {}) => {
     try {
-      setLoading(true);
-      setError("");
-      setPesan("");
+      if (showLoading) setLoading(true);
 
       const res = await api.get("/asesor/profile");
       const data = res.data?.data || {};
@@ -141,11 +178,15 @@ export default function ProfileAsesor() {
       setHasSignature(false);
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.message || "Gagal mengambil data profil asesor"
-      );
+      showNotification({
+        type: "error",
+        title: "Gagal Memuat Profile",
+        message:
+          err.response?.data?.message ||
+          "Data profile asesor gagal dimuat dari server.",
+      });
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -171,6 +212,10 @@ export default function ProfileAsesor() {
 
     return () => {
       window.removeEventListener("resize", handleResize);
+
+      if (notificationTimerRef.current) {
+        clearTimeout(notificationTimerRef.current);
+      }
     };
   }, [isEditingTtd]);
 
@@ -263,8 +308,6 @@ export default function ProfileAsesor() {
 
     try {
       setLoading(true);
-      setError("");
-      setPesan("");
 
       await api.put("/asesor/profile", {
         nik: profile.nik,
@@ -293,13 +336,22 @@ export default function ProfileAsesor() {
         status_asesor: profile.status_asesor || null,
       });
 
-      setPesan("Profil asesor berhasil diperbarui");
-      await fetchProfile();
+      await fetchProfile({ showLoading: false });
+
+      showNotification({
+        type: "success",
+        title: "Profile Berhasil Disimpan",
+        message: "Data profile asesor berhasil diperbarui.",
+      });
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.message || "Gagal memperbarui profil asesor"
-      );
+      showNotification({
+        type: "error",
+        title: "Gagal Menyimpan Profile",
+        message:
+          err.response?.data?.message ||
+          "Profile asesor gagal diperbarui. Periksa kembali data Anda.",
+      });
     } finally {
       setLoading(false);
     }
@@ -312,18 +364,26 @@ export default function ProfileAsesor() {
 
     setFotoProfil(file);
     setPreviewFoto(URL.createObjectURL(file));
+
+    showNotification({
+      type: "info",
+      title: "Foto Dipilih",
+      message: "Foto sudah dipilih. Klik Upload Foto untuk menyimpan.",
+    });
   };
 
   const handleUploadFoto = async () => {
     if (!fotoProfil) {
-      setError("Pilih foto profil terlebih dahulu");
+      showNotification({
+        type: "error",
+        title: "Foto Belum Dipilih",
+        message: "Pilih foto profil terlebih dahulu sebelum upload.",
+      });
       return;
     }
 
     try {
       setLoading(true);
-      setError("");
-      setPesan("");
 
       const formData = new FormData();
       formData.append("foto_profil", fotoProfil);
@@ -334,12 +394,23 @@ export default function ProfileAsesor() {
         },
       });
 
-      setPesan("Foto profil berhasil disimpan");
       setFotoProfil(null);
-      await fetchProfile();
+      await fetchProfile({ showLoading: false });
+
+      showNotification({
+        type: "success",
+        title: "Foto Profil Tersimpan",
+        message: "Foto profil asesor berhasil diupload dan diperbarui.",
+      });
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Gagal upload foto profil");
+      showNotification({
+        type: "error",
+        title: "Upload Foto Gagal",
+        message:
+          err.response?.data?.message ||
+          "Foto profil gagal diupload. Pastikan format file benar.",
+      });
     } finally {
       setLoading(false);
     }
@@ -347,19 +418,25 @@ export default function ProfileAsesor() {
 
   const handleUploadTtd = async () => {
     if (!hasSignature) {
-      setError("Silakan buat tanda tangan terlebih dahulu di canvas");
+      showNotification({
+        type: "error",
+        title: "TTD Masih Kosong",
+        message: "Silakan buat tanda tangan terlebih dahulu di canvas.",
+      });
       return;
     }
 
     try {
       setLoading(true);
-      setError("");
-      setPesan("");
 
       const blob = await canvasToBlob();
 
       if (!blob) {
-        setError("Gagal membuat file tanda tangan");
+        showNotification({
+          type: "error",
+          title: "Gagal Membuat TTD",
+          message: "Canvas tanda tangan gagal diproses menjadi gambar.",
+        });
         return;
       }
 
@@ -376,13 +453,25 @@ export default function ProfileAsesor() {
         },
       });
 
-      setPesan("Tanda tangan berhasil disimpan");
       setHasSignature(false);
       setIsEditingTtd(false);
-      await fetchProfile();
+
+      await fetchProfile({ showLoading: false });
+
+      showNotification({
+        type: "success",
+        title: "TTD Digital Tersimpan",
+        message: "Tanda tangan digital asesor berhasil diperbarui.",
+      });
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Gagal menyimpan tanda tangan");
+      showNotification({
+        type: "error",
+        title: "Gagal Menyimpan TTD",
+        message:
+          err.response?.data?.message ||
+          "Tanda tangan digital gagal disimpan ke server.",
+      });
     } finally {
       setLoading(false);
     }
@@ -396,6 +485,14 @@ export default function ProfileAsesor() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarAsesor isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+
+      <NotificationPopup
+        show={notification.show}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={closeNotification}
+      />
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -494,22 +591,6 @@ export default function ProfileAsesor() {
               </div>
             </div>
           </section>
-
-          {pesan && (
-            <AlertBox
-              type="success"
-              icon={<BadgeCheck size={20} />}
-              message={pesan}
-            />
-          )}
-
-          {error && (
-            <AlertBox
-              type="error"
-              icon={<XCircle size={20} />}
-              message={error}
-            />
-          )}
 
           {loading && (
             <AlertBox
@@ -988,6 +1069,79 @@ export default function ProfileAsesor() {
           </form>
         </div>
       </main>
+    </div>
+  );
+}
+
+function NotificationPopup({ show, type, title, message, onClose }) {
+  if (!show) return null;
+
+  const isSuccess = type === "success";
+  const isError = type === "error";
+  const isInfo = type === "info";
+
+  const iconWrapperClass = isSuccess
+    ? "bg-green-50 text-green-600"
+    : isError
+    ? "bg-red-50 text-red-500"
+    : "bg-orange-50 text-orange-500";
+
+  const borderClass = isSuccess
+    ? "border-green-100"
+    : isError
+    ? "border-red-100"
+    : "border-orange-100";
+
+  const titleClass = isSuccess
+    ? "text-green-700"
+    : isError
+    ? "text-red-600"
+    : "text-[#071E3D]";
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#071E3D]/35 backdrop-blur-sm px-4">
+      <div
+        className={`relative w-full max-w-md overflow-hidden rounded-[34px] border ${borderClass} bg-white p-7 text-center shadow-2xl shadow-[#071E3D]/20 animate-[popupScale_0.18s_ease-out]`}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-all hover:bg-slate-100 hover:text-[#071E3D]"
+        >
+          <X size={18} />
+        </button>
+
+        <div className="absolute -right-16 -top-16 h-36 w-36 rounded-full bg-orange-500/10 blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 h-36 w-36 rounded-full bg-[#071E3D]/10 blur-3xl" />
+
+        <div className="relative z-10">
+          <div
+            className={`mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[28px] ${iconWrapperClass}`}
+          >
+            {isSuccess ? (
+              <CheckCircle2 size={42} />
+            ) : isError ? (
+              <XCircle size={42} />
+            ) : (
+              <Sparkles size={40} />
+            )}
+          </div>
+
+          <h2 className={`text-2xl font-black ${titleClass}`}>{title}</h2>
+
+          <p className="mx-auto mt-3 max-w-sm text-sm font-medium leading-relaxed text-slate-500">
+            {message}
+          </p>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-7 w-full rounded-2xl bg-[#071E3D] px-6 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-orange-500"
+          >
+            Mengerti
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

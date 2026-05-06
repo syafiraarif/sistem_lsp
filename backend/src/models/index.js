@@ -9,6 +9,7 @@ const PendaftaranAsesi = require("./pendaftaranAsesi.model");
 const Notifikasi = require("./notifikasi.model");
 const Skkni = require("./skkni.model");
 const Skema = require("./skema.model");
+const SkemaUnit = require("./skemaUnit.model");
 const BiayaUji = require("./biayaUji.model");
 const Persyaratan = require("./persyaratan.model");
 const SkemaPersyaratan = require("./skemaPersyaratan.model");
@@ -1478,6 +1479,43 @@ UnitElemen.belongsTo(UnitKompetensi, { foreignKey: "id_unit" });
 UnitElemen.hasMany(UnitKuk, { foreignKey: "id_elemen" });
 UnitKuk.belongsTo(UnitElemen, { foreignKey: "id_elemen" });
 
+// ==========================
+// APL02 FORM RELATION
+// ==========================
+
+// SkemaUnit → UnitKompetensi
+SkemaUnit.belongsTo(UnitKompetensi, {
+  foreignKey: "id_unit",
+  as: "unit"
+});
+
+UnitKompetensi.hasMany(SkemaUnit, {
+  foreignKey: "id_unit",
+  as: "skemaUnit"
+});
+
+// UnitKompetensi → Elemen
+UnitKompetensi.hasMany(UnitElemen, {
+  foreignKey: "id_unit",
+  as: "elemen"
+});
+
+UnitElemen.belongsTo(UnitKompetensi, {
+  foreignKey: "id_unit",
+  as: "unit"
+});
+
+// Elemen → KUK
+UnitElemen.hasMany(UnitKuk, {
+  foreignKey: "id_elemen",
+  as: "kuk"
+});
+
+UnitKuk.belongsTo(UnitElemen, {
+  foreignKey: "id_elemen",
+  as: "elemen"
+});
+
 BankSoal.belongsTo(UnitKompetensi, { foreignKey: "id_unit" });
 UnitKompetensi.hasMany(BankSoal, { foreignKey: "id_unit" });
 
@@ -2026,6 +2064,7 @@ module.exports = {
   Notifikasi,
   Skkni,
   Skema,
+  SkemaUnit,
   BiayaUji,
   Persyaratan,
   SkemaPersyaratan,

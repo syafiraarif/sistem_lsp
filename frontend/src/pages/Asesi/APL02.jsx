@@ -288,6 +288,30 @@ export default function APL02() {
     return elemen.id_elemen || elemen.id || elemen.id_unit_elemen;
   };
 
+  const getIdUnitByElemen = (id_elemen) => {
+  for (const row of formUnits) {
+    const unit = getUnit(row);
+    const elemenList = getElemenList(row);
+
+    const found = elemenList.find(
+      (elemen) => Number(getElemenId(elemen)) === Number(id_elemen)
+    );
+
+    if (found) {
+      return (
+        unit.id_unit ||
+        unit.id_unit_kompetensi ||
+        row.id_unit ||
+        row.id_unit_kompetensi ||
+        row.id ||
+        null
+      );
+    }
+  }
+
+  return null;
+};
+
   const getElemenText = (elemen) => {
     return (
       elemen.elemen_kompetensi ||
@@ -369,49 +393,60 @@ export default function APL02() {
   };
 
   const savePenilaian = async (id_elemen) => {
-    const data = detailForm[id_elemen] || {};
+  const data = detailForm[id_elemen] || {};
 
-    if (!data.kompeten) {
-      alert("Pilih K atau BK terlebih dahulu.");
-      return;
+  if (!data.kompeten) {
+    alert("Pilih K atau BK terlebih dahulu.");
+    return;
+  }
+
+  try {
+    setSavingKey(`save-${id_elemen}`);
+
+    const currentApl02 = await ensureApl02();
+    const idUnit = getIdUnitByElemen(id_elemen);
+
+    const res = await axios.post(
+      ENDPOINT.savePenilaian,
+      {
+        id_apl02: currentApl02.id_apl02,
+        id_unit: idUnit,
+        id_elemen,
+        kompeten: data.kompeten,
+        catatan: data.catatan || "",
+      },
+      {
+        headers: getHeaders(),
+      }
+    );
+
+    const detail = res.data?.data;
+
+    setDetailForm((prev) => ({
+      ...prev,
+      [id_elemen]: {
+        ...prev[id_elemen],
+        id_detail: detail?.id_detail || prev[id_elemen]?.id_detail,
+      },
+    }));
+
+    alert("Penilaian berhasil disimpan.");
+
+    const pesertaId = idPeserta || (await resolveIdPeserta());
+    if (pesertaId) {
+      await fetchExistingApl02(pesertaId, true);
     }
-
-    try {
-      setSavingKey(`save-${id_elemen}`);
-
-      const currentApl02 = await ensureApl02();
-
-      const res = await axios.post(
-        ENDPOINT.savePenilaian,
-        {
-          id_apl02: currentApl02.id_apl02,
-          id_elemen,
-          kompeten: data.kompeten,
-          catatan: data.catatan || "",
-        },
-        {
-          headers: getHeaders(),
-        }
-      );
-
-      const detail = res.data?.data;
-
-      setDetailForm((prev) => ({
-        ...prev,
-        [id_elemen]: {
-          ...prev[id_elemen],
-          id_detail: detail?.id_detail || prev[id_elemen]?.id_detail,
-        },
-      }));
-
-      alert("Penilaian berhasil disimpan.");
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || err.message || "Gagal menyimpan penilaian.");
-    } finally {
-      setSavingKey(null);
-    }
-  };
+  } catch (err) {
+    console.error(err);
+    alert(
+      err.response?.data?.message ||
+        err.message ||
+        "Gagal menyimpan penilaian."
+    );
+  } finally {
+    setSavingKey(null);
+  }
+};
 
   const uploadBukti = async (id_elemen) => {
     const data = detailForm[id_elemen] || {};
@@ -486,35 +521,47 @@ export default function APL02() {
   };
 
   const submitFinal = async () => {
-    try {
-      setSubmitting(true);
+  try {
+    setSubmitting(true);
 
-      const currentApl02 = await ensureApl02();
+    const currentApl02 = await ensureApl02();
 
-      const detailCount = currentApl02?.detail?.length || apl02?.detail?.length || 0;
+    const savedDetailCount = Object.values(detailForm).filter(
+      (item) => item?.id_detail || item?.kompeten
+    ).length;
 
-      if (detailCount === 0) {
-        alert("Isi dan simpan minimal satu penilaian terlebih dahulu.");
-        return;
-      }
+    const detailCount =
+      currentApl02?.detail?.length ||
+      apl02?.detail?.length ||
+      savedDetailCount ||
+      0;
 
-      await axios.put(
-        ENDPOINT.submit(currentApl02.id_apl02),
-        {},
-        {
-          headers: getHeaders(),
-        }
-      );
-
-      alert("APL02 berhasil disubmit.");
-      await fetchExistingApl02(idPeserta, true);
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || err.message || "Gagal submit APL02.");
-    } finally {
-      setSubmitting(false);
+    if (detailCount === 0) {
+      alert("Isi dan simpan minimal satu penilaian terlebih dahulu.");
+      return;
     }
-  };
+
+    await axios.put(
+      ENDPOINT.submit(currentApl02.id_apl02),
+      {},
+      {
+        headers: getHeaders(),
+      }
+    );
+
+    alert("APL02 berhasil disubmit.");
+
+    const pesertaId = idPeserta || (await resolveIdPeserta());
+    if (pesertaId) {
+      await fetchExistingApl02(pesertaId, true);
+    }
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.message || err.message || "Gagal submit APL02.");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const totalElemen = useMemo(() => {
     return formUnits.reduce((total, row) => total + getElemenList(row).length, 0);

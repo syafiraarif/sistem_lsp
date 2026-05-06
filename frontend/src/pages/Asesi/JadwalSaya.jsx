@@ -6,13 +6,17 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
+  BadgeCheck,
   BookOpen,
+  CalendarCheck,
   CalendarDays,
   CheckCircle,
   ChevronRight,
   Clock,
   CreditCard,
+  FileCheck2,
   FileText,
+  Filter,
   Inbox,
   Loader2,
   MapPin,
@@ -20,7 +24,9 @@ import {
   RefreshCcw,
   Search,
   ShieldCheck,
+  Sparkles,
   Tag,
+  UploadCloud,
   Users,
   XCircle,
 } from "lucide-react";
@@ -60,9 +66,7 @@ export default function JadwalSaya() {
         item.id ||
         item.id_pendaftaran,
 
-      id_jadwal:
-        item.id_jadwal ||
-        jadwalItem.id_jadwal,
+      id_jadwal: item.id_jadwal || jadwalItem.id_jadwal,
 
       id_skema:
         item.id_skema ||
@@ -286,7 +290,7 @@ export default function JadwalSaya() {
 
     return parsed.toLocaleDateString("id-ID", {
       day: "2-digit",
-      month: "short",
+      month: "long",
       year: "numeric",
     });
   };
@@ -319,41 +323,192 @@ export default function JadwalSaya() {
   }, [jadwal, myJadwal, pembayaran, search, filter]);
 
   const totalDipilih = myJadwal.length;
-
   const totalPaid = jadwal.filter((item) => getStatusPembayaran(item) === "paid")
     .length;
+  const totalTersedia = jadwal.length;
 
   if (loading) {
     return <LoadingScreen />;
   }
 
   return (
-    <div className="min-h-screen bg-[#EEF2F7] flex">
+    <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarAsesi isOpen={isOpen} setIsOpen={setIsOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8">
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
         <div className="max-w-7xl mx-auto space-y-6">
-          <HeaderSection
-            totalJadwal={jadwal.length}
-            totalDipilih={totalDipilih}
-            totalPaid={totalPaid}
-          />
+          {/* HERO */}
+          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
+            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
+            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-          <FilterSection
-            search={search}
-            setSearch={setSearch}
-            filter={filter}
-            setFilter={setFilter}
-            loadData={loadData}
-          />
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
+              <div className="flex flex-col justify-center">
+                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+                  <CalendarDays size={15} className="text-orange-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                    Jadwal Saya
+                  </span>
+                </div>
+
+                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
+                  Kelola Jadwal
+                  <br />
+                  <span className="text-orange-500">Sertifikasi Anda</span>
+                </h1>
+
+                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
+                  Pilih jadwal uji kompetensi, lanjutkan pembayaran, dan akses
+                  formulir APL01, APL02, serta pra asesmen setelah pembayaran
+                  dikonfirmasi.
+                </p>
+
+                <div className="mt-7 flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={loadData}
+                    disabled={loading}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {loading ? (
+                      <Loader2 size={17} className="animate-spin" />
+                    ) : (
+                      <RefreshCcw size={17} />
+                    )}
+                    Refresh Jadwal
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/asesi")}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+                  >
+                    Dashboard
+                    <ChevronRight size={17} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
+                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+
+                <div className="relative z-10">
+                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
+                    <Sparkles size={28} />
+                  </div>
+
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
+                    Ringkasan Jadwal
+                  </p>
+
+                  <h2 className="mb-4 text-2xl font-black">
+                    {totalTersedia} Jadwal Tersedia
+                  </h2>
+
+                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                    Pantau status jadwal dan pembayaran Anda sebelum lanjut ke
+                    proses asesmen.
+                  </p>
+
+                  <div className="mt-6 grid grid-cols-2 gap-3">
+                    <HeroPill label="Dipilih" value={`${totalDipilih} Jadwal`} />
+                    <HeroPill label="Paid" value={`${totalPaid} Jadwal`} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
           {error && <ErrorAlert message={error} />}
 
-          {filteredJadwal.length === 0 ? (
-            <EmptyState search={search} />
-          ) : (
-            <section className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-              {filteredJadwal.map((item) => {
+          {/* STATS */}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <MiniStat
+              icon={<CalendarDays size={22} />}
+              label="Total Jadwal"
+              value={`${totalTersedia} Jadwal`}
+            />
+            <MiniStat
+              icon={<BadgeCheck size={22} />}
+              label="Jadwal Dipilih"
+              value={`${totalDipilih} Dipilih`}
+            />
+            <MiniStat
+              icon={<CheckCircle size={22} />}
+              label="Pembayaran Paid"
+              value={`${totalPaid} Paid`}
+            />
+          </section>
+
+          {/* FILTER */}
+          <section className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+                  <Filter size={15} className="text-orange-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                    Filter Jadwal
+                  </span>
+                </div>
+
+                <h2 className="text-2xl lg:text-3xl font-black text-[#071E3D]">
+                  Daftar Jadwal Sertifikasi
+                </h2>
+
+                <p className="mt-2 text-sm font-medium text-slate-400">
+                  Cari berdasarkan skema, kegiatan, TUK, atau pelaksanaan uji.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadData}
+                disabled={loading}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                {loading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <RefreshCcw size={16} />
+                )}
+                Muat Ulang
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4">
+              <div className="relative">
+                <Search
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
+                />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Cari skema, kode, kegiatan, atau TUK..."
+                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-12 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                />
+              </div>
+
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+              >
+                <option value="semua">Semua</option>
+                <option value="dipilih">Dipilih</option>
+                <option value="belum">Belum Dipilih</option>
+                <option value="paid">Paid</option>
+              </select>
+            </div>
+          </section>
+
+          {/* LIST */}
+          <section className="space-y-5">
+            {filteredJadwal.length === 0 ? (
+              <EmptyState search={search} />
+            ) : (
+              filteredJadwal.map((item, index) => {
                 const skema = item.skema || item.Skema || {};
                 const tuk = item.tuk || item.Tuk || {};
                 const idSkema = getIdSkema(item);
@@ -365,7 +520,7 @@ export default function JadwalSaya() {
 
                 return (
                   <ScheduleCard
-                    key={item.id_jadwal}
+                    key={item.id_jadwal || index}
                     item={item}
                     skema={skema}
                     tuk={tuk}
@@ -383,136 +538,16 @@ export default function JadwalSaya() {
                     pergiPraAsesmen={pergiPraAsesmen}
                   />
                 );
-              })}
-            </section>
-          )}
+              })
+            )}
+          </section>
         </div>
       </main>
     </div>
   );
 }
 
-const LoadingScreen = () => {
-  return (
-    <div className="min-h-screen bg-[#EEF2F7] flex items-center justify-center px-5">
-      <div className="bg-white rounded-[28px] border border-slate-200 shadow-lg p-10 text-center max-w-sm w-full">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
-          <Loader2 className="animate-spin text-white" size={34} />
-        </div>
-
-        <h2 className="text-[#071E3D] font-bold text-lg">Memuat Jadwal</h2>
-
-        <p className="text-slate-500 text-sm mt-2">
-          Mengambil data jadwal Anda.
-        </p>
-      </div>
-    </div>
-  );
-};
-
-const HeaderSection = ({ totalJadwal, totalDipilih, totalPaid }) => {
-  return (
-    <section className="overflow-hidden rounded-[30px] bg-white border border-slate-200 shadow-md">
-      <div className="bg-[#071E3D] px-6 lg:px-8 py-7">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1.5 mb-4">
-              <CalendarDays size={14} className="text-orange-400" />
-              <span className="text-white/80 text-xs font-semibold">
-                Dashboard Asesi
-              </span>
-            </div>
-
-            <h1 className="text-3xl md:text-4xl font-bold text-white">
-              Jadwal Saya
-            </h1>
-
-            <p className="text-slate-300 mt-2 text-sm">
-              Kelola jadwal, pembayaran, dan formulir asesmen.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard label="Jadwal" value={totalJadwal} />
-            <StatCard label="Dipilih" value={totalDipilih} />
-            <StatCard label="Paid" value={totalPaid} />
-          </div>
-        </div>
-      </div>
-
-      <div className="h-2 bg-orange-500" />
-    </section>
-  );
-};
-
-const FilterSection = ({
-  search,
-  setSearch,
-  filter,
-  setFilter,
-  loadData,
-}) => {
-  return (
-    <section className="bg-white rounded-[28px] border border-slate-200 shadow-md p-4">
-      <div className="flex flex-col xl:flex-row gap-4 xl:items-center xl:justify-between">
-        <div className="relative flex-1">
-          <Search
-            size={19}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-          />
-
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari skema, kegiatan, atau TUK..."
-            className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-200 outline-none text-sm font-medium text-[#071E3D] placeholder:text-slate-400 focus:bg-white focus:border-[#071E3D] transition"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <FilterButton
-            active={filter === "semua"}
-            onClick={() => setFilter("semua")}
-          >
-            Semua
-          </FilterButton>
-
-          <FilterButton
-            active={filter === "dipilih"}
-            onClick={() => setFilter("dipilih")}
-          >
-            Dipilih
-          </FilterButton>
-
-          <FilterButton
-            active={filter === "belum"}
-            onClick={() => setFilter("belum")}
-          >
-            Belum
-          </FilterButton>
-
-          <FilterButton
-            active={filter === "paid"}
-            onClick={() => setFilter("paid")}
-          >
-            Paid
-          </FilterButton>
-
-          <button
-            onClick={loadData}
-            className="px-4 py-3 rounded-2xl bg-orange-500 text-white font-semibold text-sm hover:bg-orange-600 transition inline-flex items-center gap-2"
-          >
-            <RefreshCcw size={16} />
-            Refresh
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const ScheduleCard = ({
+function ScheduleCard({
   item,
   skema,
   tuk,
@@ -527,257 +562,271 @@ const ScheduleCard = ({
   pergiAPL01,
   pergiAPL02,
   pergiPraAsesmen,
-}) => {
+}) {
+  const title = skema.judul_skema || "Skema tidak tersedia";
+  const kodeSkema = skema.kode_skema || "SKEMA";
+  const kegiatan = item.nama_kegiatan || "Jadwal uji kompetensi";
+  const idJadwal = item.id_jadwal;
+  const tanggal = `${formatTanggal(item.tgl_awal)} - ${formatTanggal(
+    item.tgl_akhir
+  )}`;
+
   return (
-    <article className="bg-white rounded-[28px] border border-slate-200 shadow-md hover:shadow-lg transition overflow-hidden">
-      <div className="bg-[#071E3D] px-5 lg:px-6 py-4">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 text-orange-400 flex items-center justify-center shrink-0">
-            <BookOpen size={25} />
-          </div>
+    <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_330px]">
+        <div className="p-6">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+            <div>
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-full bg-orange-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-orange-500">
+                  {kodeSkema}
+                </span>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <Badge variant="code">{skema.kode_skema || "SKEMA"}</Badge>
+                {sudahDipilih ? (
+                  <StatusBadge type="success" label="Dipilih" />
+                ) : (
+                  <StatusBadge type="light" label="Tersedia" />
+                )}
 
-              {sudahDipilih ? (
-                <Badge variant="success">
-                  <CheckCircle size={13} />
-                  Dipilih
-                </Badge>
-              ) : (
-                <Badge variant="light">
-                  <Clock size={13} />
-                  Tersedia
-                </Badge>
-              )}
+                {statusBayar === "pending" && (
+                  <StatusBadge type="warning" label="Menunggu ACC" />
+                )}
 
-              {statusBayar === "pending" && (
-                <Badge variant="warning">Menunggu ACC</Badge>
-              )}
+                {statusBayar === "paid" && (
+                  <StatusBadge type="success" label="Paid" />
+                )}
+              </div>
 
-              {statusBayar === "paid" && (
-                <Badge variant="success">
-                  <CheckCircle size={13} />
-                  Paid
-                </Badge>
-              )}
+              <h3 className="text-2xl font-black text-[#071E3D]">{title}</h3>
+
+              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+                {kegiatan}
+              </p>
             </div>
 
-            <h2 className="text-lg lg:text-xl font-bold text-white leading-snug">
-              {skema.judul_skema || "Skema tidak tersedia"}
-            </h2>
-
-            <p className="text-slate-300 text-sm mt-1">
-              {item.nama_kegiatan || "Jadwal uji kompetensi"}
-            </p>
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+              <BookOpen size={26} />
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="h-1.5 bg-orange-500" />
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <DetailItem
+              icon={<MapPin size={18} />}
+              label="TUK"
+              value={tuk.nama_tuk || "-"}
+            />
 
-      <div className="p-5 lg:p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <InfoItem
-            icon={<MapPin size={17} />}
-            label="TUK"
-            value={tuk.nama_tuk || "-"}
-          />
+            <DetailItem
+              icon={<MonitorCheck size={18} />}
+              label="Pelaksanaan"
+              value={item.pelaksanaan_uji || "-"}
+            />
 
-          <InfoItem
-            icon={<MonitorCheck size={17} />}
-            label="Pelaksanaan"
-            value={item.pelaksanaan_uji || "-"}
-          />
+            <DetailItem
+              icon={<CalendarCheck size={18} />}
+              label="Tanggal"
+              value={tanggal}
+            />
 
-          <InfoItem
-            icon={<CalendarDays size={17} />}
-            label="Tanggal"
-            value={`${formatTanggal(item.tgl_awal)} - ${formatTanggal(
-              item.tgl_akhir
-            )}`}
-          />
-
-          <InfoItem
-            icon={<Users size={17} />}
-            label="Kuota"
-            value={`${item.kuota || 0} peserta`}
-          />
-        </div>
-      </div>
-
-      <div className="px-5 lg:px-6 py-4 bg-[#F8FAFC] border-t border-slate-200 flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-semibold">
-          <span className="inline-flex items-center gap-2">
-            <Tag size={14} />
-            ID Jadwal: {item.id_jadwal || "-"}
-          </span>
-
-          {sudahDipilih && (
-            <span className="inline-flex items-center gap-2">
-              <Tag size={14} />
-              ID Peserta: {idPeserta || "-"}
-            </span>
-          )}
-        </div>
-
-        {!sudahDipilih ? (
-          <button
-            disabled={sedangMemilih}
-            onClick={() => pilihJadwal(item.id_jadwal)}
-            className="w-full sm:w-fit px-5 py-3 rounded-2xl bg-[#071E3D] hover:bg-orange-500 text-white font-semibold text-sm transition inline-flex items-center justify-center gap-2"
-          >
-            {sedangMemilih ? (
-              <>
-                <Loader2 size={17} className="animate-spin" />
-                Memilih
-              </>
-            ) : (
-              <>
-                <ShieldCheck size={17} />
-                Pilih Jadwal
-                <ChevronRight size={16} />
-              </>
-            )}
-          </button>
-        ) : sudahPaid ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <ActionButton title="APL01" onClick={() => pergiAPL01(item)} />
-            <ActionButton title="APL02" onClick={() => pergiAPL02(item)} />
-            <ActionButton
-              title="Pra Asesmen"
-              onClick={() => pergiPraAsesmen(item)}
+            <DetailItem
+              icon={<Users size={18} />}
+              label="Kuota"
+              value={`${item.kuota || 0} peserta`}
             />
           </div>
-        ) : (
-          <button
-            onClick={() => pergiBayar(item)}
-            className="w-full sm:w-fit px-5 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition inline-flex items-center justify-center gap-2"
-          >
-            <CreditCard size={17} />
-            Bayar Sekarang
-          </button>
-        )}
+
+          <div className="mt-5 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-400">
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2">
+              <Tag size={14} />
+              ID Jadwal: {idJadwal || "-"}
+            </span>
+
+            {sudahDipilih && (
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2">
+                <Tag size={14} />
+                ID Peserta: {idPeserta || "-"}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t xl:border-t-0 xl:border-l border-slate-100 bg-slate-50/60 p-6 flex flex-col justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Aksi Jadwal
+            </p>
+
+            <h4 className="mt-2 text-lg font-black text-[#071E3D]">
+              Kelola Proses
+            </h4>
+
+            <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+              Pilih jadwal, lakukan pembayaran, lalu lanjutkan pengisian form
+              asesmen.
+            </p>
+          </div>
+
+          {!sudahDipilih ? (
+            <button
+              disabled={sedangMemilih}
+              onClick={() => pilihJadwal(item.id_jadwal)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {sedangMemilih ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Memilih
+                </>
+              ) : (
+                <>
+                  <ShieldCheck size={16} />
+                  Pilih Jadwal
+                </>
+              )}
+            </button>
+          ) : sudahPaid ? (
+            <div className="grid grid-cols-1 gap-3">
+              <ActionButton title="APL01" onClick={() => pergiAPL01(item)} />
+              <ActionButton title="APL02" onClick={() => pergiAPL02(item)} />
+              <ActionButton
+                title="Pra Asesmen"
+                onClick={() => pergiPraAsesmen(item)}
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => pergiBayar(item)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+            >
+              <CreditCard size={16} />
+              Bayar Sekarang
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );
-};
+}
 
-const StatCard = ({ label, value }) => {
+function LoadingScreen() {
   return (
-    <div className="min-w-[92px] rounded-2xl bg-white/10 border border-white/15 p-4 text-white">
-      <p className="text-xs text-slate-300 font-medium">{label}</p>
-      <h3 className="text-2xl font-bold mt-1">{value}</h3>
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-5">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl p-10 text-center max-w-sm w-full">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
+          <Loader2 className="animate-spin text-white" size={34} />
+        </div>
+
+        <h2 className="text-[#071E3D] font-black text-xl">Memuat Jadwal</h2>
+
+        <p className="text-slate-500 text-sm mt-2 font-medium">
+          Mengambil data jadwal sertifikasi Anda.
+        </p>
+      </div>
     </div>
   );
-};
+}
 
-const FilterButton = ({ active, onClick, children }) => {
+function MiniStat({ icon, label, value }) {
   return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-3 rounded-2xl font-semibold text-sm transition ${
-        active
-          ? "bg-[#071E3D] text-white"
-          : "bg-[#F8FAFC] text-slate-600 border border-slate-200 hover:bg-slate-100"
-      }`}
-    >
-      {children}
-    </button>
-  );
-};
+    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+      <div className="w-13 h-13 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+        {icon}
+      </div>
 
-const Badge = ({ variant = "light", children }) => {
-  const variants = {
-    code: "bg-orange-500 text-white border-orange-500",
-    success: "bg-emerald-500 text-white border-emerald-500",
-    warning: "bg-amber-400 text-[#071E3D] border-amber-400",
-    light: "bg-white/10 text-white border-white/20",
+      <div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          {label}
+        </p>
+        <p className="text-[#071E3D] font-black mt-1">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function HeroPill({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function StatusBadge({ type = "light", label }) {
+  const styles = {
+    success: "bg-green-50 text-green-600",
+    warning: "bg-amber-50 text-amber-600",
+    light: "bg-slate-50 text-slate-500",
   };
 
   return (
     <span
-      className={`px-3 py-1.5 rounded-full border text-xs font-semibold inline-flex items-center gap-1.5 ${
-        variants[variant] || variants.light
+      className={`inline-flex items-center rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
+        styles[type] || styles.light
       }`}
     >
-      {children}
+      {label}
     </span>
   );
-};
+}
 
-const InfoItem = ({ icon, label, value }) => {
+function DetailItem({ icon, label, value }) {
   return (
-    <div className="rounded-2xl bg-[#F8FAFC] border border-slate-200 p-4">
-      <div className="flex gap-3">
-        <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-[#071E3D] flex items-center justify-center shrink-0">
-          {icon}
-        </div>
-
-        <div className="min-w-0">
-          <p className="text-xs text-slate-400 font-semibold mb-1">{label}</p>
-
-          <p className="text-sm font-semibold text-[#071E3D] leading-snug capitalize break-words">
-            {value}
-          </p>
-        </div>
+    <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-4">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
+        {icon}
       </div>
+
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+        {label}
+      </p>
+
+      <p className="mt-1 text-sm font-black text-[#071E3D] line-clamp-2 capitalize">
+        {value || "-"}
+      </p>
     </div>
   );
-};
+}
 
-const ActionButton = ({ title, onClick }) => {
+function ActionButton({ title, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="px-4 py-3 rounded-2xl bg-[#071E3D] hover:bg-orange-500 text-white font-semibold text-sm transition inline-flex items-center justify-center gap-2"
+      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
     >
-      <FileText size={17} />
+      <FileText size={16} />
       {title}
     </button>
   );
-};
+}
 
-const ErrorAlert = ({ message }) => {
+function ErrorAlert({ message }) {
   return (
-    <div className="rounded-[24px] bg-red-50 border border-red-100 p-5 flex gap-3 items-start shadow-sm">
-      <AlertCircle className="text-red-500 shrink-0" size={22} />
-
-      <div>
-        <h3 className="font-bold text-red-700">Terjadi Kesalahan</h3>
-        <p className="text-red-500 text-sm mt-1">{message}</p>
-      </div>
+    <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-4 text-sm font-semibold flex items-center gap-3 text-red-600">
+      <AlertCircle size={20} className="shrink-0" />
+      <span>{message}</span>
     </div>
   );
-};
+}
 
-const EmptyState = ({ search }) => {
+function EmptyState({ search }) {
   return (
-    <section className="bg-white rounded-[28px] border border-slate-200 shadow-md overflow-hidden">
-      <div className="bg-[#071E3D] px-6 py-5">
-        <h2 className="text-white text-xl font-bold">
-          {search ? "Jadwal Tidak Ditemukan" : "Belum Ada Jadwal"}
-        </h2>
+    <div className="rounded-[32px] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
+      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+        {search ? <XCircle size={30} /> : <Inbox size={30} />}
       </div>
 
-      <div className="h-1.5 bg-orange-500" />
+      <h3 className="text-2xl font-black text-[#071E3D]">
+        {search ? "Jadwal Tidak Ditemukan" : "Belum Ada Jadwal"}
+      </h3>
 
-      <div className="p-10 lg:p-14 text-center">
-        <div className="w-20 h-20 rounded-3xl bg-[#F8FAFC] border border-slate-200 flex items-center justify-center mx-auto mb-5">
-          {search ? (
-            <XCircle className="text-slate-400" size={40} />
-          ) : (
-            <Inbox className="text-slate-400" size={40} />
-          )}
-        </div>
-
-        <p className="text-slate-500 text-sm max-w-md mx-auto">
-          {search
-            ? "Coba gunakan kata kunci lain."
-            : "Saat ini belum ada jadwal sertifikasi yang tersedia."}
-        </p>
-      </div>
-    </section>
+      <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
+        {search
+          ? "Coba gunakan kata kunci lain untuk mencari jadwal sertifikasi."
+          : "Saat ini belum ada jadwal sertifikasi yang tersedia."}
+      </p>
+    </div>
   );
-};
+}
