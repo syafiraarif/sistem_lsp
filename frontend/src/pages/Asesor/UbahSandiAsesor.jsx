@@ -57,6 +57,9 @@ export default function UbahSandiAsesor() {
       ...prev,
       [name]: value,
     }));
+
+    if (pesan) setPesan("");
+    if (error) setError("");
   };
 
   const toggleShowPassword = (field) => {
@@ -72,6 +75,13 @@ export default function UbahSandiAsesor() {
       password_baru: "",
       konfirmasi_password: "",
     });
+
+    setShowPassword({
+      password_lama: false,
+      password_baru: false,
+      konfirmasi_password: false,
+    });
+
     setPesan("");
     setError("");
   };
@@ -114,7 +124,6 @@ export default function UbahSandiAsesor() {
         password_baru: form.password_baru,
         konfirmasi_password: form.konfirmasi_password,
 
-        // fallback kalau backend kamu pakai naming lain
         old_password: form.password_lama,
         new_password: form.password_baru,
         confirm_password: form.konfirmasi_password,
@@ -127,6 +136,12 @@ export default function UbahSandiAsesor() {
         password_lama: "",
         password_baru: "",
         konfirmasi_password: "",
+      });
+
+      setShowPassword({
+        password_lama: false,
+        password_baru: false,
+        konfirmasi_password: false,
       });
     } catch (err) {
       console.error(err);
@@ -144,14 +159,13 @@ export default function UbahSandiAsesor() {
     <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarAsesor isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* HERO */}
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
+        <div className="w-full max-w-[1500px] mx-auto space-y-6">
           <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
             <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
             <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
               <div className="flex flex-col justify-center">
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <KeyRound size={15} className="text-orange-500" />
@@ -200,7 +214,7 @@ export default function UbahSandiAsesor() {
               <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
                 <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
 
-                <div className="relative z-10">
+                <div className="relative z-10 flex h-full flex-col">
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
                     <Sparkles size={28} />
                   </div>
@@ -209,16 +223,16 @@ export default function UbahSandiAsesor() {
                     Keamanan Akun
                   </p>
 
-                  <h2 className="mb-4 text-2xl font-black">
+                  <h2 className="text-2xl font-black leading-tight">
                     Akun Terproteksi
                   </h2>
 
-                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
                     Setelah sandi diperbarui, gunakan sandi baru saat login
                     berikutnya. Jangan bagikan sandi kepada siapapun.
                   </p>
 
-                  <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
                     <HeroPill label="Role" value="Asesor" />
                     <HeroPill label="Status" value="Aman" />
                   </div>
@@ -251,9 +265,7 @@ export default function UbahSandiAsesor() {
             />
           )}
 
-          {/* CONTENT */}
           <section className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start">
-            {/* FORM */}
             <form
               id="form-ubah-sandi"
               onSubmit={handleSubmit}
@@ -363,7 +375,6 @@ export default function UbahSandiAsesor() {
               </div>
             </form>
 
-            {/* SIDE INFO */}
             <aside className="space-y-5">
               <InfoCard
                 icon={<ShieldCheck size={22} />}
@@ -397,9 +408,7 @@ export default function UbahSandiAsesor() {
                 <div className="mt-5">
                   <div className="h-3 overflow-hidden rounded-full bg-slate-100">
                     <div
-                      className={`h-full rounded-full transition-all ${
-                        passwordStrength.colorClass
-                      }`}
+                      className={`h-full rounded-full transition-all ${passwordStrength.colorClass}`}
                       style={{ width: `${passwordStrength.percent}%` }}
                     />
                   </div>

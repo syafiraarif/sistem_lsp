@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SidebarAsesor from "../../components/sidebar/SidebarAsesor";
 import {
-  BadgeCheck,
   CalendarCheck,
   CalendarDays,
   ChevronRight,
@@ -18,7 +17,6 @@ import {
   ShieldCheck,
   Sparkles,
   User,
-  Users,
 } from "lucide-react";
 import api from "../../services/api";
 
@@ -192,14 +190,13 @@ export default function DashboardAsesor() {
     <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarAsesor isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* HERO */}
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
+        <div className="w-full max-w-[1500px] mx-auto space-y-6">
           <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
             <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
             <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
               <div className="flex flex-col justify-center">
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <ShieldCheck size={15} className="text-orange-500" />
@@ -233,7 +230,7 @@ export default function DashboardAsesor() {
                     type="button"
                     onClick={fetchDashboardData}
                     disabled={loading}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-orange-500 hover:text-white disabled:opacity-60"
                   >
                     {loading ? (
                       <Loader2 size={17} className="animate-spin" />
@@ -248,7 +245,7 @@ export default function DashboardAsesor() {
               <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
                 <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
 
-                <div className="relative z-10">
+                <div className="relative z-10 flex h-full flex-col">
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
                     <Sparkles size={28} />
                   </div>
@@ -257,20 +254,22 @@ export default function DashboardAsesor() {
                     Ringkasan Akun
                   </p>
 
-                  <h2 className="mb-4 text-2xl font-black">
-                    {isProfileComplete ? "Profile Siap" : "Profile Perlu Dilengkapi"}
+                  <h2 className="text-2xl font-black leading-tight">
+                    {isProfileComplete
+                      ? "Profile Siap"
+                      : "Profile Perlu Dilengkapi"}
                   </h2>
 
-                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
                     Pastikan profile, tanda tangan digital, dan data lisensi
                     sudah lengkap sebelum menjalankan proses asesmen.
                   </p>
 
-                  <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
                     <HeroPill label="Total Jadwal" value={`${totalJadwal}`} />
                     <HeroPill
                       label="Profile"
-                      value={isProfileComplete ? "Lengkap" : "Belum Lengkap"}
+                      value={isProfileComplete ? "Lengkap" : "Belum"}
                     />
                   </div>
 
@@ -302,7 +301,6 @@ export default function DashboardAsesor() {
             />
           )}
 
-          {/* STATS */}
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
             <MiniStat
               icon={<CalendarDays size={22} />}
@@ -326,9 +324,7 @@ export default function DashboardAsesor() {
             />
           </section>
 
-          {/* CONTENT */}
-          <section className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start">
-            {/* MENU */}
+          <section className="grid grid-cols-1 xl:grid-cols-[1fr_430px] gap-6 items-start">
             <div className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-100">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
@@ -360,7 +356,6 @@ export default function DashboardAsesor() {
               </div>
             </div>
 
-            {/* JADWAL TERDEKAT */}
             <aside className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-100">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
@@ -416,7 +411,7 @@ function MenuCard({ icon, title, desc, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="group text-left rounded-[28px] border border-slate-100 bg-slate-50/60 hover:bg-white hover:border-orange-200 hover:shadow-xl hover:shadow-orange-500/5 p-5 transition-all"
+      className="group text-left rounded-[28px] border border-slate-100 bg-slate-50/60 p-5 transition-all hover:bg-white hover:border-orange-200 hover:shadow-xl hover:shadow-orange-500/5"
     >
       <div className="w-14 h-14 rounded-2xl bg-white group-hover:bg-orange-50 text-[#071E3D] group-hover:text-orange-500 border border-slate-100 group-hover:border-orange-100 flex items-center justify-center mb-5 transition-all">
         {icon}
@@ -441,6 +436,7 @@ function MenuCard({ icon, title, desc, onClick }) {
 
 function JadwalMiniCard({ item, onClick }) {
   const jadwal = item.jadwal || item;
+
   const title =
     item.nama_kegiatan ||
     jadwal.nama_kegiatan ||
@@ -499,15 +495,15 @@ function JadwalMiniCard({ item, onClick }) {
 function MiniStat({ icon, label, value }) {
   return (
     <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-      <div className="w-13 h-13 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+      <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
         {icon}
       </div>
 
-      <div>
+      <div className="min-w-0">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           {label}
         </p>
-        <p className="text-[#071E3D] font-black mt-1">{value}</p>
+        <p className="text-[#071E3D] font-black mt-1 truncate">{value}</p>
       </div>
     </div>
   );
@@ -558,13 +554,15 @@ function getJadwalId(item) {
 function formatTanggal(value) {
   if (!value) return "-";
 
-  try {
-    return new Date(value).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-  } catch (err) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
     return value;
   }
+
+  return parsed.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }

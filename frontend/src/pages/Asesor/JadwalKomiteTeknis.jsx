@@ -47,8 +47,7 @@ export default function JadwalKomiteTeknis() {
     } catch (err) {
       console.error(err);
       setError(
-        err.response?.data?.message ||
-          "Gagal mengambil jadwal komite teknis"
+        err.response?.data?.message || "Gagal mengambil jadwal komite teknis"
       );
     } finally {
       setLoading(false);
@@ -102,14 +101,13 @@ export default function JadwalKomiteTeknis() {
     <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarAsesor isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* HERO */}
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
+        <div className="w-full max-w-[1500px] mx-auto space-y-6">
           <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
             <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
             <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
               <div className="flex flex-col justify-center">
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <FileSearch size={15} className="text-orange-500" />
@@ -134,7 +132,7 @@ export default function JadwalKomiteTeknis() {
                     type="button"
                     onClick={fetchJadwal}
                     disabled={loading}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:bg-slate-300 disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <Loader2 size={17} className="animate-spin" />
@@ -158,7 +156,7 @@ export default function JadwalKomiteTeknis() {
               <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
                 <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
 
-                <div className="relative z-10">
+                <div className="relative z-10 flex h-full flex-col">
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
                     <Sparkles size={28} />
                   </div>
@@ -167,16 +165,16 @@ export default function JadwalKomiteTeknis() {
                     Ringkasan Komite
                   </p>
 
-                  <h2 className="mb-4 text-2xl font-black">
+                  <h2 className="text-2xl font-black leading-tight">
                     {totalJadwal} Jadwal Komite
                   </h2>
 
-                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
                     Jadwal ini khusus untuk tugas komite teknis dalam
                     pengelolaan instrumen asesmen.
                   </p>
 
-                  <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
                     <HeroPill label="Aktif" value={`${totalAktif} Jadwal`} />
                     <HeroPill
                       label="Nonaktif"
@@ -204,7 +202,6 @@ export default function JadwalKomiteTeknis() {
             />
           )}
 
-          {/* STATS */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <MiniStat
               icon={<CalendarDays size={22} />}
@@ -223,7 +220,6 @@ export default function JadwalKomiteTeknis() {
             />
           </section>
 
-          {/* FILTER */}
           <section className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
@@ -247,7 +243,7 @@ export default function JadwalKomiteTeknis() {
                 type="button"
                 onClick={fetchJadwal}
                 disabled={loading}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:bg-slate-300 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -285,7 +281,6 @@ export default function JadwalKomiteTeknis() {
             </div>
           </section>
 
-          {/* LIST */}
           <section className="space-y-5">
             {filteredJadwal.length === 0 ? (
               <EmptyState loading={loading} />
@@ -330,7 +325,7 @@ function JadwalKomiteCard({ item, index }) {
 
   return (
     <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_330px]">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px]">
         <div className="p-6">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
             <div>
@@ -346,7 +341,9 @@ function JadwalKomiteCard({ item, index }) {
                 </span>
               </div>
 
-              <h3 className="text-2xl font-black text-[#071E3D]">{title}</h3>
+              <h3 className="text-2xl font-black text-[#071E3D] leading-tight">
+                {title}
+              </h3>
 
               <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
                 {catatan}
@@ -364,11 +361,7 @@ function JadwalKomiteCard({ item, index }) {
               label="Tanggal"
               value={formatRentangTanggal(tanggal, tanggalAkhir)}
             />
-            <DetailItem
-              icon={<MapPin size={18} />}
-              label="Lokasi / TUK"
-              value={tuk}
-            />
+            <DetailItem icon={<MapPin size={18} />} label="Lokasi / TUK" value={tuk} />
             <DetailItem
               icon={<FileCheck2 size={18} />}
               label="Jenis Tugas"
@@ -461,9 +454,11 @@ function DetailItem({ icon, label, value }) {
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
         {icon}
       </div>
+
       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
         {label}
       </p>
+
       <p className="mt-1 text-sm font-black text-[#071E3D] line-clamp-2">
         {value || "-"}
       </p>
@@ -488,14 +483,15 @@ function StatusBadge({ status }) {
 function MiniStat({ icon, label, value }) {
   return (
     <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-      <div className="w-13 h-13 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+      <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
         {icon}
       </div>
-      <div>
+
+      <div className="min-w-0">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           {label}
         </p>
-        <p className="text-[#071E3D] font-black mt-1">{value}</p>
+        <p className="text-[#071E3D] font-black mt-1 truncate">{value}</p>
       </div>
     </div>
   );
@@ -613,15 +609,17 @@ function getJadwalTuk(jadwal) {
 function formatTanggal(value) {
   if (!value) return "-";
 
-  try {
-    return new Date(value).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-  } catch (err) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
     return value;
   }
+
+  return parsed.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function formatRentangTanggal(start, end) {

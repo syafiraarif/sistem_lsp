@@ -494,14 +494,13 @@ export default function ProfileAsesor() {
         onClose={closeNotification}
       />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* HERO */}
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
+        <div className="w-full max-w-[1500px] mx-auto space-y-6">
           <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
             <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
             <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
               <div className="flex flex-col justify-center">
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <ShieldCheck size={15} className="text-orange-500" />
@@ -553,7 +552,7 @@ export default function ProfileAsesor() {
               <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
                 <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
 
-                <div className="relative z-10">
+                <div className="relative z-10 flex h-full flex-col">
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
                     <Sparkles size={28} />
                   </div>
@@ -562,14 +561,16 @@ export default function ProfileAsesor() {
                     Ringkasan Profile
                   </p>
 
-                  <h2 className="mb-4 text-2xl font-black">{statusLabel}</h2>
+                  <h2 className="text-2xl font-black leading-tight">
+                    {statusLabel}
+                  </h2>
 
-                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
                     Pastikan foto dan tanda tangan digital tersedia agar proses
                     administrasi asesmen berjalan lebih cepat.
                   </p>
 
-                  <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
                     <InfoPill
                       label="Foto Profil"
                       value={previewFoto ? "Tersedia" : "Belum Ada"}
@@ -600,7 +601,6 @@ export default function ProfileAsesor() {
             />
           )}
 
-          {/* DOKUMEN DIGITAL */}
           <section
             id="upload-section"
             className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch"
@@ -611,8 +611,8 @@ export default function ProfileAsesor() {
               icon={<Camera size={22} />}
             >
               <div className="flex h-full flex-col justify-between gap-5">
-                <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-5 items-center">
-                  <div className="relative h-[210px] rounded-[30px] border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden shadow-inner">
+                <div className="grid grid-cols-1 md:grid-cols-[190px_1fr] gap-5 items-center">
+                  <div className="relative h-[220px] rounded-[30px] border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden shadow-inner">
                     {previewFoto ? (
                       <img
                         src={previewFoto}
@@ -811,7 +811,6 @@ export default function ProfileAsesor() {
             </UploadCard>
           </section>
 
-          {/* FORM */}
           <form
             id="form-profile"
             onSubmit={handleSubmitProfile}
@@ -998,7 +997,7 @@ export default function ProfileAsesor() {
                     value={profile.alamat || ""}
                     onChange={handleChange}
                     rows="4"
-                    className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                    className="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                     placeholder="Masukkan alamat"
                   />
                 </div>
@@ -1078,7 +1077,6 @@ function NotificationPopup({ show, type, title, message, onClose }) {
 
   const isSuccess = type === "success";
   const isError = type === "error";
-  const isInfo = type === "info";
 
   const iconWrapperClass = isSuccess
     ? "bg-green-50 text-green-600"
