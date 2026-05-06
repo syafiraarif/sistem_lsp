@@ -18,6 +18,7 @@ const frAk03Controller = require("../controllers/asesi/frAk03.controller");
 const frAk04Controller = require("../controllers/asesi/frAk04.controller");
 const frIa05AsesiController = require("../controllers/asesi/frIa05Asesi.controller");
 const controller = require("../controllers/asesi/frIa06Asesi.controller");
+const praAsesmenController = require("../controllers/asesi/praAsesmen.controller");
 
 // Semua route hanya bisa diakses oleh asesi
 router.use(authMiddleware, roleMiddleware.asesiOnly);
@@ -149,6 +150,11 @@ router.get("/fr-ia06/asesi/jawaban/:id_peserta/:id_fr_ia_06", controller.getJawa
 
 // cek status
 router.get("/fr-ia06/asesi/status/:id_peserta/:id_fr_ia_06", controller.getStatus);
+
+/* ========================= PRA ASESMEN ASESI ========================= */
+router.get("/pra-asesmen/form", praAsesmenController.getFormPraAsesmen);
+router.post("/pra-asesmen/submit", praAsesmenController.submitPraAsesmen);
+router.get("/pra-asesmen/download", praAsesmenController.downloadPraAsesmen);
 
 /* ========================= 404 fallback ========================= */
 router.use((req, res) => {
