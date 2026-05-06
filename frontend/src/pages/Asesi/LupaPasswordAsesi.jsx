@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -178,14 +178,13 @@ export default function LupaPasswordAsesi() {
     <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* HERO */}
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
+        <div className="w-full max-w-[1500px] mx-auto space-y-6">
           <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
             <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
             <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
               <div className="flex flex-col justify-center">
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <KeyRound size={15} className="text-orange-500" />
@@ -234,7 +233,7 @@ export default function LupaPasswordAsesi() {
               <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
                 <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
 
-                <div className="relative z-10">
+                <div className="relative z-10 flex flex-col h-full">
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
                     <Sparkles size={28} />
                   </div>
@@ -243,16 +242,16 @@ export default function LupaPasswordAsesi() {
                     Keamanan Akun
                   </p>
 
-                  <h2 className="mb-4 text-2xl font-black">
+                  <h2 className="text-2xl font-black leading-tight">
                     Akun Terproteksi
                   </h2>
 
-                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
                     Setelah password diperbarui, gunakan password baru saat
                     login berikutnya. Jangan bagikan password kepada siapapun.
                   </p>
 
-                  <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
                     <HeroPill label="Role" value="Asesi" />
                     <HeroPill label="Status" value="Aman" />
                   </div>
@@ -285,15 +284,13 @@ export default function LupaPasswordAsesi() {
             />
           )}
 
-          {/* CONTENT */}
           <section className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start">
-            {/* FORM */}
             <form
               id="form-ubah-password"
               onSubmit={handleSubmit}
-              className="overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm"
+              className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm"
             >
-              <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between lg:p-8">
+              <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div>
                   <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                     <LockKeyhole size={15} className="text-orange-500" />
@@ -302,13 +299,12 @@ export default function LupaPasswordAsesi() {
                     </span>
                   </div>
 
-                  <h2 className="text-2xl lg:text-3xl font-black text-[#071E3D]">
+                  <h2 className="text-xl font-black text-[#071E3D]">
                     Ubah Password Asesi
                   </h2>
 
-                  <p className="mt-2 text-sm font-medium text-slate-400">
-                    Masukkan password lama, password baru, dan konfirmasi
-                    password baru.
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+                    Masukkan password lama, baru, dan konfirmasi
                   </p>
                 </div>
 
@@ -323,7 +319,7 @@ export default function LupaPasswordAsesi() {
                 </button>
               </div>
 
-              <div className="p-6 lg:p-8 space-y-5">
+              <div className="p-6 space-y-5">
                 <PasswordInput
                   label="Password Lama"
                   name="password_lama"
@@ -379,7 +375,7 @@ export default function LupaPasswordAsesi() {
                 )}
               </div>
 
-              <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/50 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8">
+              <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/50 p-6 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm font-medium text-slate-500">
                   Pastikan password baru sudah benar sebelum menyimpan
                   perubahan.
@@ -400,7 +396,6 @@ export default function LupaPasswordAsesi() {
               </div>
             </form>
 
-            {/* SIDE INFO */}
             <aside className="space-y-5">
               <InfoCard
                 icon={<ShieldCheck size={22} />}

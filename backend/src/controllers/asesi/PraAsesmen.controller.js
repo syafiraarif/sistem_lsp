@@ -105,6 +105,14 @@ exports.getFormPraAsesmen = async (req, res) => {
 
     const presensi = peserta.presensi || null;
 
+    const ttdAsesiPath =
+      asesi.ttd_path ||
+      asesi.ttd ||
+      asesi.tanda_tangan ||
+      asesi.file_ttd ||
+      asesi.ttd_asesi ||
+      null;
+
     return res.json({
       success: true,
       message: "Form pra asesmen berhasil diambil",
@@ -133,12 +141,8 @@ exports.getFormPraAsesmen = async (req, res) => {
           pelaksanaan_uji: jadwal.pelaksanaan_uji || "-",
         },
 
-        ttd_asesi_ready: Boolean(
-          asesi.ttd ||
-            asesi.tanda_tangan ||
-            asesi.file_ttd ||
-            asesi.ttd_asesi
-        ),
+        ttd_asesi_ready: Boolean(ttdAsesiPath),
+        ttd_asesi_path: ttdAsesiPath,
 
         is_submitted: Boolean(presensi),
         presensi,
@@ -163,6 +167,13 @@ exports.submitPraAsesmen = async (req, res) => {
     const { id_peserta, catatan } = req.body;
     const id_user = req.user?.id_user || req.user?.id;
 
+    if (!id_user) {
+      return res.status(401).json({
+        success: false,
+        message: "User tidak valid. Silakan login ulang.",
+      });
+    }
+
     if (!id_peserta) {
       return res.status(400).json({
         success: false,
@@ -176,6 +187,10 @@ exports.submitPraAsesmen = async (req, res) => {
         id_user,
       },
       include: [
+        {
+          model: ProfileAsesi,
+          as: "asesi",
+        },
         {
           model: Presensi,
           as: "presensi",
@@ -197,11 +212,32 @@ exports.submitPraAsesmen = async (req, res) => {
       });
     }
 
+    const asesi = peserta.asesi || {};
+
+    const ttdAsesiPath =
+      asesi.ttd_path ||
+      asesi.ttd ||
+      asesi.tanda_tangan ||
+      asesi.file_ttd ||
+      asesi.ttd_asesi ||
+      null;
+
+    if (!ttdAsesiPath) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "TTD asesi belum tersedia. Silakan lengkapi tanda tangan di profile terlebih dahulu.",
+      });
+    }
+
     const presensi = await Presensi.create({
       id_peserta,
-      catatan: catatan || "Hadir",
+      catatan: catatan?.trim() || "Hadir",
       status: "hadir",
       waktu_presensi: new Date(),
+
+      // WAJIB: kolom ini NOT NULL di model/database Presensi kamu
+      ttd_asesi_path: ttdAsesiPath,
     });
 
     return res.json({
@@ -216,6 +252,12 @@ exports.submitPraAsesmen = async (req, res) => {
       success: false,
       message: "Gagal submit pra asesmen",
       error: error.message,
+      sqlMessage: error.sqlMessage,
+      errors: error.errors?.map((item) => ({
+        message: item.message,
+        path: item.path,
+        value: item.value,
+      })),
     });
   }
 };

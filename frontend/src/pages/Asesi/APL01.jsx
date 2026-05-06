@@ -20,13 +20,15 @@ import {
   RefreshCcw,
   User,
   BriefcaseBusiness,
+  Sparkles,
+  ChevronRight,
 } from "lucide-react";
 
 const APL01 = () => {
   const { id_peserta } = useParams();
   const navigate = useNavigate();
 
-  const API_BASE = import.meta.env.VITE_API_BASE;
+  const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -517,181 +519,145 @@ const APL01 = () => {
   const selectedCount = selectedPersyaratan.length;
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center">
-          <Loader2
-            className="animate-spin text-orange-500 mx-auto mb-5"
-            size={44}
-          />
-          <p className="text-[#071E3D] font-black text-lg">Memuat APL01</p>
-          <p className="text-slate-400 text-sm mt-1 font-medium">
-            Mohon tunggu sebentar...
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen title="Memuat APL01" desc="Mengambil data formulir aplikasi asesmen." />;
   }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto">
-          <section className="relative overflow-hidden bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 lg:p-8 mb-6">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-[90px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#071E3D]/5 rounded-full blur-[90px] pointer-events-none" />
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
+        <div className="w-full max-w-[1500px] mx-auto space-y-6">
+          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
+            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
+            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 mb-4">
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
+              <div className="flex flex-col justify-center">
+                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <ClipboardList size={15} className="text-orange-500" />
-                  <span className="text-orange-500 text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
                     Formulir APL01
                   </span>
                 </div>
 
-                <h1 className="text-3xl lg:text-4xl font-black text-[#071E3D] leading-tight">
-                  APL01 - Aplikasi Asesmen
+                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
+                  APL01
+                  <br />
+                  <span className="text-orange-500">Aplikasi Asesmen</span>
                 </h1>
 
-                <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
+                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
                   Lengkapi tujuan asesmen, data persyaratan, dan dokumen
                   pendukung sesuai kebutuhan aplikasi asesmen.
                 </p>
 
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <InfoBadge label="ID Peserta" value={id_peserta || "-"} />
-                  <InfoBadge label="ID Jadwal" value={getIdJadwal()} />
-                  <InfoBadge label="ID Skema" value={getIdSkema()} />
-                  <InfoBadge
-                    label="Status APL01"
-                    value={apl01?.status || "Belum Dibuat"}
-                  />
-                </div>
-              </div>
-
-              <div className="bg-[#071E3D] text-white rounded-[26px] p-5 min-w-[240px] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/20 rounded-full blur-3xl -mr-12 -mt-12" />
-
-                <div className="relative z-10">
-                  <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">
-                    Persyaratan Dipilih
-                  </p>
-
-                  <div className="flex items-end justify-between mt-2">
-                    <h2 className="text-4xl font-black">{selectedCount}</h2>
-                    <FileText className="text-orange-400" size={30} />
-                  </div>
-
+                <div className="mt-7 flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
                     onClick={handleRefresh}
                     disabled={refreshing}
-                    className="mt-4 w-full px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
                     {refreshing ? (
-                      <Loader2 size={15} className="animate-spin" />
+                      <Loader2 size={17} className="animate-spin" />
                     ) : (
-                      <RefreshCcw size={15} />
+                      <RefreshCcw size={17} />
                     )}
                     Refresh
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/asesi/jadwal-saya")}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+                  >
+                    Jadwal Saya
+                    <ChevronRight size={17} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
+                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
+                    <Sparkles size={28} />
+                  </div>
+
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
+                    Persyaratan Dipilih
+                  </p>
+
+                  <h2 className="text-4xl font-black leading-tight">
+                    {selectedCount}
+                  </h2>
+
+                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
+                    Status APL01: {apl01?.status || "Belum Dibuat"}.
+                  </p>
+
+                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
+                    <HeroPill label="ID Peserta" value={id_peserta || "-"} />
+                    <HeroPill label="ID Skema" value={getIdSkema()} />
+                  </div>
                 </div>
               </div>
             </div>
           </section>
 
+          <section className="grid grid-cols-1 md:grid-cols-4 gap-5">
+            <MiniStat label="ID Peserta" value={id_peserta || "-"} />
+            <MiniStat label="ID Jadwal" value={getIdJadwal()} />
+            <MiniStat label="ID Skema" value={getIdSkema()} />
+            <MiniStat label="Status" value={apl01?.status || "Belum Dibuat"} />
+          </section>
+
           <form
             onSubmit={handleSubmit}
-            className="grid grid-cols-1 xl:grid-cols-3 gap-6"
+            className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start"
           >
-            <section className="xl:col-span-2 space-y-6">
+            <section className="space-y-6">
               <Card title="Data Pribadi Asesi" icon={<User size={22} />}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <DataItem
                     label="Nama Lengkap"
-                    value={getProfileValue(
-                      "nama_lengkap",
-                      "nama",
-                      "nama_asesi"
-                    )}
+                    value={getProfileValue("nama_lengkap", "nama", "nama_asesi")}
                   />
-
-                  <DataItem
-                    label="Tempat Lahir"
-                    value={getProfileValue("tempat_lahir")}
-                  />
-
+                  <DataItem label="Tempat Lahir" value={getProfileValue("tempat_lahir")} />
                   <DataItem
                     label="Tanggal Lahir"
-                    value={formatTanggal(
-                      getProfileValue("tanggal_lahir", "tgl_lahir")
-                    )}
+                    value={formatTanggal(getProfileValue("tanggal_lahir", "tgl_lahir"))}
                   />
-
-                  <DataItem
-                    label="Jenis Kelamin"
-                    value={getProfileValue("jenis_kelamin", "gender")}
-                  />
-
+                  <DataItem label="Jenis Kelamin" value={getProfileValue("jenis_kelamin", "gender")} />
                   <DataItem
                     label="Kebangsaan"
-                    value={getProfileValue(
-                      "kebangsaan",
-                      "kewarganegaraan",
-                      "warga_negara"
-                    )}
+                    value={getProfileValue("kebangsaan", "kewarganegaraan", "warga_negara")}
                   />
-
                   <DataItem
                     label="Pendidikan Terakhir"
-                    value={getProfileValue(
-                      "pendidikan_terakhir",
-                      "pendidikan"
-                    )}
+                    value={getProfileValue("pendidikan_terakhir", "pendidikan")}
                   />
-
                   <div className="md:col-span-2">
-                    <DataItem
-                      label="Alamat Rumah"
-                      value={getProfileValue("alamat_rumah", "alamat")}
-                    />
+                    <DataItem label="Alamat Rumah" value={getProfileValue("alamat_rumah", "alamat")} />
                   </div>
                 </div>
               </Card>
 
-              <Card
-                title="Data Pekerjaan / Perusahaan"
-                icon={<BriefcaseBusiness size={22} />}
-              >
+              <Card title="Data Pekerjaan / Perusahaan" icon={<BriefcaseBusiness size={22} />}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DataItem
-                    label="Jabatan"
-                    value={getProfileValue("jabatan", "pekerjaan")}
-                  />
-
+                  <DataItem label="Jabatan" value={getProfileValue("jabatan", "pekerjaan")} />
                   <DataItem
                     label="Nama Lembaga / Perusahaan"
-                    value={getProfileValue(
-                      "nama_lembaga",
-                      "nama_perusahaan",
-                      "lembaga",
-                      "perusahaan"
-                    )}
+                    value={getProfileValue("nama_lembaga", "nama_perusahaan", "lembaga", "perusahaan")}
                   />
-
                   <div className="md:col-span-2">
                     <DataItem
                       label="Alamat Perusahaan"
-                      value={getProfileValue(
-                        "alamat_perusahaan",
-                        "alamat_kantor"
-                      )}
+                      value={getProfileValue("alamat_perusahaan", "alamat_kantor")}
                     />
                   </div>
-
                   <DataItem
                     label="No. Telp Perusahaan"
                     value={getProfileValue(
@@ -701,32 +667,18 @@ const APL01 = () => {
                       "telepon_perusahaan"
                     )}
                   />
-
                   <DataItem
                     label="Fax Perusahaan"
-                    value={getProfileValue(
-                      "fax",
-                      "no_fax",
-                      "fax_perusahaan",
-                      "no_fax_perusahaan"
-                    )}
+                    value={getProfileValue("fax", "no_fax", "fax_perusahaan", "no_fax_perusahaan")}
                   />
-
                   <DataItem
                     label="Email Perusahaan"
-                    value={getProfileValue(
-                      "email_perusahaan",
-                      "email_kantor",
-                      "email_lembaga"
-                    )}
+                    value={getProfileValue("email_perusahaan", "email_kantor", "email_lembaga")}
                   />
                 </div>
               </Card>
 
-              <Card
-                title="Bagian 2: Data Sertifikasi"
-                icon={<ShieldCheck size={22} />}
-              >
+              <Card title="Bagian 2: Data Sertifikasi" icon={<ShieldCheck size={22} />}>
                 <div className="space-y-6">
                   <div className="overflow-hidden rounded-2xl border border-slate-100">
                     <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-slate-100">
@@ -746,7 +698,6 @@ const APL01 = () => {
                               Judul
                             </p>
                           </div>
-
                           <div className="md:col-span-3 p-4">
                             <p className="text-sm font-black text-[#071E3D]">
                               {getJudulSkema()}
@@ -760,7 +711,6 @@ const APL01 = () => {
                               Nomor
                             </p>
                           </div>
-
                           <div className="md:col-span-3 p-4">
                             <p className="text-sm font-black text-[#071E3D]">
                               {getNomorSkema()}
@@ -779,54 +729,18 @@ const APL01 = () => {
 
                       <div className="lg:col-span-8 bg-white p-4">
                         <div className="space-y-3">
-                          <RadioTujuan
-                            label="Sertifikasi"
-                            value="sertifikasi"
-                            tujuan={tujuan}
-                            setTujuan={setTujuan}
-                            disabled={isSubmitted}
-                          />
-
-                          <RadioTujuan
-                            label="Sertifikasi Ulang"
-                            value="sertifikasi_ulang"
-                            tujuan={tujuan}
-                            setTujuan={setTujuan}
-                            disabled={isSubmitted}
-                          />
-
-                          <RadioTujuan
-                            label="Pengakuan Kompetensi Terkini (PKT)"
-                            value="pkk"
-                            tujuan={tujuan}
-                            setTujuan={setTujuan}
-                            disabled={isSubmitted}
-                          />
-
-                          <RadioTujuan
-                            label="Rekognisi Pembelajaran Lampau"
-                            value="rpl"
-                            tujuan={tujuan}
-                            setTujuan={setTujuan}
-                            disabled={isSubmitted}
-                          />
-
-                          <RadioTujuan
-                            label="Lainnya"
-                            value="lainnya"
-                            tujuan={tujuan}
-                            setTujuan={setTujuan}
-                            disabled={isSubmitted}
-                          />
+                          <RadioTujuan label="Sertifikasi" value="sertifikasi" tujuan={tujuan} setTujuan={setTujuan} disabled={isSubmitted} />
+                          <RadioTujuan label="Sertifikasi Ulang" value="sertifikasi_ulang" tujuan={tujuan} setTujuan={setTujuan} disabled={isSubmitted} />
+                          <RadioTujuan label="Pengakuan Kompetensi Terkini (PKT)" value="pkk" tujuan={tujuan} setTujuan={setTujuan} disabled={isSubmitted} />
+                          <RadioTujuan label="Rekognisi Pembelajaran Lampau" value="rpl" tujuan={tujuan} setTujuan={setTujuan} disabled={isSubmitted} />
+                          <RadioTujuan label="Lainnya" value="lainnya" tujuan={tujuan} setTujuan={setTujuan} disabled={isSubmitted} />
 
                           {tujuan === "lainnya" && (
                             <input
                               type="text"
                               placeholder="Tuliskan tujuan asesmen lainnya"
                               value={tujuanLainnya}
-                              onChange={(e) =>
-                                setTujuanLainnya(e.target.value)
-                              }
+                              onChange={(e) => setTujuanLainnya(e.target.value)}
                               disabled={isSubmitted}
                               className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
                               required
@@ -865,30 +779,19 @@ const APL01 = () => {
                           <tbody>
                             {unitKompetensi.map((unit, index) => (
                               <tr
-                                key={
-                                  unit.id_unit ||
-                                  unit.id_unit_kompetensi ||
-                                  index
-                                }
-                                className={
-                                  index % 2 === 0
-                                    ? "bg-white"
-                                    : "bg-slate-50/60"
-                                }
+                                key={unit.id_unit || unit.id_unit_kompetensi || index}
+                                className={index % 2 === 0 ? "bg-white" : "bg-slate-50/60"}
                               >
                                 <td className="p-4 border-b border-slate-100 font-bold text-slate-500">
                                   {index + 1}
                                 </td>
-
                                 <td className="p-4 border-b border-slate-100 font-black text-[#071E3D]">
                                   {getUnitKode(unit)}
                                 </td>
-
                                 <td className="p-4 border-b border-slate-100 font-bold text-[#071E3D]">
                                   {getUnitJudul(unit)}
                                   <span className="ml-2 text-red-500">✅</span>
                                 </td>
-
                                 <td className="p-4 border-b border-slate-100 font-medium text-slate-500">
                                   {getUnitStandar(unit)}
                                 </td>
@@ -968,8 +871,7 @@ const APL01 = () => {
                               </div>
 
                               <p className="text-slate-400 text-xs font-medium">
-                                Centang persyaratan lalu upload dokumen
-                                pendukung.
+                                Centang persyaratan lalu upload dokumen pendukung.
                               </p>
                             </div>
                           </label>
@@ -977,56 +879,24 @@ const APL01 = () => {
                           {checked && (
                             <div className="mt-5 ml-0 md:ml-9 space-y-4">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
-                                    Nomor Dokumen
-                                  </label>
+                                <FieldWithIcon
+                                  label="Nomor Dokumen"
+                                  icon={<Hash size={16} />}
+                                  type="text"
+                                  placeholder="Masukkan nomor dokumen"
+                                  value={nomorDokumen[id] || ""}
+                                  onChange={(value) => handleNomorDokumenChange(id, value)}
+                                  disabled={isSubmitted}
+                                />
 
-                                  <div className="relative">
-                                    <Hash
-                                      size={16}
-                                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                                    />
-                                    <input
-                                      type="text"
-                                      placeholder="Masukkan nomor dokumen"
-                                      value={nomorDokumen[id] || ""}
-                                      onChange={(e) =>
-                                        handleNomorDokumenChange(
-                                          id,
-                                          e.target.value
-                                        )
-                                      }
-                                      disabled={isSubmitted}
-                                      className="w-full pl-11 pr-5 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
-                                    />
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
-                                    Tanggal Dokumen
-                                  </label>
-
-                                  <div className="relative">
-                                    <CalendarDays
-                                      size={16}
-                                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                                    />
-                                    <input
-                                      type="date"
-                                      value={tanggalDokumen[id] || ""}
-                                      onChange={(e) =>
-                                        handleTanggalDokumenChange(
-                                          id,
-                                          e.target.value
-                                        )
-                                      }
-                                      disabled={isSubmitted}
-                                      className="w-full pl-11 pr-5 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
-                                    />
-                                  </div>
-                                </div>
+                                <FieldWithIcon
+                                  label="Tanggal Dokumen"
+                                  icon={<CalendarDays size={16} />}
+                                  type="date"
+                                  value={tanggalDokumen[id] || ""}
+                                  onChange={(value) => handleTanggalDokumenChange(id, value)}
+                                  disabled={isSubmitted}
+                                />
                               </div>
 
                               {!isSubmitted && (
@@ -1049,19 +919,14 @@ const APL01 = () => {
                                           : "Pilih file dokumen"}
                                       </p>
                                       <p className="text-xs text-slate-400 font-medium mt-1">
-                                        File akan dikirim sebagai field
-                                        file_dokumen. Backend menyimpan path ke
-                                        kolom file_path.
+                                        File akan dikirim sebagai field file_dokumen.
                                       </p>
                                     </div>
 
                                     <input
                                       type="file"
                                       onChange={(e) =>
-                                        handleDokumenChange(
-                                          id,
-                                          e.target.files?.[0] || null
-                                        )
+                                        handleDokumenChange(id, e.target.files?.[0] || null)
                                       }
                                       className="hidden"
                                       required={!alreadyUploaded}
@@ -1085,7 +950,7 @@ const APL01 = () => {
               </Card>
             </section>
 
-            <aside className="xl:col-span-1">
+            <aside>
               <div className="sticky top-6 space-y-6">
                 <Card title="Informasi Submit" icon={<PenLine size={22} />}>
                   <div className="space-y-4">
@@ -1095,8 +960,7 @@ const APL01 = () => {
                         <div>
                           <p className="font-black">Sesuai Model Database</p>
                           <p className="text-sm font-medium mt-1">
-                            Data asesmen masuk ke apl01_asesmen. Dokumen masuk
-                            ke apl01_dokumen.
+                            Data asesmen masuk ke apl01_asesmen. Dokumen masuk ke apl01_dokumen.
                           </p>
                         </div>
                       </div>
@@ -1121,33 +985,19 @@ const APL01 = () => {
                   </div>
                 </Card>
 
-                <div className="bg-[#071E3D] rounded-[30px] p-6 text-white relative overflow-hidden">
+                <div className="bg-[#071E3D] rounded-[32px] p-6 text-white relative overflow-hidden shadow-2xl shadow-[#071E3D]/15">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl -mr-20 -mt-20" />
 
                   <div className="relative z-10">
-                    <h3 className="font-black text-xl mb-2">
-                      Ringkasan APL01
-                    </h3>
+                    <h3 className="font-black text-xl mb-2">Ringkasan APL01</h3>
 
                     <div className="space-y-3 mt-5">
-                      <SummaryItem
-                        label="ID Peserta"
-                        value={id_peserta || "-"}
-                      />
+                      <SummaryItem label="ID Peserta" value={id_peserta || "-"} />
                       <SummaryItem label="ID Jadwal" value={getIdJadwal()} />
                       <SummaryItem label="ID Skema" value={getIdSkema()} />
-                      <SummaryItem
-                        label="Persyaratan Dipilih"
-                        value={selectedCount}
-                      />
-                      <SummaryItem
-                        label="Tujuan Asesmen"
-                        value={tujuan || "-"}
-                      />
-                      <SummaryItem
-                        label="Status"
-                        value={apl01?.status || "Draft Baru"}
-                      />
+                      <SummaryItem label="Persyaratan Dipilih" value={selectedCount} />
+                      <SummaryItem label="Tujuan Asesmen" value={tujuan || "-"} />
+                      <SummaryItem label="Status" value={apl01?.status || "Draft Baru"} />
                     </div>
                   </div>
                 </div>
@@ -1161,11 +1011,7 @@ const APL01 = () => {
                       : "bg-orange-500 hover:bg-[#071E3D] shadow-orange-500/20"
                   }`}
                 >
-                  {submitting ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : (
-                    <Send size={18} />
-                  )}
+                  {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
 
                   {isSubmitted
                     ? "Sudah Submit"
@@ -1182,9 +1028,25 @@ const APL01 = () => {
   );
 };
 
+function LoadingScreen({ title, desc }) {
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-5">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl p-10 text-center max-w-sm w-full">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
+          <Loader2 className="animate-spin text-white" size={34} />
+        </div>
+
+        <h2 className="text-[#071E3D] font-black text-xl">{title}</h2>
+
+        <p className="text-slate-500 text-sm mt-2 font-medium">{desc}</p>
+      </div>
+    </div>
+  );
+}
+
 const Card = ({ title, icon, children }) => {
   return (
-    <section className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden">
+    <section className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-slate-100 flex items-center gap-4">
         <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
           {icon}
@@ -1203,13 +1065,24 @@ const Card = ({ title, icon, children }) => {
   );
 };
 
-const InfoBadge = ({ label, value }) => {
+const MiniStat = ({ label, value }) => {
   return (
-    <div className="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100">
-      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5">
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
         {label}
       </p>
-      <p className="text-sm font-black text-[#071E3D] mt-1">{value || "-"}</p>
+      <p className="text-[#071E3D] font-black mt-1 truncate">{value}</p>
+    </div>
+  );
+};
+
+const HeroPill = ({ label, value }) => {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );
 };
@@ -1241,6 +1114,38 @@ const DataItem = ({ label, value }) => {
       <p className="text-sm font-black text-[#071E3D] break-words">
         {value || "-"}
       </p>
+    </div>
+  );
+};
+
+const FieldWithIcon = ({
+  label,
+  icon,
+  type = "text",
+  placeholder = "",
+  value,
+  onChange,
+  disabled,
+}) => {
+  return (
+    <div>
+      <label className="block text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50 mb-3">
+        {label}
+      </label>
+
+      <div className="relative">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+          {icon}
+        </div>
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          className="w-full pl-11 pr-5 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/5 focus:border-orange-500 transition-all text-sm font-bold text-[#071E3D] disabled:opacity-70 disabled:cursor-not-allowed"
+        />
+      </div>
     </div>
   );
 };

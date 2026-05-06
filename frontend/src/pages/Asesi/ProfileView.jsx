@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// frontend/src/pages/asesi/ProfileView.jsx
+
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
@@ -6,12 +8,7 @@ import {
   AlertCircle,
   BadgeCheck,
   BriefcaseBusiness,
-  Calendar,
   ChevronRight,
-  Download,
-  Eraser,
-  FileCheck2,
-  FileText,
   Globe,
   GraduationCap,
   Hash,
@@ -21,7 +18,6 @@ import {
   Pencil,
   Phone,
   RefreshCcw,
-  Save,
   ShieldCheck,
   Sparkles,
   Upload,
@@ -30,15 +26,9 @@ import {
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
-const WILAYAH_PUBLIC_BASE =
-  "https://emsifa.github.io/api-wilayah-indonesia/api";
 
 const api = axios.create({
   baseURL: API_BASE,
-});
-
-const publicWilayahApi = axios.create({
-  baseURL: WILAYAH_PUBLIC_BASE,
 });
 
 api.interceptors.request.use((config) => {
@@ -50,38 +40,6 @@ api.interceptors.request.use((config) => {
 
   return config;
 });
-
-const normalizeList = (payload) => {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.result)) return payload.result;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
-};
-
-const getItemId = (item) => {
-  return String(
-    item?.id ||
-      item?.kode ||
-      item?.id_provinsi ||
-      item?.id_kota ||
-      item?.id_kecamatan ||
-      item?.id_kelurahan ||
-      ""
-  );
-};
-
-const getItemName = (item) => {
-  return (
-    item?.name ||
-    item?.nama ||
-    item?.nama_provinsi ||
-    item?.nama_kota ||
-    item?.nama_kecamatan ||
-    item?.nama_kelurahan ||
-    ""
-  );
-};
 
 export default function ProfileView() {
   const navigate = useNavigate();
@@ -119,47 +77,6 @@ export default function ProfileView() {
     return getImageSrc(path);
   };
 
-  const getNameFromList = (list, idOrName) => {
-    if (!idOrName) return "-";
-
-    const found = list.find((item) => {
-      const itemId = getItemId(item);
-      const itemName = getItemName(item);
-
-      return (
-        String(itemId) === String(idOrName) ||
-        String(itemName || "").toLowerCase() ===
-          String(idOrName || "").toLowerCase()
-      );
-    });
-
-    return getItemName(found) || idOrName || "-";
-  };
-
-  const fetchWilayahWithFallback = async ({
-    backendPath,
-    publicPath,
-    errorMessage,
-  }) => {
-    try {
-      const res = await api.get(backendPath);
-      return normalizeList(res.data);
-    } catch (backendErr) {
-      console.warn(
-        `Backend wilayah gagal: ${backendPath}. Fallback ke API publik.`,
-        backendErr?.response?.status || backendErr?.message
-      );
-
-      try {
-        const publicRes = await publicWilayahApi.get(publicPath);
-        return normalizeList(publicRes.data);
-      } catch (publicErr) {
-        console.error(errorMessage, publicErr);
-        throw new Error(errorMessage);
-      }
-    }
-  };
-
   const loadProfile = async () => {
     try {
       setError("");
@@ -194,7 +111,14 @@ export default function ProfileView() {
         setFiles({});
       }
 
-      await resolveWilayah(profileData);
+      setWilayah({
+        provinsi: profileData.provinsi || profileData.provinsi_nama || "-",
+        kota: profileData.kota || profileData.kota_nama || "-",
+        kecamatan:
+          profileData.kecamatan || profileData.kecamatan_nama || "-",
+        kelurahan:
+          profileData.kelurahan || profileData.kelurahan_nama || "-",
+      });
     } catch (err) {
       console.error("Gagal ambil profile:", err);
 
@@ -217,76 +141,6 @@ export default function ProfileView() {
     await loadProfile();
   };
 
-  const resolveWilayah = async (data) => {
-    try {
-      let provinsiNama = data.provinsi || data.provinsi_nama || "-";
-      let kotaNama = data.kota || data.kota_nama || "-";
-      let kecamatanNama = data.kecamatan || data.kecamatan_nama || "-";
-      let kelurahanNama = data.kelurahan || data.kelurahan_nama || "-";
-
-      const provinsiId = data.provinsi_id || data.id_provinsi || "";
-      const kotaId = data.kota_id || data.id_kota || "";
-      const kecamatanId = data.kecamatan_id || data.id_kecamatan || "";
-      const kelurahanId = data.kelurahan_id || data.id_kelurahan || "";
-
-      if (provinsiId) {
-        const provinsiList = await fetchWilayahWithFallback({
-          backendPath: "/asesi/wilayah/provinsi",
-          publicPath: "/provinces.json",
-          errorMessage: "Gagal memuat data provinsi.",
-        });
-
-        provinsiNama = getNameFromList(provinsiList, provinsiId);
-      }
-
-      if (provinsiId && kotaId) {
-        const kotaList = await fetchWilayahWithFallback({
-          backendPath: `/asesi/wilayah/kota/${provinsiId}`,
-          publicPath: `/regencies/${provinsiId}.json`,
-          errorMessage: "Gagal memuat data kota/kabupaten.",
-        });
-
-        kotaNama = getNameFromList(kotaList, kotaId);
-      }
-
-      if (kotaId && kecamatanId) {
-        const kecamatanList = await fetchWilayahWithFallback({
-          backendPath: `/asesi/wilayah/kecamatan/${kotaId}`,
-          publicPath: `/districts/${kotaId}.json`,
-          errorMessage: "Gagal memuat data kecamatan.",
-        });
-
-        kecamatanNama = getNameFromList(kecamatanList, kecamatanId);
-      }
-
-      if (kecamatanId && kelurahanId) {
-        const kelurahanList = await fetchWilayahWithFallback({
-          backendPath: `/asesi/wilayah/kelurahan/${kecamatanId}`,
-          publicPath: `/villages/${kecamatanId}.json`,
-          errorMessage: "Gagal memuat data kelurahan/desa.",
-        });
-
-        kelurahanNama = getNameFromList(kelurahanList, kelurahanId);
-      }
-
-      setWilayah({
-        provinsi: provinsiNama || "-",
-        kota: kotaNama || "-",
-        kecamatan: kecamatanNama || "-",
-        kelurahan: kelurahanNama || "-",
-      });
-    } catch (err) {
-      console.error("Gagal resolve wilayah:", err);
-
-      setWilayah({
-        provinsi: data.provinsi || data.provinsi_nama || "-",
-        kota: data.kota || data.kota_nama || "-",
-        kecamatan: data.kecamatan || data.kecamatan_nama || "-",
-        kelurahan: data.kelurahan || data.kelurahan_nama || "-",
-      });
-    }
-  };
-
   const formatTanggal = (date) => {
     if (!date) return "-";
 
@@ -302,59 +156,19 @@ export default function ProfileView() {
   };
 
   const profilePhoto = useMemo(() => {
-    return resolveFileUrl(files.foto_profil) || getImageSrc(profile?.foto_profil);
+    return (
+      resolveFileUrl(files.foto_profil) || getImageSrc(profile?.foto_profil)
+    );
   }, [files, profile]);
 
   const ttdUrl = useMemo(() => {
-    return resolveFileUrl(files.ttd) || getImageSrc(profile?.ttd_path);
+    return (
+      resolveFileUrl(files.ttd) ||
+      resolveFileUrl(files.tanda_tangan) ||
+      getImageSrc(profile?.ttd_path) ||
+      getImageSrc(profile?.ttd)
+    );
   }, [files, profile]);
-
-  const dokumenList = useMemo(() => {
-    return [
-      {
-        key: "pas_foto",
-        label: "Pas Foto",
-        value: resolveFileUrl(files.pas_foto) || getImageSrc(profile?.pas_foto),
-      },
-      {
-        key: "ktp",
-        label: "KTP",
-        value: resolveFileUrl(files.ktp) || getImageSrc(profile?.ktp),
-      },
-      {
-        key: "ijazah",
-        label: "Ijazah",
-        value: resolveFileUrl(files.ijazah) || getImageSrc(profile?.ijazah),
-      },
-      {
-        key: "transkrip",
-        label: "Transkrip",
-        value:
-          resolveFileUrl(files.transkrip) || getImageSrc(profile?.transkrip),
-      },
-      {
-        key: "kk",
-        label: "Kartu Keluarga",
-        value: resolveFileUrl(files.kk) || getImageSrc(profile?.kk),
-      },
-      {
-        key: "surat_kerja",
-        label: "Surat Kerja",
-        value:
-          resolveFileUrl(files.surat_kerja) ||
-          getImageSrc(profile?.surat_kerja),
-      },
-      {
-        key: "portofolio",
-        label: "Portofolio",
-        value:
-          resolveFileUrl(files.portofolio) || getImageSrc(profile?.portofolio),
-      },
-    ];
-  }, [files, profile]);
-
-  const totalDokumen = dokumenList.length;
-  const dokumenTerisi = dokumenList.filter((item) => Boolean(item.value)).length;
 
   if (loading) {
     return <LoadingScreen />;
@@ -433,9 +247,8 @@ export default function ProfileView() {
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Lihat ringkasan data diri, pendidikan, alamat, pekerjaan,
-                  dokumen pendukung, dan kelola tanda tangan digital langsung
-                  dari halaman ini.
+                  Lihat ringkasan data diri, pendidikan, alamat, pekerjaan, dan
+                  status tanda tangan digital dari halaman profile.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -454,7 +267,7 @@ export default function ProfileView() {
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
                   >
                     <Upload size={17} />
-                    Upload Dokumen
+                    Kelola Dokumen & TTD
                   </button>
 
                   <button
@@ -490,16 +303,13 @@ export default function ProfileView() {
                   </h2>
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    {dokumenTerisi}/{totalDokumen} dokumen pendukung tersedia.
-                    Tanda tangan digital dapat dibuat langsung memakai canvas.
+                    Status tanda tangan digital:{" "}
+                    {ttdUrl ? "sudah tersedia" : "belum dibuat"}.
                   </p>
 
                   <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
                     <HeroPill label="Role" value="Asesi" />
-                    <HeroPill
-                      label="Dokumen"
-                      value={`${dokumenTerisi}/${totalDokumen}`}
-                    />
+                    <HeroPill label="TTD" value={ttdUrl ? "Ada" : "Belum"} />
                   </div>
                 </div>
               </div>
@@ -515,12 +325,16 @@ export default function ProfileView() {
               value={profile.nama_lengkap || "-"}
             />
 
-            <MiniStat icon={<Hash size={22} />} label="NIK" value={profile.nik || "-"} />
+            <MiniStat
+              icon={<Hash size={22} />}
+              label="NIK"
+              value={profile.nik || "-"}
+            />
 
             <MiniStat
-              icon={<FileCheck2 size={22} />}
-              label="Dokumen"
-              value={`${dokumenTerisi}/${totalDokumen} Terisi`}
+              icon={ttdUrl ? <BadgeCheck size={22} /> : <XCircle size={22} />}
+              label="Status TTD"
+              value={ttdUrl ? "Sudah Tersedia" : "Belum Dibuat"}
             />
           </section>
 
@@ -543,13 +357,18 @@ export default function ProfileView() {
 
               <InfoBox label="Jurusan">{profile.jurusan || "-"}</InfoBox>
 
-              <InfoBox label="Tahun Lulus">{profile.tahun_lulus || "-"}</InfoBox>
+              <InfoBox label="Tahun Lulus">
+                {profile.tahun_lulus || "-"}
+              </InfoBox>
             </div>
           </Card>
 
           <Card title="Alamat" icon={<MapPin size={22} />}>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              <InfoBox label="Alamat Lengkap" className="md:col-span-2 xl:col-span-4">
+              <InfoBox
+                label="Alamat Lengkap"
+                className="md:col-span-2 xl:col-span-4"
+              >
                 {profile.alamat || "-"}
               </InfoBox>
 
@@ -605,45 +424,17 @@ export default function ProfileView() {
             </div>
           </Card>
 
-          <section className="grid grid-cols-1 xl:grid-cols-[1fr_430px] gap-6 items-start">
-            <Card title="Dokumen" icon={<FileText size={22} />}>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {dokumenList.map((item) => (
-                  <DocumentBox
-                    key={item.key}
-                    label={item.label}
-                    url={item.value}
-                  />
-                ))}
-              </div>
-
-              <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => navigate("/asesi/profile/dokumen")}
-                  className="px-6 py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-                >
-                  <Upload size={17} />
-                  Kelola Dokumen
-                  <ChevronRight size={16} />
-                </button>
-
-                <button
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className="px-6 py-4 rounded-2xl bg-[#071E3D] hover:bg-orange-500 text-white font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  {refreshing ? (
-                    <Loader2 size={17} className="animate-spin" />
-                  ) : (
-                    <RefreshCcw size={17} />
-                  )}
-                  Refresh
-                </button>
-              </div>
-            </Card>
-
-            <SignatureCard currentTtd={ttdUrl} onSaved={loadProfile} />
-          </section>
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/asesi/profile/dokumen")}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
+            >
+              <Upload size={17} />
+              Kelola Dokumen & TTD
+              <ChevronRight size={17} />
+            </button>
+          </div>
         </div>
       </main>
     </div>
@@ -688,7 +479,9 @@ function DataDiriCard({ profile, profilePhoto, ttdUrl, formatTanggal }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <InfoBox label="Nama Lengkap">{profile.nama_lengkap || "-"}</InfoBox>
+            <InfoBox label="Nama Lengkap">
+              {profile.nama_lengkap || "-"}
+            </InfoBox>
 
             <InfoBox label="NIK">{profile.nik || "-"}</InfoBox>
 
@@ -721,283 +514,6 @@ function DataDiriCard({ profile, profilePhoto, ttdUrl, formatTanggal }) {
             </InfoBox>
           </div>
         </div>
-      </div>
-    </section>
-  );
-}
-
-function SignatureCard({ currentTtd, onSaved }) {
-  const canvasRef = useRef(null);
-  const wrapperRef = useRef(null);
-
-  const [drawing, setDrawing] = useState(false);
-  const [hasDrawn, setHasDrawn] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [cacheKey, setCacheKey] = useState(Date.now());
-
-  const displayedTtd = currentTtd
-    ? `${currentTtd}${currentTtd.includes("?") ? "&" : "?"}v=${cacheKey}`
-    : "";
-
-  useEffect(() => {
-    resizeCanvas();
-
-    window.addEventListener("resize", resizeCanvas);
-
-    return () => {
-      window.removeEventListener("resize", resizeCanvas);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const resizeCanvas = () => {
-    const canvas = canvasRef.current;
-    const wrapper = wrapperRef.current;
-
-    if (!canvas || !wrapper) return;
-
-    const ratio = window.devicePixelRatio || 1;
-    const width = wrapper.clientWidth;
-    const height = 210;
-
-    canvas.width = width * ratio;
-    canvas.height = height * ratio;
-
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-
-    const ctx = canvas.getContext("2d");
-
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "#071E3D";
-
-    setHasDrawn(false);
-  };
-
-  const getPoint = (event) => {
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-
-    if (event.touches && event.touches[0]) {
-      return {
-        x: event.touches[0].clientX - rect.left,
-        y: event.touches[0].clientY - rect.top,
-      };
-    }
-
-    return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    };
-  };
-
-  const startDrawing = (event) => {
-    event.preventDefault();
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    const point = getPoint(event);
-
-    setDrawing(true);
-    setHasDrawn(true);
-
-    ctx.beginPath();
-    ctx.moveTo(point.x, point.y);
-  };
-
-  const draw = (event) => {
-    if (!drawing) return;
-
-    event.preventDefault();
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    const point = getPoint(event);
-
-    ctx.lineTo(point.x, point.y);
-    ctx.stroke();
-  };
-
-  const stopDrawing = () => {
-    setDrawing(false);
-  };
-
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    const rect = canvas.getBoundingClientRect();
-
-    ctx.clearRect(0, 0, rect.width, rect.height);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, rect.width, rect.height);
-
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "#071E3D";
-
-    setHasDrawn(false);
-  };
-
-  const saveSignature = async () => {
-    const canvas = canvasRef.current;
-
-    if (!canvas) return;
-
-    if (!hasDrawn) {
-      alert("Silakan buat tanda tangan baru di canvas terlebih dahulu.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      const ttdBase64 = canvas.toDataURL("image/png");
-
-      await api.put("/asesi/profile/upload-ttd", {
-        ttd_base64: ttdBase64,
-      });
-
-      alert("Tanda tangan berhasil diperbarui.");
-
-      clearCanvas();
-
-      setCacheKey(Date.now());
-
-      if (onSaved) {
-        await onSaved();
-      }
-
-      setCacheKey(Date.now());
-    } catch (err) {
-      console.error(err);
-
-      alert(
-        err.response?.data?.message ||
-          err.response?.data?.error ||
-          "Gagal menyimpan tanda tangan."
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <section className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-slate-100 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
-          <Pencil size={22} />
-        </div>
-
-        <div>
-          <h2 className="text-xl font-black text-[#071E3D]">
-            Tanda Tangan Digital
-          </h2>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-            Canvas TTD
-          </p>
-        </div>
-      </div>
-
-      <div className="p-6 space-y-5">
-        {currentTtd ? (
-          <div className="rounded-[24px] border border-emerald-100 bg-emerald-50 p-5">
-            <div className="flex items-center justify-between gap-4 mb-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
-                  TTD Tersimpan
-                </p>
-                <p className="text-sm font-black text-emerald-700 mt-1">
-                  Tanda tangan sudah tersedia. Jika ingin mengganti, buat tanda
-                  tangan baru di canvas lalu klik simpan.
-                </p>
-              </div>
-
-              <BadgeCheck className="text-emerald-600" size={24} />
-            </div>
-
-            <div className="rounded-2xl bg-white border border-emerald-100 p-4 flex items-center justify-center min-h-[130px]">
-              <img
-                src={displayedTtd}
-                alt="Tanda Tangan"
-                className="max-h-[110px] object-contain"
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-5 flex gap-3 text-slate-500">
-            <AlertCircle size={20} className="shrink-0 text-orange-500" />
-            <p className="text-sm font-semibold leading-relaxed">
-              Tanda tangan belum tersedia. Silakan tanda tangan di canvas, lalu
-              klik simpan.
-            </p>
-          </div>
-        )}
-
-        <div>
-          <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Canvas Tanda Tangan Baru
-              </p>
-              <p className="text-sm font-semibold text-slate-500 mt-1">
-                Coret di area putih ini untuk mengganti tanda tangan lama.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={clearCanvas}
-              disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
-            >
-              <Eraser size={15} />
-              Bersihkan
-            </button>
-          </div>
-
-          <div
-            ref={wrapperRef}
-            className="rounded-[24px] overflow-hidden border-2 border-dashed border-slate-200 bg-white"
-          >
-            <canvas
-              ref={canvasRef}
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
-              className="block w-full cursor-crosshair touch-none"
-            />
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={saveSignature}
-          disabled={saving}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          {saving ? (
-            <Loader2 size={17} className="animate-spin" />
-          ) : (
-            <Save size={17} />
-          )}
-          {saving ? "Menyimpan..." : "Simpan / Ganti Tanda Tangan"}
-        </button>
       </div>
     </section>
   );
@@ -1074,62 +590,6 @@ function InfoBox({ label, children, className = "" }) {
       <div className="text-sm font-black text-[#071E3D] leading-relaxed break-words">
         {children}
       </div>
-    </div>
-  );
-}
-
-function DocumentBox({ label, url }) {
-  const ready = Boolean(url);
-
-  return (
-    <div
-      className={`rounded-[24px] border p-5 ${
-        ready
-          ? "bg-emerald-50 border-emerald-100"
-          : "bg-slate-50 border-slate-100"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p
-            className={`text-[10px] font-black uppercase tracking-widest mb-2 ${
-              ready ? "text-emerald-600" : "text-slate-400"
-            }`}
-          >
-            {label}
-          </p>
-
-          <p
-            className={`text-sm font-black ${
-              ready ? "text-emerald-700" : "text-slate-500"
-            }`}
-          >
-            {ready ? "Dokumen tersedia" : "Belum diupload"}
-          </p>
-        </div>
-
-        <div
-          className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-            ready
-              ? "bg-white text-emerald-600"
-              : "bg-white text-slate-300 border border-slate-100"
-          }`}
-        >
-          {ready ? <BadgeCheck size={20} /> : <XCircle size={20} />}
-        </div>
-      </div>
-
-      {ready && (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] border border-white hover:bg-[#071E3D] hover:text-white transition-all"
-        >
-          <Download size={15} />
-          Lihat File
-        </a>
-      )}
     </div>
   );
 }

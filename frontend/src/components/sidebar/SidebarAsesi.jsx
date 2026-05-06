@@ -12,10 +12,11 @@ import {
   LogOut,
   X,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SidebarAsesi = ({ isOpen, setIsOpen }) => {
+const SidebarAsesi = ({ isOpen = false, setIsOpen = () => {} }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [userData, setUserData] = useState(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -25,6 +26,7 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
+
     if (storedUser) {
       try {
         setUserData(JSON.parse(storedUser));
@@ -38,13 +40,19 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
 
   const displayName =
     userData?.nama ||
+    userData?.nama_lengkap ||
     userData?.username ||
     userData?.name ||
     "Asesi";
 
   const menus = useMemo(
     () => [
-      { id: "home", name: "Home", path: "/asesi", icon: <Home size={21} /> },
+      {
+        id: "home",
+        name: "Home",
+        path: "/asesi",
+        icon: <Home size={21} />,
+      },
       {
         id: "profile",
         name: "Profile Anda",
@@ -64,6 +72,12 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
         icon: <ClipboardList size={21} />,
       },
       {
+        id: "banding",
+        name: "Banding",
+        path: "/asesi/banding",
+        icon: <AlertTriangle size={21} />,
+      },
+      {
         id: "ubah-password",
         name: "Ubah Password",
         path: "/asesi/ubah-password",
@@ -80,12 +94,40 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
       return currentPath === "/asesi";
     }
 
+    if (path === "/asesi/profile") {
+      return (
+        currentPath === "/asesi/profile" ||
+        currentPath.startsWith("/asesi/profile/")
+      );
+    }
+
     if (path === "/asesi/jadwal") {
-      return currentPath === "/asesi/jadwal" || currentPath.startsWith("/asesi/jadwal/");
+      return (
+        currentPath === "/asesi/jadwal" ||
+        currentPath.startsWith("/asesi/jadwal/") ||
+        currentPath.startsWith("/asesi/pembayaran/")
+      );
     }
 
     if (path === "/asesi/jadwal-saya") {
-      return currentPath === "/asesi/jadwal-saya" || currentPath.startsWith("/asesi/jadwal-saya/");
+      return (
+        currentPath === "/asesi/jadwal-saya" ||
+        currentPath.startsWith("/asesi/jadwal-saya/") ||
+        currentPath.startsWith("/asesi/apl01/") ||
+        currentPath.startsWith("/asesi/apl02/") ||
+        currentPath.startsWith("/asesi/pra-asesmen/")
+      );
+    }
+
+    if (path === "/asesi/banding") {
+      return (
+        currentPath === "/asesi/banding" ||
+        currentPath.startsWith("/asesi/banding/")
+      );
+    }
+
+    if (path === "/asesi/ubah-password") {
+      return currentPath === "/asesi/ubah-password";
     }
 
     return currentPath === path || currentPath.startsWith(`${path}/`);
@@ -93,7 +135,10 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
 
   const handleClick = (path) => {
     navigate(path);
-    if (window.innerWidth < 1024) setIsOpen(false);
+
+    if (window.innerWidth < 1024) {
+      setIsOpen(false);
+    }
   };
 
   const confirmLogout = () => {
@@ -101,14 +146,18 @@ const SidebarAsesi = ({ isOpen, setIsOpen }) => {
     localStorage.removeItem("role");
     localStorage.removeItem("user");
     localStorage.removeItem("id_user");
+    localStorage.removeItem("id_peserta");
+
     navigate("/login", { replace: true });
   };
 
   return (
     <>
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
         className="fixed top-4 left-4 z-[55] lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 shadow-lg text-[#071E3D] flex items-center justify-center"
+        aria-label="Buka sidebar"
       >
         <Menu size={22} />
       </button>
@@ -248,6 +297,7 @@ const SidebarContent = ({
           <h1 className="text-xl font-black text-[#071E3D] uppercase truncate max-w-[165px] leading-tight">
             {displayName}
           </h1>
+
           <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-1">
             Dashboard Asesi
           </p>
@@ -255,8 +305,10 @@ const SidebarContent = ({
 
         {isMobile && (
           <button
+            type="button"
             onClick={onClose}
             className="ml-auto mr-5 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+            aria-label="Tutup sidebar"
           >
             <X size={24} />
           </button>
@@ -271,6 +323,7 @@ const SidebarContent = ({
             return (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => handleClick(item.path)}
                 title={!isExpanded ? item.name : ""}
                 className="group w-full h-16 flex items-center"
@@ -320,6 +373,7 @@ const SidebarContent = ({
       <div className="h-28 border-t border-slate-100 bg-slate-50/50 shrink-0 flex items-center">
         <div className="w-24 h-full flex items-center justify-center shrink-0">
           <button
+            type="button"
             onClick={handleLogout}
             title={!isExpanded ? "Keluar" : ""}
             className="w-14 h-14 rounded-2xl bg-white border border-slate-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 shadow-sm flex items-center justify-center transition-colors duration-150"
@@ -329,6 +383,7 @@ const SidebarContent = ({
         </div>
 
         <button
+          type="button"
           onClick={handleLogout}
           className={`h-14 flex-1 mr-5 rounded-2xl flex items-center justify-between overflow-hidden text-red-500 transition-opacity duration-150 ${
             isExpanded ? "opacity-100" : "opacity-0"

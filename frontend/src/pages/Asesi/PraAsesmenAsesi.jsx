@@ -171,6 +171,7 @@ export default function PraAsesmenAsesi() {
       getImageSrc(profile?.ttd) ||
       ""
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files, profile]);
 
   const statusSubmit = Boolean(formData?.is_submitted);
@@ -260,13 +261,13 @@ export default function PraAsesmenAsesi() {
     <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
+        <div className="w-full max-w-[1500px] mx-auto space-y-6">
           <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
             <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
             <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
               <div className="flex flex-col justify-center">
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <ClipboardCheck size={15} className="text-orange-500" />
@@ -327,7 +328,7 @@ export default function PraAsesmenAsesi() {
               <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
                 <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
 
-                <div className="relative z-10">
+                <div className="relative z-10 flex flex-col h-full">
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
                     <Sparkles size={28} />
                   </div>
@@ -336,11 +337,11 @@ export default function PraAsesmenAsesi() {
                     Status Pra Asesmen
                   </p>
 
-                  <h2 className="mb-4 text-2xl font-black">
+                  <h2 className="text-2xl font-black leading-tight">
                     {statusSubmit ? "Sudah Submit" : "Belum Submit"}
                   </h2>
 
-                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
                     {statusSubmit
                       ? "Presensi pra asesmen sudah tercatat di sistem."
                       : statusTtd
@@ -348,7 +349,7 @@ export default function PraAsesmenAsesi() {
                       : "TTD belum tersedia. Silakan isi tanda tangan digital di halaman profile terlebih dahulu."}
                   </p>
 
-                  <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
                     <HeroPill
                       label="TTD Asesi"
                       value={statusTtd ? "Ready" : "Belum Ada"}
@@ -414,8 +415,8 @@ export default function PraAsesmenAsesi() {
               )}
 
               <section className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start">
-                <div className="overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
-                  <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between lg:p-8">
+                <div className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
+                  <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
                       <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                         <FileText size={15} className="text-orange-500" />
@@ -424,12 +425,12 @@ export default function PraAsesmenAsesi() {
                         </span>
                       </div>
 
-                      <h2 className="text-2xl lg:text-3xl font-black text-[#071E3D]">
+                      <h2 className="text-xl font-black text-[#071E3D]">
                         Informasi Asesmen
                       </h2>
 
-                      <p className="mt-2 text-sm font-medium text-slate-400">
-                        Periksa kembali data sebelum melakukan submit presensi.
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+                        Periksa kembali data sebelum submit presensi
                       </p>
                     </div>
 
@@ -439,7 +440,7 @@ export default function PraAsesmenAsesi() {
                     />
                   </div>
 
-                  <div className="p-6 lg:p-8 space-y-6">
+                  <div className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <InfoCard
                         icon={<FileText size={20} />}
@@ -537,16 +538,14 @@ export default function PraAsesmenAsesi() {
                         Catatan / Keterangan
                       </label>
 
-                      <div className="relative">
-                        <textarea
-                          value={catatan}
-                          onChange={(e) => setCatatan(e.target.value)}
-                          disabled={statusSubmit}
-                          rows={4}
-                          placeholder="Contoh: Hadir / catatan lainnya"
-                          className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10 disabled:cursor-not-allowed disabled:opacity-70"
-                        />
-                      </div>
+                      <textarea
+                        value={catatan}
+                        onChange={(e) => setCatatan(e.target.value)}
+                        disabled={statusSubmit}
+                        rows={4}
+                        placeholder="Contoh: Hadir / catatan lainnya"
+                        className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10 disabled:cursor-not-allowed disabled:opacity-70"
+                      />
 
                       {statusSubmit && (
                         <p className="mt-2 text-xs font-semibold text-slate-400">
@@ -564,7 +563,7 @@ export default function PraAsesmenAsesi() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/50 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8">
+                  <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/50 p-6 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm font-medium text-slate-500">
                       Pastikan seluruh data sudah benar sebelum submit presensi.
                     </p>
@@ -769,6 +768,7 @@ function HeroPill({ label, value }) {
       <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
         {label}
       </p>
+
       <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );

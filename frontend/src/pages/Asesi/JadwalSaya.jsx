@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Clock,
   CreditCard,
-  FileCheck2,
   FileText,
   Filter,
   Inbox,
@@ -26,7 +25,6 @@ import {
   ShieldCheck,
   Sparkles,
   Tag,
-  UploadCloud,
   Users,
   XCircle,
 } from "lucide-react";
@@ -43,7 +41,7 @@ export default function JadwalSaya() {
   const [isOpen, setIsOpen] = useState(false);
 
   const navigate = useNavigate();
-  const API = import.meta.env.VITE_API_BASE;
+  const API = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
   const getToken = () => localStorage.getItem("token");
 
@@ -335,14 +333,13 @@ export default function JadwalSaya() {
     <div className="min-h-screen bg-[#F8FAFC] flex">
       <SidebarAsesi isOpen={isOpen} setIsOpen={setIsOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* HERO */}
+      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
+        <div className="w-full max-w-[1500px] mx-auto space-y-6">
           <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
             <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
             <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 p-6 lg:p-8">
+            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
               <div className="flex flex-col justify-center">
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <CalendarDays size={15} className="text-orange-500" />
@@ -392,7 +389,7 @@ export default function JadwalSaya() {
               <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
                 <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
 
-                <div className="relative z-10">
+                <div className="relative z-10 flex flex-col h-full">
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
                     <Sparkles size={28} />
                   </div>
@@ -401,16 +398,16 @@ export default function JadwalSaya() {
                     Ringkasan Jadwal
                   </p>
 
-                  <h2 className="mb-4 text-2xl font-black">
+                  <h2 className="text-2xl font-black leading-tight">
                     {totalTersedia} Jadwal Tersedia
                   </h2>
 
-                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
                     Pantau status jadwal dan pembayaran Anda sebelum lanjut ke
                     proses asesmen.
                   </p>
 
-                  <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
                     <HeroPill label="Dipilih" value={`${totalDipilih} Jadwal`} />
                     <HeroPill label="Paid" value={`${totalPaid} Jadwal`} />
                   </div>
@@ -421,18 +418,19 @@ export default function JadwalSaya() {
 
           {error && <ErrorAlert message={error} />}
 
-          {/* STATS */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <MiniStat
               icon={<CalendarDays size={22} />}
               label="Total Jadwal"
               value={`${totalTersedia} Jadwal`}
             />
+
             <MiniStat
               icon={<BadgeCheck size={22} />}
               label="Jadwal Dipilih"
               value={`${totalDipilih} Dipilih`}
             />
+
             <MiniStat
               icon={<CheckCircle size={22} />}
               label="Pembayaran Paid"
@@ -440,7 +438,6 @@ export default function JadwalSaya() {
             />
           </section>
 
-          {/* FILTER */}
           <section className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
@@ -451,12 +448,12 @@ export default function JadwalSaya() {
                   </span>
                 </div>
 
-                <h2 className="text-2xl lg:text-3xl font-black text-[#071E3D]">
+                <h2 className="text-xl font-black text-[#071E3D]">
                   Daftar Jadwal Sertifikasi
                 </h2>
 
-                <p className="mt-2 text-sm font-medium text-slate-400">
-                  Cari berdasarkan skema, kegiatan, TUK, atau pelaksanaan uji.
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+                  Cari berdasarkan skema, kegiatan, TUK, atau pelaksanaan uji
                 </p>
               </div>
 
@@ -481,6 +478,7 @@ export default function JadwalSaya() {
                   size={18}
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
                 />
+
                 <input
                   type="text"
                   value={search}
@@ -503,7 +501,6 @@ export default function JadwalSaya() {
             </div>
           </section>
 
-          {/* LIST */}
           <section className="space-y-5">
             {filteredJadwal.length === 0 ? (
               <EmptyState search={search} />
@@ -511,7 +508,6 @@ export default function JadwalSaya() {
               filteredJadwal.map((item, index) => {
                 const skema = item.skema || item.Skema || {};
                 const tuk = item.tuk || item.Tuk || {};
-                const idSkema = getIdSkema(item);
                 const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
                 const sudahDipilih = isSudahDipilih(item.id_jadwal);
                 const sedangMemilih = choosingId === item.id_jadwal;
@@ -524,7 +520,6 @@ export default function JadwalSaya() {
                     item={item}
                     skema={skema}
                     tuk={tuk}
-                    idSkema={idSkema}
                     idPeserta={idPeserta}
                     sudahDipilih={sudahDipilih}
                     sedangMemilih={sedangMemilih}
@@ -729,15 +724,15 @@ function LoadingScreen() {
 function MiniStat({ icon, label, value }) {
   return (
     <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-      <div className="w-13 h-13 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+      <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
         {icon}
       </div>
 
-      <div>
+      <div className="min-w-0">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           {label}
         </p>
-        <p className="text-[#071E3D] font-black mt-1">{value}</p>
+        <p className="text-[#071E3D] font-black mt-1 truncate">{value}</p>
       </div>
     </div>
   );

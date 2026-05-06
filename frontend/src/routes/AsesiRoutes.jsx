@@ -41,6 +41,7 @@ export default function AsesiRoutes() {
       <Route path="apl01/:id_peserta" element={<APL01 />} />
       <Route path="apl02/:id_skema" element={<APL02 />} />
       <Route path="pembayaran/:id_skema" element={<BayarSkema />} />
+      <Route path="pra-asesmen" element={<PraAsesmenAsesi />} />
       <Route path="pra-asesmen/:id_skema" element={<PraAsesmenAsesi />} />
 
       {/* BANDING */}
