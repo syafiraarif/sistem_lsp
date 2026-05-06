@@ -1,9 +1,23 @@
+// frontend/src/pages/admin/KelompokPekerjaan.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import api from "../../services/api";
-import { 
-  Search, Plus, Edit2, Trash2, X, Save, Loader2, ArrowLeft, Briefcase 
+import {
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Save,
+  Loader2,
+  ArrowLeft,
+  Briefcase,
+  Sparkles,
+  Layers,
+  ClipboardList,
+  BadgeCheck,
 } from 'lucide-react';
 
 const KelompokPekerjaan = () => {
@@ -14,7 +28,7 @@ const KelompokPekerjaan = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Modal State
   const [showModal, setShowModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -33,7 +47,6 @@ const KelompokPekerjaan = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Menyesuaikan dengan controller getBySkema
       const response = await api.get(`/admin/kelompok-pekerjaan/skema/${id}`);
       setData(response.data?.data || []);
     } catch (error) {
@@ -111,175 +124,416 @@ const KelompokPekerjaan = () => {
   };
 
   // --- FILTER ---
-  const filteredData = data.filter(item => 
+  const filteredData = data.filter(item =>
     item.nama_kelompok && item.nama_kelompok.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const totalKelompok = data.length;
+  const totalFiltered = filteredData.length;
+  const totalDeskripsi = data.filter((item) => item.deskripsi).length;
+
   return (
-    <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
-      
-      {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate('/admin/skema')}
-            className="p-2 bg-[#FAFAFA] hover:bg-[#E2E8F0] border border-[#071E3D]/10 rounded-lg text-[#182D4A] transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h2 className="text-[22px] font-bold text-[#071E3D] m-0 mb-1">Kelompok Pekerjaan</h2>
-            <p className="text-[14px] text-[#182D4A] m-0">Kelola pemetaan kelompok pekerjaan pada skema.</p>
-          </div>
-        </div>
-        <button 
-          className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all flex items-center gap-2 text-[13px]"
-          onClick={() => {
-            setFormData(initialFormState);
-            setIsEditMode(false);
-            setShowModal(true);
-          }}
-        >
-          <Plus size={18} /> Tambah Kelompok
-        </button>
-      </div>
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* HERO */}
+        <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
+          <div className="absolute right-0 top-0 h-[430px] w-[430px] rounded-full bg-orange-500/10 blur-[110px]" />
+          <div className="absolute -bottom-24 -left-24 h-[380px] w-[380px] rounded-full bg-[#071E3D]/5 blur-[100px]" />
 
-      {/* TABLE SECTION */}
-      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6">
-        {/* Search Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <h4 className="text-[16px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
-            <Briefcase size={18} className="text-[#CC6B27]"/> Daftar Kelompok Pekerjaan
-          </h4>
-          <div className="w-full md:w-80 relative group">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Cari nama kelompok..." 
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
+          <div className="relative z-10 grid grid-cols-1 gap-6 p-6 lg:p-8 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="flex flex-col justify-center">
+              <button
+                type="button"
+                onClick={() => navigate('/admin/skema')}
+                className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all hover:bg-[#071E3D] hover:text-white"
+              >
+                <ArrowLeft size={14} />
+                Kembali ke Skema
+              </button>
 
-        {/* Table */}
-        <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
-          <table className="w-full text-left border-collapse min-w-max bg-white">
-            <thead>
-              <tr>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] w-16 text-center">Urutan</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27]">Nama Kelompok</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] w-1/3">Deskripsi</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-32">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="4" className="py-16 text-center">
-                    <Loader2 className="animate-spin text-[#CC6B27] mx-auto mb-3" size={36} />
-                    <p className="text-[#182D4A] font-medium text-[14px]">Memuat data...</p>
-                  </td>
+              <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+                <Briefcase size={15} className="text-orange-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                  Kelompok Pekerjaan
+                </span>
+              </div>
+
+              <h1 className="text-4xl font-black leading-tight text-[#071E3D] lg:text-5xl">
+                Pemetaan Kelompok
+                <br />
+                <span className="text-orange-500">Pekerjaan</span>
+              </h1>
+
+              <p className="mt-5 max-w-2xl text-base font-medium leading-relaxed text-slate-500 lg:text-lg">
+                Kelola pemetaan kelompok pekerjaan pada skema sertifikasi
+                berdasarkan urutan, nama kelompok, dan deskripsi pekerjaan.
+              </p>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(initialFormState);
+                    setIsEditMode(false);
+                    setShowModal(true);
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+                >
+                  <Plus size={17} />
+                  Tambah Kelompok
+                </button>
+
+                <button
+                  type="button"
+                  onClick={fetchData}
+                  disabled={loading}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200"
+                >
+                  {loading ? (
+                    <Loader2 size={17} className="animate-spin" />
+                  ) : (
+                    <ClipboardList size={17} />
+                  )}
+                  Refresh Data
+                </button>
+              </div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
+              <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+
+              <div className="relative z-10">
+                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
+                  <Sparkles size={28} />
+                </div>
+
+                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
+                  Ringkasan Kelompok
+                </p>
+
+                <h2 className="mb-4 text-2xl font-black">
+                  {totalKelompok} Kelompok
+                </h2>
+
+                <p className="text-sm font-medium leading-relaxed text-white/60">
+                  Data ini digunakan untuk memetakan pekerjaan dalam skema
+                  sertifikasi agar lebih terstruktur.
+                </p>
+
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <HeroPill label="Tampil" value={`${totalFiltered}`} />
+                  <HeroPill label="Deskripsi" value={`${totalDeskripsi}`} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* STATS */}
+        <section className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <MiniStat
+            icon={<Briefcase size={22} />}
+            label="Total Kelompok"
+            value={`${totalKelompok} Data`}
+          />
+          <MiniStat
+            icon={<Layers size={22} />}
+            label="Hasil Filter"
+            value={`${totalFiltered} Data`}
+            tone="navy"
+          />
+          <MiniStat
+            icon={<BadgeCheck size={22} />}
+            label="Ada Deskripsi"
+            value={`${totalDeskripsi} Data`}
+            tone="green"
+          />
+        </section>
+
+        {/* TABLE SECTION */}
+        <section className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+                <Search size={15} className="text-orange-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                  Data Kelompok
+                </span>
+              </div>
+
+              <h2 className="text-2xl font-black text-[#071E3D]">
+                Daftar Kelompok Pekerjaan
+              </h2>
+
+              <p className="mt-2 text-sm font-medium text-slate-400">
+                Cari dan kelola kelompok pekerjaan berdasarkan skema.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFormData(initialFormState);
+                setIsEditMode(false);
+                setShowModal(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+            >
+              <Plus size={16} />
+              Tambah Kelompok
+            </button>
+          </div>
+
+          {/* SEARCH */}
+          <div className="p-6">
+            <div className="relative">
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
+              />
+              <input
+                type="text"
+                placeholder="Cari nama kelompok..."
+                className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-12 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* TABLE */}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] border-collapse text-left">
+              <thead>
+                <tr className="bg-[#071E3D]">
+                  <TableHead center>Urutan</TableHead>
+                  <TableHead>Nama Kelompok</TableHead>
+                  <TableHead>Deskripsi</TableHead>
+                  <TableHead center>Aksi</TableHead>
                 </tr>
-              ) : filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="py-16 text-center">
-                    <Briefcase size={48} className="text-[#071E3D]/20 mx-auto mb-3"/>
-                    <p className="text-[#182D4A] font-medium text-[14px]">Belum ada kelompok pekerjaan.</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((item) => (
-                  <tr key={item.id_kelompok} className="border-b border-[#071E3D]/5 hover:bg-[#CC6B27]/5 transition-colors">
-                    <td className="py-4 px-4 text-center font-bold text-[#CC6B27]">{item.urutan || '-'}</td>
-                    <td className="py-4 px-4 font-bold text-[#071E3D] text-[13.5px]">{item.nama_kelompok}</td>
-                    <td className="py-4 px-4 text-[#182D4A]/80 text-[13px]">{item.deskripsi || '-'}</td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button 
-                          onClick={() => handleEdit(item)} 
-                          className="inline-flex items-center justify-center p-2 rounded-lg text-[#CC6B27] bg-[#CC6B27]/10 hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm h-[34px] w-[34px]" 
-                          title="Edit"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(item.id_kelompok)} 
-                          className="inline-flex items-center justify-center p-2 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100 hover:border-transparent h-[34px] w-[34px]" 
-                          title="Hapus"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+              </thead>
+
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="4" className="p-16 text-center">
+                      <Loader2
+                        className="mx-auto mb-4 animate-spin text-orange-500"
+                        size={42}
+                      />
+                      <p className="font-black text-[#071E3D]">
+                        Memuat data kelompok pekerjaan...
+                      </p>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="p-16 text-center">
+                      <Briefcase
+                        size={48}
+                        className="mx-auto mb-4 text-slate-300"
+                      />
+                      <p className="font-black text-[#071E3D]">
+                        Belum ada kelompok pekerjaan.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredData.map((item) => (
+                    <tr
+                      key={item.id_kelompok}
+                      className="border-b border-slate-100 transition-all last:border-0 hover:bg-orange-50/30"
+                    >
+                      <td className="px-5 py-4 text-center text-sm font-black text-orange-500">
+                        {item.urutan || '-'}
+                      </td>
+
+                      <td className="px-5 py-4 text-sm font-black text-[#071E3D]">
+                        {item.nama_kelompok}
+                      </td>
+
+                      <td className="px-5 py-4 text-sm font-semibold leading-relaxed text-slate-600">
+                        {item.deskripsi || '-'}
+                      </td>
+
+                      <td className="px-5 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(item)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-500 transition-all hover:bg-orange-500 hover:text-white"
+                            title="Edit"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.id_kelompok)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-500 transition-all hover:bg-red-500 hover:text-white"
+                            title="Hapus"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
       {/* MODAL FORM */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            
-            <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
-              <h3 className="text-[16px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
-                {isEditMode ? <Edit2 size={18} className="text-[#CC6B27]"/> : <Plus size={18} className="text-[#CC6B27]"/>}
-                {isEditMode ? 'Edit Kelompok Pekerjaan' : 'Tambah Kelompok Pekerjaan'}
-              </h3>
-              <button onClick={() => setShowModal(false)} className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors"><X size={20} /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-[34px] border border-slate-100 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 p-6">
+              <div>
+                <h3 className="flex items-center gap-2 text-xl font-black text-[#071E3D]">
+                  {isEditMode ? (
+                    <Edit2 size={20} className="text-orange-500" />
+                  ) : (
+                    <Plus size={20} className="text-orange-500" />
+                  )}
+                  {isEditMode ? 'Edit Kelompok Pekerjaan' : 'Tambah Kelompok Pekerjaan'}
+                </h3>
+                <p className="mt-1 text-sm font-medium text-slate-400">
+                  Isi detail kelompok pekerjaan pada skema ini.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500"
+              >
+                <X size={20} />
+              </button>
             </div>
-            
+
             <div className="p-6">
-              <form id="kelompokForm" onSubmit={handleSubmit} className="flex flex-col gap-4">
-                
+              <form id="kelompokForm" onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Urutan <span className="text-red-500">*</span></label>
-                  <input type="number" name="urutan" value={formData.urutan} onChange={handleInputChange} required 
-                    className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]" />
+                  <Label required>Urutan</Label>
+                  <input
+                    type="number"
+                    name="urutan"
+                    value={formData.urutan}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                  />
                 </div>
-                
+
                 <div>
-                  <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Nama Kelompok <span className="text-red-500">*</span></label>
-                  <input type="text" name="nama_kelompok" value={formData.nama_kelompok} onChange={handleInputChange} required 
-                    className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]"/>
+                  <Label required>Nama Kelompok</Label>
+                  <input
+                    type="text"
+                    name="nama_kelompok"
+                    value={formData.nama_kelompok}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Deskripsi</label>
-                  <textarea name="deskripsi" rows="3" value={formData.deskripsi} onChange={handleInputChange} 
-                    className="w-full p-3 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] resize-none"></textarea>
+                  <Label>Deskripsi</Label>
+                  <textarea
+                    name="deskripsi"
+                    rows="4"
+                    value={formData.deskripsi}
+                    onChange={handleInputChange}
+                    className="w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                  />
                 </div>
-
               </form>
             </div>
 
-            <div className="border-t border-[#071E3D]/10 px-6 py-4 flex justify-end gap-3 bg-[#FAFAFA]">
-              <button 
-                type="button" 
-                className="px-5 py-2 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] bg-[#FAFAFA] hover:bg-[#E2E8F0] transition-colors text-[13px]" 
+            <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-5">
+              <button
+                type="button"
+                className="rounded-2xl border border-slate-100 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
                 onClick={() => setShowModal(false)}
               >
                 Batal
               </button>
-              <button 
-                type="submit" 
-                form="kelompokForm" 
-                className="px-5 py-2 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all flex items-center gap-2 text-[13px]"
+
+              <button
+                type="submit"
+                form="kelompokForm"
+                className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
               >
-                <Save size={16}/> Simpan
+                <Save size={16} />
+                Simpan
               </button>
             </div>
-
           </div>
         </div>
       )}
     </div>
   );
 };
+
+function HeroPill({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function MiniStat({ icon, label, value, tone = "orange" }) {
+  const tones = {
+    orange: "bg-orange-50 text-orange-500",
+    green: "bg-green-50 text-green-600",
+    navy: "bg-slate-50 text-[#071E3D]",
+  };
+
+  return (
+    <div className="flex items-center gap-4 rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm">
+      <div
+        className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl ${
+          tones[tone] || tones.orange
+        }`}
+      >
+        {icon}
+      </div>
+
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          {label}
+        </p>
+        <p className="mt-1 text-lg font-black text-[#071E3D]">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function TableHead({ children, center }) {
+  return (
+    <th
+      className={`border-b-4 border-orange-500 px-5 py-4 text-[11px] font-black uppercase tracking-widest text-white ${
+        center ? "text-center" : "text-left"
+      }`}
+    >
+      {children}
+    </th>
+  );
+}
+
+function Label({ children, required }) {
+  return (
+    <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+      {children} {required && <span className="text-red-500">*</span>}
+    </label>
+  );
+}
 
 export default KelompokPekerjaan;

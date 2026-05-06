@@ -1,297 +1,678 @@
+// frontend/src/components/sidebar/Sidebar.jsx
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  FaHome, FaBullhorn, FaGavel, FaChartBar, FaUniversity, FaBook, FaAward,
-  FaLayerGroup, FaMoneyBillWave, FaCalendarAlt, FaBuilding, FaUserGraduate,
-  FaUserTie, FaCommentDots, FaEnvelopeOpenText, FaEye, FaLock, FaSignOutAlt,
-  FaChevronDown, FaChevronRight
+  FaHome,
+  FaBullhorn,
+  FaGavel,
+  FaChartBar,
+  FaUniversity,
+  FaBook,
+  FaAward,
+  FaLayerGroup,
+  FaCalendarAlt,
+  FaBuilding,
+  FaUserGraduate,
+  FaUserTie,
+  FaCommentDots,
+  FaEye,
+  FaSignOutAlt,
+  FaChevronDown,
+  FaChevronRight,
 } from "react-icons/fa";
+import { Menu, X, LogOut } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const sidebarContentRef = useRef(null);
 
-  // State untuk Dropdown Menu
+  const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
   const [openMenus, setOpenMenus] = useState({
     standar: false,
     asesi: false,
-    asesor: false
+    asesor: false,
   });
 
-  // 1. AUTO-OPEN MENU INDUK JIKA ANAKNYA SEDANG AKTIF
   useEffect(() => {
     const path = location.pathname;
+
     setOpenMenus((prev) => {
       const newState = { ...prev };
-      const isPathActive = (pathsArray) => pathsArray.some(p => path.startsWith(p));
 
-      // '/admin/bank-soal' & '/admin/bank-soal-pg' tetap dipertahankan di sini agar menu Standar Kompetensi 
-      // tetap terbuka & menyala (highlight) ketika user sedang mengelola soal dari halaman unit kompetensi
-      newState.standar = isPathActive(['/admin/unit-kompetensi', '/admin/skkni', '/admin/bank-soal', '/admin/bank-soal-pg']);
-      newState.asesi = isPathActive(['/admin/asesi', '/admin/verifikasi-pendaftaran', '/admin/asesi/belum-kompeten']);
-      newState.asesor = isPathActive(['/admin/asesor']);
+      const isPathActive = (pathsArray) =>
+        pathsArray.some((p) => path.startsWith(p));
+
+      newState.standar = isPathActive([
+        "/admin/unit-kompetensi",
+        "/admin/skkni",
+        "/admin/bank-soal",
+        "/admin/bank-soal-pg",
+      ]);
+
+      newState.asesi = isPathActive([
+        "/admin/asesi",
+        "/admin/verifikasi-pendaftaran",
+        "/admin/asesi/belum-kompeten",
+      ]);
+
+      newState.asesor = isPathActive(["/admin/asesor"]);
 
       return newState;
     });
   }, [location.pathname]);
 
-  // 2. KEMBALIKAN POSISI SCROLL SIDEBAR SETIAP RENDER
   useEffect(() => {
     const savedScrollPos = sessionStorage.getItem("sidebarScrollPosition");
+
     if (sidebarContentRef.current && savedScrollPos) {
       sidebarContentRef.current.scrollTop = parseInt(savedScrollPos, 10);
     }
   }, []);
 
-  // 3. SIMPAN POSISI SCROLL SETIAP KALI USER MENGGESER SIDEBAR
+  const isExpanded = isOpen || isHovered;
+
   const handleScroll = (e) => {
     sessionStorage.setItem("sidebarScrollPosition", e.target.scrollTop);
   };
 
-  // FUNGSI TOGGLE MENU (ACCORDION STYLE)
   const toggleMenu = (key) => {
     setOpenMenus((prev) => {
       const newState = {
         standar: false,
         asesi: false,
-        asesor: false
+        asesor: false,
       };
+
       newState[key] = !prev[key];
+
       return newState;
     });
   };
 
-  const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const isActive = (path) =>
+    location.pathname === path || location.pathname.startsWith(`${path}/`);
 
-  const handleNav = (path) => navigate(path);
+  const handleNav = (path) => {
+    navigate(path);
 
-  const handleLogout = () => {
-    const isConfirm = window.confirm("Yakin mau keluar dari sistem?");
-    if (isConfirm) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      navigate('/login');
+    if (window.innerWidth < 1024) {
+      setIsOpen(false);
     }
   };
 
-  // --- HELPER UNTUK KELAS TAILWIND ---
-  
-  const getNavItemClass = (active) =>
-    `w-full flex items-center justify-between px-3 py-2.5 mb-1 rounded-lg text-sm transition-all duration-200 outline-none ${
-      active
-        ? "bg-[#CC6B27] text-[#FAFAFA] font-semibold shadow-md"
-        : "text-[#FAFAFA] hover:bg-[#182D4A]"
-    }`;
+  const confirmLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("user");
+    localStorage.removeItem("id_user");
+    localStorage.removeItem("id_tuk");
 
-  const getSubItemClass = (active) =>
-    `w-full flex items-center pl-10 pr-3 py-2 mb-1 rounded-lg text-sm transition-all duration-200 outline-none ${
-      active 
-        ? "bg-[#182D4A] text-[#CC6B27] font-medium shadow-sm" 
-        : "text-[#FAFAFA] opacity-80 hover:bg-[#182D4A] hover:opacity-100"
-    }`;
-
-  const SectionLabel = ({ children }) => (
-    <div className="px-3 pt-5 pb-2 text-xs font-bold text-[#FAFAFA]/50 uppercase tracking-wider">
-      {children}
-    </div>
-  );
+    navigate("/login", { replace: true });
+  };
 
   return (
-    <div className="flex flex-col h-screen w-64 bg-[#071E3D] text-[#FAFAFA] shadow-xl flex-shrink-0 relative">
-      
-      {/* STYLE MINIMAL UNTUK CUSTOM SCROLLBAR */}
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #182D4A; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #CC6B27; }
-      `}</style>
-
-      {/* HEADER */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-[#182D4A] mb-2 bg-[#071E3D]">
-        <div className="text-3xl text-[#CC6B27]">
-          <FaUniversity />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-wide text-[#FAFAFA]">S.I.LSP</h1>
-          <p className="text-xs text-[#FAFAFA]/70">Sistem Informasi LSP</p>
-        </div>
-      </div>
-
-      {/* CONTENT (SCROLLABLE) */}
-      <div 
-        className="flex-1 overflow-y-auto px-3 py-2 custom-scrollbar" 
-        ref={sidebarContentRef} 
-        onScroll={handleScroll}
+    <>
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="fixed top-4 left-4 z-[55] lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 shadow-lg text-[#071E3D] flex items-center justify-center"
       >
-        {/* UTAMA */}
-        <SectionLabel>Utama</SectionLabel>
+        <Menu size={22} />
+      </button>
 
-        <button className={getNavItemClass(location.pathname === '/admin/dashboard')} onClick={() => handleNav('/admin/dashboard')}>
-          <div className="flex items-center flex-1">
-            <FaHome className="text-lg mr-3" />
-            <span className="text-left">Home / Dashboard</span>
-          </div>
-        </button>
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 bg-[#071E3D]/50 backdrop-blur-sm z-[60] lg:hidden"
+            />
 
-        <button className={getNavItemClass(isActive('/admin/pengaduan'))} onClick={() => handleNav('/admin/pengaduan')}>
-          <div className="flex items-center flex-1">
-            <FaBullhorn className="text-lg mr-3" />
-            <span className="text-left">Layanan Pengaduan</span>
-          </div>
-        </button>
-
-        <button className={getNavItemClass(isActive('/admin/banding'))} onClick={() => handleNav('/admin/banding')}>
-          <div className="flex items-center flex-1">
-            <FaGavel className="text-lg mr-3" />
-            <span className="text-left">Layanan Banding</span>
-          </div>
-        </button>
-
-        {/* REPORTING */}
-        <SectionLabel>Reporting</SectionLabel>
-        
-        {/* MENU LAPORAN SERTIFIKASI (PATH DIUBAH DI SINI) */}
-        <button className={getNavItemClass(isActive('/admin/laporan-sertifikasi'))} onClick={() => handleNav('/admin/laporan-sertifikasi')}>
-          <div className="flex items-center flex-1">
-            <FaChartBar className="text-lg mr-3" />
-            <span className="text-left">Laporan Sertifikasi</span>
-          </div>
-        </button>
-
-        {/* MASTER DATA */}
-        <SectionLabel>Master Data</SectionLabel>
-
-        <button className={getNavItemClass(isActive('/admin/dokumen-mutu'))} onClick={() => handleNav('/admin/dokumen-mutu')}>
-          <div className="flex items-center flex-1">
-            <FaBook className="text-lg mr-3" />
-            <span className="text-left">Dokumen Mutu</span>
-          </div>
-        </button>
-
-        <button className={getNavItemClass(isActive('/admin/unit-kompetensi') || isActive('/admin/skkni') || isActive('/admin/bank-soal') || isActive('/admin/bank-soal-pg'))} onClick={() => toggleMenu('standar')}>
-          <div className="flex items-center flex-1">
-            <FaAward className="text-lg mr-3" />
-            <span className="text-left">Standar Kompetensi</span>
-          </div>
-          {openMenus.standar ? <FaChevronDown className="text-xs" /> : <FaChevronRight className="text-xs" />}
-        </button>
-        {openMenus.standar && (
-          <div className="flex flex-col mb-1 mt-1">
-            <button className={getSubItemClass(isActive('/admin/unit-kompetensi'))} onClick={() => handleNav('/admin/unit-kompetensi')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/unit-kompetensi') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Unit Kompetensi
-            </button>
-            <button className={getSubItemClass(isActive('/admin/skkni'))} onClick={() => handleNav('/admin/skkni')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/skkni') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Data SKKNI
-            </button>
-          </div>
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-y-0 left-0 w-80 bg-white shadow-2xl z-[70] lg:hidden flex flex-col overflow-hidden"
+            >
+              <SidebarContent
+                location={location}
+                openMenus={openMenus}
+                toggleMenu={toggleMenu}
+                isActive={isActive}
+                handleNav={handleNav}
+                handleLogout={() => setShowLogoutModal(true)}
+                sidebarContentRef={sidebarContentRef}
+                handleScroll={handleScroll}
+                isExpanded={true}
+                isMobile
+                onClose={() => setIsOpen(false)}
+              />
+            </motion.aside>
+          </>
         )}
+      </AnimatePresence>
 
-        <button className={getNavItemClass(isActive('/admin/skema'))} onClick={() => handleNav('/admin/skema')}>
-          <div className="flex items-center flex-1">
-            <FaLayerGroup className="text-lg mr-3" />
-            <span className="text-left">Skema Sertifikasi</span>
-          </div>
-        </button>
+      <aside
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`hidden lg:flex fixed left-0 top-0 h-screen bg-white text-[#071E3D] flex-col z-[70] border-r border-slate-100 shadow-[16px_0_40px_-30px_rgba(7,30,61,0.35)] overflow-hidden transition-[width] duration-200 ease-linear ${
+          isExpanded ? "w-80" : "w-24"
+        }`}
+      >
+        <SidebarContent
+          location={location}
+          openMenus={openMenus}
+          toggleMenu={toggleMenu}
+          isActive={isActive}
+          handleNav={handleNav}
+          handleLogout={() => setShowLogoutModal(true)}
+          sidebarContentRef={sidebarContentRef}
+          handleScroll={handleScroll}
+          isExpanded={isExpanded}
+        />
+      </aside>
 
-        {/* OPERASIONAL */}
-        <SectionLabel>Operasional</SectionLabel>
+      <div
+        className={`hidden lg:block shrink-0 pointer-events-none transition-[width] duration-200 ease-linear ${
+          isExpanded ? "w-80" : "w-24"
+        }`}
+      />
 
-        <button className={getNavItemClass(isActive('/admin/jadwal/uji-kompetensi'))} onClick={() => handleNav('/admin/jadwal/uji-kompetensi')}>
-          <div className="flex items-center flex-1">
-            <FaCalendarAlt className="text-lg mr-3" />
-            <span className="text-left">Jadwal Uji Kompetensi</span>
-          </div>
-        </button>
+      <AnimatePresence>
+        {showLogoutModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-[#071E3D]/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 12 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 12 }}
+              transition={{ duration: 0.18 }}
+              className="w-full max-w-md bg-white rounded-[30px] border border-slate-100 shadow-2xl p-8 text-center"
+            >
+              <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
+                <LogOut size={30} />
+              </div>
 
-        <button className={getNavItemClass(isActive('/admin/tuk'))} onClick={() => handleNav('/admin/tuk')}>
-          <div className="flex items-center flex-1">
-            <FaBuilding className="text-lg mr-3" />
-            <span className="text-left">Tempat Uji Kompetensi</span>
-          </div>
-        </button>
+              <h2 className="text-2xl font-black text-[#071E3D] mb-2">
+                Keluar dari Sistem?
+              </h2>
 
-        <button className={getNavItemClass(isActive('/admin/asesi') || isActive('/admin/verifikasi-pendaftaran'))} onClick={() => toggleMenu('asesi')}>
-          <div className="flex items-center flex-1">
-            <FaUserGraduate className="text-lg mr-3" />
-            <span className="text-left">Data Asesi</span>
-          </div>
-          {openMenus.asesi ? <FaChevronDown className="text-xs" /> : <FaChevronRight className="text-xs" />}
-        </button>
-        {openMenus.asesi && (
-          <div className="flex flex-col mb-1 mt-1">
-            <button className={getSubItemClass(isActive('/admin/asesi/tambah'))} onClick={() => handleNav('/admin/asesi/tambah')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/tambah') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Tambah Asesi
-            </button>
-            <button className={getSubItemClass(isActive('/admin/verifikasi-pendaftaran'))} onClick={() => handleNav('/admin/verifikasi-pendaftaran')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/verifikasi-pendaftaran') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Pendaftar Baru
-            </button>
-            <button className={getSubItemClass(isActive('/admin/asesi/terjadwal'))} onClick={() => handleNav('/admin/asesi/terjadwal')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/terjadwal') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Terjadwal
-            </button>
-            <button className={getSubItemClass(isActive('/admin/asesi/kompeten'))} onClick={() => handleNav('/admin/asesi/kompeten')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/kompeten') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Kompeten
-            </button>
-            <button className={getSubItemClass(isActive('/admin/asesi/belum-kompeten'))} onClick={() => handleNav('/admin/asesi/belum-kompeten')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesi/belum-kompeten') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Belum Kompeten
-            </button>
-          </div>
+              <p className="text-slate-500 font-medium mb-7">
+                Apakah Anda yakin ingin logout dari dashboard Admin?
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutModal(false)}
+                  className="px-5 py-4 rounded-2xl border border-slate-200 text-[#071E3D] font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmLogout}
+                  className="px-5 py-4 rounded-2xl bg-red-500 text-white font-black text-xs uppercase tracking-widest hover:bg-red-600 transition-all"
+                >
+                  Ya, Keluar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
-
-        <button className={getNavItemClass(isActive('/admin/asesor'))} onClick={() => toggleMenu('asesor')}>
-          <div className="flex items-center flex-1">
-            <FaUserTie className="text-lg mr-3" />
-            <span className="text-left">Data Asesor</span>
-          </div>
-          {openMenus.asesor ? <FaChevronDown className="text-xs" /> : <FaChevronRight className="text-xs" />}
-        </button>
-        {openMenus.asesor && (
-          <div className="flex flex-col mb-1 mt-1">
-            <button className={getSubItemClass(location.pathname === '/admin/asesor')} onClick={() => handleNav('/admin/asesor')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${location.pathname === '/admin/asesor' ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Daftar Asesor
-            </button>
-            <button className={getSubItemClass(isActive('/admin/asesor/statistik'))} onClick={() => handleNav('/admin/asesor/statistik')}>
-              <span className={`w-1.5 h-1.5 rounded-full mr-3 ${isActive('/admin/asesor/statistik') ? 'bg-[#CC6B27]' : 'bg-[#FAFAFA]/40'}`}></span>Statistik Wilayah
-            </button>
-          </div>
-        )}
-
-        {/* SISTEM & WEB */}
-        <SectionLabel>Sistem & Web</SectionLabel>
-
-        <button className={getNavItemClass(isActive('/admin/notifikasi'))} onClick={() => handleNav('/admin/notifikasi')}>
-          <div className="flex items-center flex-1">
-            <FaCommentDots className="text-lg mr-3" />
-            <span className="text-left">Notifikasi</span>
-          </div>
-        </button>
-
-        {/* KEUANGAN & ADMIN */}
-        <SectionLabel>Keuangan & Admin</SectionLabel>
-
-        <button className={getNavItemClass(isActive('/admin/surveillance'))} onClick={() => handleNav('/admin/surveillance')}>
-          <div className="flex items-center flex-1">
-            <FaEye className="text-lg mr-3" />
-            <span className="text-left">Surveillance</span>
-          </div>
-        </button>
-
-      </div>
-
-      {/* FOOTER: LOGOUT */}
-      <div className="p-4 border-t border-[#182D4A] mt-auto bg-[#071E3D]">
-        <button
-          className="w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium text-[#FAFAFA] hover:bg-red-600 transition-all duration-200"
-          onClick={handleLogout}
-        >
-          <FaSignOutAlt className="text-lg mr-3 text-[#CC6B27] group-hover:text-white" />
-          <span className="flex-1 text-left">Keluar</span>
-        </button>
-      </div>
-      
-    </div>
+      </AnimatePresence>
+    </>
   );
 };
+
+const SidebarContent = ({
+  location,
+  openMenus,
+  toggleMenu,
+  isActive,
+  handleNav,
+  handleLogout,
+  sidebarContentRef,
+  handleScroll,
+  isExpanded,
+  isMobile = false,
+  onClose,
+}) => {
+  const parentActive = {
+    standar:
+      isActive("/admin/unit-kompetensi") ||
+      isActive("/admin/skkni") ||
+      isActive("/admin/bank-soal") ||
+      isActive("/admin/bank-soal-pg"),
+
+    asesi:
+      isActive("/admin/asesi") ||
+      isActive("/admin/verifikasi-pendaftaran"),
+
+    asesor: isActive("/admin/asesor"),
+  };
+
+  return (
+    <>
+      <style>{`
+        .admin-sidebar-scrollbar::-webkit-scrollbar { width: 6px; }
+        .admin-sidebar-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .admin-sidebar-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 999px; }
+        .admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover { background: #F97316; }
+      `}</style>
+
+      <div className="h-[120px] border-b border-slate-100 flex items-center shrink-0">
+        <div className="w-24 h-full flex items-center justify-center shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center text-2xl">
+            <FaUniversity />
+          </div>
+        </div>
+
+        <div
+          className={`overflow-hidden whitespace-nowrap transition-opacity duration-150 ${
+            isExpanded ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <h1 className="text-xl font-black text-[#071E3D] uppercase truncate max-w-[190px] leading-tight">
+            S.I.LSP
+          </h1>
+
+          <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-1">
+            Dashboard Admin
+          </p>
+        </div>
+
+        {isMobile && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto mr-5 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+          >
+            <X size={24} />
+          </button>
+        )}
+      </div>
+
+      <nav
+        ref={sidebarContentRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto py-4 admin-sidebar-scrollbar"
+      >
+        <div className="space-y-1">
+          <SectionLabel isExpanded={isExpanded}>Utama</SectionLabel>
+
+          <NavItem
+            icon={<FaHome />}
+            label="Home / Dashboard"
+            active={location.pathname === "/admin/dashboard"}
+            onClick={() => handleNav("/admin/dashboard")}
+            isExpanded={isExpanded}
+          />
+
+          <NavItem
+            icon={<FaBullhorn />}
+            label="Layanan Pengaduan"
+            active={isActive("/admin/pengaduan")}
+            onClick={() => handleNav("/admin/pengaduan")}
+            isExpanded={isExpanded}
+          />
+
+          <NavItem
+            icon={<FaGavel />}
+            label="Layanan Banding"
+            active={isActive("/admin/banding")}
+            onClick={() => handleNav("/admin/banding")}
+            isExpanded={isExpanded}
+          />
+
+          <SectionLabel isExpanded={isExpanded}>Reporting</SectionLabel>
+
+          <NavItem
+            icon={<FaChartBar />}
+            label="Laporan Sertifikasi"
+            active={isActive("/admin/laporan-sertifikasi")}
+            onClick={() => handleNav("/admin/laporan-sertifikasi")}
+            isExpanded={isExpanded}
+          />
+
+          <SectionLabel isExpanded={isExpanded}>Master Data</SectionLabel>
+
+          <NavItem
+            icon={<FaBook />}
+            label="Dokumen Mutu"
+            active={isActive("/admin/dokumen-mutu")}
+            onClick={() => handleNav("/admin/dokumen-mutu")}
+            isExpanded={isExpanded}
+          />
+
+          <DropdownItem
+            icon={<FaAward />}
+            label="Standar Kompetensi"
+            active={parentActive.standar}
+            open={openMenus.standar}
+            onClick={() => toggleMenu("standar")}
+            isExpanded={isExpanded}
+          />
+
+          {openMenus.standar && isExpanded && (
+            <SubMenu>
+              <SubItem
+                label="Unit Kompetensi"
+                active={isActive("/admin/unit-kompetensi")}
+                onClick={() => handleNav("/admin/unit-kompetensi")}
+              />
+
+              <SubItem
+                label="Data SKKNI"
+                active={isActive("/admin/skkni")}
+                onClick={() => handleNav("/admin/skkni")}
+              />
+            </SubMenu>
+          )}
+
+          <NavItem
+            icon={<FaLayerGroup />}
+            label="Skema Sertifikasi"
+            active={isActive("/admin/skema")}
+            onClick={() => handleNav("/admin/skema")}
+            isExpanded={isExpanded}
+          />
+
+          <SectionLabel isExpanded={isExpanded}>Operasional</SectionLabel>
+
+          <NavItem
+            icon={<FaCalendarAlt />}
+            label="Jadwal Uji Kompetensi"
+            active={isActive("/admin/jadwal/uji-kompetensi")}
+            onClick={() => handleNav("/admin/jadwal/uji-kompetensi")}
+            isExpanded={isExpanded}
+          />
+
+          <NavItem
+            icon={<FaBuilding />}
+            label="Tempat Uji Kompetensi"
+            active={isActive("/admin/tuk")}
+            onClick={() => handleNav("/admin/tuk")}
+            isExpanded={isExpanded}
+          />
+
+          <DropdownItem
+            icon={<FaUserGraduate />}
+            label="Data Asesi"
+            active={parentActive.asesi}
+            open={openMenus.asesi}
+            onClick={() => toggleMenu("asesi")}
+            isExpanded={isExpanded}
+          />
+
+          {openMenus.asesi && isExpanded && (
+            <SubMenu>
+              <SubItem
+                label="Tambah Asesi"
+                active={isActive("/admin/asesi/tambah")}
+                onClick={() => handleNav("/admin/asesi/tambah")}
+              />
+
+              <SubItem
+                label="Pendaftar Baru"
+                active={isActive("/admin/verifikasi-pendaftaran")}
+                onClick={() => handleNav("/admin/verifikasi-pendaftaran")}
+              />
+
+              <SubItem
+                label="Terjadwal"
+                active={isActive("/admin/asesi/terjadwal")}
+                onClick={() => handleNav("/admin/asesi/terjadwal")}
+              />
+
+              <SubItem
+                label="Kompeten"
+                active={isActive("/admin/asesi/kompeten")}
+                onClick={() => handleNav("/admin/asesi/kompeten")}
+              />
+
+              <SubItem
+                label="Belum Kompeten"
+                active={isActive("/admin/asesi/belum-kompeten")}
+                onClick={() => handleNav("/admin/asesi/belum-kompeten")}
+              />
+            </SubMenu>
+          )}
+
+          <DropdownItem
+            icon={<FaUserTie />}
+            label="Data Asesor"
+            active={parentActive.asesor}
+            open={openMenus.asesor}
+            onClick={() => toggleMenu("asesor")}
+            isExpanded={isExpanded}
+          />
+
+          {openMenus.asesor && isExpanded && (
+            <SubMenu>
+              <SubItem
+                label="Daftar Asesor"
+                active={location.pathname === "/admin/asesor"}
+                onClick={() => handleNav("/admin/asesor")}
+              />
+
+              <SubItem
+                label="Statistik Wilayah"
+                active={isActive("/admin/asesor/statistik")}
+                onClick={() => handleNav("/admin/asesor/statistik")}
+              />
+            </SubMenu>
+          )}
+
+          <SectionLabel isExpanded={isExpanded}>Sistem & Web</SectionLabel>
+
+          <NavItem
+            icon={<FaCommentDots />}
+            label="Notifikasi"
+            active={isActive("/admin/notifikasi")}
+            onClick={() => handleNav("/admin/notifikasi")}
+            isExpanded={isExpanded}
+          />
+
+          <SectionLabel isExpanded={isExpanded}>Keuangan & Admin</SectionLabel>
+
+          <NavItem
+            icon={<FaEye />}
+            label="Surveillance"
+            active={isActive("/admin/surveillance")}
+            onClick={() => handleNav("/admin/surveillance")}
+            isExpanded={isExpanded}
+          />
+        </div>
+      </nav>
+
+      <div className="h-28 border-t border-slate-100 bg-slate-50/50 shrink-0 flex items-center">
+        <div className="w-24 h-full flex items-center justify-center shrink-0">
+          <button
+            type="button"
+            onClick={handleLogout}
+            title={!isExpanded ? "Keluar" : ""}
+            className="w-14 h-14 rounded-2xl bg-white border border-slate-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 shadow-sm flex items-center justify-center transition-colors duration-150"
+          >
+            <FaSignOutAlt className="text-lg" />
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className={`h-14 flex-1 mr-5 rounded-2xl flex items-center justify-between overflow-hidden text-red-500 transition-opacity duration-150 ${
+            isExpanded ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <span className="text-sm font-black whitespace-nowrap">Keluar</span>
+          <FaChevronRight className="text-xs" />
+        </button>
+      </div>
+    </>
+  );
+};
+
+function SectionLabel({ children, isExpanded }) {
+  return (
+    <div
+      className={`px-8 pt-5 pb-2 overflow-hidden transition-opacity duration-150 ${
+        isExpanded ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+        {children}
+      </p>
+    </div>
+  );
+}
+
+function NavItem({ icon, label, active, onClick, isExpanded }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={!isExpanded ? label : ""}
+      className="group w-full min-h-16 flex items-center"
+    >
+      <div className="w-24 h-16 flex items-center justify-center shrink-0">
+        <div
+          className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-150 text-[20px] ${
+            active
+              ? "bg-orange-50 border border-orange-100 text-orange-500"
+              : "text-[#071E3D]/80 group-hover:bg-slate-50 group-hover:text-orange-500"
+          }`}
+        >
+          {icon}
+        </div>
+      </div>
+
+      <div
+        className={`min-h-16 flex-1 pr-5 flex items-center justify-between gap-3 overflow-hidden transition-opacity duration-150 ${
+          isExpanded ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <span
+          className={`text-[14px] text-left leading-snug ${
+            active ? "font-black text-orange-500" : "font-medium text-slate-600"
+          }`}
+        >
+          {label}
+        </span>
+
+        <FaChevronRight
+          className={`text-xs shrink-0 ${
+            active ? "text-orange-500" : "text-slate-300 group-hover:text-orange-500"
+          }`}
+        />
+      </div>
+    </button>
+  );
+}
+
+function DropdownItem({
+  icon,
+  label,
+  active,
+  open,
+  onClick,
+  isExpanded,
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={!isExpanded ? label : ""}
+      className="group w-full min-h-16 flex items-center"
+    >
+      <div className="w-24 h-16 flex items-center justify-center shrink-0">
+        <div
+          className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-150 text-[20px] ${
+            active
+              ? "bg-orange-50 border border-orange-100 text-orange-500"
+              : "text-[#071E3D]/80 group-hover:bg-slate-50 group-hover:text-orange-500"
+          }`}
+        >
+          {icon}
+        </div>
+      </div>
+
+      <div
+        className={`min-h-16 flex-1 pr-5 flex items-center justify-between gap-3 overflow-hidden transition-opacity duration-150 ${
+          isExpanded ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <span
+          className={`text-[14px] text-left leading-snug ${
+            active ? "font-black text-orange-500" : "font-medium text-slate-600"
+          }`}
+        >
+          {label}
+        </span>
+
+        {open ? (
+          <FaChevronDown
+            className={`text-xs shrink-0 ${
+              active ? "text-orange-500" : "text-slate-300"
+            }`}
+          />
+        ) : (
+          <FaChevronRight
+            className={`text-xs shrink-0 ${
+              active ? "text-orange-500" : "text-slate-300 group-hover:text-orange-500"
+            }`}
+          />
+        )}
+      </div>
+    </button>
+  );
+}
+
+function SubMenu({ children }) {
+  return <div className="ml-24 mr-5 mb-2 space-y-1">{children}</div>;
+}
+
+function SubItem({ label, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group w-full min-h-11 rounded-2xl flex items-center gap-3 px-4 text-left transition-all duration-150 ${
+        active
+          ? "bg-orange-50 border border-orange-100 text-orange-500"
+          : "bg-slate-50/70 border border-transparent text-slate-500 hover:bg-white hover:border-orange-100 hover:text-orange-500"
+      }`}
+    >
+      <span
+        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+          active ? "bg-orange-500" : "bg-slate-300 group-hover:bg-orange-500"
+        }`}
+      />
+
+      <span
+        className={`text-xs leading-snug ${
+          active ? "font-black" : "font-semibold"
+        }`}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
 
 export default Sidebar;
