@@ -92,8 +92,9 @@ const StatistikWilayah = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#CC6B27]"></div>
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#CC6B27]/20 border-b-[#CC6B27]"></div>
+        <p className="mt-4 text-[14px] font-bold text-[#071E3D]">Memuat statistik wilayah...</p>
       </div>
     );
   }
@@ -103,120 +104,172 @@ const StatistikWilayah = () => {
   const totalAsesor = dataAsesor.length;
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen relative">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#071E3D] flex items-center gap-2">
-            <FaMapMarkedAlt className="text-[#CC6B27]" /> Statistik Wilayah Asesor
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Sebaran data asesor berdasarkan Provinsi dan Kota/Kabupaten
-          </p>
+    <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
+      
+      {/* HEADER SECTION */}
+      <div className="relative overflow-hidden bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
+        <div className="absolute right-0 top-0 w-64 h-64 bg-[#CC6B27]/10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/2"></div>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#CC6B27]/10 text-[#CC6B27] text-[11px] font-black uppercase tracking-wider mb-3">
+              <FaMapMarkedAlt />
+              Statistik Wilayah
+            </div>
+            <h1 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">
+              Statistik Wilayah Asesor
+            </h1>
+            <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">
+              Sebaran data asesor berdasarkan Provinsi dan Kota/Kabupaten.
+            </p>
+          </div>
         </div>
       </div>
 
       {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="p-3 bg-[#071E3D]/10 rounded-lg text-[#071E3D]">
-            <FaUsers className="text-2xl" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-semibold uppercase">Total Asesor</p>
-            <p className="text-2xl font-bold text-[#071E3D]">{totalAsesor}</p>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SummaryCard 
+          icon={<FaUsers className="text-2xl" />}
+          title="Total Asesor"
+          value={totalAsesor}
+          color="navy"
+        />
         
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="p-3 bg-[#CC6B27]/10 rounded-lg text-[#CC6B27]">
-            <FaChartBar className="text-2xl" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-semibold uppercase">Total Provinsi</p>
-            <p className="text-2xl font-bold text-[#071E3D]">{provinsiAktif}</p>
-          </div>
-        </div>
+        <SummaryCard 
+          icon={<FaChartBar className="text-2xl" />}
+          title="Total Provinsi"
+          value={provinsiAktif}
+          color="orange"
+        />
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
-            <FaCity className="text-2xl" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-semibold uppercase">Total Kota/Kab</p>
-            <p className="text-2xl font-bold text-[#071E3D]">{statsKota.length}</p>
-          </div>
-        </div>
+        <SummaryCard 
+          icon={<FaCity className="text-2xl" />}
+          title="Total Kota/Kab"
+          value={statsKota.length}
+          color="blue"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* STATISTIK PROVINSI */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-[#071E3D] px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-[#FAFAFA] flex items-center gap-2">
+        <div className="bg-white rounded-xl shadow-sm border border-[#071E3D]/10 overflow-hidden">
+          <div className="bg-[#071E3D] px-6 py-4 border-b-4 border-[#CC6B27]">
+            <h2 className="font-bold text-[#FAFAFA] flex items-center gap-2 text-[14px] uppercase tracking-wider">
+              <FaMapMarkedAlt className="text-[#CC6B27]" />
               Sebaran Provinsi (Semua Wilayah)
             </h2>
           </div>
-          <div className="p-5 max-h-[400px] overflow-y-auto custom-scrollbar">
+
+          <div className="p-5 max-h-[450px] overflow-y-auto custom-scrollbar">
             {statsProvinsi.length > 0 ? statsProvinsi.map((item, index) => {
               // Jika datanya 0, maka persentase juga 0 (hindari NaN error)
               const percentage = totalAsesor === 0 ? 0 : (item.count / totalAsesor * 100).toFixed(1);
               
               return (
-                <div key={index} className="mb-4 last:mb-0">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium text-gray-700">{index + 1}. {item.name}</span>
-                    <span className="text-gray-500">{item.count} Asesor ({percentage}%)</span>
+                <div 
+                  key={index} 
+                  className={`p-3 rounded-xl border mb-3 last:mb-0 transition-all ${
+                    item.count > 0 
+                      ? 'bg-[#CC6B27]/5 border-[#CC6B27]/20' 
+                      : 'bg-[#FAFAFA] border-[#071E3D]/5'
+                  }`}
+                >
+                  <div className="flex justify-between text-sm mb-2 gap-4">
+                    <span className="font-bold text-[#071E3D]">
+                      {index + 1}. {item.name}
+                    </span>
+                    <span className={`font-black whitespace-nowrap ${item.count > 0 ? 'text-[#CC6B27]' : 'text-[#182D4A]/40'}`}>
+                      {item.count} Asesor ({percentage}%)
+                    </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-[#071E3D]/10 rounded-full h-2.5 overflow-hidden">
                     <div 
-                      className="bg-[#CC6B27] h-2 rounded-full" 
+                      className="bg-[#CC6B27] h-2.5 rounded-full transition-all duration-500" 
                       style={{ width: `${percentage}%` }}
                     ></div>
                   </div>
                 </div>
               );
             }) : (
-              <p className="text-center text-gray-500 py-4">Tidak ada data provinsi</p>
+              <div className="py-16 text-center">
+                <FaMapMarkedAlt className="mx-auto text-[#071E3D]/20 text-5xl mb-3" />
+                <p className="text-[#182D4A] font-medium text-[14px]">Tidak ada data provinsi</p>
+              </div>
             )}
           </div>
         </div>
 
         {/* STATISTIK KOTA */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-[#071E3D] px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-[#FAFAFA] flex items-center gap-2">
+        <div className="bg-white rounded-xl shadow-sm border border-[#071E3D]/10 overflow-hidden">
+          <div className="bg-[#071E3D] px-6 py-4 border-b-4 border-[#CC6B27]">
+            <h2 className="font-bold text-[#FAFAFA] flex items-center gap-2 text-[14px] uppercase tracking-wider">
+              <FaCity className="text-[#CC6B27]" />
               Sebaran Kota/Kabupaten Terbanyak
             </h2>
           </div>
-          <div className="p-0 max-h-[400px] overflow-y-auto custom-scrollbar">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-gray-700 sticky top-0">
+
+          <div className="overflow-x-auto max-h-[450px] overflow-y-auto custom-scrollbar">
+            <table className="w-full text-left border-collapse min-w-max bg-white">
+              <thead className="sticky top-0 z-10">
                 <tr>
-                  <th className="px-5 py-3 border-b">No</th>
-                  <th className="px-5 py-3 border-b">Kota / Kabupaten</th>
-                  <th className="px-5 py-3 border-b text-center">Jumlah Asesor</th>
+                  <th className="py-3.5 px-4 bg-[#FAFAFA] text-[#071E3D] font-bold text-[12px] uppercase tracking-wider border-b border-[#071E3D]/10 w-16 text-center">No</th>
+                  <th className="py-3.5 px-4 bg-[#FAFAFA] text-[#071E3D] font-bold text-[12px] uppercase tracking-wider border-b border-[#071E3D]/10">Kota / Kabupaten</th>
+                  <th className="py-3.5 px-4 bg-[#FAFAFA] text-[#071E3D] font-bold text-[12px] uppercase tracking-wider border-b border-[#071E3D]/10 text-center">Jumlah Asesor</th>
                 </tr>
               </thead>
               <tbody>
                 {statsKota.length > 0 ? statsKota.map((item, index) => (
-                  <tr key={index} className="border-b hover:bg-gray-50">
-                    <td className="px-5 py-3">{index + 1}</td>
-                    <td className="px-5 py-3 font-medium">{item.name}</td>
-                    <td className="px-5 py-3 text-center">
-                      <span className="bg-[#182D4A]/10 text-[#071E3D] py-1 px-3 rounded-full font-semibold">
+                  <tr key={index} className="border-b border-[#071E3D]/5 hover:bg-[#CC6B27]/5 transition-colors">
+                    <td className="px-5 py-4 text-center font-bold text-[#071E3D] text-[13.5px]">
+                      {index + 1}
+                    </td>
+                    <td className="px-5 py-4 font-bold text-[#071E3D] text-[13.5px]">
+                      {item.name}
+                    </td>
+                    <td className="px-5 py-4 text-center">
+                      <span className="inline-flex items-center justify-center min-w-[42px] px-3 py-1.5 rounded-full bg-[#182D4A]/10 text-[#071E3D] font-black text-[12px] border border-[#071E3D]/10">
                         {item.count}
                       </span>
                     </td>
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan="3" className="px-5 py-4 text-center text-gray-500">Tidak ada data kota</td>
+                    <td colSpan="3" className="px-5 py-16 text-center">
+                      <FaCity className="mx-auto text-[#071E3D]/20 text-5xl mb-3" />
+                      <p className="text-[#182D4A] font-medium text-[14px]">Tidak ada data kota</p>
+                    </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #CC6B27; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8561f; }
+      `}} />
+    </div>
+  );
+};
+
+const SummaryCard = ({ icon, title, value, color }) => {
+  const colors = {
+    navy: 'bg-[#071E3D]/10 text-[#071E3D]',
+    orange: 'bg-[#CC6B27]/10 text-[#CC6B27]',
+    blue: 'bg-blue-50 text-blue-600'
+  };
+
+  return (
+    <div className="bg-white p-5 rounded-xl shadow-sm border border-[#071E3D]/10 flex items-center gap-4 hover:shadow-md transition-all">
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${colors[color]}`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-[11px] text-[#182D4A]/60 font-black uppercase tracking-wider mb-0.5">{title}</p>
+        <p className="text-[26px] font-black text-[#071E3D] leading-none">{value}</p>
       </div>
     </div>
   );

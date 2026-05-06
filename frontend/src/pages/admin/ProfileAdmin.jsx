@@ -3,7 +3,8 @@ import Swal from 'sweetalert2';
 import api from "../../services/api";
 import { 
   User, MapPin, Edit2, Save, X, Shield, 
-  GraduationCap, Loader2, Hash, Calendar, Camera
+  GraduationCap, Loader2, Hash, Calendar, Camera,
+  Sparkles, BadgeCheck, IdCard, Home, Award
 } from 'lucide-react';
 
 const ProfileAdmin = () => {
@@ -202,179 +203,245 @@ const ProfileAdmin = () => {
     }
   };
 
-  const inputClass = "w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[13px] text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium";
-  const labelClass = "block text-[12px] font-bold text-[#071E3D] mb-1.5";
+  const inputClass = "w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10 disabled:cursor-not-allowed disabled:opacity-60";
+  const labelClass = "mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-400";
 
   const DetailText = ({ label, value, icon: Icon }) => (
-    <div className="mb-4">
-      <p className="text-[11px] font-bold text-[#182D4A]/60 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-        {Icon && <Icon size={12} className="text-[#CC6B27]"/>} {label}
+    <div className="rounded-[22px] border border-slate-100 bg-slate-50/70 p-4">
+      <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+        {Icon && <Icon size={12} className="text-orange-500"/>} {label}
       </p>
-      <p className="text-[14px] font-semibold text-[#071E3D]">{value || '-'}</p>
+      <p className="text-sm font-black text-[#071E3D]">{value || '-'}</p>
     </div>
   );
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <Loader2 className="animate-spin text-[#CC6B27]" size={40}/>
-        <p className="text-[#182D4A] mt-3 font-medium text-[14px]">Memuat profil...</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#F8FAFC]">
+        <Loader2 className="animate-spin text-orange-500" size={42}/>
+        <p className="mt-4 text-sm font-black uppercase tracking-widest text-[#071E3D]">
+          Memuat Profil
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6 relative">
-      
-      {/* HEADER PAGE */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
-        <div>
-          <h2 className="text-[22px] font-bold text-[#071E3D] m-0 mb-1">Profil Administrator</h2>
-          <p className="text-[14px] text-[#182D4A] m-0">Kelola informasi akun, data diri, dan lisensi Anda.</p>
-        </div>
-        <button 
-          className="px-5 py-2.5 rounded-lg font-bold bg-[#071E3D] text-white hover:bg-[#182D4A] shadow-md transition-all flex items-center gap-2 text-[13px]" 
-          onClick={handleEditClick}
-        >
-          <Edit2 size={16}/> Edit Profil
-        </button>
-      </div>
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        
+        {/* HERO */}
+        <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
+          <div className="absolute right-0 top-0 h-[430px] w-[430px] rounded-full bg-orange-500/10 blur-[110px]" />
+          <div className="absolute -bottom-24 -left-24 h-[380px] w-[380px] rounded-full bg-[#071E3D]/5 blur-[100px]" />
 
-      {/* VIEW MODE */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* KOLOM KIRI */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="bg-white rounded-xl border border-[#071E3D]/10 shadow-sm overflow-hidden">
-            <div className="h-28 bg-gradient-to-r from-[#071E3D] to-[#182D4A] relative"></div>
-            
-            {/* AREA FOTO PROFIL */}
-            <div className="flex justify-center -mt-14 relative z-10">
-              <div className="w-28 h-28 bg-[#CC6B27] rounded-full border-[5px] border-white shadow-md flex items-center justify-center text-white font-bold text-[40px] overflow-hidden">
-                {profile.foto ? (
-                  <img src={`${API_URL}/uploads/${profile.foto}`} alt="Profil" className="w-full h-full object-cover"/>
-                ) : (
-                  profile.nama_lengkap ? profile.nama_lengkap.charAt(0).toUpperCase() : <User size={48}/>
-                )}
+          <div className="relative z-10 grid grid-cols-1 gap-6 p-6 lg:p-8 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="flex flex-col justify-center">
+              <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+                <Shield size={15} className="text-orange-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                  Profil Administrator
+                </span>
               </div>
-            </div>
 
-            <div className="text-center px-6 pt-4 pb-6 border-b border-[#071E3D]/10">
-              <h2 className="text-[20px] font-extrabold text-[#071E3D] leading-tight mb-1">
-                {profile.nama_lengkap || userAccount.username}
-              </h2>
-              <span className="inline-block px-3.5 py-1 bg-[#071E3D]/10 text-[#071E3D] border border-[#071E3D]/20 rounded-full text-[11px] font-bold uppercase tracking-wider">
-                {userAccount.role}
-              </span>
-            </div>
-            
-            <div className="p-6 flex flex-col gap-5">
-              {/* BAGIAN EMAIL SUDAH DIHAPUS */}
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#CC6B27]/10 flex items-center justify-center text-[#CC6B27]">
-                  <Shield size={18}/>
-                </div>
-                <div>
-                  <p className="text-[#182D4A]/70 text-[11px] font-bold uppercase mb-0.5">NIP Administrator</p>
-                  <p className="text-[#071E3D] font-bold text-[13.5px]">{profile.nip_admin || '-'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+              <h1 className="text-4xl font-black leading-tight text-[#071E3D] lg:text-5xl">
+                Profil
+                <br />
+                <span className="text-orange-500">Administrator</span>
+              </h1>
 
-        {/* KOLOM KANAN */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="bg-white rounded-xl border border-[#071E3D]/10 shadow-sm p-6">
-            <h3 className="text-[16px] font-bold text-[#CC6B27] mb-5 border-b border-[#CC6B27]/20 pb-2 flex items-center gap-2">
-              <User size={18}/> Informasi Identitas Pribadi
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-              <DetailText icon={User} label="Nama Lengkap" value={profile.nama_lengkap} />
-              <DetailText icon={Hash} label="NIK" value={profile.nik} />
-              <DetailText icon={MapPin} label="Tempat Lahir" value={profile.tempat_lahir} />
-              <DetailText icon={Calendar} label="Tanggal Lahir" value={profile.tanggal_lahir} />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-[#071E3D]/10 shadow-sm p-6">
-            <h3 className="text-[16px] font-bold text-[#CC6B27] mb-5 border-b border-[#CC6B27]/20 pb-2 flex items-center gap-2">
-              <MapPin size={18}/> Detail Domisili
-            </h3>
-            <div className="mb-4">
-              <p className="text-[11px] font-bold text-[#182D4A]/60 uppercase tracking-widest mb-1">Alamat Lengkap</p>
-              <p className="text-[14px] font-semibold text-[#071E3D] bg-[#FAFAFA] p-3 rounded-lg border border-[#071E3D]/5">
-                {profile.alamat || '-'}
+              <p className="mt-5 max-w-2xl text-base font-medium leading-relaxed text-slate-500 lg:text-lg">
+                Kelola informasi akun, data diri, domisili, pendidikan, dan lisensi administrator.
               </p>
+
+              <button
+                className="mt-7 inline-flex w-fit items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+                onClick={handleEditClick}
+              >
+                <Edit2 size={16}/>
+                Edit Profil
+              </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-              <DetailText label="Provinsi" value={profile.provinsi} />
-              <DetailText label="Kota / Kabupaten" value={profile.kota} />
-              <DetailText label="Kecamatan" value={profile.kecamatan} />
-              <DetailText label="Kelurahan / Desa" value={profile.kelurahan} />
-              <div className="flex gap-6">
+
+            <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
+              <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="mb-5 flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border-[6px] border-white bg-orange-500 text-5xl font-black text-white shadow-2xl">
+                  {profile.foto ? (
+                    <img src={`${API_URL}/uploads/${profile.foto}`} alt="Profil" className="h-full w-full object-cover"/>
+                  ) : (
+                    profile.nama_lengkap ? profile.nama_lengkap.charAt(0).toUpperCase() : <User size={56}/>
+                  )}
+                </div>
+
+                <h2 className="text-2xl font-black leading-tight">
+                  {profile.nama_lengkap || userAccount.username}
+                </h2>
+
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/80">
+                  <BadgeCheck size={13} className="text-orange-400" />
+                  {userAccount.role}
+                </span>
+
+                <div className="mt-6 grid w-full grid-cols-2 gap-3">
+                  <HeroPill label="NIP Admin" value={profile.nip_admin || '-'} />
+                  <HeroPill label="NIK" value={profile.nik || '-'} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* INFO GRID */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          
+          {/* LEFT PROFILE CARD */}
+          <div className="lg:col-span-1">
+            <div className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
+              <div className="relative h-32 bg-[#071E3D]">
+                <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+              </div>
+
+              <div className="-mt-16 flex justify-center">
+                <div className="relative z-10 flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border-[6px] border-white bg-orange-500 text-5xl font-black text-white shadow-xl">
+                  {profile.foto ? (
+                    <img src={`${API_URL}/uploads/${profile.foto}`} alt="Profil" className="h-full w-full object-cover"/>
+                  ) : (
+                    profile.nama_lengkap ? profile.nama_lengkap.charAt(0).toUpperCase() : <User size={54}/>
+                  )}
+                </div>
+              </div>
+
+              <div className="px-6 pb-6 pt-4 text-center">
+                <h2 className="text-2xl font-black text-[#071E3D]">
+                  {profile.nama_lengkap || userAccount.username}
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-slate-400">
+                  {userAccount.username}
+                </p>
+
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-orange-100 bg-orange-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-orange-500">
+                  <Shield size={13} />
+                  {userAccount.role}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 p-6">
+                <div className="flex items-center gap-4 rounded-[24px] bg-slate-50 p-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+                    <IdCard size={21}/>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      NIP Administrator
+                    </p>
+                    <p className="mt-1 text-sm font-black text-[#071E3D]">
+                      {profile.nip_admin || '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT DATA */}
+          <div className="flex flex-col gap-6 lg:col-span-2">
+            
+            <InfoCard icon={<User size={18}/>} title="Informasi Identitas Pribadi">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <DetailText icon={User} label="Nama Lengkap" value={profile.nama_lengkap} />
+                <DetailText icon={Hash} label="NIK" value={profile.nik} />
+                <DetailText icon={MapPin} label="Tempat Lahir" value={profile.tempat_lahir} />
+                <DetailText icon={Calendar} label="Tanggal Lahir" value={profile.tanggal_lahir} />
+              </div>
+            </InfoCard>
+
+            <InfoCard icon={<Home size={18}/>} title="Detail Domisili">
+              <div className="mb-4 rounded-[22px] border border-slate-100 bg-slate-50/70 p-4">
+                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Alamat Lengkap
+                </p>
+                <p className="text-sm font-black leading-relaxed text-[#071E3D]">
+                  {profile.alamat || '-'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <DetailText label="Provinsi" value={profile.provinsi} />
+                <DetailText label="Kota / Kabupaten" value={profile.kota} />
+                <DetailText label="Kecamatan" value={profile.kecamatan} />
+                <DetailText label="Kelurahan / Desa" value={profile.kelurahan} />
                 <DetailText label="RT" value={profile.rt} />
                 <DetailText label="RW" value={profile.rw} />
               </div>
-            </div>
-          </div>
+            </InfoCard>
 
-          <div className="bg-white rounded-xl border border-[#071E3D]/10 shadow-sm p-6">
-            <h3 className="text-[16px] font-bold text-[#CC6B27] mb-5 border-b border-[#CC6B27]/20 pb-2 flex items-center gap-2">
-              <GraduationCap size={18}/> Pendidikan & Lisensi
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-              <DetailText label="Pendidikan Terakhir" value={profile.pendidikan_terakhir} />
-              <DetailText label="Nomor Lisensi" value={profile.no_lisensi} />
-              <DetailText label="Masa Berlaku Lisensi" value={profile.masa_berlaku} />
-            </div>
+            <InfoCard icon={<GraduationCap size={18}/>} title="Pendidikan & Lisensi">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <DetailText icon={GraduationCap} label="Pendidikan Terakhir" value={profile.pendidikan_terakhir} />
+                <DetailText icon={Award} label="Nomor Lisensi" value={profile.no_lisensi} />
+                <DetailText icon={Calendar} label="Masa Berlaku Lisensi" value={profile.masa_berlaku} />
+              </div>
+            </InfoCard>
           </div>
         </div>
       </div>
 
       {/* MODAL EDIT PROFIL */}
       {isEditing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/60 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/60 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[34px] border border-slate-100 bg-white shadow-2xl">
             
-            <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
-              <h3 className="text-[18px] font-bold text-[#071E3D] flex items-center gap-2">
-                <Edit2 size={20} className="text-[#CC6B27]"/> Form Perbarui Profil
-              </h3>
-              <button onClick={handleCancelEdit} className="w-8 h-8 rounded-full bg-white border border-[#071E3D]/20 flex justify-center items-center text-[#182D4A] hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all">
-                <X size={18}/>
+            <div className="flex items-center justify-between border-b border-slate-100 p-6">
+              <div>
+                <h3 className="flex items-center gap-2 text-xl font-black text-[#071E3D]">
+                  <Edit2 size={20} className="text-orange-500"/>
+                  Form Perbarui Profil
+                </h3>
+                <p className="mt-1 text-sm font-medium text-slate-400">
+                  Perbarui foto, identitas, alamat, pendidikan, dan lisensi.
+                </p>
+              </div>
+
+              <button
+                onClick={handleCancelEdit}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500"
+              >
+                <X size={20}/>
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1">
+            <div className="flex-1 overflow-y-auto p-6">
               <form id="edit-profile-form" onSubmit={handleSubmit} className="flex flex-col gap-8">
                 
                 {/* SECTION FOTO PROFIL */}
-                <div className="bg-[#FAFAFA] p-5 rounded-xl border border-[#071E3D]/10 flex items-center gap-6">
-                  <div className="w-20 h-20 rounded-full border-4 border-[#CC6B27] overflow-hidden flex justify-center items-center bg-gray-200 shadow-sm shrink-0">
+                <div className="flex flex-col gap-5 rounded-[28px] border border-slate-100 bg-slate-50/70 p-5 md:flex-row md:items-center">
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-orange-500 bg-white shadow-sm">
                     {fotoPreview ? (
-                      <img src={fotoPreview} alt="Preview" className="w-full h-full object-cover"/>
+                      <img src={fotoPreview} alt="Preview" className="h-full w-full object-cover"/>
                     ) : (
-                      <Camera size={30} className="text-gray-400"/>
+                      <Camera size={34} className="text-slate-300"/>
                     )}
                   </div>
+
                   <div className="flex-1">
                     <label className={labelClass}>Unggah Foto Profil Baru</label>
                     <input 
                       type="file" 
                       accept="image/*" 
                       onChange={handleFotoChange} 
-                      className="w-full text-[13px] text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[12px] file:font-semibold file:bg-[#CC6B27]/10 file:text-[#CC6B27] hover:file:bg-[#CC6B27]/20 cursor-pointer"
+                      className="w-full rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-orange-50 file:px-4 file:py-2 file:text-xs file:font-black file:uppercase file:tracking-widest file:text-orange-500 hover:file:bg-orange-100"
                     />
-                    <p className="text-[11px] text-gray-400 mt-2">Format: JPG, PNG (Max 2MB). Biarkan kosong jika tidak ingin mengubah foto.</p>
+                    <p className="mt-2 text-xs font-medium text-slate-400">
+                      Format: JPG, PNG (Max 2MB). Biarkan kosong jika tidak ingin mengubah foto.
+                    </p>
                   </div>
                 </div>
 
                 {/* IDENTITAS */}
-                <div>
-                  <h4 className="text-[14px] font-bold text-[#CC6B27] mb-4 border-b border-[#CC6B27]/20 pb-2 flex items-center gap-2">
-                    <User size={16}/> Data Identitas
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <FormSection icon={<User size={17}/>} title="Data Identitas">
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div className="md:col-span-2">
                       <label className={labelClass}>Nama Lengkap</label>
                       <input type="text" name="nama_lengkap" value={formData.nama_lengkap || ''} onChange={handleChange} className={inputClass}/>
@@ -396,65 +463,70 @@ const ProfileAdmin = () => {
                       <input type="date" name="tanggal_lahir" value={formData.tanggal_lahir || ''} onChange={handleChange} className={inputClass}/>
                     </div>
                   </div>
-                </div>
+                </FormSection>
 
                 {/* ALAMAT */}
-                <div>
-                  <h4 className="text-[14px] font-bold text-[#CC6B27] mb-4 border-b border-[#CC6B27]/20 pb-2 flex items-center gap-2">
-                    <MapPin size={16}/> Alamat Domisili
-                  </h4>
+                <FormSection icon={<MapPin size={17}/>} title="Alamat Domisili">
                   <div className="flex flex-col gap-5">
                     <div>
                       <label className={labelClass}>Alamat Lengkap</label>
-                      <textarea name="alamat" value={formData.alamat || ''} onChange={handleChange} rows="2" className={`${inputClass} resize-none`}></textarea>
+                      <textarea name="alamat" value={formData.alamat || ''} onChange={handleChange} rows="3" className={`${inputClass} resize-none`}></textarea>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                       <div>
                         <label className={labelClass}>Provinsi</label>
                         <select name="provinsi" onChange={handleProvinsiChange} value={selectedWilayahId.provinsi} className={inputClass}>
                           <option value="">-- Pilih Provinsi Baru --</option>
                           {provinsiList.map(p => (<option key={p.id} value={p.id}>{p.name}</option>))}
                         </select>
-                        {formData.provinsi && !selectedWilayahId.provinsi && <span className="text-[11px] text-gray-500 mt-1 block">Saat ini: {formData.provinsi}</span>}
+                        {formData.provinsi && !selectedWilayahId.provinsi && <span className="mt-2 block text-xs font-bold text-slate-400">Saat ini: {formData.provinsi}</span>}
                       </div>
+
                       <div>
                         <label className={labelClass}>Kota / Kabupaten</label>
                         <select name="kota" onChange={handleKotaChange} value={selectedWilayahId.kota} disabled={!selectedWilayahId.provinsi} className={inputClass}>
                           <option value="">-- Pilih Kota --</option>
                           {kotaList.map(k => (<option key={k.id} value={k.id}>{k.name}</option>))}
                         </select>
-                        {formData.kota && !selectedWilayahId.kota && <span className="text-[11px] text-gray-500 mt-1 block">Saat ini: {formData.kota}</span>}
+                        {formData.kota && !selectedWilayahId.kota && <span className="mt-2 block text-xs font-bold text-slate-400">Saat ini: {formData.kota}</span>}
                       </div>
+
                       <div>
                         <label className={labelClass}>Kecamatan</label>
                         <select name="kecamatan" onChange={handleKecamatanChange} value={selectedWilayahId.kecamatan} disabled={!selectedWilayahId.kota} className={inputClass}>
                           <option value="">-- Pilih Kecamatan --</option>
                           {kecamatanList.map(k => (<option key={k.id} value={k.id}>{k.name}</option>))}
                         </select>
-                        {formData.kecamatan && !selectedWilayahId.kecamatan && <span className="text-[11px] text-gray-500 mt-1 block">Saat ini: {formData.kecamatan}</span>}
+                        {formData.kecamatan && !selectedWilayahId.kecamatan && <span className="mt-2 block text-xs font-bold text-slate-400">Saat ini: {formData.kecamatan}</span>}
                       </div>
+
                       <div>
                         <label className={labelClass}>Kelurahan / Desa</label>
                         <select name="kelurahan" onChange={handleKelurahanChange} disabled={!selectedWilayahId.kecamatan} className={inputClass}>
                           <option value="">-- Pilih Kelurahan --</option>
                           {kelurahanList.map(k => (<option key={k.id} value={k.id}>{k.name}</option>))}
                         </select>
-                        {formData.kelurahan && !kelurahanList.length && <span className="text-[11px] text-gray-500 mt-1 block">Saat ini: {formData.kelurahan}</span>}
+                        {formData.kelurahan && !kelurahanList.length && <span className="mt-2 block text-xs font-bold text-slate-400">Saat ini: {formData.kelurahan}</span>}
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-5 w-full md:w-1/2">
-                      <div><label className={labelClass}>RT</label><input type="text" name="rt" value={formData.rt || ''} onChange={handleChange} className={inputClass}/></div>
-                      <div><label className={labelClass}>RW</label><input type="text" name="rw" value={formData.rw || ''} onChange={handleChange} className={inputClass}/></div>
+
+                    <div className="grid grid-cols-2 gap-5 md:w-1/2">
+                      <div>
+                        <label className={labelClass}>RT</label>
+                        <input type="text" name="rt" value={formData.rt || ''} onChange={handleChange} className={inputClass}/>
+                      </div>
+                      <div>
+                        <label className={labelClass}>RW</label>
+                        <input type="text" name="rw" value={formData.rw || ''} onChange={handleChange} className={inputClass}/>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </FormSection>
 
                 {/* PENDIDIKAN & LISENSI */}
-                <div>
-                  <h4 className="text-[14px] font-bold text-[#CC6B27] mb-4 border-b border-[#CC6B27]/20 pb-2 flex items-center gap-2">
-                    <GraduationCap size={16}/> Pendidikan & Lisensi
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <FormSection icon={<GraduationCap size={17}/>} title="Pendidikan & Lisensi">
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div className="md:col-span-2">
                       <label className={labelClass}>Pendidikan Terakhir</label>
                       <input type="text" name="pendidikan_terakhir" value={formData.pendidikan_terakhir || ''} onChange={handleChange} className={inputClass}/>
@@ -468,23 +540,69 @@ const ProfileAdmin = () => {
                       <input type="date" name="masa_berlaku" value={formData.masa_berlaku || ''} onChange={handleChange} className={inputClass}/>
                     </div>
                   </div>
-                </div>
+                </FormSection>
               </form>
             </div>
 
-            <div className="px-6 py-4 border-t border-[#071E3D]/10 bg-[#FAFAFA] flex justify-end gap-3 rounded-b-2xl">
-              <button type="button" onClick={handleCancelEdit} className="px-5 py-2.5 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] hover:bg-[#E2E8F0] transition-colors text-[13px]">Batal</button>
-              <button type="submit" form="edit-profile-form" className="px-6 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-md transition-all flex items-center gap-2 text-[13px]">
-                <Save size={16}/> Simpan Perubahan
+            <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/70 p-6">
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="rounded-2xl border border-slate-100 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+              >
+                Batal
+              </button>
+
+              <button
+                type="submit"
+                form="edit-profile-form"
+                className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+              >
+                <Save size={16}/>
+                Simpan Perubahan
               </button>
             </div>
 
           </div>
         </div>
       )}
-
     </div>
   );
 };
+
+function HeroPill({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-xs font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function InfoCard({ icon, title, children }) {
+  return (
+    <section className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
+      <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-lg font-black text-[#071E3D]">
+        <span className="text-orange-500">{icon}</span>
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function FormSection({ icon, title, children }) {
+  return (
+    <section className="rounded-[28px] border border-slate-100 bg-white p-5">
+      <h4 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-black text-[#071E3D]">
+        <span className="text-orange-500">{icon}</span>
+        {title}
+      </h4>
+      {children}
+    </section>
+  );
+}
 
 export default ProfileAdmin;

@@ -3,7 +3,8 @@ import api from "../../services/api";
 import Swal from 'sweetalert2';
 import { 
   Search, Download, Eye, CheckCircle, 
-  XCircle, Loader2, FileText, Building, Briefcase, User, CalendarClock, ShieldAlert, X
+  XCircle, Loader2, FileText, Building, Briefcase, User, CalendarClock, ShieldAlert, X,
+  Filter, ClipboardCheck, Sparkles
 } from 'lucide-react';
 
 const Surveillance = () => {
@@ -111,52 +112,87 @@ const Surveillance = () => {
     }
   };
 
+  const totalSubmitted = surveillances.filter(item => item.status_verifikasi === 'submitted').length;
+  const totalReview = surveillances.filter(item => item.status_verifikasi === 'review').length;
+  const totalValid = surveillances.filter(item => item.status_verifikasi === 'valid').length;
+  const totalTidakValid = surveillances.filter(item => item.status_verifikasi === 'tidak_valid').length;
+
   return (
     <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
       
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
-        <div>
-          <h2 className="text-[22px] font-bold text-[#071E3D] m-0 mb-1">Surveillance Asesi</h2>
-          <p className="text-[14px] text-[#182D4A] m-0">Pengawasan dan pemeliharaan sertifikat kompetensi.</p>
+      <div className="relative overflow-hidden bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
+        <div className="absolute right-0 top-0 w-72 h-72 bg-[#CC6B27]/10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/2"></div>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#CC6B27]/10 text-[#CC6B27] text-[11px] font-black uppercase tracking-wider mb-3">
+              <Sparkles size={14} />
+              Surveillance Asesi
+            </div>
+            <h2 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">
+              Surveillance Asesi
+            </h2>
+            <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">
+              Pengawasan dan pemeliharaan sertifikat kompetensi.
+            </p>
+          </div>
+          <button 
+            onClick={handleExport}
+            className="w-full md:w-auto px-5 py-2.5 rounded-lg font-bold bg-[#071E3D] text-[#FAFAFA] hover:bg-[#182D4A] shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 text-[13px]"
+          >
+            <Download size={18} /> Export Excel
+          </button>
         </div>
-        <button 
-          onClick={handleExport}
-          className="px-5 py-2.5 rounded-lg font-bold bg-[#182D4A] text-[#FAFAFA] hover:bg-[#071E3D] shadow-sm transition-all flex items-center justify-center gap-2 text-[13px]"
-        >
-          <Download size={18} /> Export Excel
-        </button>
+      </div>
+
+      {/* SUMMARY */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SummaryCard title="Menunggu" value={totalSubmitted} icon={<CalendarClock size={22}/>} color="yellow" />
+        <SummaryCard title="Review" value={totalReview} icon={<Search size={22}/>} color="blue" />
+        <SummaryCard title="Valid" value={totalValid} icon={<CheckCircle size={22}/>} color="green" />
+        <SummaryCard title="Tidak Valid" value={totalTidakValid} icon={<XCircle size={22}/>} color="red" />
       </div>
 
       {/* FILTER & TABLE CARD */}
       <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6">
         
+        {/* Toolbar */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <h4 className="text-[16px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
+            <ClipboardCheck size={18} className="text-[#CC6B27]"/>
+            Daftar Pengajuan Surveillance
+          </h4>
+        </div>
+
         {/* Toolbar (Search & Filter) */}
-        <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4 mb-6">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4 mb-6 bg-[#FAFAFA] p-4 rounded-xl border border-[#071E3D]/10">
           <div className="flex-1 relative group">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
             <input 
               type="text" 
               placeholder="Cari berdasarkan periode atau sumber dana..." 
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-medium"
               value={filters.search}
               onChange={(e) => setFilters({...filters, search: e.target.value})}
             />
           </div>
 
-          <select 
-            className="p-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] text-[13px] font-medium"
-            value={filters.status_verifikasi}
-            onChange={(e) => setFilters({...filters, status_verifikasi: e.target.value})}
-          >
-            <option value="">Semua Status</option>
-            <option value="submitted">Menunggu</option>
-            <option value="review">Sedang Direview</option>
-            <option value="valid">Valid (Diterima)</option>
-            <option value="tidak_valid">Tidak Valid (Ditolak)</option>
-          </select>
+          <div className="relative w-full md:w-56">
+            <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 z-10" />
+            <select 
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-white focus:outline-none focus:border-[#CC6B27] text-[13px] font-bold appearance-none cursor-pointer"
+              value={filters.status_verifikasi}
+              onChange={(e) => setFilters({...filters, status_verifikasi: e.target.value})}
+            >
+              <option value="">Semua Status</option>
+              <option value="submitted">Menunggu</option>
+              <option value="review">Sedang Direview</option>
+              <option value="valid">Valid (Diterima)</option>
+              <option value="tidak_valid">Tidak Valid (Ditolak)</option>
+            </select>
+          </div>
 
-          <button type="submit" className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm transition-all text-[13px] hidden md:block">
+          <button type="submit" className="w-full md:w-auto px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm transition-all text-[13px]">
             Cari
           </button>
         </form>
@@ -237,14 +273,17 @@ const Surveillance = () => {
       {/* MODAL FLOATING CARD (DETAIL & UPDATE STATUS) */}
       {showModal && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             
             {/* Header Floating Card */}
             <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
-              <h3 className="text-[18px] font-bold text-[#071E3D] flex items-center gap-2">
-                <FileText size={20} className="text-[#CC6B27]" /> 
-                Detail Pengajuan Surveillance
-              </h3>
+              <div>
+                <h3 className="text-[18px] font-bold text-[#071E3D] flex items-center gap-2 m-0">
+                  <FileText size={20} className="text-[#CC6B27]" /> 
+                  Detail Pengajuan Surveillance
+                </h3>
+                <p className="text-[12px] text-[#182D4A]/70 font-medium mt-1 ml-7">Evaluasi status pengajuan pemeliharaan sertifikat.</p>
+              </div>
               <button onClick={() => setShowModal(false)} className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors">
                 <X size={20}/>
               </button>
@@ -275,18 +314,9 @@ const Surveillance = () => {
                     <Building size={16}/> Informasi Perusahaan
                   </h4>
                   <div className="space-y-4">
-                    <div>
-                      <span className="text-[11px] font-bold text-[#182D4A]/70 block">Nama Perusahaan</span>
-                      <p className="text-[13px] font-bold text-[#071E3D] mt-0.5">{selectedItem.nama_perusahaan || '-'}</p>
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-[#182D4A]/70 block">Jabatan / Posisi</span>
-                      <p className="text-[13px] font-bold text-[#071E3D] mt-0.5">{selectedItem.jabatan_pekerjaan || '-'}</p>
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-[#182D4A]/70 block">Alamat Perusahaan</span>
-                      <p className="text-[13px] font-medium text-[#071E3D] mt-0.5">{selectedItem.alamat_perusahaan || '-'}</p>
-                    </div>
+                    <DetailField label="Nama Perusahaan" value={selectedItem.nama_perusahaan || '-'} />
+                    <DetailField label="Jabatan / Posisi" value={selectedItem.jabatan_pekerjaan || '-'} />
+                    <DetailField label="Alamat Perusahaan" value={selectedItem.alamat_perusahaan || '-'} normal />
                   </div>
                 </div>
 
@@ -295,14 +325,8 @@ const Surveillance = () => {
                     <Briefcase size={16}/> Pekerjaan / Proyek Terkini
                   </h4>
                   <div className="space-y-4">
-                    <div>
-                      <span className="text-[11px] font-bold text-[#182D4A]/70 block">Nama Proyek / Aktivitas</span>
-                      <p className="text-[13px] font-bold text-[#071E3D] mt-0.5">{selectedItem.nama_proyek || '-'}</p>
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-[#182D4A]/70 block">Peran dalam Proyek</span>
-                      <p className="text-[13px] font-bold text-[#071E3D] mt-0.5">{selectedItem.jabatan_dalam_proyek || '-'}</p>
-                    </div>
+                    <DetailField label="Nama Proyek / Aktivitas" value={selectedItem.nama_proyek || '-'} />
+                    <DetailField label="Peran dalam Proyek" value={selectedItem.jabatan_dalam_proyek || '-'} />
                     <div>
                       <span className="text-[11px] font-bold text-[#182D4A]/70 block">Status Kesesuaian Kompetensi</span>
                       <div className="mt-1.5">
@@ -377,5 +401,35 @@ const Surveillance = () => {
     </div>
   );
 };
+
+const SummaryCard = ({ title, value, icon, color }) => {
+  const colorMap = {
+    yellow: 'bg-yellow-50 text-yellow-700 border-yellow-100',
+    blue: 'bg-blue-50 text-blue-700 border-blue-100',
+    green: 'bg-green-50 text-green-700 border-green-100',
+    red: 'bg-red-50 text-red-700 border-red-100'
+  };
+
+  return (
+    <div className="bg-white p-5 rounded-xl border border-[#071E3D]/10 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${colorMap[color]}`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-[11px] font-black text-[#182D4A]/60 uppercase tracking-wider mb-1">{title}</p>
+        <h3 className="text-[26px] font-black text-[#071E3D] leading-none">{value}</h3>
+      </div>
+    </div>
+  );
+};
+
+const DetailField = ({ label, value, normal }) => (
+  <div>
+    <span className="text-[11px] font-bold text-[#182D4A]/70 block">{label}</span>
+    <p className={`text-[13px] ${normal ? 'font-medium' : 'font-bold'} text-[#071E3D] mt-0.5 m-0 leading-relaxed`}>
+      {value}
+    </p>
+  </div>
+);
 
 export default Surveillance;

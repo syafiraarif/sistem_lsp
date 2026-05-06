@@ -4,7 +4,8 @@ import api from "../../services/api";
 import { getProvinsi, getKota, getKecamatan, getKelurahan } from "../../services/wilayah.service";
 import { 
   Search, Plus, Eye, Edit2, Trash2, X, Save, Upload, FileSpreadsheet,
-  MapPin, User, Building2, Loader2, FileText, Home, Mail, Key, CheckCircle
+  MapPin, User, Building2, Loader2, FileText, Home, Mail, Key, CheckCircle,
+  Filter, Sparkles
 } from 'lucide-react';
 
 const TempatUji = () => {
@@ -340,15 +341,15 @@ const TempatUji = () => {
         await api.put(`/admin/tuk/${currentId}`, payload);
         Swal.fire({title: 'Sukses', text: 'Data TUK berhasil diperbarui', icon: 'success', confirmButtonColor: '#CC6B27'});
       } else {
-  // Create akun user & TUK
-  await api.post('/admin/tuk', payload);
-  Swal.fire({
-    title: 'Sukses',
-    text: 'TUK baru berhasil dibuat.',
-    icon: 'success',
-    confirmButtonColor: '#CC6B27'
-  });
-}
+        // Create akun user & TUK
+        await api.post('/admin/tuk', payload);
+        Swal.fire({
+          title: 'Sukses',
+          text: 'TUK baru berhasil dibuat.',
+          icon: 'success',
+          confirmButtonColor: '#CC6B27'
+        });
+      }
       setShowModal(false);
       fetchData();
     } catch (error) {
@@ -429,40 +430,58 @@ const TempatUji = () => {
     <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
       
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-[22px] font-bold text-[#071E3D] m-0 mb-1">Data Tempat Uji Kompetensi (TUK)</h2>
-          <p className="text-[14px] text-[#182D4A] m-0">Kelola data TUK, lokasi, dan status lisensi.</p>
-        </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <button 
-            className="flex-1 md:flex-none px-4 py-2 bg-white border border-[#071E3D]/20 text-[#182D4A] rounded-lg hover:bg-[#E2E8F0] shadow-sm transition-all font-bold flex items-center justify-center gap-2 text-[13px]" 
-            onClick={() => {
-              setSelectedImportFile(null); // Reset setiap kali modal dibuka
-              setShowImportModal(true);
-            }}
-          >
-            <FileSpreadsheet size={18} /> Import
-          </button>
-          <button 
-            className="flex-1 md:flex-none px-4 py-2 bg-[#CC6B27] text-white rounded-lg hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all font-bold flex items-center justify-center gap-2 text-[13px]" 
-            onClick={openCreateModal}
-          >
-            <Plus size={18} /> Tambah TUK
-          </button>
+      <div className="relative overflow-hidden bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
+        <div className="absolute right-0 top-0 w-72 h-72 bg-[#CC6B27]/10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/2"></div>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#CC6B27]/10 text-[#CC6B27] text-[11px] font-black uppercase tracking-wider mb-3">
+              <Sparkles size={14} />
+              Master TUK
+            </div>
+            <h2 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">
+              Data Tempat Uji Kompetensi (TUK)
+            </h2>
+            <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">
+              Kelola data TUK, lokasi, dan status lisensi.
+            </p>
+          </div>
+          <div className="flex gap-3 w-full md:w-auto">
+            <button 
+              className="flex-1 md:flex-none px-4 py-2.5 bg-white border border-[#071E3D]/20 text-[#182D4A] rounded-lg hover:bg-[#E2E8F0] shadow-sm transition-all font-bold flex items-center justify-center gap-2 text-[13px]" 
+              onClick={() => {
+                setSelectedImportFile(null); // Reset setiap kali modal dibuka
+                setShowImportModal(true);
+              }}
+            >
+              <FileSpreadsheet size={18} /> Import
+            </button>
+            <button 
+              className="flex-1 md:flex-none px-4 py-2.5 bg-[#CC6B27] text-white rounded-lg hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all font-bold flex items-center justify-center gap-2 text-[13px]" 
+              onClick={openCreateModal}
+            >
+              <Plus size={18} /> Tambah TUK
+            </button>
+          </div>
         </div>
       </div>
 
       {/* CONTENT */}
       <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-6">
         
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h4 className="text-[16px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
+            <Building2 size={18} className="text-[#CC6B27]" />
+            Daftar Tempat Uji Kompetensi
+          </h4>
+        </div>
+
         {/* --- PENCARIAN & FILTER --- */}
-        <div className="flex flex-col md:flex-row gap-3 w-full">
+        <div className="flex flex-col md:flex-row gap-3 w-full bg-[#FAFAFA] p-4 rounded-xl border border-[#071E3D]/10">
           <div className="w-full md:w-80 relative group">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
             <input 
               type="text" 
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]" 
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-medium" 
               placeholder="Cari Kode atau Nama TUK..."
               value={searchTerm}
               onChange={(e) => {
@@ -472,18 +491,21 @@ const TempatUji = () => {
             />
           </div>
 
-          <select 
-            value={filterStatus}
-            onChange={(e) => {
-              setFilterStatus(e.target.value);
-              setPagination(prev => ({...prev, page: 1})); 
-            }}
-            className="w-full md:w-48 px-3 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-medium appearance-none cursor-pointer"
-          >
-            <option value="">Semua Status</option>
-            <option value="aktif">Status: Aktif</option>
-            <option value="nonaktif">Status: Nonaktif</option>
-          </select>
+          <div className="relative w-full md:w-48">
+            <Filter size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 z-10" />
+            <select 
+              value={filterStatus}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setPagination(prev => ({...prev, page: 1})); 
+              }}
+              className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-bold appearance-none cursor-pointer"
+            >
+              <option value="">Semua Status</option>
+              <option value="aktif">Status: Aktif</option>
+              <option value="nonaktif">Status: Nonaktif</option>
+            </select>
+          </div>
         </div>
 
         {/* Table */}
@@ -496,7 +518,7 @@ const TempatUji = () => {
                 <th className="py-3.5 px-4">Nama TUK</th>
                 <th className="py-3.5 px-4">Jenis</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
-                <th className="py-3.5 px-4 text-center w-40">Aksi</th>
+                <th className="py-3.5 px-4 text-center w-48">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#071E3D]/5">
@@ -512,7 +534,7 @@ const TempatUji = () => {
                   <tr key={item.id_tuk || idx} className="hover:bg-[#CC6B27]/5 transition-colors">
                     <td className="py-4 px-4 text-center font-bold text-[#071E3D] text-[13.5px]">{(pagination.page - 1) * pagination.limit + idx + 1}</td>
                     <td className="py-4 px-4">
-                        <span className="px-2.5 py-1 bg-[#FAFAFA] border border-[#071E3D]/10 rounded-md font-mono font-medium text-[13px] text-[#182D4A]">{item.kode_tuk}</span>
+                        <span className="px-2.5 py-1 bg-[#FAFAFA] border border-[#071E3D]/10 rounded-md font-mono font-bold text-[13px] text-[#CC6B27]">{item.kode_tuk}</span>
                     </td>
                     <td className="py-4 px-4">
                       <div className="font-bold text-[#071E3D] text-[13.5px] max-w-sm truncate">{item.nama_tuk}</div>
@@ -531,7 +553,7 @@ const TempatUji = () => {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex justify-center gap-1">
+                      <div className="flex justify-center gap-1.5">
                         
                         <button 
                           onClick={() => handleSendEmail(item.id_tuk, !!item.penanggungJawab)} 
@@ -547,16 +569,19 @@ const TempatUji = () => {
                         </button>
                         
                         <button onClick={() => handleResetPassword(item.penanggungJawab?.id_user)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10 transition-colors" title="Reset Password"><Key size={18}/></button>
-                        <button onClick={() => openDetailModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 transition-colors" title="Detail"><Eye size={18}/></button>
+                        <button onClick={() => openDetailModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#CC6B27] bg-[#CC6B27]/10 hover:bg-[#CC6B27] hover:text-white transition-colors" title="Detail"><Eye size={18}/></button>
                         <button onClick={() => openEditModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10 transition-colors" title="Edit"><Edit2 size={18}/></button>
-                        <button onClick={() => handleDelete(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus"><Trash2 size={18}/></button>
+                        <button onClick={() => handleDelete(item.id_tuk)} className="p-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-100 transition-colors" title="Hapus"><Trash2 size={18}/></button>
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                    <td colSpan="6" className="text-center py-16 text-[#182D4A]/50 font-medium text-[14px]">Data TUK tidak ditemukan.</td>
+                    <td colSpan="6" className="text-center py-16">
+                      <Building2 size={48} className="text-[#071E3D]/20 mx-auto mb-3" />
+                      <p className="text-[#182D4A] font-medium text-[14px]">Data TUK tidak ditemukan.</p>
+                    </td>
                 </tr>
               )}
             </tbody>
@@ -567,12 +592,15 @@ const TempatUji = () => {
       {/* --- MODAL FORM UTAMA --- */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden zoom-in-95">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden zoom-in-95">
             
             <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
-              <h3 className="text-[18px] font-bold text-[#071E3D] flex items-center gap-2 m-0">
-                {isDetailMode ? <><Eye size={20} className="text-[#CC6B27]"/> Detail TUK</> : isEditMode ? <><Edit2 size={20} className="text-[#CC6B27]"/> Edit Data TUK</> : <><Plus size={20} className="text-[#CC6B27]"/> Tambah TUK Baru</>}
-              </h3>
+              <div>
+                <h3 className="text-[18px] font-bold text-[#071E3D] flex items-center gap-2 m-0">
+                  {isDetailMode ? <><Eye size={20} className="text-[#CC6B27]"/> Detail TUK</> : isEditMode ? <><Edit2 size={20} className="text-[#CC6B27]"/> Edit Data TUK</> : <><Plus size={20} className="text-[#CC6B27]"/> Tambah TUK Baru</>}
+                </h3>
+                <p className="text-[12px] text-[#182D4A]/70 font-medium mt-1 ml-7">Lengkapi informasi akun, profil, alamat, dan legalitas TUK.</p>
+              </div>
               <button onClick={() => setShowModal(false)} className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors"><X size={20}/></button>
             </div>
             
@@ -580,129 +608,115 @@ const TempatUji = () => {
                 <form id="tukForm" onSubmit={handleSubmit} className="space-y-6">
                 
                 {/* AKUN */}
-                <div className="flex flex-col gap-4">
-                    <h4 className="text-[14px] font-bold text-[#071E3D] border-b border-[#071E3D]/10 pb-2 flex items-center gap-2 m-0">
-                        <User size={16} className="text-[#CC6B27]"/> Informasi Akun & Kontak
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Email {isEditMode && <span className="text-[#182D4A]/50 font-normal">(Tidak bisa diubah)</span>}</label>
-                            <input type="email" name="email" value={formData.email} onChange={handleInputChange} disabled={isEditMode || isDetailMode} required={!isEditMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="Email login TUK..."/>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[13px] font-bold text-[#071E3D]">No Handphone / Telp</label>
-                            <input type="text" name="telepon" value={formData.telepon} onChange={handleInputChange} disabled={isDetailMode} required={!isEditMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="08..."/>
-                        </div>
-                    </div>
+                <SectionTitle icon={<User size={16}/>} title="Informasi Akun & Kontak" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <FormGroup label={<>Email {isEditMode && <span className="text-[#182D4A]/50 font-normal">(Tidak bisa diubah)</span>}</>}>
+                      <input type="email" name="email" value={formData.email} onChange={handleInputChange} disabled={isEditMode || isDetailMode} required={!isEditMode} className={inputBase} placeholder="Email login TUK..."/>
+                    </FormGroup>
+                    <FormGroup label="No Handphone / Telp">
+                      <input type="text" name="telepon" value={formData.telepon} onChange={handleInputChange} disabled={isDetailMode} required={!isEditMode} className={inputBase} placeholder="08..."/>
+                    </FormGroup>
                 </div>
 
                 {/* PROFIL TUK */}
-                <div className="flex flex-col gap-4">
-                    <h4 className="text-[14px] font-bold text-[#071E3D] border-b border-[#071E3D]/10 pb-2 flex items-center gap-2 m-0">
-                        <Building2 size={16} className="text-[#CC6B27]"/> Profil TUK
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Kode TUK <span className="text-red-500">*</span></label>
-                            <input type="text" name="kode_tuk" value={formData.kode_tuk} onChange={handleInputChange} disabled={isDetailMode} required className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"/>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Nama TUK <span className="text-red-500">*</span></label>
-                            <input type="text" name="nama_tuk" value={formData.nama_tuk} onChange={handleInputChange} disabled={isDetailMode} required className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"/>
-                        </div>
-                        <div className="flex flex-col gap-1.5 md:col-span-2">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Jenis TUK</label>
-                            <select name="jenis_tuk" value={formData.jenis_tuk} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
-                                <option value="sewaktu">TUK Sewaktu</option>
-                                <option value="tempat_kerja">TUK Tempat Kerja</option>
-                                <option value="mandiri">TUK Mandiri</option>
-                            </select>
-                        </div>
-                        <div className="flex flex-col gap-1.5 md:col-span-2">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Institusi Induk</label>
-                            <input type="text" name="institusi_induk" value={formData.institusi_induk} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" placeholder="Nama instansi/perusahaan..."/>
-                        </div>
+                <SectionTitle icon={<Building2 size={16}/>} title="Profil TUK" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <FormGroup label={<span>Kode TUK <span className="text-red-500">*</span></span>}>
+                      <input type="text" name="kode_tuk" value={formData.kode_tuk} onChange={handleInputChange} disabled={isDetailMode} required className={inputBase}/>
+                    </FormGroup>
+
+                    <FormGroup label={<span>Nama TUK <span className="text-red-500">*</span></span>}>
+                      <input type="text" name="nama_tuk" value={formData.nama_tuk} onChange={handleInputChange} disabled={isDetailMode} required className={inputBase}/>
+                    </FormGroup>
+
+                    <div className="md:col-span-2">
+                      <FormGroup label="Jenis TUK">
+                        <select name="jenis_tuk" value={formData.jenis_tuk} onChange={handleInputChange} disabled={isDetailMode} className={`${inputBase} appearance-none`}>
+                            <option value="sewaktu">TUK Sewaktu</option>
+                            <option value="tempat_kerja">TUK Tempat Kerja</option>
+                            <option value="mandiri">TUK Mandiri</option>
+                        </select>
+                      </FormGroup>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <FormGroup label="Institusi Induk">
+                        <input type="text" name="institusi_induk" value={formData.institusi_induk} onChange={handleInputChange} disabled={isDetailMode} className={inputBase} placeholder="Nama instansi/perusahaan..."/>
+                      </FormGroup>
                     </div>
                 </div>
 
                 {/* ALAMAT */}
-                <div className="flex flex-col gap-4">
-                    <h4 className="text-[14px] font-bold text-[#071E3D] border-b border-[#071E3D]/10 pb-2 flex items-center gap-2 m-0">
-                        <Home size={16} className="text-[#CC6B27]"/> Alamat & Lokasi
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div className="flex flex-col gap-1.5 md:col-span-2">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Alamat Lengkap</label>
-                            <textarea name="alamat" rows="2" value={formData.alamat} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-3 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 resize-none"></textarea>
-                        </div>
-                        
-                        {!isDetailMode ? (
-                        <>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#071E3D]">Provinsi</label>
-                                <select value={selectedProvinsiId} onChange={handleProvinsiChange} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] appearance-none">
-                                    <option value="">Pilih Provinsi</option>
-                                    {provinsiList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#071E3D]">Kota/Kab</label>
-                                <select value={selectedKotaId} onChange={handleKotaChange} disabled={kotaList.length === 0} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
-                                    <option value="">Pilih Kota/Kab</option>
-                                    {kotaList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
-                                </select>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#071E3D]">Kecamatan</label>
-                                <select value={selectedKecamatanId} onChange={handleKecamatanChange} disabled={kecamatanList.length === 0} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
-                                    <option value="">Pilih Kecamatan</option>
-                                    {kecamatanList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
-                                </select>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#071E3D]">Kelurahan</label>
-                                <select value={selectedKelurahanId} onChange={handleKelurahanChange} disabled={kelurahanList.length === 0} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
-                                    <option value="">Pilih Kelurahan</option>
-                                    {kelurahanList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
-                                </select>
-                            </div>
-                        </>
-                        ) : (
-                        <div className="flex flex-col gap-1.5 md:col-span-2">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Wilayah</label>
-                            <input value={`${formData.kelurahan || '-'}, ${formData.kecamatan || '-'}, ${formData.kota || '-'}, ${formData.provinsi || '-'}`} disabled className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100" />
-                        </div>
-                        )}
-                        
-                        <div className="flex flex-col gap-1.5 md:col-span-2">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Kode Pos</label>
-                            <input type="text" name="kode_pos" value={formData.kode_pos} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 w-full md:w-1/2"/>
-                        </div>
+                <SectionTitle icon={<Home size={16}/>} title="Alamat & Lokasi" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="md:col-span-2">
+                      <FormGroup label="Alamat Lengkap">
+                        <textarea name="alamat" rows="2" value={formData.alamat} onChange={handleInputChange} disabled={isDetailMode} className={`${inputBase} resize-none p-3`}></textarea>
+                      </FormGroup>
+                    </div>
+                    
+                    {!isDetailMode ? (
+                    <>
+                        <FormGroup label="Provinsi">
+                          <select value={selectedProvinsiId} onChange={handleProvinsiChange} className={`${inputBase} appearance-none`}>
+                              <option value="">Pilih Provinsi</option>
+                              {provinsiList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        </FormGroup>
+
+                        <FormGroup label="Kota/Kab">
+                          <select value={selectedKotaId} onChange={handleKotaChange} disabled={kotaList.length === 0} className={`${inputBase} appearance-none`}>
+                              <option value="">Pilih Kota/Kab</option>
+                              {kotaList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+                          </select>
+                        </FormGroup>
+
+                        <FormGroup label="Kecamatan">
+                          <select value={selectedKecamatanId} onChange={handleKecamatanChange} disabled={kecamatanList.length === 0} className={`${inputBase} appearance-none`}>
+                              <option value="">Pilih Kecamatan</option>
+                              {kecamatanList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+                          </select>
+                        </FormGroup>
+
+                        <FormGroup label="Kelurahan">
+                          <select value={selectedKelurahanId} onChange={handleKelurahanChange} disabled={kelurahanList.length === 0} className={`${inputBase} appearance-none`}>
+                              <option value="">Pilih Kelurahan</option>
+                              {kelurahanList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+                          </select>
+                        </FormGroup>
+                    </>
+                    ) : (
+                    <div className="flex flex-col gap-1.5 md:col-span-2">
+                        <FormGroup label="Wilayah">
+                          <input value={`${formData.kelurahan || '-'}, ${formData.kecamatan || '-'}, ${formData.kota || '-'}, ${formData.provinsi || '-'}`} disabled className={inputBase} />
+                        </FormGroup>
+                    </div>
+                    )}
+                    
+                    <div className="md:col-span-2">
+                      <FormGroup label="Kode Pos">
+                        <input type="text" name="kode_pos" value={formData.kode_pos} onChange={handleInputChange} disabled={isDetailMode} className={`${inputBase} w-full md:w-1/2`}/>
+                      </FormGroup>
                     </div>
                 </div>
 
                 {/* LEGALITAS */}
-                <div className="flex flex-col gap-4">
-                    <h4 className="text-[14px] font-bold text-[#071E3D] border-b border-[#071E3D]/10 pb-2 flex items-center gap-2 m-0">
-                        <FileText size={16} className="text-[#CC6B27]"/> Legalitas & Status
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[13px] font-bold text-[#071E3D]">No. Lisensi</label>
-                            <input type="text" name="no_lisensi" value={formData.no_lisensi} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"/>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Masa Berlaku Lisensi</label>
-                            <input type="date" name="masa_berlaku_lisensi" value={formData.masa_berlaku_lisensi} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100"/>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[13px] font-bold text-[#071E3D]">Status TUK</label>
-                            <select name="status" value={formData.status} onChange={handleInputChange} disabled={isDetailMode} className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 appearance-none">
-                                <option value="aktif">Aktif</option>
-                                <option value="nonaktif">Nonaktif</option>
-                            </select>
-                        </div>
-                    </div>
+                <SectionTitle icon={<FileText size={16}/>} title="Legalitas & Status" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <FormGroup label="No. Lisensi">
+                      <input type="text" name="no_lisensi" value={formData.no_lisensi} onChange={handleInputChange} disabled={isDetailMode} className={inputBase}/>
+                    </FormGroup>
+
+                    <FormGroup label="Masa Berlaku Lisensi">
+                      <input type="date" name="masa_berlaku_lisensi" value={formData.masa_berlaku_lisensi} onChange={handleInputChange} disabled={isDetailMode} className={inputBase}/>
+                    </FormGroup>
+
+                    <FormGroup label="Status TUK">
+                      <select name="status" value={formData.status} onChange={handleInputChange} disabled={isDetailMode} className={`${inputBase} appearance-none`}>
+                          <option value="aktif">Aktif</option>
+                          <option value="nonaktif">Nonaktif</option>
+                      </select>
+                    </FormGroup>
                 </div>
                 </form>
             </div>
@@ -727,13 +741,18 @@ const TempatUji = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden zoom-in-95">
             <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
-              <h3 className="text-[18px] font-bold text-[#071E3D] m-0 flex items-center gap-2"><Upload size={20} className="text-[#CC6B27]"/> Import Data TUK</h3>
+              <div>
+                <h3 className="text-[18px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
+                  <Upload size={20} className="text-[#CC6B27]"/> Import Data TUK
+                </h3>
+                <p className="text-[12px] text-[#182D4A]/70 font-medium mt-1 ml-7">Unggah file Excel berisi data TUK.</p>
+              </div>
               <button onClick={() => setShowImportModal(false)} className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors"><X size={20}/></button>
             </div>
             
             <form onSubmit={handleImportSubmit} className="p-6">
               <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer relative ${
-                selectedImportFile ? 'border-green-500/50 bg-green-50' : 'border-[#071E3D]/30 bg-[#FAFAFA] hover:bg-white'
+                selectedImportFile ? 'border-green-500/50 bg-green-50' : 'border-[#CC6B27]/30 bg-[#CC6B27]/5 hover:bg-white'
               }`}>
                 
                 {selectedImportFile ? (
@@ -767,8 +786,31 @@ const TempatUji = () => {
           </div>
         </div>
       )}
+
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #CC6B27; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8561f; }
+      `}} />
     </div>
   );
 };
+
+const inputBase = "w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100";
+
+const SectionTitle = ({ icon, title }) => (
+  <h4 className="text-[14px] font-bold text-[#071E3D] border-b border-[#071E3D]/10 pb-2 flex items-center gap-2 m-0">
+    <span className="text-[#CC6B27]">{icon}</span>
+    {title}
+  </h4>
+);
+
+const FormGroup = ({ label, children }) => (
+  <div className="flex flex-col gap-1.5">
+    <label className="text-[13px] font-bold text-[#071E3D]">{label}</label>
+    {children}
+  </div>
+);
 
 export default TempatUji;

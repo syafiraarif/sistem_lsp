@@ -18,6 +18,7 @@ import {
   BadgeCheck,
   RefreshCcw,
   Info,
+  Sparkles,
 } from "lucide-react";
 
 const UnitKompetensi = () => {
@@ -467,29 +468,28 @@ const UnitKompetensi = () => {
 
   return (
     <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
-      <div className="relative overflow-hidden rounded-3xl bg-[#071E3D] p-6 md:p-8 shadow-lg">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[#CC6B27]/20 rounded-full blur-[90px] -mr-32 -mt-32" />
+      
+      {/* HEADER */}
+      <div className="relative overflow-hidden bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
+        <div className="absolute right-0 top-0 w-72 h-72 bg-[#CC6B27]/10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/2"></div>
 
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/10 mb-4">
-              <BookOpen className="text-[#CC6B27]" size={16} />
-              <span className="text-white/70 text-xs font-black uppercase tracking-widest">
-                Struktur Kompetensi
-              </span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#CC6B27]/10 text-[#CC6B27] text-[11px] font-black uppercase tracking-wider mb-3">
+              <Sparkles size={14} />
+              Struktur Kompetensi
             </div>
 
-            <h2 className="text-3xl md:text-4xl font-black text-white">
+            <h2 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">
               Unit Kompetensi per Skema
             </h2>
 
-            <p className="text-slate-300 mt-3 max-w-2xl text-sm font-medium leading-relaxed">
-              Pilih skema terlebih dahulu, lalu sistem menampilkan unit
-              kompetensi, elemen kompetensi, dan KUK / kriteria unjuk kerja.
+            <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium max-w-2xl">
+              Pilih skema terlebih dahulu, lalu sistem menampilkan unit kompetensi, elemen kompetensi, dan KUK / kriteria unjuk kerja.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 w-full lg:w-auto">
             <StatCard label="Unit" value={filteredUnits.length} />
             <StatCard label="Elemen" value={totalElemen} />
             <StatCard label="KUK" value={totalKuk} />
@@ -497,7 +497,8 @@ const UnitKompetensi = () => {
         </div>
       </div>
 
-      <div className="bg-white border border-[#071E3D]/10 rounded-3xl shadow-sm p-5 md:p-6">
+      {/* FILTER CARD */}
+      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-end">
           <div className="xl:col-span-5">
             <label className="text-[11px] font-black text-[#071E3D] uppercase tracking-widest mb-2 block">
@@ -511,7 +512,7 @@ const UnitKompetensi = () => {
                 setExpandedUnits({});
                 setSelectedUnitId(null);
               }}
-              className="w-full px-4 py-3 rounded-2xl border border-[#071E3D]/15 bg-[#FAFAFA] text-[#071E3D] font-bold text-sm focus:outline-none focus:border-[#CC6B27] focus:ring-4 focus:ring-[#CC6B27]/10"
+              className="w-full px-4 py-2.5 rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] text-[#071E3D] font-bold text-[13px] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10"
             >
               <option value="">-- Pilih Skema Sertifikasi --</option>
               {skemaList.map((skema) => (
@@ -527,14 +528,14 @@ const UnitKompetensi = () => {
               Cari Unit
             </label>
 
-            <div className="relative">
+            <div className="relative group">
               <Search
                 size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#182D4A]/50"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27]"
               />
               <input
                 type="text"
-                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-[#071E3D]/15 bg-[#FAFAFA] text-[#071E3D] font-bold text-sm focus:outline-none focus:border-[#CC6B27] focus:ring-4 focus:ring-[#CC6B27]/10"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] text-[#071E3D] font-medium text-[13px] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10"
                 placeholder="Cari kode, judul unit, atau SKKNI..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -545,7 +546,7 @@ const UnitKompetensi = () => {
           <div className="xl:col-span-3 flex gap-2">
             <button
               onClick={loadInitialData}
-              className="px-4 py-3 rounded-2xl border border-[#071E3D]/15 bg-white text-[#071E3D] hover:bg-slate-50 font-black text-sm flex items-center gap-2"
+              className="px-4 py-2.5 rounded-lg border border-[#071E3D]/20 bg-white text-[#071E3D] hover:bg-[#E2E8F0] font-bold text-[13px] flex items-center gap-2 transition-colors"
             >
               <RefreshCcw size={17} />
               Refresh
@@ -553,7 +554,7 @@ const UnitKompetensi = () => {
 
             <button
               onClick={openModal}
-              className="flex-1 px-5 py-3 rounded-2xl font-black bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm flex items-center justify-center gap-2 text-sm transition-all"
+              className="flex-1 px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-[13px] transition-all"
             >
               <Plus size={17} />
               Tambah Unit
@@ -562,25 +563,25 @@ const UnitKompetensi = () => {
         </div>
 
         {selectedSkema && (
-          <div className="mt-5 rounded-2xl bg-[#071E3D]/5 border border-[#071E3D]/10 p-5">
+          <div className="mt-5 rounded-xl bg-[#FAFAFA] border border-[#071E3D]/10 p-5">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
               <div>
                 <p className="text-[10px] font-black text-[#CC6B27] uppercase tracking-widest mb-2">
                   Skema Terpilih
                 </p>
-                <h3 className="text-lg font-black text-[#071E3D]">
+                <h3 className="text-[16px] font-black text-[#071E3D]">
                   {getSkemaTitle(selectedSkema)}
                 </h3>
-                <p className="text-sm font-bold text-[#182D4A]/70 mt-1">
+                <p className="text-[13px] font-bold text-[#182D4A]/70 mt-1">
                   Kode: {getSkemaCode(selectedSkema)}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white border border-[#071E3D]/10 px-4 py-3">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <div className="rounded-xl bg-white border border-[#071E3D]/10 px-4 py-3">
+                <p className="text-[10px] font-black text-[#182D4A]/50 uppercase tracking-widest">
                   SKKNI Terkait
                 </p>
-                <p className="text-sm font-black text-[#071E3D] mt-1">
+                <p className="text-[13px] font-black text-[#071E3D] mt-1">
                   {selectedSkkniIds.length > 0
                     ? `${selectedSkkniIds.length} SKKNI`
                     : "Belum ada SKKNI"}
@@ -593,7 +594,7 @@ const UnitKompetensi = () => {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-white rounded-xl w-full max-w-xl shadow-2xl flex flex-col overflow-hidden">
             <div className="px-6 py-4 border-b border-[#071E3D]/10 bg-[#FAFAFA] flex justify-between items-center">
               <div className="flex items-center gap-2 text-[#182D4A]">
                 {isEditing ? (
@@ -601,14 +602,14 @@ const UnitKompetensi = () => {
                 ) : (
                   <Plus size={20} className="text-[#CC6B27]" />
                 )}
-                <h3 className="font-black text-[16px]">
+                <h3 className="font-black text-[16px] text-[#071E3D]">
                   {isEditing ? "Edit Unit Kompetensi" : "Tambah Unit Kompetensi"}
                 </h3>
               </div>
 
               <button
                 onClick={closeModal}
-                className="text-[#182D4A]/50 hover:text-red-500 p-1 rounded-lg"
+                className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
@@ -624,7 +625,7 @@ const UnitKompetensi = () => {
                   name="id_skkni"
                   value={formData.id_skkni}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-[#071E3D]/20 rounded-xl text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 font-bold text-[13px]"
+                  className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 font-bold text-[13px]"
                 >
                   <option value="">-- Pilih SKKNI --</option>
                   {skkniList.map((sk) => (
@@ -635,7 +636,7 @@ const UnitKompetensi = () => {
                 </select>
 
                 {selectedSkkniIds.length > 0 && !isEditing && (
-                  <p className="mt-2 text-xs font-semibold text-slate-500">
+                  <p className="mt-2 text-[12px] font-semibold text-[#182D4A]/60">
                     Tips: skema terpilih memakai SKKNI ID{" "}
                     {selectedSkkniIds.join(", ")}.
                   </p>
@@ -652,7 +653,7 @@ const UnitKompetensi = () => {
                   name="kode_unit"
                   value={formData.kode_unit}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-[#071E3D]/20 rounded-xl text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 font-bold text-[13px]"
+                  className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 font-bold text-[13px]"
                   placeholder="Contoh: J.620100.004.01"
                 />
               </div>
@@ -667,7 +668,7 @@ const UnitKompetensi = () => {
                   name="judul_unit"
                   value={formData.judul_unit}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-[#071E3D]/20 rounded-xl text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 font-bold text-[13px]"
+                  className="w-full p-2.5 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 font-bold text-[13px]"
                   placeholder="Contoh: Menggunakan Struktur Data"
                 />
               </div>
@@ -676,7 +677,7 @@ const UnitKompetensi = () => {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-5 py-2 rounded-xl font-black border border-[#071E3D]/20 text-[#182D4A] bg-white hover:bg-[#E2E8F0] text-[13px]"
+                  className="px-5 py-2.5 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] bg-white hover:bg-[#E2E8F0] text-[13px]"
                 >
                   Batal
                 </button>
@@ -684,7 +685,7 @@ const UnitKompetensi = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-5 py-2 rounded-xl font-black bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm flex items-center gap-2 text-[13px] disabled:opacity-70"
+                  className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm flex items-center gap-2 text-[13px] disabled:opacity-70"
                 >
                   {loading ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -699,20 +700,20 @@ const UnitKompetensi = () => {
         </div>
       )}
 
-      <div className="bg-white border border-[#071E3D]/10 rounded-3xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-[#071E3D]/10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h3 className="text-xl font-black text-[#071E3D] flex items-center gap-2">
+            <h3 className="text-[18px] font-black text-[#071E3D] flex items-center gap-2">
               <Layers className="text-[#CC6B27]" size={22} />
               Struktur Unit Kompetensi
             </h3>
-            <p className="text-sm text-[#182D4A]/60 font-medium mt-1">
+            <p className="text-[13px] text-[#182D4A]/60 font-medium mt-1">
               Urutan data: Skema → Unit Kompetensi → Elemen → KUK.
             </p>
           </div>
 
           {!selectedSkemaId && (
-            <div className="rounded-2xl bg-amber-50 border border-amber-100 px-4 py-3 text-amber-700 text-sm font-bold flex items-center gap-2">
+            <div className="rounded-lg bg-amber-50 border border-amber-100 px-4 py-2.5 text-amber-700 text-[13px] font-bold flex items-center gap-2">
               <Info size={17} />
               Pilih skema dulu
             </div>
@@ -735,7 +736,7 @@ const UnitKompetensi = () => {
                 return (
                   <div
                     key={idUnit || index}
-                    className={`rounded-3xl border transition-all overflow-hidden ${
+                    className={`rounded-xl border transition-all overflow-hidden ${
                       selectedUnitId === idUnit
                         ? "border-[#CC6B27]/40 bg-[#CC6B27]/5"
                         : "border-[#071E3D]/10 bg-white"
@@ -748,7 +749,7 @@ const UnitKompetensi = () => {
                           onClick={() => toggleUnit(unit)}
                           className="flex items-start gap-4 text-left flex-1"
                         >
-                          <div className="w-12 h-12 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center shrink-0">
+                          <div className="w-11 h-11 rounded-xl bg-[#071E3D] text-white flex items-center justify-center shrink-0">
                             {isExpanded ? (
                               <ChevronDown size={22} />
                             ) : (
@@ -758,19 +759,19 @@ const UnitKompetensi = () => {
 
                           <div>
                             <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <span className="px-3 py-1 rounded-full bg-[#CC6B27] text-white text-xs font-black">
+                              <span className="px-3 py-1 rounded-full bg-[#CC6B27] text-white text-[11px] font-black">
                                 Unit {index + 1}
                               </span>
-                              <span className="px-3 py-1 rounded-full bg-slate-100 text-[#071E3D] text-xs font-black">
+                              <span className="px-3 py-1 rounded-full bg-[#071E3D]/10 text-[#071E3D] text-[11px] font-black">
                                 {getUnitKode(unit)}
                               </span>
                             </div>
 
-                            <h4 className="text-lg font-black text-[#071E3D] leading-snug">
+                            <h4 className="text-[16px] font-black text-[#071E3D] leading-snug">
                               {getUnitJudul(unit)}
                             </h4>
 
-                            <p className="text-xs text-[#182D4A]/60 font-semibold mt-2">
+                            <p className="text-[12px] text-[#182D4A]/60 font-semibold mt-2">
                               Rujukan: {getUnitSkkniTitle(unit)}
                             </p>
                           </div>
@@ -794,7 +795,7 @@ const UnitKompetensi = () => {
 
                           <button
                             onClick={() => handleEdit(unit)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[#182D4A] bg-slate-100 hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm text-xs font-black"
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[#182D4A] bg-[#071E3D]/10 hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm text-[12px] font-black"
                             title="Edit Unit"
                           >
                             <Edit size={15} />
@@ -803,7 +804,7 @@ const UnitKompetensi = () => {
 
                           <button
                             onClick={() => handleDelete(unit)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-red-600 bg-red-50 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100 hover:border-transparent text-xs font-black"
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100 hover:border-transparent text-[12px] font-black"
                             title="Hapus Unit"
                           >
                             <Trash2 size={15} />
@@ -833,10 +834,10 @@ const UnitKompetensi = () => {
                               return (
                                 <div
                                   key={getElemenId(elemen) || elemenIndex}
-                                  className="rounded-2xl bg-white border border-[#071E3D]/10 p-5"
+                                  className="rounded-xl bg-white border border-[#071E3D]/10 p-5"
                                 >
                                   <div className="flex gap-4">
-                                    <div className="w-10 h-10 rounded-2xl bg-[#CC6B27]/10 text-[#CC6B27] flex items-center justify-center font-black shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-[#CC6B27]/10 text-[#CC6B27] flex items-center justify-center font-black shrink-0">
                                       {elemenIndex + 1}
                                     </div>
 
@@ -845,12 +846,12 @@ const UnitKompetensi = () => {
                                         Elemen Kompetensi
                                       </p>
 
-                                      <h5 className="text-base font-black text-[#071E3D] leading-snug">
+                                      <h5 className="text-[15px] font-black text-[#071E3D] leading-snug">
                                         {getElemenText(elemen)}
                                       </h5>
 
-                                      <div className="mt-4 rounded-2xl bg-slate-50 border border-slate-100 p-4">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                      <div className="mt-4 rounded-xl bg-[#FAFAFA] border border-[#071E3D]/10 p-4">
+                                        <p className="text-[10px] font-black text-[#182D4A]/50 uppercase tracking-widest mb-3 flex items-center gap-2">
                                           <BadgeCheck size={14} />
                                           KUK / Kriteria Unjuk Kerja
                                         </p>
@@ -865,9 +866,9 @@ const UnitKompetensi = () => {
                                                   kuk.id ||
                                                   kukIndex
                                                 }
-                                                className="flex gap-3 text-sm font-semibold text-[#182D4A]"
+                                                className="flex gap-3 text-[13px] font-semibold text-[#182D4A]"
                                               >
-                                                <span className="w-7 h-7 rounded-xl bg-white border border-slate-200 text-[#CC6B27] flex items-center justify-center text-xs font-black shrink-0">
+                                                <span className="w-7 h-7 rounded-lg bg-white border border-[#071E3D]/10 text-[#CC6B27] flex items-center justify-center text-xs font-black shrink-0">
                                                   {kukIndex + 1}
                                                 </span>
                                                 <span>{getKukText(kuk)}</span>
@@ -875,7 +876,7 @@ const UnitKompetensi = () => {
                                             ))}
                                           </ol>
                                         ) : (
-                                          <p className="text-sm text-slate-400 font-semibold">
+                                          <p className="text-[13px] text-[#182D4A]/50 font-semibold">
                                             Belum ada KUK untuk elemen ini.
                                           </p>
                                         )}
@@ -887,15 +888,15 @@ const UnitKompetensi = () => {
                             })}
                           </div>
                         ) : (
-                          <div className="rounded-2xl bg-white border border-dashed border-slate-200 p-8 text-center">
+                          <div className="rounded-xl bg-white border border-dashed border-[#071E3D]/20 p-8 text-center">
                             <ClipboardList
                               size={44}
-                              className="mx-auto text-slate-300 mb-3"
+                              className="mx-auto text-[#071E3D]/20 mb-3"
                             />
                             <h4 className="font-black text-[#071E3D] mb-2">
                               Elemen dan KUK belum tampil
                             </h4>
-                            <p className="text-sm font-medium text-slate-500 max-w-xl mx-auto">
+                            <p className="text-[13px] font-medium text-[#182D4A]/60 max-w-xl mx-auto">
                               Frontend sudah siap menampilkan Unit → Elemen → KUK.
                               Namun endpoint admin <b>/admin/unit-kompetensi/:id</b>{" "}
                               perlu mengirim relasi elemen dan kuk dari backend.
@@ -929,8 +930,8 @@ const UnitKompetensi = () => {
 
 const StatCard = ({ label, value }) => {
   return (
-    <div className="min-w-[92px] rounded-2xl bg-white/10 border border-white/15 p-4 text-white">
-      <p className="text-xs text-slate-300 font-bold">{label}</p>
+    <div className="min-w-[92px] rounded-xl bg-[#071E3D]/5 border border-[#071E3D]/10 p-4 text-[#071E3D]">
+      <p className="text-[11px] text-[#182D4A]/60 font-black uppercase tracking-wider">{label}</p>
       <h3 className="text-2xl font-black mt-1">{value}</h3>
     </div>
   );
@@ -938,7 +939,7 @@ const StatCard = ({ label, value }) => {
 
 const SmallStat = ({ icon, label, value }) => {
   return (
-    <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 text-[#071E3D] text-xs font-black inline-flex items-center gap-2">
+    <div className="px-3 py-2 rounded-lg bg-[#FAFAFA] border border-[#071E3D]/10 text-[#071E3D] text-[12px] font-black inline-flex items-center gap-2">
       <span className="text-[#CC6B27]">{icon}</span>
       {label}: {value}
     </div>

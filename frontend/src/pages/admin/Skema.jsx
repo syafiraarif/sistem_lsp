@@ -3,16 +3,18 @@ import Swal from 'sweetalert2';
 import api from "../../services/api";
 import { useNavigate } from 'react-router-dom';
 import { 
-  Search, Plus, Edit2, Trash2, X, Save, Loader2, FileText, Upload, BookOpen, Eye, ArrowRight, Filter
+  Search, Plus, Edit2, Trash2, X, Save, Loader2, FileText, Upload, BookOpen, Eye, ArrowRight, Filter,
+  Sparkles, Layers, BadgeCheck, FileSearch, ClipboardList, DollarSign
 } from 'lucide-react';
 
 const Skema = () => {
   const navigate = useNavigate();
+
   // --- STATE ---
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState(''); // Tambahan State Filter Status
+  const [filterStatus, setFilterStatus] = useState('');
   
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -43,7 +45,7 @@ const Skema = () => {
     keterangan_bukti: '',
     skor_min_ai05: '',
     kedalaman_bukti: 'elemen_kompetensi',
-    dokumen: '', // Hanya untuk menyimpan nama file lama saat edit
+    dokumen: '',
     status: 'draft'
   };
   const [formData, setFormData] = useState(initialFormState);
@@ -91,7 +93,6 @@ const Skema = () => {
   const validateInput = (name, value) => {
     let errorMsg = '';
     
-    // Pengecualian karakter untuk Level KKNI & Skor (Hanya wajib diisi)
     if (name === 'level_kkni' || name === 'skor_min_ai05') {
       if (value === null || value === '') {
         errorMsg = 'Tidak boleh kosong.';
@@ -99,7 +100,6 @@ const Skema = () => {
     } else if (['kode_sektor', 'kode_kbli', 'kode_kbji'].includes(name)) {
       // Abaikan aturan 4 karakter untuk kode angka yang pendek
     } else {
-      // Aturan default: minimal 4 karakter
       if (typeof value === 'string' && value.trim().length > 0 && value.trim().length <= 3) {
         errorMsg = 'Terlalu pendek (minimal 4 karakter).';
       }
@@ -127,6 +127,7 @@ const Skema = () => {
 
   const handleDetail = (item) => {
     setSelectedSkema(item);
+    setShowFullPreview(false);
     setShowDetailModal(true);
   };
 
@@ -185,7 +186,6 @@ const Skema = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Pengecekan Validasi Keseluruhan
     let isValid = true;
     Object.keys(formData).forEach(key => {
       if (!validateInput(key, formData[key])) isValid = false;
@@ -243,9 +243,8 @@ const Skema = () => {
     }
   };
 
-  // Helper Input Class
-  const inputClass = (name) => `w-full p-2.5 border rounded-lg text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none transition-all font-medium text-[13px] disabled:opacity-70 disabled:bg-gray-100 placeholder:text-[#182D4A]/40
-    ${errors[name] ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-[#071E3D]/20 focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10'}
+  const inputClass = (name) => `w-full rounded-2xl border px-4 py-3 text-sm font-semibold text-[#071E3D] outline-none transition-all disabled:cursor-not-allowed disabled:opacity-60 placeholder:text-slate-300
+    ${errors[name] ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-500/10' : 'border-slate-100 bg-slate-50 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10'}
   `;
 
   // --- FILTER ---
@@ -256,541 +255,605 @@ const Skema = () => {
     return matchSearch && matchStatus;
   });
 
-  return (
-    <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
-      
-      {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
-        <div>
-          <h2 className="text-[22px] font-bold text-[#071E3D] m-0 mb-1">Data Skema Sertifikasi</h2>
-          <p className="text-[14px] text-[#182D4A] m-0">Kelola daftar skema kompetensi LSP</p>
-        </div>
-        <button 
-          className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all flex items-center gap-2 text-[13px]"
-          onClick={() => {
-            setFormData(initialFormState);
-            setSelectedFile(null);
-            setPreviewUrl(null);
-            setShowFullPreview(false);
-            setErrors({});
-            setIsEditMode(false);
-            setShowModal(true);
-          }}
-        >
-          <Plus size={18} /> Tambah Skema
-        </button>
-      </div>
+  const totalAktif = data.filter(item => item.status === 'aktif').length;
+  const totalDraft = data.filter(item => item.status === 'draft').length;
+  const totalNonaktif = data.filter(item => item.status === 'nonaktif').length;
 
-      {/* TABLE SECTION */}
-      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6">
-        
-        {/* Search Bar & Filter */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <h4 className="text-[16px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
-            <BookOpen size={18} className="text-[#CC6B27]"/> Daftar Skema
-          </h4>
-          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-            <div className="relative group w-full md:w-80">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Cari kode atau judul skema..." 
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            {/* MODIFIKASI: Tambahan dropdown filter status */}
-            <div className="relative w-full md:w-48">
-              <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors z-10" />
-              <select 
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-medium appearance-none cursor-pointer"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+
+        {/* HERO */}
+        <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
+          <div className="absolute right-0 top-0 h-[430px] w-[430px] rounded-full bg-orange-500/10 blur-[110px]" />
+          <div className="absolute -bottom-24 -left-24 h-[380px] w-[380px] rounded-full bg-[#071E3D]/5 blur-[100px]" />
+
+          <div className="relative z-10 grid grid-cols-1 gap-6 p-6 lg:p-8 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="flex flex-col justify-center">
+              <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+                <BookOpen size={15} className="text-orange-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                  Data Skema Sertifikasi
+                </span>
+              </div>
+
+              <h1 className="text-4xl font-black leading-tight text-[#071E3D] lg:text-5xl">
+                Kelola Skema
+                <br />
+                <span className="text-orange-500">Kompetensi LSP</span>
+              </h1>
+
+              <p className="mt-5 max-w-3xl text-base font-medium leading-relaxed text-slate-500 lg:text-lg">
+                Atur kode, judul, status, persyaratan, biaya, dokumen, dan instrumen asesmen setiap skema.
+              </p>
+
+              <button 
+                className="mt-7 inline-flex w-fit items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+                onClick={() => {
+                  setFormData(initialFormState);
+                  setSelectedFile(null);
+                  setPreviewUrl(null);
+                  setShowFullPreview(false);
+                  setErrors({});
+                  setIsEditMode(false);
+                  setShowModal(true);
+                }}
               >
-                <option value="">Semua Status</option>
-                <option value="aktif">Aktif</option>
-                <option value="nonaktif">Non-Aktif</option>
-                <option value="draft">Draft</option>
-              </select>
+                <Plus size={16} />
+                Tambah Skema
+              </button>
+            </div>
+
+            <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
+              <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+
+              <div className="relative z-10">
+                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
+                  <Sparkles size={28} />
+                </div>
+
+                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
+                  Total Skema
+                </p>
+
+                <h2 className="mb-4 text-5xl font-black leading-none">
+                  {data.length}
+                </h2>
+
+                <p className="text-sm font-medium leading-relaxed text-white/60">
+                  Ringkasan status skema yang tersedia dalam sistem.
+                </p>
+
+                <div className="mt-6 grid grid-cols-3 gap-3">
+                  <HeroPill label="Aktif" value={totalAktif} />
+                  <HeroPill label="Draft" value={totalDraft} />
+                  <HeroPill label="Nonaktif" value={totalNonaktif} />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Table */}
-        <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
-          <table className="w-full text-left border-collapse min-w-max bg-white">
-            <thead>
-              <tr>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] w-12 text-center">No</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] w-32">Kode</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27]">Judul Skema</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] w-24 text-center">Status</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-56">Kelola Persyaratan</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-52">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="py-16 text-center">
-                    <Loader2 className="animate-spin text-[#CC6B27] mx-auto mb-3" size={36} />
-                    <p className="text-[#182D4A] font-medium text-[14px]">Memuat data...</p>
-                  </td>
+        {/* STAT */}
+        <section className="grid grid-cols-1 gap-5 md:grid-cols-4">
+          <MiniStat icon={<BookOpen size={22} />} label="Total Skema" value={data.length} />
+          <MiniStat icon={<BadgeCheck size={22} />} label="Aktif" value={totalAktif} />
+          <MiniStat icon={<FileText size={22} />} label="Draft" value={totalDraft} />
+          <MiniStat icon={<Layers size={22} />} label="Nonaktif" value={totalNonaktif} />
+        </section>
+
+        {/* TABLE CARD */}
+        <section className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
+          <div className="border-b border-slate-100 p-6">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+              <ClipboardList size={15} className="text-orange-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                Daftar Skema
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-[#071E3D]">
+                  Data Skema Sertifikasi
+                </h2>
+                <p className="mt-2 text-sm font-medium text-slate-400">
+                  Cari berdasarkan kode atau judul, lalu filter berdasarkan status.
+                </p>
+              </div>
+
+              <div className="flex w-full flex-col gap-3 md:flex-row lg:w-auto">
+                <div className="relative w-full lg:w-[340px]">
+                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Cari kode atau judul skema..." 
+                    className="w-full rounded-2xl border border-slate-100 bg-slate-50 py-3 pl-11 pr-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+
+                <div className="relative w-full md:w-52">
+                  <Filter size={18} className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-slate-400" />
+                  <select 
+                    className="w-full cursor-pointer appearance-none rounded-2xl border border-slate-100 bg-slate-50 py-3 pl-11 pr-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                  >
+                    <option value="">Semua Status</option>
+                    <option value="aktif">Aktif</option>
+                    <option value="nonaktif">Non-Aktif</option>
+                    <option value="draft">Draft</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1250px] border-collapse text-left">
+              <thead>
+                <tr className="bg-[#071E3D]">
+                  <TableHead center>No</TableHead>
+                  <TableHead>Kode</TableHead>
+                  <TableHead>Judul Skema</TableHead>
+                  <TableHead center>Status</TableHead>
+                  <TableHead center>Kelola Persyaratan</TableHead>
+                  <TableHead center>Aksi</TableHead>
                 </tr>
-              ) : filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="py-16 text-center">
-                    <BookOpen size={48} className="text-[#071E3D]/20 mx-auto mb-3"/>
-                    <p className="text-[#182D4A] font-medium text-[14px]">Belum ada data skema ditemukan.</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((item, index) => (
-                  <tr key={item.id_skema} className="border-b border-[#071E3D]/5 hover:bg-[#CC6B27]/5 transition-colors">
-                    <td className="py-4 px-4 text-center text-[#071E3D] text-[13.5px] font-semibold">{index + 1}</td>
-                    <td className="py-4 px-4 font-mono text-[13px] font-bold text-[#CC6B27]">{item.kode_skema}</td>
-                    <td className="py-4 px-4">
-                      <div className="font-bold text-[#071E3D] text-[13.5px]">{item.judul_skema}</div>
-                      <div className="text-[11px] font-bold text-[#182D4A]/60 mt-1 tracking-wide">
-                        {item.jenis_skema.toUpperCase()} {item.level_kkni ? `• LEVEL ${item.level_kkni}` : ''}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold border capitalize
-                        ${item.status === 'aktif' ? 'bg-green-50 text-green-600 border-green-200' : 
-                          item.status === 'nonaktif' ? 'bg-red-50 text-red-600 border-red-200' : 
-                          'bg-gray-100 text-gray-600 border-gray-200'
-                        }`}>
-                        {item.status}
-                      </span>
-                    </td>
-                    
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex flex-col gap-2 justify-center items-center">
-                        <button 
-                          onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan`)}
-                          className="w-full max-w-[140px] px-3 py-1.5 bg-[#FAFAFA] text-[#182D4A] rounded-md border border-[#071E3D]/20 hover:bg-[#182D4A]/5 text-[11px] font-bold transition-colors"
-                        >
-                          Persyaratan Dasar
-                        </button>
-                        <button 
-                          onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan-tuk`)}
-                          className="w-full max-w-[140px] px-3 py-1.5 bg-[#CC6B27]/5 text-[#CC6B27] rounded-md border border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 text-[11px] font-bold transition-colors"
-                        >
-                          Persyaratan TUK
-                        </button>
-                      </div>
-                    </td>
+              </thead>
 
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {/* TOMBOL BIAYA */}
-                        <button 
-                          onClick={() => navigate(`/admin/skema/${item.id_skema}/biaya-uji`)} 
-                          className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-emerald-100 hover:border-transparent text-[11px] font-bold h-[34px]" 
-                          title="Atur Biaya Uji"
-                        >
-                          Biaya
-                        </button>
-
-                        {/* TOMBOL DETAIL */}
-                        <button 
-                          onClick={() => handleDetail(item)} 
-                          className="inline-flex items-center justify-center p-2 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all shadow-sm border border-blue-100 hover:border-transparent h-[34px] w-[34px]" 
-                          title="Detail Skema"
-                        >
-                          <Eye size={16} />
-                        </button>
-
-                        <button 
-                          onClick={() => handleEdit(item)} 
-                          className="inline-flex items-center justify-center p-2 rounded-lg text-[#CC6B27] bg-[#CC6B27]/10 hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm h-[34px] w-[34px]" 
-                          title="Edit"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        
-                        <button 
-                          onClick={() => handleDelete(item.id_skema)} 
-                          className="inline-flex items-center justify-center p-2 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100 hover:border-transparent h-[34px] w-[34px]" 
-                          title="Hapus"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="6" className="py-16 text-center">
+                      <Loader2 className="mx-auto mb-3 animate-spin text-orange-500" size={36} />
+                      <p className="text-sm font-black uppercase tracking-widest text-[#071E3D]">
+                        Memuat Data Skema
+                      </p>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="py-16 text-center">
+                      <BookOpen size={48} className="mx-auto mb-3 text-[#071E3D]/20"/>
+                      <p className="text-sm font-black text-[#071E3D]">
+                        Belum ada data skema ditemukan.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredData.map((item, index) => (
+                    <tr key={item.id_skema} className="border-b border-slate-100 transition-all last:border-0 hover:bg-orange-50/30">
+                      <td className="px-5 py-4 text-center text-sm font-black text-[#071E3D]">
+                        {index + 1}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className="font-mono text-sm font-black text-orange-500">
+                          {item.kode_skema}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="max-w-[420px] font-black text-[#071E3D]">{item.judul_skema}</div>
+                        <div className="mt-1 text-[11px] font-black uppercase tracking-widest text-slate-400">
+                          {item.jenis_skema?.toUpperCase()} {item.level_kkni ? `• LEVEL ${item.level_kkni}` : ''}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 text-center">
+                        <StatusBadge status={item.status} />
+                      </td>
+                      
+                      <td className="px-5 py-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <button 
+                            onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan`)}
+                            className="w-[155px] rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] font-black text-[#071E3D] transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white"
+                          >
+                            Persyaratan Dasar
+                          </button>
+                          <button 
+                            onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan-tuk`)}
+                            className="w-[155px] rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-[11px] font-black text-orange-500 transition-all hover:bg-orange-500 hover:text-white"
+                          >
+                            Persyaratan TUK
+                          </button>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <IconButton
+                            onClick={() => navigate(`/admin/skema/${item.id_skema}/biaya-uji`)}
+                            title="Atur Biaya Uji"
+                            className="bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white"
+                          >
+                            <DollarSign size={16} />
+                          </IconButton>
+
+                          <IconButton
+                            onClick={() => handleDetail(item)}
+                            title="Detail Skema"
+                            className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white"
+                          >
+                            <Eye size={16} />
+                          </IconButton>
+
+                          <IconButton
+                            onClick={() => handleEdit(item)}
+                            title="Edit"
+                            className="bg-orange-50 text-orange-500 hover:bg-orange-500 hover:text-white"
+                          >
+                            <Edit2 size={16} />
+                          </IconButton>
+                          
+                          <IconButton
+                            onClick={() => handleDelete(item.id_skema)}
+                            title="Hapus"
+                            className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white"
+                          >
+                            <Trash2 size={16} />
+                          </IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
       {/* MODAL DETAIL SKEMA */}
       {showDetailModal && selectedSkema && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/60 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[34px] border border-slate-100 bg-white shadow-2xl">
             
-            {/* Header Detail */}
-            <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
-              <h3 className="text-[18px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
-                <BookOpen size={20} className="text-[#CC6B27]"/> Detail Skema Kompetensi
-              </h3>
-              <button onClick={() => setShowDetailModal(false)} className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors"><X size={20} /></button>
+            <div className="flex items-start justify-between border-b border-slate-100 p-6">
+              <div>
+                <h3 className="flex items-center gap-2 text-xl font-black text-[#071E3D]">
+                  <BookOpen size={21} className="text-orange-500"/>
+                  Detail Skema Kompetensi
+                </h3>
+                <p className="mt-1 text-sm font-medium text-slate-400">
+                  Informasi lengkap skema, dokumen, serta pintasan instrumen asesmen.
+                </p>
+              </div>
+
+              <button onClick={() => setShowDetailModal(false)} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500">
+                <X size={20} />
+              </button>
             </div>
             
-            {/* Body Detail */}
-            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-              
-              {/* Informasi Utama */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-[#FAFAFA] p-4 rounded-lg border border-[#071E3D]/10">
-                  <p className="text-[11px] font-bold text-[#182D4A]/60 uppercase tracking-wider mb-1">Kode Skema</p>
-                  <p className="text-[14px] font-mono font-bold text-[#CC6B27]">{selectedSkema.kode_skema}</p>
-                </div>
-                <div className="bg-[#FAFAFA] p-4 rounded-lg border border-[#071E3D]/10">
-                  <p className="text-[11px] font-bold text-[#182D4A]/60 uppercase tracking-wider mb-1">Status</p>
-                  <span className={`inline-block px-3 py-1 rounded-full text-[12px] font-bold border capitalize mt-1
-                    ${selectedSkema.status === 'aktif' ? 'bg-green-50 text-green-600 border-green-200' : 
-                      selectedSkema.status === 'nonaktif' ? 'bg-red-50 text-red-600 border-red-200' : 
-                      'bg-gray-100 text-gray-600 border-gray-200'
-                    }`}>
-                    {selectedSkema.status}
-                  </span>
-                </div>
-                <div className="bg-[#FAFAFA] p-4 rounded-lg border border-[#071E3D]/10 md:col-span-2">
-                  <p className="text-[11px] font-bold text-[#182D4A]/60 uppercase tracking-wider mb-1">Judul Skema</p>
-                  <p className="text-[15px] font-bold text-[#071E3D]">{selectedSkema.judul_skema}</p>
-                  {selectedSkema.judul_skema_en && (
-                    <p className="text-[13px] font-medium text-[#182D4A]/80 mt-1 italic">{selectedSkema.judul_skema_en}</p>
-                  )}
-                </div>
-              </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-6">
+                
+                <InfoPanel title="Informasi Utama">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <DetailItem label="Kode Skema">
+                      <span className="font-mono text-orange-500">{selectedSkema.kode_skema}</span>
+                    </DetailItem>
+                    <DetailItem label="Status">
+                      <StatusBadge status={selectedSkema.status} />
+                    </DetailItem>
+                    <DetailItem label="Judul Skema" wide>
+                      <span>{selectedSkema.judul_skema}</span>
+                      {selectedSkema.judul_skema_en && (
+                        <p className="mt-1 text-sm font-semibold italic text-slate-400">{selectedSkema.judul_skema_en}</p>
+                      )}
+                    </DetailItem>
+                  </div>
+                </InfoPanel>
 
-              {/* Atribut Lengkap */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
-                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Jenis Skema</p>
-                  <p className="text-[13px] font-semibold text-[#071E3D] capitalize">{selectedSkema.jenis_skema}</p>
-                </div>
-                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
-                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Level KKNI</p>
-                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.level_kkni || '-'}</p>
-                </div>
-                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
-                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Bidang Okupasi</p>
-                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.bidang_okupasi || '-'}</p>
-                </div>
-                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
-                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Kedalaman Bukti</p>
-                  <p className="text-[13px] font-semibold text-[#071E3D] capitalize">{selectedSkema.kedalaman_bukti?.replace(/_/g, ' ') || '-'}</p>
-                </div>
-                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
-                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Kode Sektor</p>
-                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.kode_sektor || '-'}</p>
-                </div>
-                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
-                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Kode KBLI</p>
-                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.kode_kbli || '-'}</p>
-                </div>
-                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
-                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Kode KBJI</p>
-                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.kode_kbji || '-'}</p>
-                </div>
-                <div className="border border-[#071E3D]/5 p-3 rounded-lg">
-                  <p className="text-[10px] font-bold text-[#182D4A]/50 uppercase mb-1">Skor Min AI 05</p>
-                  <p className="text-[13px] font-semibold text-[#071E3D]">{selectedSkema.skor_min_ai05 || '-'}</p>
-                </div>
-              </div>
+                <InfoPanel title="Atribut Skema">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <DetailItem label="Jenis Skema">{selectedSkema.jenis_skema}</DetailItem>
+                    <DetailItem label="Level KKNI">{selectedSkema.level_kkni || '-'}</DetailItem>
+                    <DetailItem label="Bidang Okupasi">{selectedSkema.bidang_okupasi || '-'}</DetailItem>
+                    <DetailItem label="Kedalaman Bukti">{selectedSkema.kedalaman_bukti?.replace(/_/g, ' ') || '-'}</DetailItem>
+                    <DetailItem label="Kode Sektor">{selectedSkema.kode_sektor || '-'}</DetailItem>
+                    <DetailItem label="Kode KBLI">{selectedSkema.kode_kbli || '-'}</DetailItem>
+                    <DetailItem label="Kode KBJI">{selectedSkema.kode_kbji || '-'}</DetailItem>
+                    <DetailItem label="Skor Min AI 05">{selectedSkema.skor_min_ai05 || '-'}</DetailItem>
+                  </div>
+                </InfoPanel>
 
-              {selectedSkema.keterangan_bukti && (
-                <div className="border border-[#071E3D]/5 p-4 rounded-lg bg-[#FAFAFA]/50">
-                  <p className="text-[11px] font-bold text-[#182D4A]/60 uppercase mb-2">Keterangan Bukti</p>
-                  <p className="text-[13px] text-[#071E3D] leading-relaxed">{selectedSkema.keterangan_bukti}</p>
-                </div>
-              )}
+                {selectedSkema.keterangan_bukti && (
+                  <InfoPanel title="Keterangan Bukti">
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-semibold leading-relaxed text-[#071E3D]">
+                      {selectedSkema.keterangan_bukti}
+                    </div>
+                  </InfoPanel>
+                )}
 
-              {/* TAMPILAN PREVIEW PDF DI DETAIL MODAL */}
-              {selectedSkema.dokumen && (
-                  <div className="border border-[#071E3D]/20 rounded-lg flex flex-col overflow-hidden min-h-[350px]">
-                      <div className="bg-gray-100 px-3 py-2 text-[11px] font-bold text-[#182D4A] flex justify-between items-center border-b border-[#071E3D]/20">
-                          <span>Preview Dokumen Skema</span>
-                          {isPreviewable(selectedSkema.dokumen) && (
-                          <button type="button" onClick={() => setShowFullPreview(!showFullPreview)} className="text-[#CC6B27] hover:underline cursor-pointer">
-                              {showFullPreview ? 'Perkecil' : 'Perbesar Tampilan'}
+                {selectedSkema.dokumen && (
+                  <InfoPanel title="Preview Dokumen Skema">
+                    <div className="flex min-h-[380px] flex-col overflow-hidden rounded-2xl border border-slate-100">
+                      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
+                        <span className="text-xs font-black uppercase tracking-widest text-[#071E3D]">
+                          Dokumen Skema
+                        </span>
+                        {isPreviewable(selectedSkema.dokumen) && (
+                          <button type="button" onClick={() => setShowFullPreview(!showFullPreview)} className="text-xs font-black text-orange-500 hover:underline">
+                            {showFullPreview ? 'Perkecil' : 'Perbesar Tampilan'}
                           </button>
-                          )}
+                        )}
                       </div>
                       
-                      <div className={`relative flex-1 transition-all duration-300 ${showFullPreview ? 'h-[600px]' : 'h-full bg-white'}`}>
-                          {isPreviewable(selectedSkema.dokumen) ? (
-                              isImageFile(selectedSkema.dokumen) ? (
-                                  <div className="w-full h-full overflow-auto absolute inset-0 flex justify-center items-start bg-gray-50 p-2">
-                                      <img src={buildFileUrl(selectedSkema.dokumen)} alt="Preview" className="max-w-full object-contain" />
-                                  </div>
-                              ) : (
-                                  <iframe src={`${buildFileUrl(selectedSkema.dokumen)}#toolbar=0&navpanes=0`} className="w-full h-full border-0 absolute inset-0" title="Preview PDF" />
-                              )
+                      <div className={`relative flex-1 transition-all duration-300 ${showFullPreview ? 'h-[620px]' : 'h-[380px] bg-white'}`}>
+                        {isPreviewable(selectedSkema.dokumen) ? (
+                          isImageFile(selectedSkema.dokumen) ? (
+                            <div className="absolute inset-0 flex items-start justify-center overflow-auto bg-slate-50 p-3">
+                              <img src={buildFileUrl(selectedSkema.dokumen)} alt="Preview" className="max-w-full object-contain" />
+                            </div>
                           ) : (
-                              <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6 text-center absolute inset-0 bg-gray-50">
-                                  <FileText size={42} className="mb-2 text-blue-400" />
-                                  <p className="text-[12px] font-bold mb-1">Preview tidak tersedia</p>
-                                  <p className="text-[11px]">Format file ini tidak dapat dipratinjau.</p>
-                                  <a href={buildFileUrl(selectedSkema.dokumen)} target="_blank" rel="noreferrer" className="mt-3 px-3 py-1.5 bg-blue-100 text-blue-700 rounded text-[11px] font-bold hover:bg-blue-200">Unduh File</a>
-                              </div>
-                          )}
+                            <iframe src={`${buildFileUrl(selectedSkema.dokumen)}#toolbar=0&navpanes=0`} className="absolute inset-0 h-full w-full border-0" title="Preview PDF" />
+                          )
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 p-6 text-center text-slate-500">
+                            <FileText size={42} className="mb-2 text-blue-400" />
+                            <p className="mb-1 text-sm font-black">Preview tidak tersedia</p>
+                            <p className="text-xs font-medium">Format file ini tidak dapat dipratinjau.</p>
+                            <a href={buildFileUrl(selectedSkema.dokumen)} target="_blank" rel="noreferrer" className="mt-3 rounded-xl bg-blue-50 px-4 py-2 text-xs font-black text-blue-700 hover:bg-blue-100">Unduh File</a>
+                          </div>
+                        )}
                       </div>
+                    </div>
+                  </InfoPanel>
+                )}
+
+                <InfoPanel title="Navigasi Instrumen & Asesmen">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <NavigationCard
+                      title="FR.IA.01"
+                      subtitle="Observasi"
+                      onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/ia01`)}
+                      className="border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white"
+                    />
+                    <NavigationCard
+                      title="FR.IA.03"
+                      subtitle="Pertanyaan"
+                      onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/ia03`)}
+                      className="border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white"
+                    />
+                    <NavigationCard
+                      title="FR.MAPA"
+                      subtitle="Manajemen"
+                      onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/mapa`)}
+                      className="border-orange-100 bg-orange-50 text-orange-500 hover:bg-orange-500 hover:text-white"
+                    />
+                    <NavigationCard
+                      title="Kelompok"
+                      subtitle="Pekerjaan"
+                      onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/kelompok-pekerjaan`)}
+                      className="border-amber-100 bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white"
+                    />
                   </div>
-              )}
+                </InfoPanel>
 
-              {/* SEPARATOR KHUSUS NAVIGASI FORMULIR */}
-              <div className="border-t border-[#071E3D]/10 pt-6 mt-2">
-                <h4 className="text-[14px] font-bold text-[#071E3D] mb-4 flex items-center gap-2">
-                  Navigasi Instrumen & Asesmen
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <button 
-                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/ia01`)}
-                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
-                  >
-                    <span className="text-[12px] font-bold mb-1">FR.IA.01</span>
-                    <span className="text-[10px] font-medium opacity-80 mb-2">Observasi</span>
-                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-                  
-                  <button 
-                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/ia03`)}
-                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all shadow-sm group"
-                  >
-                    <span className="text-[12px] font-bold mb-1">FR.IA.03</span>
-                    <span className="text-[10px] font-medium opacity-80 mb-2">Pertanyaan</span>
-                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-                  
-                  {/* TOMBOL PINTAR: Mengarah ke route /admin/skema/:id/mapa */}
-                  <button 
-                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/mapa`)}
-                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-[#CC6B27]/30 bg-[#CC6B27]/5 text-[#CC6B27] hover:bg-[#CC6B27] hover:text-white transition-all shadow-sm group"
-                  >
-                    <span className="text-[12px] font-bold mb-1">FR.MAPA</span>
-                    <span className="text-[10px] font-medium opacity-80 mb-2">Manajemen</span>
-                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-
-                  <button 
-                    onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/kelompok-pekerjaan`)}
-                    className="flex flex-col items-center justify-center p-3 rounded-xl border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-600 hover:text-white transition-all shadow-sm group"
-                  >
-                    <span className="text-[12px] font-bold mb-1">Kelompok</span>
-                    <span className="text-[10px] font-medium opacity-80 mb-2">Pekerjaan</span>
-                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
               </div>
-
             </div>
           </div>
         </div>
       )}
 
-
       {/* MODAL FORM TAMBAH/EDIT */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/60 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[34px] border border-slate-100 bg-white shadow-2xl">
             
-            <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
-              <h3 className="text-[18px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
-                {isEditMode ? <Edit2 size={18} className="text-[#CC6B27]"/> : <Plus size={18} className="text-[#CC6B27]"/>}
-                {isEditMode ? 'Edit Data Skema' : 'Tambah Skema Baru'}
-              </h3>
-              <button onClick={() => setShowModal(false)} className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors"><X size={20} /></button>
+            <div className="flex items-start justify-between border-b border-slate-100 p-6">
+              <div>
+                <h3 className="flex items-center gap-2 text-xl font-black text-[#071E3D]">
+                  {isEditMode ? <Edit2 size={20} className="text-orange-500"/> : <Plus size={20} className="text-orange-500"/>}
+                  {isEditMode ? 'Edit Data Skema' : 'Tambah Skema Baru'}
+                </h3>
+                <p className="mt-1 text-sm font-medium text-slate-400">
+                  Lengkapi informasi utama, atribut skema, dan dokumen pendukung.
+                </p>
+              </div>
+
+              <button onClick={() => setShowModal(false)} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500">
+                <X size={20} />
+              </button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-6">
-              <form id="skemaForm" onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <form id="skemaForm" onSubmit={handleSubmit} className="flex flex-col gap-6">
                 
-                {/* Form Inputs (Dibuat Grid Kiri Kanan) */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   
                   {/* Kolom Kiri */}
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode Skema <span className="text-red-500">*</span></label>
-                        <input type="text" name="kode_skema" value={formData.kode_skema} onChange={handleInputChange} required 
-                          className={inputClass('kode_skema') + " font-mono"} />
-                          {errors.kode_skema && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.kode_skema}</span>}
-                      </div>
-                      <div>
-                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Status Skema</label>
-                        <select name="status" value={formData.status} onChange={handleInputChange} className={inputClass('status')}>
-                          <option value="draft">Draft</option>
-                          <option value="aktif">Aktif</option>
-                          <option value="nonaktif">Non-Aktif</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Judul Skema (Indonesia) <span className="text-red-500">*</span></label>
-                      <input type="text" name="judul_skema" value={formData.judul_skema} onChange={handleInputChange} required className={inputClass('judul_skema')}/>
-                      {errors.judul_skema && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.judul_skema}</span>}
-                    </div>
-
-                    <div>
-                      <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Judul Skema (Inggris)</label>
-                      <input type="text" name="judul_skema_en" value={formData.judul_skema_en} onChange={handleInputChange} className={inputClass('judul_skema_en')}/>
-                      {errors.judul_skema_en && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.judul_skema_en}</span>}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-5">
+                    <FormSection title="Informasi Skema">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                            <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Jenis Skema</label>
-                            <select name="jenis_skema" value={formData.jenis_skema} onChange={handleInputChange} className={inputClass('jenis_skema')}>
+                          <Label>Kode Skema <span className="text-red-500">*</span></Label>
+                          <input type="text" name="kode_skema" value={formData.kode_skema} onChange={handleInputChange} required className={inputClass('kode_skema') + " font-mono"} />
+                          {errors.kode_skema && <ErrorText>{errors.kode_skema}</ErrorText>}
+                        </div>
+
+                        <div>
+                          <Label>Status Skema</Label>
+                          <select name="status" value={formData.status} onChange={handleInputChange} className={inputClass('status')}>
+                            <option value="draft">Draft</option>
+                            <option value="aktif">Aktif</option>
+                            <option value="nonaktif">Non-Aktif</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label>Judul Skema (Indonesia) <span className="text-red-500">*</span></Label>
+                        <input type="text" name="judul_skema" value={formData.judul_skema} onChange={handleInputChange} required className={inputClass('judul_skema')}/>
+                        {errors.judul_skema && <ErrorText>{errors.judul_skema}</ErrorText>}
+                      </div>
+
+                      <div>
+                        <Label>Judul Skema (Inggris)</Label>
+                        <input type="text" name="judul_skema_en" value={formData.judul_skema_en} onChange={handleInputChange} className={inputClass('judul_skema_en')}/>
+                        {errors.judul_skema_en && <ErrorText>{errors.judul_skema_en}</ErrorText>}
+                      </div>
+                    </FormSection>
+
+                    <FormSection title="Atribut & Kode Klasifikasi">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                          <Label>Jenis Skema</Label>
+                          <select name="jenis_skema" value={formData.jenis_skema} onChange={handleInputChange} className={inputClass('jenis_skema')}>
                             <option value="kkni">KKNI</option>
                             <option value="okupasi">Okupasi</option>
                             <option value="klaster">Klaster</option>
-                            </select>
+                          </select>
                         </div>
+
                         <div>
-                            <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Level KKNI <span className="text-red-500">*</span></label>
-                            <select name="level_kkni" value={formData.level_kkni} onChange={handleInputChange} className={inputClass('level_kkni')} required>
+                          <Label>Level KKNI <span className="text-red-500">*</span></Label>
+                          <select name="level_kkni" value={formData.level_kkni} onChange={handleInputChange} className={inputClass('level_kkni')} required>
                             <option value="">-- Pilih Level --</option>
                             {[1,2,3,4,5,6,7,8,9].map(num => <option key={num} value={num}>Level {num}</option>)}
-                            </select>
-                            {errors.level_kkni && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.level_kkni}</span>}
+                          </select>
+                          {errors.level_kkni && <ErrorText>{errors.level_kkni}</ErrorText>}
                         </div>
-                    </div>
+                      </div>
 
-                    <div>
-                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Bidang Okupasi</label>
+                      <div>
+                        <Label>Bidang Okupasi</Label>
                         <input type="text" name="bidang_okupasi" value={formData.bidang_okupasi} onChange={handleInputChange} className={inputClass('bidang_okupasi')} />
-                        {errors.bidang_okupasi && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.bidang_okupasi}</span>}
-                    </div>
+                        {errors.bidang_okupasi && <ErrorText>{errors.bidang_okupasi}</ErrorText>}
+                      </div>
 
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode Sektor</label>
-                        <input type="text" name="kode_sektor" value={formData.kode_sektor} onChange={handleInputChange} className={inputClass('kode_sektor') + " font-mono"} />
-                        {errors.kode_sektor && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.kode_sektor}</span>}
-                      </div>
-                      <div>
-                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode KBLI</label>
-                        <input type="text" name="kode_kbli" value={formData.kode_kbli} onChange={handleInputChange} className={inputClass('kode_kbli') + " font-mono"} />
-                        {errors.kode_kbli && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.kode_kbli}</span>}
-                      </div>
-                      <div>
-                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kode KBJI</label>
-                        <input type="text" name="kode_kbji" value={formData.kode_kbji} onChange={handleInputChange} className={inputClass('kode_kbji') + " font-mono"} />
-                        {errors.kode_kbji && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.kode_kbji}</span>}
-                      </div>
-                    </div>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div>
+                          <Label>Kode Sektor</Label>
+                          <input type="text" name="kode_sektor" value={formData.kode_sektor} onChange={handleInputChange} className={inputClass('kode_sektor') + " font-mono"} />
+                          {errors.kode_sektor && <ErrorText>{errors.kode_sektor}</ErrorText>}
+                        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Kedalaman Bukti</label>
-                        <select name="kedalaman_bukti" value={formData.kedalaman_bukti} onChange={handleInputChange} className={inputClass('kedalaman_bukti')}>
-                          <option value="elemen_kompetensi">Elemen Kompetensi</option>
-                          <option value="kriteria_unjuk_kerja">Kriteria Unjuk Kerja</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Skor Min. (AI 05) <span className="text-red-500">*</span></label>
-                        <input type="number" name="skor_min_ai05" value={formData.skor_min_ai05} onChange={handleInputChange} className={inputClass('skor_min_ai05')} required />
-                        {errors.skor_min_ai05 && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.skor_min_ai05}</span>}
-                      </div>
-                    </div>
+                        <div>
+                          <Label>Kode KBLI</Label>
+                          <input type="text" name="kode_kbli" value={formData.kode_kbli} onChange={handleInputChange} className={inputClass('kode_kbli') + " font-mono"} />
+                          {errors.kode_kbli && <ErrorText>{errors.kode_kbli}</ErrorText>}
+                        </div>
 
-                    <div>
-                      <label className="block text-[13px] font-bold text-[#071E3D] mb-1.5">Keterangan Bukti</label>
-                      <textarea name="keterangan_bukti" rows="2" value={formData.keterangan_bukti} onChange={handleInputChange} className={inputClass('keterangan_bukti') + " resize-none"}></textarea>
-                      {errors.keterangan_bukti && <span className="text-[11px] text-red-500 font-medium block mt-1">{errors.keterangan_bukti}</span>}
-                    </div>
+                        <div>
+                          <Label>Kode KBJI</Label>
+                          <input type="text" name="kode_kbji" value={formData.kode_kbji} onChange={handleInputChange} className={inputClass('kode_kbji') + " font-mono"} />
+                          {errors.kode_kbji && <ErrorText>{errors.kode_kbji}</ErrorText>}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                          <Label>Kedalaman Bukti</Label>
+                          <select name="kedalaman_bukti" value={formData.kedalaman_bukti} onChange={handleInputChange} className={inputClass('kedalaman_bukti')}>
+                            <option value="elemen_kompetensi">Elemen Kompetensi</option>
+                            <option value="kriteria_unjuk_kerja">Kriteria Unjuk Kerja</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <Label>Skor Min. (AI 05) <span className="text-red-500">*</span></Label>
+                          <input type="number" name="skor_min_ai05" value={formData.skor_min_ai05} onChange={handleInputChange} className={inputClass('skor_min_ai05')} required />
+                          {errors.skor_min_ai05 && <ErrorText>{errors.skor_min_ai05}</ErrorText>}
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label>Keterangan Bukti</Label>
+                        <textarea name="keterangan_bukti" rows="3" value={formData.keterangan_bukti} onChange={handleInputChange} className={inputClass('keterangan_bukti') + " resize-none"}></textarea>
+                        {errors.keterangan_bukti && <ErrorText>{errors.keterangan_bukti}</ErrorText>}
+                      </div>
+                    </FormSection>
                   </div>
 
                   {/* Kolom Kanan: File & Preview */}
-                  <div className="flex flex-col gap-4 border-t lg:border-t-0 lg:border-l border-[#071E3D]/10 pt-4 lg:pt-0 lg:pl-6">
-                      <div className="bg-[#182D4A]/5 p-5 rounded-lg border border-[#182D4A]/20">
-                          <label className="block text-[13px] font-bold text-[#071E3D] mb-2 flex items-center gap-2">
-                              <Upload size={16} className="text-[#CC6B27]"/> Unggah Dokumen Skema (PDF)
-                          </label>
-                          
-                          {/* MODIFIKASI: accept input file hanya mengizinkan PDF */}
-                          <input 
-                              type="file" 
-                              name="file_dokumen" 
-                              onChange={handleFileChange} 
-                              accept=".pdf"
-                              className="block w-full text-[12px] text-[#182D4A] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-[12px] file:font-bold file:bg-[#071E3D] file:text-white hover:file:bg-[#182D4A] file:cursor-pointer file:transition-colors cursor-pointer bg-white border border-[#071E3D]/20 rounded-lg p-1"
-                          />
-                          
-                          {isEditMode && formData.dokumen && !selectedFile && (
-                              <div className="flex items-center gap-2 mt-3 text-[11px] text-[#CC6B27] font-bold bg-[#CC6B27]/10 p-2 rounded-md w-fit border border-[#CC6B27]/20">
-                              <FileText size={14} />
-                              <span>Tersimpan: <a href={buildFileUrl(formData.dokumen)} target="_blank" rel="noreferrer" className="hover:underline">{formData.dokumen.split('/').pop()}</a></span>
+                  <div className="flex flex-col gap-5">
+                    <FormSection title="Dokumen Skema">
+                      <div className="rounded-[24px] border border-orange-100 bg-orange-50/60 p-5">
+                        <Label>
+                          <span className="inline-flex items-center gap-2">
+                            <Upload size={16} className="text-orange-500"/>
+                            Unggah Dokumen Skema (PDF)
+                          </span>
+                        </Label>
+                        
+                        <input 
+                          type="file" 
+                          name="file_dokumen" 
+                          onChange={handleFileChange} 
+                          accept=".pdf"
+                          className="block w-full cursor-pointer rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-[#071E3D] file:px-4 file:py-2 file:text-xs file:font-black file:uppercase file:tracking-widest file:text-white hover:file:bg-orange-500"
+                        />
+                        
+                        {isEditMode && formData.dokumen && !selectedFile && (
+                          <div className="mt-3 flex w-fit items-center gap-2 rounded-xl border border-orange-100 bg-white px-3 py-2 text-xs font-black text-orange-500">
+                            <FileText size={14} />
+                            <span>
+                              Tersimpan: <a href={buildFileUrl(formData.dokumen)} target="_blank" rel="noreferrer" className="hover:underline">{formData.dokumen.split('/').pop()}</a>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </FormSection>
+
+                    <div className="flex min-h-[430px] flex-1 flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white">
+                      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
+                        <span className="text-xs font-black uppercase tracking-widest text-[#071E3D]">Pratinjau Dokumen</span>
+                        {previewUrl && isPreviewable(previewUrl) && (
+                          <button type="button" onClick={() => setShowFullPreview(!showFullPreview)} className="text-xs font-black text-orange-500 hover:underline">
+                            {showFullPreview ? 'Perkecil' : 'Perbesar Tampilan'}
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className={`relative flex-1 transition-all duration-300 ${showFullPreview ? 'h-[540px]' : 'h-full bg-white'}`}>
+                        {previewUrl ? (
+                          isPreviewable(previewUrl) ? (
+                            isImageFile(previewUrl) ? (
+                              <div className="absolute inset-0 flex items-start justify-center overflow-auto bg-slate-50 p-3">
+                                <img src={buildFileUrl(previewUrl)} alt="Preview" className="max-w-full object-contain" />
                               </div>
-                          )}
-                      </div>
-
-                      {/* AREA PREVIEW PDF */}
-                      <div className="border border-[#071E3D]/20 rounded-lg flex flex-col flex-1 overflow-hidden min-h-[350px]">
-                          <div className="bg-gray-100 px-3 py-2 text-[11px] font-bold text-[#182D4A] flex justify-between items-center border-b border-[#071E3D]/20">
-                              <span>Pratinjau Dokumen</span>
-                              {previewUrl && isPreviewable(previewUrl) && (
-                              <button type="button" onClick={() => setShowFullPreview(!showFullPreview)} className="text-[#CC6B27] hover:underline cursor-pointer">
-                                  {showFullPreview ? 'Perkecil' : 'Perbesar Tampilan'}
-                              </button>
-                              )}
+                            ) : (
+                              <iframe src={`${buildFileUrl(previewUrl)}#toolbar=0&navpanes=0`} className="absolute inset-0 h-full w-full border-0" title="Preview PDF" />
+                            )
+                          ) : (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 p-6 text-center text-slate-500">
+                              <FileText size={42} className="mb-2 text-blue-400" />
+                              <p className="mb-1 text-sm font-black">Preview tidak tersedia</p>
+                              <p className="text-xs font-medium">Format file ini tidak dapat dipratinjau.</p>
+                            </div>
+                          )
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-slate-400">
+                            <FileSearch size={46} className="mb-3 opacity-30" />
+                            <p className="text-xs font-bold">Pilih file skema (PDF) untuk melihat pratinjau.</p>
                           </div>
-                          
-                          <div className={`relative flex-1 transition-all duration-300 ${showFullPreview ? 'h-[500px]' : 'h-full bg-white'}`}>
-                              {previewUrl ? (
-                                  isPreviewable(previewUrl) ? (
-                                      isImageFile(previewUrl) ? (
-                                          <div className="w-full h-full overflow-auto absolute inset-0 flex justify-center items-start bg-gray-50 p-2">
-                                              <img src={buildFileUrl(previewUrl)} alt="Preview" className="max-w-full object-contain" />
-                                          </div>
-                                      ) : (
-                                          <iframe src={`${buildFileUrl(previewUrl)}#toolbar=0&navpanes=0`} className="w-full h-full border-0 absolute inset-0" title="Preview PDF" />
-                                      )
-                                  ) : (
-                                      <div className="flex flex-col items-center justify-center h-full text-gray-500 p-6 text-center absolute inset-0 bg-gray-50">
-                                          <FileText size={42} className="mb-2 text-blue-400" />
-                                          <p className="text-[12px] font-bold mb-1">Preview tidak tersedia</p>
-                                          <p className="text-[11px]">Format file ini tidak dapat dipratinjau.</p>
-                                      </div>
-                                  )
-                              ) : (
-                                  <div className="flex flex-col items-center justify-center h-full text-gray-400 p-6 text-center absolute inset-0">
-                                      <FileText size={42} className="mb-2 opacity-30" />
-                                      <p className="text-[11px]">Pilih file skema (PDF) untuk melihat pratinjau.</p>
-                                  </div>
-                              )}
-                          </div>
+                        )}
                       </div>
-
+                    </div>
                   </div>
                 </div>
-
               </form>
             </div>
 
-            <div className="border-t border-[#071E3D]/10 px-6 py-4 flex justify-end gap-3 bg-[#FAFAFA]">
+            <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/70 p-6">
               <button 
                 type="button" 
-                className="px-5 py-2 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] bg-[#FAFAFA] hover:bg-[#E2E8F0] transition-colors text-[13px]" 
+                className="rounded-2xl border border-slate-100 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white" 
                 onClick={() => setShowModal(false)}
               >
                 Batal
               </button>
+
               <button 
                 type="submit" 
                 form="skemaForm" 
-                className="px-5 py-2 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all flex items-center gap-2 text-[13px]"
+                className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
               >
                 <Save size={16}/> Simpan
               </button>
@@ -802,5 +865,123 @@ const Skema = () => {
     </div>
   );
 };
+
+function HeroPill({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center">
+      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">{label}</p>
+      <p className="mt-1 text-sm font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function MiniStat({ icon, label, value }) {
+  return (
+    <div className="flex items-center gap-4 rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+        {icon}
+      </div>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+        <p className="mt-1 text-2xl font-black text-[#071E3D]">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function TableHead({ children, center }) {
+  return (
+    <th className={`border-b-4 border-orange-500 px-5 py-4 text-[11px] font-black uppercase tracking-widest text-white ${center ? "text-center" : "text-left"}`}>
+      {children}
+    </th>
+  );
+}
+
+function StatusBadge({ status }) {
+  const style =
+    status === 'aktif'
+      ? 'bg-green-50 text-green-700 border-green-200'
+      : status === 'nonaktif'
+      ? 'bg-red-50 text-red-700 border-red-200'
+      : 'bg-slate-100 text-slate-600 border-slate-200';
+
+  return (
+    <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${style}`}>
+      {status || 'draft'}
+    </span>
+  );
+}
+
+function IconButton({ children, onClick, title, className }) {
+  return (
+    <button 
+      onClick={onClick}
+      title={title}
+      className={`inline-flex h-10 w-10 items-center justify-center rounded-xl transition-all ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function InfoPanel({ title, children }) {
+  return (
+    <section className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm">
+      <h4 className="mb-4 border-b border-slate-100 pb-3 text-sm font-black uppercase tracking-widest text-[#071E3D]">
+        {title}
+      </h4>
+      {children}
+    </section>
+  );
+}
+
+function DetailItem({ label, children, wide }) {
+  return (
+    <div className={`rounded-2xl border border-slate-100 bg-slate-50/70 p-4 ${wide ? 'md:col-span-2' : ''}`}>
+      <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <div className="text-sm font-black capitalize text-[#071E3D]">{children}</div>
+    </div>
+  );
+}
+
+function NavigationCard({ title, subtitle, onClick, className }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`group flex min-h-[112px] flex-col items-center justify-center rounded-3xl border p-4 text-center transition-all shadow-sm ${className}`}
+    >
+      <span className="mb-1 text-sm font-black">{title}</span>
+      <span className="mb-3 text-xs font-bold opacity-75">{subtitle}</span>
+      <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+    </button>
+  );
+}
+
+function FormSection({ title, children }) {
+  return (
+    <section className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm">
+      <h4 className="mb-5 border-b border-slate-100 pb-4 text-sm font-black uppercase tracking-widest text-[#071E3D]">
+        {title}
+      </h4>
+      <div className="space-y-4">{children}</div>
+    </section>
+  );
+}
+
+function Label({ children }) {
+  return (
+    <label className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+      {children}
+    </label>
+  );
+}
+
+function ErrorText({ children }) {
+  return (
+    <span className="mt-1 block text-xs font-bold text-red-500">
+      {children}
+    </span>
+  );
+}
 
 export default Skema;

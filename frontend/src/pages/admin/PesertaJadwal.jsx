@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from "../../services/api";
 import { 
-  Search, ArrowLeft, Loader2, User, Award, FileText, CheckCircle, Eye, X, CalendarClock, Info
+  Search, ArrowLeft, Loader2, Eye, X, CalendarClock, Info,
+  Users, BadgeCheck, Award, Hash, User, Sparkles, FileText
 } from 'lucide-react';
 
 const PesertaJadwal = () => {
@@ -91,225 +92,325 @@ const PesertaJadwal = () => {
     }) + ' WIB';
   };
 
+  const totalKompeten = pesertaList.filter(item => item.status_asesmen === 'kompeten').length;
+  const totalBelumKompeten = pesertaList.filter(item => item.status_asesmen === 'belum_kompeten').length;
+  const totalProses = pesertaList.filter(item => item.status_asesmen !== 'kompeten' && item.status_asesmen !== 'belum_kompeten').length;
+
+  const statusClass = (status) => {
+    if (status === 'kompeten') return 'bg-green-50 text-green-700 border-green-200';
+    if (status === 'belum_kompeten') return 'bg-red-50 text-red-700 border-red-200';
+    return 'bg-blue-50 text-blue-700 border-blue-200';
+  };
+
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button 
-          onClick={() => navigate('/admin/jadwal/uji-kompetensi')}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <ArrowLeft size={20} className="text-gray-600" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-[#182D4A]">Data Peserta Jadwal</h1>
-          <p className="text-gray-500 text-sm">
-            {jadwalInfo 
-              ? `Jadwal: ${jadwalInfo.nama_kegiatan} | Skema: ${getSkemaName(jadwalInfo)}` 
-              : 'Mengelola asesi yang terdaftar di jadwal ini'}
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        
+        {/* HERO */}
+        <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
+          <div className="absolute right-0 top-0 h-[420px] w-[420px] rounded-full bg-orange-500/10 blur-[110px]" />
+          <div className="absolute -bottom-24 -left-24 h-[360px] w-[360px] rounded-full bg-[#071E3D]/5 blur-[100px]" />
 
-      {/* Action Bar */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Cari nama, NIK, skema, atau email..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#CC6B27] focus:ring-1 focus:ring-[#CC6B27] text-sm"
-          />
-        </div>
-      </div>
+          <div className="relative z-10 p-6 lg:p-8">
+            <button
+              onClick={() => navigate('/admin/jadwal/uji-kompetensi')}
+              className="mb-6 inline-flex items-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500 shadow-sm transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-orange-500"
+            >
+              <ArrowLeft size={16} />
+              Kembali ke Jadwal
+            </button>
 
-      {/* Table Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[#071E3D] text-white text-[13px]">
-                <th className="p-4 font-semibold w-12 text-center">No</th>
-                <th className="p-4 font-semibold">Nama / NIK</th>
-                <th className="p-4 font-semibold">Skema</th>
-                <th className="p-4 font-semibold">Nomor Peserta</th>
-                <th className="p-4 font-semibold">Status Asesmen</th>
-                <th className="p-4 font-semibold text-center">Nilai Akhir</th>
-                <th className="p-4 font-semibold text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="p-8 text-center">
-                    <Loader2 className="animate-spin mx-auto text-[#CC6B27] mb-2" size={24} />
-                    <p className="text-gray-500 text-sm">Memuat data peserta...</p>
-                  </td>
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+              <div>
+                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+                  <Users size={15} className="text-orange-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                    Peserta Jadwal
+                  </span>
+                </div>
+
+                <h1 className="text-4xl font-black leading-tight text-[#071E3D] lg:text-5xl">
+                  Data Peserta
+                  <br />
+                  <span className="text-orange-500">Jadwal Asesmen</span>
+                </h1>
+
+                <p className="mt-5 max-w-3xl text-base font-medium leading-relaxed text-slate-500 lg:text-lg">
+                  {jadwalInfo
+                    ? `Jadwal: ${jadwalInfo.nama_kegiatan} | Skema: ${getSkemaName(jadwalInfo)}`
+                    : 'Mengelola asesi yang terdaftar di jadwal ini.'}
+                </p>
+              </div>
+
+              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
+                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+
+                <div className="relative z-10">
+                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
+                    <Sparkles size={28} />
+                  </div>
+
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
+                    Total Peserta
+                  </p>
+
+                  <h2 className="mb-4 text-5xl font-black leading-none">
+                    {pesertaList.length}
+                  </h2>
+
+                  <p className="text-sm font-medium leading-relaxed text-white/60">
+                    Ringkasan peserta yang terdaftar dalam jadwal asesmen ini.
+                  </p>
+
+                  <div className="mt-6 grid grid-cols-3 gap-3">
+                    <HeroPill label="Proses" value={`${totalProses}`} />
+                    <HeroPill label="K" value={`${totalKompeten}`} />
+                    <HeroPill label="BK" value={`${totalBelumKompeten}`} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* STATS */}
+        <section className="grid grid-cols-1 gap-5 md:grid-cols-4">
+          <MiniStat icon={<Users size={22} />} label="Total Peserta" value={pesertaList.length} />
+          <MiniStat icon={<CalendarClock size={22} />} label="Proses" value={totalProses} />
+          <MiniStat icon={<BadgeCheck size={22} />} label="Kompeten" value={totalKompeten} />
+          <MiniStat icon={<Award size={22} />} label="Belum Kompeten" value={totalBelumKompeten} />
+        </section>
+
+        {/* CONTENT */}
+        <section className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
+          <div className="border-b border-slate-100 p-6">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
+              <FileText size={15} className="text-orange-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                Daftar Peserta
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-[#071E3D]">
+                  Peserta Terdaftar
+                </h2>
+                <p className="mt-2 text-sm font-medium text-slate-400">
+                  Cari peserta berdasarkan nama, NIK, nomor peserta, email, atau skema.
+                </p>
+              </div>
+
+              <div className="relative w-full lg:w-[400px]">
+                <Search
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  type="text"
+                  placeholder="Cari nama, NIK, skema, atau email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 py-3 pl-11 pr-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1050px] border-collapse text-left">
+              <thead>
+                <tr className="bg-[#071E3D]">
+                  <TableHead center>No</TableHead>
+                  <TableHead>Nama / NIK</TableHead>
+                  <TableHead>Skema</TableHead>
+                  <TableHead>Nomor Peserta</TableHead>
+                  <TableHead>Status Asesmen</TableHead>
+                  <TableHead center>Nilai Akhir</TableHead>
+                  <TableHead center>Aksi</TableHead>
                 </tr>
-              ) : filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="p-8 text-center text-gray-500 text-sm">
-                    Belum ada peserta yang cocok atau terdaftar pada jadwal ini.
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((row, index) => {
-                  const profile = getProfile(row.user);
-                  const namaLengkap = profile?.nama_lengkap || row.user?.username || row.user?.nama_lengkap || '-';
-                  const nik = profile?.nik || '-';
-                  const namaSkema = getSkemaName(row.jadwal);
+              </thead>
 
-                  return (
-                    <tr key={row.id_peserta} className="border-b border-gray-50 hover:bg-gray-50 transition-colors text-[13px]">
-                      <td className="p-4 text-center text-gray-600">{index + 1}</td>
-                      
-                      {/* Kolom Nama & NIK */}
-                      <td className="p-4">
-                        <div className="font-medium text-[#182D4A]">{namaLengkap}</div>
-                        <div className="text-gray-500 text-xs">NIK: {nik}</div>
-                      </td>
-                      
-                      {/* Kolom Skema */}
-                      <td className="p-4 text-gray-600">
-                        <span className="line-clamp-2" title={namaSkema}>{namaSkema}</span>
-                      </td>
-                      
-                      <td className="p-4 font-medium text-[#182D4A]">{row.nomor_peserta || '-'}</td>
-                      <td className="p-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize
-                          ${row.status_asesmen === 'kompeten' ? 'bg-green-100 text-green-700' : 
-                            row.status_asesmen === 'belum_kompeten' ? 'bg-red-100 text-red-700' : 
-                            'bg-blue-100 text-blue-700'}`}>
-                          {row.status_asesmen?.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center font-bold text-[#182D4A]">
-                        {row.nilai_akhir ? row.nilai_akhir : '-'}
-                      </td>
-                      <td className="p-4 text-center">
-                        <button 
-                          onClick={() => handleViewDetail(row)}
-                          className="p-1.5 text-[#071E3D] bg-slate-100 hover:bg-[#CC6B27] hover:text-white rounded transition-colors"
-                          title="Lihat Detail"
-                        >
-                          <Eye size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="7" className="py-16 text-center">
+                      <Loader2 className="mx-auto mb-3 animate-spin text-orange-500" size={36} />
+                      <p className="text-sm font-black uppercase tracking-widest text-[#071E3D]">
+                        Memuat Data Peserta
+                      </p>
+                    </td>
+                  </tr>
+                ) : filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="py-16 text-center">
+                      <Users size={48} className="mx-auto mb-3 text-[#071E3D]/20" />
+                      <p className="text-sm font-black text-[#071E3D]">
+                        Belum ada peserta yang cocok atau terdaftar pada jadwal ini.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredData.map((row, index) => {
+                    const profile = getProfile(row.user);
+                    const namaLengkap = profile?.nama_lengkap || row.user?.username || row.user?.nama_lengkap || '-';
+                    const nik = profile?.nik || '-';
+                    const namaSkema = getSkemaName(row.jadwal);
+
+                    return (
+                      <tr
+                        key={row.id_peserta}
+                        className="border-b border-slate-100 transition-all last:border-0 hover:bg-orange-50/30"
+                      >
+                        <td className="px-5 py-4 text-center text-sm font-black text-[#071E3D]">
+                          {index + 1}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <div className="font-black text-[#071E3D]">{namaLengkap}</div>
+                          <div className="mt-1 flex items-center gap-1 text-xs font-bold text-slate-400">
+                            <Hash size={12} /> NIK: {nik}
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <div className="max-w-[280px] text-sm font-semibold leading-relaxed text-slate-500 line-clamp-2" title={namaSkema}>
+                            {namaSkema}
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm font-black text-[#071E3D]">
+                            {row.nomor_peserta || '-'}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(row.status_asesmen)}`}>
+                            {row.status_asesmen?.replace('_', ' ') || 'Terjadwal'}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4 text-center">
+                          <span className="text-base font-black text-[#071E3D]">
+                            {row.nilai_akhir ? row.nilai_akhir : '-'}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4 text-center">
+                          <button
+                            onClick={() => handleViewDetail(row)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-500 transition-all hover:bg-orange-500 hover:text-white"
+                            title="Lihat Detail"
+                          >
+                            <Eye size={17} />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
       {/* --- MODAL DETAIL PESERTA --- */}
       {showDetailModal && selectedPeserta && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/60 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[34px] border border-slate-100 bg-white shadow-2xl">
             
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-              <div className="flex items-center gap-2 text-[#182D4A]">
-                <Info size={20} className="text-[#CC6B27]" />
-                <h3 className="font-bold text-[16px]">Detail Peserta Asesmen</h3>
+            <div className="flex items-start justify-between border-b border-slate-100 p-6">
+              <div>
+                <h3 className="flex items-center gap-2 text-xl font-black text-[#071E3D]">
+                  <Info size={21} className="text-orange-500" />
+                  Detail Peserta Asesmen
+                </h3>
+                <p className="mt-1 text-sm font-medium text-slate-400">
+                  Rincian data peserta, status asesmen, nilai, dan catatan asesor.
+                </p>
               </div>
-              <button 
-                onClick={() => setShowDetailModal(false)} 
-                className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1 rounded-lg transition-colors"
+
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500"
               >
-                <X size={20}/>
+                <X size={20} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6">
-              <div className="flex flex-col gap-4">
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-6">
                 
                 {/* Info Utama */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <p className="text-[11px] text-gray-500 uppercase font-bold tracking-wider mb-1">Nama Asesi</p>
-                    <p className="font-bold text-[#182D4A] text-[14px]">
+                <DetailSection icon={<User size={17} />} title="Informasi Utama">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <DetailItem label="Nama Asesi">
                       {getProfile(selectedPeserta.user)?.nama_lengkap || selectedPeserta.user?.username || '-'}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <p className="text-[11px] text-gray-500 uppercase font-bold tracking-wider mb-1">NIK Asesi</p>
-                    <p className="font-bold text-[#182D4A] text-[14px]">
+                    </DetailItem>
+                    <DetailItem label="NIK Asesi">
                       {getProfile(selectedPeserta.user)?.nik || '-'}
-                    </p>
+                    </DetailItem>
+                    <DetailItem label="Skema" wide>
+                      <span title={getSkemaName(selectedPeserta.jadwal)}>
+                        {getSkemaName(selectedPeserta.jadwal)}
+                      </span>
+                    </DetailItem>
+                    <DetailItem label="Nomor Peserta">
+                      {selectedPeserta.nomor_peserta || 'Belum di-generate'}
+                    </DetailItem>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <p className="text-[11px] text-gray-500 uppercase font-bold tracking-wider mb-1">Skema</p>
-                    <p className="font-bold text-[#182D4A] text-[14px] line-clamp-2" title={getSkemaName(selectedPeserta.jadwal)}>
-                      {getSkemaName(selectedPeserta.jadwal)}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <p className="text-[11px] text-gray-500 uppercase font-bold tracking-wider mb-1">Nomor Peserta</p>
-                    <p className="font-bold text-[#182D4A] text-[14px]">{selectedPeserta.nomor_peserta || 'Belum di-generate'}</p>
-                  </div>
-                </div>
+                </DetailSection>
 
                 {/* Status & Nilai */}
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                  <div>
-                    <p className="text-[12px] text-gray-500 font-semibold mb-1">Status Asesmen</p>
-                    <span className={`inline-block px-3 py-1 rounded-md text-xs font-bold capitalize
-                        ${selectedPeserta.status_asesmen === 'kompeten' ? 'bg-green-100 text-green-700 border border-green-200' : 
-                          selectedPeserta.status_asesmen === 'belum_kompeten' ? 'bg-red-100 text-red-700 border border-red-200' : 
-                          'bg-blue-100 text-blue-700 border border-blue-200'}`}>
-                        {selectedPeserta.status_asesmen?.replace('_', ' ')}
-                    </span>
+                <DetailSection icon={<Award size={17} />} title="Status & Nilai">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <DetailItem label="Status Asesmen">
+                      <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(selectedPeserta.status_asesmen)}`}>
+                        {selectedPeserta.status_asesmen?.replace('_', ' ') || 'Terjadwal'}
+                      </span>
+                    </DetailItem>
+                    <DetailItem label="Nilai Akhir">
+                      <span className="text-lg font-black text-orange-500">
+                        {selectedPeserta.nilai_akhir || 'Belum dinilai'}
+                      </span>
+                    </DetailItem>
                   </div>
-                  <div>
-                    <p className="text-[12px] text-gray-500 font-semibold mb-1">Nilai Akhir</p>
-                    <p className="font-extrabold text-[#CC6B27] text-[16px]">{selectedPeserta.nilai_akhir || 'Belum dinilai'}</p>
-                  </div>
-                </div>
-
-                <hr className="border-gray-100 my-2" />
+                </DetailSection>
 
                 {/* Info Waktu */}
-                <div>
-                  <h4 className="text-[13px] font-bold text-[#182D4A] flex items-center gap-2 mb-3">
-                    <CalendarClock size={16} /> Riwayat Waktu Asesmen
-                  </h4>
-                  <div className="grid grid-cols-2 gap-4 text-[13px]">
-                    <div>
-                      <p className="text-gray-500 font-medium mb-0.5">Waktu Mulai:</p>
-                      <p className="font-semibold text-[#071E3D]">{formatDate(selectedPeserta.waktu_mulai)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 font-medium mb-0.5">Waktu Selesai:</p>
-                      <p className="font-semibold text-[#071E3D]">{formatDate(selectedPeserta.waktu_selesai)}</p>
-                    </div>
+                <DetailSection icon={<CalendarClock size={17} />} title="Riwayat Waktu Asesmen">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <DetailItem label="Waktu Mulai">
+                      {formatDate(selectedPeserta.waktu_mulai)}
+                    </DetailItem>
+                    <DetailItem label="Waktu Selesai">
+                      {formatDate(selectedPeserta.waktu_selesai)}
+                    </DetailItem>
                   </div>
-                </div>
+                </DetailSection>
 
                 {/* Keterangan */}
-                <div className="mt-2">
-                  <p className="text-[12px] text-gray-500 font-semibold mb-1">Keterangan / Catatan Asesor</p>
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 min-h-[60px] text-[13px] text-[#182D4A]">
-                    {selectedPeserta.keterangan || <span className="text-gray-400 italic">Tidak ada catatan keterangan.</span>}
+                <DetailSection icon={<FileText size={17} />} title="Keterangan / Catatan Asesor">
+                  <div className="min-h-[80px] rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-semibold leading-relaxed text-[#071E3D]">
+                    {selectedPeserta.keterangan || (
+                      <span className="italic text-slate-400">
+                        Tidak ada catatan keterangan.
+                      </span>
+                    )}
                   </div>
-                </div>
-
+                </DetailSection>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
-              <button 
+            <div className="flex justify-end border-t border-slate-100 bg-slate-50/70 p-6">
+              <button
                 onClick={() => setShowDetailModal(false)}
-                className="px-5 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                className="rounded-2xl border border-slate-100 bg-white px-7 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
               >
                 Tutup
               </button>
@@ -321,5 +422,67 @@ const PesertaJadwal = () => {
     </div>
   );
 };
+
+function HeroPill({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center">
+      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function MiniStat({ icon, label, value }) {
+  return (
+    <div className="flex items-center gap-4 rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+        {icon}
+      </div>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          {label}
+        </p>
+        <p className="mt-1 text-2xl font-black text-[#071E3D]">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function TableHead({ children, center }) {
+  return (
+    <th
+      className={`border-b-4 border-orange-500 px-5 py-4 text-[11px] font-black uppercase tracking-widest text-white ${
+        center ? "text-center" : "text-left"
+      }`}
+    >
+      {children}
+    </th>
+  );
+}
+
+function DetailSection({ icon, title, children }) {
+  return (
+    <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
+      <h4 className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3 text-sm font-black text-[#071E3D]">
+        <span className="text-orange-500">{icon}</span>
+        {title}
+      </h4>
+      {children}
+    </div>
+  );
+}
+
+function DetailItem({ label, children, wide }) {
+  return (
+    <div className={wide ? "md:col-span-2" : ""}>
+      <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+        {label}
+      </p>
+      <div className="text-sm font-bold text-[#071E3D]">{children}</div>
+    </div>
+  );
+}
 
 export default PesertaJadwal;

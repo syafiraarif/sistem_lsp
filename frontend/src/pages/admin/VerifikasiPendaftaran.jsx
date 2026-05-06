@@ -4,7 +4,7 @@ import api from "../../services/api";
 import { 
   Search, Eye, CheckCircle, XCircle, 
   User, MapPin, Phone, Mail, School, 
-  Loader2, Clock, FileText, X
+  Loader2, Clock, FileText, X, Sparkles
 } from 'lucide-react';
 
 const VerifikasiPendaftaran = () => {
@@ -175,26 +175,42 @@ const VerifikasiPendaftaran = () => {
     <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
       
       {/* HEADER PAGE */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold text-[#071E3D] m-0 mb-1">Verifikasi Pendaftaran</h1>
-          <p className="text-[14px] text-[#182D4A] m-0">Validasi data calon asesi baru</p>
+      <div className="relative overflow-hidden bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
+        <div className="absolute right-0 top-0 w-72 h-72 bg-[#CC6B27]/10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/2"></div>
+        <div className="relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#CC6B27]/10 text-[#CC6B27] text-[11px] font-black uppercase tracking-wider mb-3">
+            <Sparkles size={14} />
+            Verifikasi
+          </div>
+          <h1 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">
+            Verifikasi Pendaftaran
+          </h1>
+          <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">
+            Validasi data calon asesi baru.
+          </p>
         </div>
       </div>
 
       {/* CONTENT CARD */}
       <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-6">
         
-        {/* TOOLBAR (SEARCH) */}
-        <div className="w-full md:w-80 relative group">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Cari Nama, NIK, atau Email..." 
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px]"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h4 className="text-[16px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
+            <User size={18} className="text-[#CC6B27]" />
+            Daftar Pendaftar
+          </h4>
+
+          {/* TOOLBAR (SEARCH) */}
+          <div className="w-full md:w-80 relative group">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Cari Nama, NIK, atau Email..." 
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-medium"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* TABLE */}
@@ -255,7 +271,7 @@ const VerifikasiPendaftaran = () => {
                     <td className="py-4 px-4 text-center">
                       <button 
                         onClick={() => openDetailModal(item)}
-                        className="p-2 rounded-lg text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 transition-colors inline-flex justify-center"
+                        className="p-2 rounded-lg text-[#CC6B27] bg-[#CC6B27]/10 hover:bg-[#CC6B27] hover:text-white transition-colors inline-flex justify-center"
                         title="Lihat Detail"
                       >
                         <Eye size={18} />
@@ -303,7 +319,7 @@ const VerifikasiPendaftaran = () => {
                   <h4 className="text-[14px] font-bold text-[#071E3D] border-b border-[#071E3D]/10 pb-2 flex items-center gap-2 m-0">
                     <User size={16} className="text-[#CC6B27]"/> Data Diri
                   </h4>
-                  <div className="flex flex-col gap-3">
+                  <div className="bg-[#FAFAFA] border border-[#071E3D]/10 rounded-lg p-4 flex flex-col gap-3">
                     <DetailRow label="Nama Lengkap" value={selectedItem.nama_lengkap} />
                     <DetailRow label="NIK" value={selectedItem.nik} />
                     <DetailRow label="Email" value={selectedItem.email} />
@@ -316,13 +332,13 @@ const VerifikasiPendaftaran = () => {
                   <h4 className="text-[14px] font-bold text-[#071E3D] border-b border-[#071E3D]/10 pb-2 flex items-center gap-2 m-0">
                     <MapPin size={16} className="text-[#CC6B27]"/> Domisili & Wilayah
                   </h4>
-                  <div className="bg-[#FAFAFA] p-3.5 rounded-lg border border-[#071E3D]/10 text-[13px] shadow-sm">
+                  <div className="bg-[#FAFAFA] p-4 rounded-lg border border-[#071E3D]/10 text-[13px] shadow-sm">
                     <p className="font-bold text-[#071E3D] mb-1 leading-relaxed">{selectedItem.alamat_lengkap}</p>
                     <p className="text-[#182D4A] font-medium leading-relaxed">
                       {selectedItem.kelurahan}, {selectedItem.kecamatan}, {selectedItem.kota}, {selectedItem.provinsi}
                     </p>
                   </div>
-                  <div className="mt-1">
+                  <div className="bg-[#FAFAFA] border border-[#071E3D]/10 rounded-lg p-4">
                       <DetailRow label="Wilayah RJI" value={selectedItem.wilayah_rji} />
                   </div>
                 </div>
@@ -332,7 +348,7 @@ const VerifikasiPendaftaran = () => {
                    <h4 className="text-[14px] font-bold text-[#071E3D] border-b border-[#071E3D]/10 pb-2 flex items-center gap-2 m-0">
                     <School size={16} className="text-[#CC6B27]"/> Data Akademik
                   </h4>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#FAFAFA] border border-[#071E3D]/10 rounded-lg p-4">
                       <DetailRow label="Program Studi" value={selectedItem.program_studi} />
                       <DetailRow label="Kompetensi Keahlian" value={selectedItem.kompetensi_keahlian} />
                    </div>
