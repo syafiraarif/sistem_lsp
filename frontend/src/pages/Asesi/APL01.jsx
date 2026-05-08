@@ -763,7 +763,7 @@ const APL01 = () => {
 
                   <div>
                     <h3 className="text-xl font-black text-[#071E3D] mb-4">
-                      Daftar Unit Kompetensi sesuai kemasan:
+                      Daftar Unit Kompetensi 
                     </h3>
 
                     {unitKompetensi.length > 0 ? (
