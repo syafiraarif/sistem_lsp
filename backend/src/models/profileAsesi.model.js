@@ -101,7 +101,7 @@ const ProfileAsesi = sequelize.define("profile_asesi", {
   },
   fax_perusahaan: {
     type: DataTypes.STRING(20),
-    allowNull: false
+    allowNull: true
   },
   email_perusahaan: {
     type: DataTypes.STRING(100),

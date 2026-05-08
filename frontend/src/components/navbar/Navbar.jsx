@@ -14,7 +14,7 @@ export default function Navbar() {
 
   const menuLayanan = [
     { label: "Pendaftaran", href: "/pendaftaran" },
-    { label: "Surveillance", href: "/surveillance" },
+    // { label: "Surveillance", href: "/surveillance" },
     { label: "Pengaduan", href: "/pengaduan" },
   ];
 
