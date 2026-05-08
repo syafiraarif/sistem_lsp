@@ -55,7 +55,7 @@ const SidebarAsesi = ({ isOpen = false, setIsOpen = () => {} }) => {
       },
       {
         id: "profile",
-        name: "Profile Anda",
+        name: "Profile",
         path: "/asesi/profile",
         icon: <User size={21} />,
       },
@@ -67,7 +67,7 @@ const SidebarAsesi = ({ isOpen = false, setIsOpen = () => {} }) => {
       },
       {
         id: "asesmen",
-        name: "Asesmen Anda",
+        name: "Asesmen",
         path: "/asesi/jadwal-saya",
         icon: <ClipboardList size={21} />,
       },
