@@ -188,33 +188,43 @@ const APL01 = () => {
   };
 
   const getPersyaratanInfo = (item) => {
-    const dataPersyaratan =
-      item.persyaratan ||
-      item.Persyaratan ||
-      item.persyaratan_data ||
-      item;
+  const dataPersyaratan =
+    item.persyaratan ||
+    item.Persyaratan ||
+    item.persyaratan_data ||
+    item;
 
-    return {
-      id_persyaratan:
-        Number(item.id_persyaratan) ||
-        Number(dataPersyaratan.id_persyaratan) ||
-        Number(dataPersyaratan.id),
+  return {
+    id_persyaratan:
+      Number(item.id_persyaratan) ||
+      Number(dataPersyaratan.id_persyaratan) ||
+      Number(dataPersyaratan.id),
 
-      nama_persyaratan:
-        dataPersyaratan.nama_persyaratan ||
-        dataPersyaratan.nama ||
-        item.nama_persyaratan ||
-        "Persyaratan",
+    nama_persyaratan:
+      dataPersyaratan.nama_persyaratan ||
+      dataPersyaratan.nama ||
+      item.nama_persyaratan ||
+      "Persyaratan",
 
-      wajib:
-        item.wajib === true ||
-        item.wajib === 1 ||
-        item.wajib === "1" ||
-        dataPersyaratan.wajib === true ||
-        dataPersyaratan.wajib === 1 ||
-        dataPersyaratan.wajib === "1",
-    };
+    keterangan:
+      dataPersyaratan.keterangan ||
+      item.keterangan ||
+      item.skema_persyaratan?.keterangan ||
+      item.SkemaPersyaratan?.keterangan ||
+      "",
+
+    wajib:
+      item.wajib === true ||
+      item.wajib === 1 ||
+      item.wajib === "1" ||
+      item.skema_persyaratan?.wajib === true ||
+      item.skema_persyaratan?.wajib === 1 ||
+      item.skema_persyaratan?.wajib === "1" ||
+      dataPersyaratan.wajib === true ||
+      dataPersyaratan.wajib === 1 ||
+      dataPersyaratan.wajib === "1",
   };
+};
 
   const uploadedDokumenIds = useMemo(() => {
     const dokumenList = getDokumenList(apl01);
@@ -870,9 +880,20 @@ const APL01 = () => {
                                 )}
                               </div>
 
-                              <p className="text-slate-400 text-xs font-medium">
-                                Centang persyaratan lalu upload dokumen pendukung.
-                              </p>
+                              {p.keterangan ? (
+  <div className="mt-2 rounded-2xl border border-orange-100 bg-white/70 px-4 py-3">
+    <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 mb-1">
+      Keterangan
+    </p>
+    <p className="text-xs font-semibold leading-relaxed text-slate-500">
+      {p.keterangan}
+    </p>
+  </div>
+) : (
+  <p className="text-slate-400 text-xs font-medium">
+    Centang persyaratan lalu upload dokumen pendukung.
+  </p>
+)}
                             </div>
                           </label>
 
