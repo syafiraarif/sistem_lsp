@@ -100,6 +100,7 @@ export default function ProfileEdit() {
   const [kotaList, setKotaList] = useState([]);
   const [kecamatanList, setKecamatanList] = useState([]);
   const [kelurahanList, setKelurahanList] = useState([]);
+  const [kebangsaanList, setKebangsaanList] = useState([]);
 
   const imageBase = API_BASE.replace("/api", "");
   const totalProfileFields = 22;
@@ -167,6 +168,16 @@ export default function ProfileEdit() {
     }
   };
 
+  const fetchKebangsaan = async () => {
+    try {
+      const res = await api.get("/public/dropdown/kebangsaan");
+      setKebangsaanList(res.data || []);
+    } catch (err) {
+      console.error("Gagal memuat kebangsaan:", err);
+      setKebangsaanList([]);
+    }
+  };
+
   const initPage = async () => {
     try {
       setLoading(true);
@@ -179,6 +190,8 @@ export default function ProfileEdit() {
         navigate("/login");
         return;
       }
+
+      await fetchKebangsaan();
 
       const provList = await fetchProvinsi();
       await fetchProfile(provList);
@@ -782,6 +795,7 @@ export default function ProfileEdit() {
             clearSelectedPhoto={clearSelectedPhoto}
             uploadFotoProfile={uploadFotoProfile}
             saving={saving}
+            kebangsaanList={kebangsaanList}
           />
 
           <Card title="Pendidikan" icon={<GraduationCap size={22} />}>
@@ -976,6 +990,7 @@ function DataDiriCard({
   clearSelectedPhoto,
   uploadFotoProfile,
   saving,
+  kebangsaanList,
 }) {
   const [uploading, setUploading] = useState(false);
 
@@ -1129,12 +1144,12 @@ function DataDiriCard({
               handleChange={handleChange}
             />
 
-            <Input
+            <SelectKebangsaan
               label="Kebangsaan"
               name="kebangsaan"
               form={form}
               handleChange={handleChange}
-              placeholder="Contoh: Indonesia"
+              list={kebangsaanList}
             />
           </div>
         </div>
@@ -1339,6 +1354,39 @@ function SelectJenisKelamin({ label, name, form, handleChange }) {
           <option value="">Pilih Jenis Kelamin</option>
           <option value="laki-laki">Laki-laki</option>
           <option value="perempuan">Perempuan</option>
+        </select>
+
+        <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+          <ChevronRight size={18} className="rotate-90" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SelectKebangsaan({ label, name, form, handleChange, list }) {
+  const safeList = Array.isArray(list) ? list : [];
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 ml-1">
+        {label}
+      </label>
+
+      <div className="relative">
+        <select
+          name={name}
+          value={form?.[name] || ""}
+          onChange={handleChange}
+          className="w-full appearance-none rounded-[22px] border border-slate-100 bg-slate-50/70 px-5 py-4 pr-12 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+        >
+          <option value="">Pilih Kebangsaan</option>
+
+          {safeList.map((item, index) => (
+            <option key={`${item.value}-${index}`} value={item.value}>
+              {item.label}
+            </option>
+          ))}
         </select>
 
         <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
