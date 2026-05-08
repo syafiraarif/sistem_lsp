@@ -243,12 +243,11 @@ export default function ProfileView() {
                 <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
                   Profile
                   <br />
-                  <span className="text-orange-500">Saya</span>
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
                   Lihat ringkasan data diri, pendidikan, alamat, pekerjaan, dan
-                  status tanda tangan digital dari halaman profile.
+                  tanda tangan digital dari halaman profile.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -303,7 +302,7 @@ export default function ProfileView() {
                   </h2>
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    Status tanda tangan digital:{" "}
+                    Tanda tangan digital:{" "}
                     {ttdUrl ? "sudah tersedia" : "belum dibuat"}.
                   </p>
 
@@ -333,7 +332,7 @@ export default function ProfileView() {
 
             <MiniStat
               icon={ttdUrl ? <BadgeCheck size={22} /> : <XCircle size={22} />}
-              label="Status TTD"
+              label="TTD"
               value={ttdUrl ? "Sudah Tersedia" : "Belum Dibuat"}
             />
           </section>
@@ -351,7 +350,7 @@ export default function ProfileView() {
                 {profile.pendidikan_terakhir || "-"}
               </InfoBox>
 
-              <InfoBox label="Universitas">
+              <InfoBox label="Universitas / Sekolah">
                 {profile.universitas || "-"}
               </InfoBox>
 
@@ -365,19 +364,6 @@ export default function ProfileView() {
 
           <Card title="Alamat" icon={<MapPin size={22} />}>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              <InfoBox
-                label="Alamat Lengkap"
-                className="md:col-span-2 xl:col-span-4"
-              >
-                {profile.alamat || "-"}
-              </InfoBox>
-
-              <InfoBox label="RT / RW">
-                {(profile.rt || "-") + " / " + (profile.rw || "-")}
-              </InfoBox>
-
-              <InfoBox label="Kode Pos">{profile.kode_pos || "-"}</InfoBox>
-
               <InfoBox label="Provinsi">{wilayah.provinsi || "-"}</InfoBox>
 
               <InfoBox label="Kota/Kabupaten">{wilayah.kota || "-"}</InfoBox>
@@ -386,6 +372,15 @@ export default function ProfileView() {
 
               <InfoBox label="Kelurahan/Desa">
                 {wilayah.kelurahan || "-"}
+              </InfoBox>
+
+              <InfoBox label="Kode Pos">{profile.kode_pos || "-"}</InfoBox>
+
+              <InfoBox
+                label="Alamat Lengkap"
+                className="md:col-span-2 xl:col-span-4"
+              >
+                {profile.alamat || "-"}
               </InfoBox>
             </div>
           </Card>
@@ -407,7 +402,7 @@ export default function ProfileView() {
                 </span>
               </InfoBox>
 
-              <InfoBox label="Fax Perusahaan">
+              <InfoBox label="Fax Perusahaan (Opsional)">
                 {profile.fax_perusahaan || "-"}
               </InfoBox>
 
@@ -502,7 +497,7 @@ function DataDiriCard({ profile, profilePhoto, ttdUrl, formatTanggal }) {
               </span>
             </InfoBox>
 
-            <InfoBox label="Status TTD">
+            <InfoBox label="TTD">
               <span
                 className={`inline-flex items-center gap-2 ${
                   ttdUrl ? "text-emerald-600" : "text-slate-500"

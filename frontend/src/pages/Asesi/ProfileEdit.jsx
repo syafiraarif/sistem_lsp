@@ -1,3 +1,5 @@
+// frontend/src/pages/asesi/ProfileEdit.jsx
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -100,6 +102,7 @@ export default function ProfileEdit() {
   const [kelurahanList, setKelurahanList] = useState([]);
 
   const imageBase = API_BASE.replace("/api", "");
+  const totalProfileFields = 22;
 
   useEffect(() => {
     initPage();
@@ -549,15 +552,12 @@ export default function ProfileEdit() {
       jurusan: form.jurusan || null,
       tahun_lulus: form.tahun_lulus ? Number(form.tahun_lulus) : null,
 
-      alamat: form.alamat || null,
-      rt: form.rt || null,
-      rw: form.rw || null,
-      kode_pos: form.kode_pos || null,
-
       provinsi: form.provinsi_nama || null,
       kota: form.kota_nama || null,
       kecamatan: form.kecamatan_nama || null,
       kelurahan: form.kelurahan_nama || null,
+      kode_pos: form.kode_pos || null,
+      alamat: form.alamat || null,
 
       pekerjaan: form.pekerjaan || null,
       jabatan: form.jabatan || null,
@@ -593,7 +593,9 @@ export default function ProfileEdit() {
 
       setSuccess("Profil berhasil disimpan.");
 
-      const provList = provinsiList.length ? provinsiList : await fetchProvinsi();
+      const provList = provinsiList.length
+        ? provinsiList
+        : await fetchProvinsi();
 
       await fetchProfile(provList);
       await fetchFiles();
@@ -623,20 +625,17 @@ export default function ProfileEdit() {
       "universitas",
       "jurusan",
       "tahun_lulus",
-      "alamat",
-      "rt",
-      "rw",
-      "kode_pos",
       "provinsi_nama",
       "kota_nama",
       "kecamatan_nama",
       "kelurahan_nama",
+      "kode_pos",
+      "alamat",
       "pekerjaan",
       "jabatan",
       "nama_perusahaan",
       "alamat_perusahaan",
       "telp_perusahaan",
-      "fax_perusahaan",
       "email_perusahaan",
     ];
 
@@ -730,7 +729,7 @@ export default function ProfileEdit() {
                   </p>
 
                   <h2 className="text-2xl font-black leading-tight">
-                    {totalFilled}/25 Data Terisi
+                    {totalFilled}/{totalProfileFields} Data Terisi
                   </h2>
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
@@ -760,12 +759,16 @@ export default function ProfileEdit() {
               value={form.nama_lengkap || "-"}
             />
 
-            <MiniStat icon={<Hash size={22} />} label="NIK" value={form.nik || "-"} />
+            <MiniStat
+              icon={<Hash size={22} />}
+              label="NIK"
+              value={form.nik || "-"}
+            />
 
             <MiniStat
               icon={<BadgeCheck size={22} />}
               label="Data Profile"
-              value={`${totalFilled}/25 Terisi`}
+              value={`${totalFilled}/${totalProfileFields} Terisi`}
             />
           </section>
 
@@ -783,16 +786,15 @@ export default function ProfileEdit() {
 
           <Card title="Pendidikan" icon={<GraduationCap size={22} />}>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-              <Input
+              <SelectPendidikanTerakhir
                 label="Pendidikan Terakhir"
                 name="pendidikan_terakhir"
                 form={form}
                 handleChange={handleChange}
-                placeholder="Contoh: S1"
               />
 
               <Input
-                label="Universitas"
+                label="Universitas / Sekolah"
                 name="universitas"
                 form={form}
                 handleChange={handleChange}
@@ -820,40 +822,6 @@ export default function ProfileEdit() {
 
           <Card title="Alamat" icon={<MapPin size={22} />}>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-              <div className="md:col-span-2 xl:col-span-4">
-                <TextArea
-                  label="Alamat Lengkap"
-                  name="alamat"
-                  form={form}
-                  handleChange={handleChange}
-                  placeholder="Masukkan alamat lengkap"
-                />
-              </div>
-
-              <Input
-                label="RT"
-                name="rt"
-                form={form}
-                handleChange={handleChange}
-                placeholder="Contoh: 001"
-              />
-
-              <Input
-                label="RW"
-                name="rw"
-                form={form}
-                handleChange={handleChange}
-                placeholder="Contoh: 002"
-              />
-
-              <Input
-                label="Kode Pos"
-                name="kode_pos"
-                form={form}
-                handleChange={handleChange}
-                placeholder="Contoh: 55183"
-              />
-
               <SelectWilayah
                 label="Provinsi"
                 list={provinsiList}
@@ -884,6 +852,24 @@ export default function ProfileEdit() {
                 onChange={handleKelurahanChange}
                 disabled={!form.kecamatan_id}
               />
+
+              <Input
+                label="Kode Pos"
+                name="kode_pos"
+                form={form}
+                handleChange={handleChange}
+                placeholder="Contoh: 55183"
+              />
+
+              <div className="md:col-span-2 xl:col-span-4">
+                <TextArea
+                  label="Alamat Lengkap"
+                  name="alamat"
+                  form={form}
+                  handleChange={handleChange}
+                  placeholder="Masukkan alamat lengkap"
+                />
+              </div>
             </div>
           </Card>
 
@@ -922,11 +908,11 @@ export default function ProfileEdit() {
               />
 
               <Input
-                label="Fax Perusahaan"
+                label="Fax Perusahaan (Opsional)"
                 name="fax_perusahaan"
                 form={form}
                 handleChange={handleChange}
-                placeholder="Nomor fax"
+                placeholder="Nomor fax jika ada"
               />
 
               <Input
@@ -1299,6 +1285,39 @@ function TextArea({
         placeholder={placeholder}
         className="w-full rounded-[22px] border border-slate-100 bg-slate-50/70 px-5 py-4 text-sm font-black text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10 resize-none"
       />
+    </div>
+  );
+}
+
+function SelectPendidikanTerakhir({ label, name, form, handleChange }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <label className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 ml-1">
+        {label}
+      </label>
+
+      <div className="relative">
+        <select
+          name={name}
+          value={form?.[name] || ""}
+          onChange={handleChange}
+          className="w-full appearance-none rounded-[22px] border border-slate-100 bg-slate-50/70 px-5 py-4 pr-12 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+        >
+          <option value="">Pilih Pendidikan Terakhir</option>
+          <option value="SD">SD</option>
+          <option value="SMP">SMP</option>
+          <option value="SMA/SMK">SMA/SMK</option>
+          <option value="D3">D3</option>
+          <option value="D4">D4</option>
+          <option value="S1">S1</option>
+          <option value="S2">S2</option>
+          <option value="S3">S3</option>
+        </select>
+
+        <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+          <ChevronRight size={18} className="rotate-90" />
+        </div>
+      </div>
     </div>
   );
 }

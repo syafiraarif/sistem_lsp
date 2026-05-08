@@ -12,7 +12,6 @@ import {
   CalendarDays,
   CheckCircle,
   ChevronRight,
-  Clock,
   CreditCard,
   FileText,
   Filter,
@@ -33,6 +32,7 @@ export default function JadwalSaya() {
   const [jadwal, setJadwal] = useState([]);
   const [myJadwal, setMyJadwal] = useState([]);
   const [pembayaran, setPembayaran] = useState({});
+  const [apl01Status, setApl01Status] = useState({});
   const [loading, setLoading] = useState(true);
   const [choosingId, setChoosingId] = useState(null);
   const [search, setSearch] = useState("");
@@ -51,7 +51,6 @@ export default function JadwalSaya() {
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const normalizePesertaJadwal = (item) => {
@@ -80,72 +79,6 @@ export default function JadwalSaya() {
 
       raw: item,
     };
-  };
-
-  const loadData = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const token = getToken();
-
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
-      const [jadwalRes, sayaRes] = await Promise.all([
-        axios.get(`${API}/asesi/jadwal/tersedia`, {
-          headers: getHeaders(),
-        }),
-        axios.get(`${API}/asesi/jadwal-saya`, {
-          headers: getHeaders(),
-        }),
-      ]);
-
-      const jadwalData = jadwalRes.data?.data || [];
-      const sayaData = sayaRes.data?.data || [];
-
-      setJadwal(jadwalData);
-
-      const selected = sayaData
-        .map(normalizePesertaJadwal)
-        .filter((item) => item.id_jadwal);
-
-      setMyJadwal(selected);
-
-      await loadStatusPembayaran(jadwalData);
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || "Gagal memuat jadwal.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadStatusPembayaran = async (jadwalData) => {
-    const result = {};
-
-    await Promise.all(
-      jadwalData.map(async (item) => {
-        const idSkema = getIdSkema(item);
-
-        if (!idSkema) return;
-
-        try {
-          const res = await axios.get(
-            `${API}/asesi/pembayaran/${idSkema}/status`,
-            { headers: getHeaders() }
-          );
-
-          result[idSkema] = res.data?.data?.status || "belum bayar";
-        } catch (err) {
-          result[idSkema] = "belum bayar";
-        }
-      })
-    );
-
-    setPembayaran(result);
   };
 
   const getIdSkema = (item) => {
@@ -185,6 +118,114 @@ export default function JadwalSaya() {
   const getStatusPembayaran = (item) => {
     const idSkema = getIdSkema(item);
     return pembayaran[idSkema] || "belum bayar";
+  };
+
+  const isAPL01Done = (item) => {
+    const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
+    return Boolean(apl01Status[idPeserta]);
+  };
+
+  const loadData = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const token = getToken();
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const [jadwalRes, sayaRes] = await Promise.all([
+        axios.get(`${API}/asesi/jadwal/tersedia`, {
+          headers: getHeaders(),
+        }),
+        axios.get(`${API}/asesi/jadwal-saya`, {
+          headers: getHeaders(),
+        }),
+      ]);
+
+      const jadwalData = jadwalRes.data?.data || [];
+      const sayaData = sayaRes.data?.data || [];
+
+      const selected = sayaData
+        .map(normalizePesertaJadwal)
+        .filter((item) => item.id_jadwal);
+
+      setJadwal(jadwalData);
+      setMyJadwal(selected);
+
+      await Promise.all([
+        loadStatusPembayaran(jadwalData),
+        loadStatusAPL01(selected),
+      ]);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Gagal memuat jadwal.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStatusPembayaran = async (jadwalData) => {
+    const result = {};
+
+    await Promise.all(
+      jadwalData.map(async (item) => {
+        const idSkema = getIdSkema(item);
+
+        if (!idSkema) return;
+
+        try {
+          const res = await axios.get(
+            `${API}/asesi/pembayaran/${idSkema}/status`,
+            { headers: getHeaders() }
+          );
+
+          result[idSkema] = res.data?.data?.status || "belum bayar";
+        } catch (err) {
+          result[idSkema] = "belum bayar";
+        }
+      })
+    );
+
+    setPembayaran(result);
+  };
+
+  const loadStatusAPL01 = async (selectedData) => {
+    const result = {};
+
+    await Promise.all(
+      selectedData.map(async (item) => {
+        const idPeserta =
+          item.id_peserta ||
+          item.raw?.id_peserta ||
+          item.raw?.id_peserta_jadwal ||
+          item.raw?.id ||
+          item.raw?.id_pendaftaran;
+
+        if (!idPeserta) return;
+
+        try {
+          const res = await axios.get(`${API}/asesi/apl01/${idPeserta}`, {
+            headers: getHeaders(),
+          });
+
+          const data = res.data?.data || null;
+
+          result[idPeserta] =
+            data?.status === "submit" ||
+            data?.status === "submitted" ||
+            data?.status === "valid" ||
+            data?.status === "selesai";
+        } catch (err) {
+          result[idPeserta] = false;
+        }
+      })
+    );
+
+    setApl01Status(result);
   };
 
   const pilihJadwal = async (id_jadwal) => {
@@ -259,16 +300,26 @@ export default function JadwalSaya() {
 
   const pergiAPL02 = (item) => {
     const idSkema = getIdSkema(item);
+    const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
+
+    if (!isAPL01Done(item)) {
+      alert("Silakan kerjakan APL01 terlebih dahulu sebelum mengisi APL02.");
+      return;
+    }
 
     if (!idSkema) {
       alert("ID skema tidak ditemukan.");
       return;
     }
 
-    navigate(`/asesi/apl02/${idSkema}`);
+    navigate(`/asesi/apl02/${idSkema}`, {
+      state: {
+        id_peserta: idPeserta,
+      },
+    });
   };
 
-  const pergiPraAsesmen = (item) => {
+  const pergiPresensi = (item) => {
     const idSkema = getIdSkema(item);
 
     if (!idSkema) {
@@ -318,7 +369,7 @@ export default function JadwalSaya() {
 
       return matchSearch && matchFilter;
     });
-  }, [jadwal, myJadwal, pembayaran, search, filter]);
+  }, [jadwal, myJadwal, pembayaran, search, filter, apl01Status]);
 
   const totalDipilih = myJadwal.length;
   const totalPaid = jadwal.filter((item) => getStatusPembayaran(item) === "paid")
@@ -356,7 +407,7 @@ export default function JadwalSaya() {
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
                   Pilih jadwal uji kompetensi, lanjutkan pembayaran, dan akses
-                  formulir APL01, APL02, serta pra asesmen setelah pembayaran
+                  formulir APL01, APL02, serta presensi setelah pembayaran
                   dikonfirmasi.
                 </p>
 
@@ -513,6 +564,7 @@ export default function JadwalSaya() {
                 const sedangMemilih = choosingId === item.id_jadwal;
                 const statusBayar = getStatusPembayaran(item);
                 const sudahPaid = statusBayar === "paid";
+                const apl01Done = isAPL01Done(item);
 
                 return (
                   <ScheduleCard
@@ -525,12 +577,13 @@ export default function JadwalSaya() {
                     sedangMemilih={sedangMemilih}
                     statusBayar={statusBayar}
                     sudahPaid={sudahPaid}
+                    apl01Done={apl01Done}
                     formatTanggal={formatTanggal}
                     pilihJadwal={pilihJadwal}
                     pergiBayar={pergiBayar}
                     pergiAPL01={pergiAPL01}
                     pergiAPL02={pergiAPL02}
-                    pergiPraAsesmen={pergiPraAsesmen}
+                    pergiPresensi={pergiPresensi}
                   />
                 );
               })
@@ -551,12 +604,13 @@ function ScheduleCard({
   sedangMemilih,
   statusBayar,
   sudahPaid,
+  apl01Done,
   formatTanggal,
   pilihJadwal,
   pergiBayar,
   pergiAPL01,
   pergiAPL02,
-  pergiPraAsesmen,
+  pergiPresensi,
 }) {
   const title = skema.judul_skema || "Skema tidak tersedia";
   const kodeSkema = skema.kode_skema || "SKEMA";
@@ -589,6 +643,10 @@ function ScheduleCard({
 
                 {statusBayar === "paid" && (
                   <StatusBadge type="success" label="Paid" />
+                )}
+
+                {apl01Done && (
+                  <StatusBadge type="success" label="APL01 Selesai" />
                 )}
               </div>
 
@@ -682,10 +740,18 @@ function ScheduleCard({
           ) : sudahPaid ? (
             <div className="grid grid-cols-1 gap-3">
               <ActionButton title="APL01" onClick={() => pergiAPL01(item)} />
-              <ActionButton title="APL02" onClick={() => pergiAPL02(item)} />
+
+              {apl01Done ? (
+                <ActionButton title="APL02" onClick={() => pergiAPL02(item)} />
+              ) : (
+                <div className="rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-[11px] font-bold text-amber-700 leading-relaxed">
+                  APL02 akan tersedia setelah APL01 selesai dikerjakan.
+                </div>
+              )}
+
               <ActionButton
-                title="Pra Asesmen"
-                onClick={() => pergiPraAsesmen(item)}
+                title="Presensi"
+                onClick={() => pergiPresensi(item)}
               />
             </div>
           ) : (

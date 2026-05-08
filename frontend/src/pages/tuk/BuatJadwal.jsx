@@ -54,7 +54,6 @@ const BuatJadwal = () => {
   const [form, setForm] = useState({
     kode_jadwal: "",
     id_skema: "",
-    nama_kegiatan: "",
     tahun: currentYear,
     periode_bulan: "",
     gelombang: "",
@@ -119,10 +118,6 @@ const BuatJadwal = () => {
       return setMsg({ type: "error", text: "Pilih Skema terlebih dahulu!" });
     }
 
-    if (!form.nama_kegiatan) {
-      return setMsg({ type: "error", text: "Nama kegiatan wajib diisi!" });
-    }
-
     if (!form.kuota || isNaN(form.kuota)) {
       return setMsg({ type: "error", text: "Kuota harus angka!" });
     }
@@ -147,10 +142,14 @@ const BuatJadwal = () => {
     try {
       const token = localStorage.getItem("token");
 
+      const selectedSkema = skemaOptions.find(
+        (s) => String(s.id_skema) === String(form.id_skema)
+      );
+
       const payload = {
         kode_jadwal: form.kode_jadwal || null,
         id_skema: parseInt(form.id_skema),
-        nama_kegiatan: form.nama_kegiatan,
+        nama_kegiatan: selectedSkema?.judul_skema || "Uji Kompetensi",
         tahun: parseInt(form.tahun),
         periode_bulan: form.periode_bulan || null,
         gelombang: form.gelombang || null,
@@ -196,7 +195,6 @@ const BuatJadwal = () => {
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
           <section className="relative overflow-hidden bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 lg:p-8 mb-6">
             <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-[90px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#071E3D]/5 rounded-full blur-[90px] pointer-events-none" />
@@ -285,18 +283,6 @@ const BuatJadwal = () => {
                         </option>
                       ))}
                     </SelectField>
-
-                    <div className="md:col-span-2">
-                      <InputField
-                        label="Nama Kegiatan"
-                        name="nama_kegiatan"
-                        value={form.nama_kegiatan}
-                        onChange={handleChange}
-                        placeholder="Contoh: Uji Kompetensi Junior Web Developer"
-                        required
-                        icon={<BadgeCheck size={18} />}
-                      />
-                    </div>
                   </div>
                 </Card>
 
@@ -395,25 +381,23 @@ const BuatJadwal = () => {
                         Tipe Pelaksanaan Uji
                       </label>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {["luring", "daring", "hybrid", "onsite"].map(
-                          (type) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() =>
-                                setForm({ ...form, pelaksanaan_uji: type })
-                              }
-                              className={`px-4 py-4 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${
-                                form.pelaksanaan_uji === type
-                                  ? "bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20"
-                                  : "bg-slate-50 text-[#071E3D] border-slate-100 hover:border-orange-200 hover:bg-orange-50"
-                              }`}
-                            >
-                              {type}
-                            </button>
-                          )
-                        )}
+                      <div className="grid grid-cols-2 gap-3">
+                        {["luring", "daring"].map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() =>
+                              setForm({ ...form, pelaksanaan_uji: type })
+                            }
+                            className={`px-4 py-4 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${
+                              form.pelaksanaan_uji === type
+                                ? "bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20"
+                                : "bg-slate-50 text-[#071E3D] border-slate-100 hover:border-orange-200 hover:bg-orange-50"
+                            }`}
+                          >
+                            {type}
+                          </button>
+                        ))}
                       </div>
                     </div>
 

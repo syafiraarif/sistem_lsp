@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import {
   User,
@@ -15,28 +16,48 @@ import {
   CalendarCheck,
 } from "lucide-react";
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
+
+const api = axios.create({
+  baseURL: API_BASE,
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
 const HomeAsesi = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userData, setUserData] = useState(null);
+  const [profile, setProfile] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-
-    if (storedUser) {
+    const loadProfile = async () => {
       try {
-        setUserData(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Gagal membaca data user:", error);
-      }
-    }
-  }, []);
+        const token = localStorage.getItem("token");
 
-  const displayName =
-    userData?.nama ||
-    userData?.nama_lengkap ||
-    userData?.username ||
-    "Asesi";
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
+        const res = await api.get("/asesi/profile");
+        setProfile(res.data?.data || null);
+      } catch (error) {
+        console.error("Gagal mengambil profile:", error);
+      }
+    };
+
+    loadProfile();
+  }, [navigate]);
+
+  const displayName = profile?.nama_lengkap || "Asesi";
 
   const cards = [
     {
@@ -71,7 +92,6 @@ const HomeAsesi = () => {
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
         <div className="w-full max-w-[1500px] mx-auto space-y-6">
-          {/* HERO */}
           <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
             <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
             <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
@@ -124,11 +144,11 @@ const HomeAsesi = () => {
                   </div>
 
                   <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
-                    Status Akun
+                    Dashboard Asesi
                   </p>
 
                   <h2 className="text-2xl font-black leading-tight">
-                    Siap Mengikuti Sertifikasi
+                    Kelola Sertifikasi Anda
                   </h2>
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
@@ -136,16 +156,14 @@ const HomeAsesi = () => {
                     mengajukan asesmen.
                   </p>
 
-                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
+                  <div className="mt-auto pt-6 grid grid-cols-1 gap-3">
                     <HeroPill label="Role" value="Asesi" />
-                    <HeroPill label="Status" value="Aktif" />
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* MINI STATS */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <MiniStat
               icon={<FileText size={22} />}
@@ -164,7 +182,6 @@ const HomeAsesi = () => {
             />
           </section>
 
-          {/* MENU */}
           <section className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100">
               <h2 className="text-xl font-black text-[#071E3D]">Menu Utama</h2>
