@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-const BASE_URL = "https://emsifa.github.io/api-wilayah-indonesia/api";
+const BASE_URL = "https://www.emsifa.com/api-wilayah-indonesia/api";
 
 exports.getProvinsi = async (req, res) => {
   try {
