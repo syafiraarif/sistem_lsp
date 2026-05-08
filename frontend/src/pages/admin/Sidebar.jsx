@@ -20,6 +20,7 @@ import {
   FaSignOutAlt,
   FaChevronDown,
   FaChevronRight,
+  FaThumbtack, // Tambahan icon jika butuh indikator pin
 } from "react-icons/fa";
 import { Menu, X, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -33,11 +34,21 @@ const Sidebar = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  // ✅ State untuk menyimpan status pin sidebar
+  const [isPinned, setIsPinned] = useState(() => {
+    return localStorage.getItem("sidebarPinned") === "true";
+  });
+
   const [openMenus, setOpenMenus] = useState({
     standar: false,
     asesi: false,
     asesor: false,
   });
+
+  // ✅ Simpan status pin ke local storage setiap kali berubah
+  useEffect(() => {
+    localStorage.setItem("sidebarPinned", isPinned);
+  }, [isPinned]);
 
   useEffect(() => {
     const path = location.pathname;
@@ -75,7 +86,8 @@ const Sidebar = () => {
     }
   }, []);
 
-  const isExpanded = isOpen || isHovered;
+  // ✅ Sidebar akan terbuka jika di-pin, di-hover, atau dibuka via menu mobile
+  const isExpanded = isOpen || isHovered || isPinned;
 
   const handleScroll = (e) => {
     sessionStorage.setItem("sidebarScrollPosition", e.target.scrollTop);
@@ -114,6 +126,10 @@ const Sidebar = () => {
     localStorage.removeItem("id_tuk");
 
     navigate("/login", { replace: true });
+  };
+
+  const togglePin = () => {
+    setIsPinned((prev) => !prev);
   };
 
   return (
@@ -156,6 +172,8 @@ const Sidebar = () => {
                 isExpanded={true}
                 isMobile
                 onClose={() => setIsOpen(false)}
+                isPinned={false} // Pin tidak berlaku di mobile
+                togglePin={() => {}}
               />
             </motion.aside>
           </>
@@ -179,6 +197,8 @@ const Sidebar = () => {
           sidebarContentRef={sidebarContentRef}
           handleScroll={handleScroll}
           isExpanded={isExpanded}
+          isPinned={isPinned}
+          togglePin={togglePin}
         />
       </aside>
 
@@ -252,6 +272,8 @@ const SidebarContent = ({
   isExpanded,
   isMobile = false,
   onClose,
+  isPinned,
+  togglePin,
 }) => {
   const parentActive = {
     standar:
@@ -277,11 +299,26 @@ const SidebarContent = ({
       `}</style>
 
       <div className="h-[120px] border-b border-slate-100 flex items-center shrink-0">
-        <div className="w-24 h-full flex items-center justify-center shrink-0">
-          <div className="w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center text-2xl">
+        {/* ✅ Tombol Logo di sini untuk lock/unlock sidebar */}
+        <button
+          type="button"
+          onClick={togglePin}
+          title={isPinned ? "Buka Kunci Sidebar" : "Kunci Sidebar"}
+          className="w-24 h-full flex items-center justify-center shrink-0 cursor-pointer group"
+        >
+          <div
+            className={`relative w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center text-2xl transition-all duration-300 ${
+              isPinned ? "ring-4 ring-orange-500/30 scale-95" : "group-hover:scale-105"
+            }`}
+          >
             <FaUniversity />
+            {isPinned && (
+              <div className="absolute -top-1 -right-1 bg-orange-500 rounded-full p-1 text-[8px]">
+                <FaThumbtack />
+              </div>
+            )}
           </div>
-        </div>
+        </button>
 
         <div
           className={`overflow-hidden whitespace-nowrap transition-opacity duration-150 ${
@@ -371,7 +408,6 @@ const SidebarContent = ({
 
           {openMenus.standar && isExpanded && (
             <SubMenu>
-              {/* SKKNI ditaruh di atas Unit Kompetensi */}
               <SubItem
                 label="Data SKKNI"
                 active={isActive("/admin/skkni")}

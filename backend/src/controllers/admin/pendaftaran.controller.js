@@ -230,3 +230,40 @@ exports.rejectPendaftaran = async (req, res) => {
     return response.error(res, err.message);
   }
 };
+
+exports.deletePendaftaran = async (req, res) => {
+  try {
+    const pendaftaran = await Pendaftaran.findByPk(req.params.id);
+
+    if (!pendaftaran) {
+      return response.error(res, "Data pendaftaran tidak ditemukan", 404);
+    }
+
+    await pendaftaran.destroy();
+
+    return response.success(res, "Data pendaftaran berhasil dihapus secara permanen");
+  } catch (err) {
+    console.error("DELETE PENDAFTARAN ERROR:", err);
+    return response.error(res, err.message);
+  }
+};
+
+exports.bulkDeletePendaftaran = async (req, res) => {
+  try {
+    const { ids } = req.body; 
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return response.error(res, "Tidak ada data yang dipilih untuk dihapus", 400);
+    }
+
+    await Pendaftaran.destroy({
+      where: {
+        id_pendaftaran: ids
+      }
+    });
+
+    return response.success(res, `${ids.length} data pendaftaran berhasil dihapus`);
+  } catch (err) {
+    console.error("BULK DELETE PENDAFTARAN ERROR:", err);
+    return response.error(res, err.message);
+  }
+};

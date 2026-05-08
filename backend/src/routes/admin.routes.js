@@ -85,6 +85,8 @@ router.put("/admin/:id/reset-password", adminController.resetPassword);
 router.get("/pendaftaran", pendaftaranController.getAll);
 router.post("/pendaftaran/:id/approve", pendaftaranController.approvePendaftaran);
 router.post("/pendaftaran/:id/reject", pendaftaranController.rejectPendaftaran);
+router.delete("/pendaftaran/:id", pendaftaranController.deletePendaftaran);
+router.post("/pendaftaran/bulk-delete", pendaftaranController.bulkDeletePendaftaran);
 
 
 router.get("/pengaduan", pengaduanController.getAllPengaduan);
@@ -196,5 +198,8 @@ router.delete("/unit-elemen/:id", elemenKukController.deleteElemen);
 router.post("/unit-kuk", elemenKukController.createKuk);
 router.put("/unit-kuk/:id", elemenKukController.updateKuk);
 router.delete("/unit-kuk/:id", elemenKukController.deleteKuk);
+
+router.get("/download-template-asesi", asesiAdmin.downloadTemplate);
+router.get("/download-template-asesor", asesorAdmin.downloadTemplate);
 
 module.exports = router;

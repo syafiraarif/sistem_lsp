@@ -5,6 +5,60 @@ const { createUser, resetUserPassword } = require("../../services/account.servic
 const { createNotifikasi } = require("../../services/notifikasi.service");
 const sequelize = require("../../config/database");
 
+exports.downloadTemplate = async (req, res) => {
+  try {
+    const headers = [
+      "nik", "email", "no_hp", "nama_lengkap", "jenis_kelamin", "tempat_lahir", 
+      "tanggal_lahir", "kebangsaan", "alamat", "rt", "rw", "provinsi", "kota", 
+      "kecamatan", "kelurahan", "kode_pos", "pendidikan_terakhir", "universitas", 
+      "jurusan", "tahun_lulus", "pekerjaan", "jabatan", "nama_perusahaan", 
+      "alamat_perusahaan", "telp_perusahaan", "fax_perusahaan", "email_perusahaan"
+    ];
+
+    const exampleData = [{
+      nik: "1234567890123456",
+      email: "asesi.contoh@email.com",
+      no_hp: "081234567890",
+      nama_lengkap: "Budi Santoso",
+      jenis_kelamin: "laki-laki",
+      tempat_lahir: "Jakarta",
+      tanggal_lahir: "1995-08-17",
+      kebangsaan: "Indonesia",
+      alamat: "Jl. Sudirman No 1",
+      rt: "001",
+      rw: "002",
+      provinsi: "DKI Jakarta",
+      kota: "Jakarta Pusat",
+      kecamatan: "Menteng",
+      kelurahan: "Menteng",
+      kode_pos: "10310",
+      pendidikan_terakhir: "S1",
+      universitas: "Universitas Indonesia",
+      jurusan: "Sistem Informasi",
+      tahun_lulus: 2018,
+      pekerjaan: "Software Engineer",
+      jabatan: "Staff",
+      nama_perusahaan: "PT Teknologi Hebat",
+      alamat_perusahaan: "Jl. Thamrin No 10",
+      telp_perusahaan: "0211234567",
+      fax_perusahaan: "-",
+      email_perusahaan: "kantor@teknologi.com"
+    }];
+
+    const ws = XLSX.utils.json_to_sheet(exampleData, { header: headers });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template_Asesi");
+    
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Disposition", 'attachment; filename="Template_Import_Asesi.xlsx"');
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    return res.send(buffer);
+
+  } catch (err) {
+    return response.error(res, err.message);
+  }
+};
 
 exports.importAsesiExcel = async (req, res) => {
   try {

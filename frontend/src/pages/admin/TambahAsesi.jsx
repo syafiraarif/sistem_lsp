@@ -5,8 +5,8 @@ import { getProvinsi, getKota, getKecamatan, getKelurahan } from "../../services
 import { 
   Search, Eye, Edit2, Trash2, X, Save, 
   User as UserIcon, Loader2, Upload, FileSpreadsheet,
-  GraduationCap, MapPin, Mail, Briefcase, Users, Key, Sparkles, ChevronLeft, ChevronRight
-} from 'lucide-react';
+  GraduationCap, MapPin, Mail, Briefcase, Users, Key, Sparkles, ChevronLeft, ChevronRight, Download
+} from 'lucide-react'; // ✅ Tambah icon Download
 
 const TambahAsesi = () => {
   // --- STATE UTAMA ---
@@ -195,19 +195,15 @@ const TambahAsesi = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
     let finalValue = value;
     
-    // 1. Auto hapus huruf untuk form yang WAJIB ANGKA
     if (['nik', 'no_hp', 'rt', 'rw', 'kode_pos', 'telp_perusahaan', 'tahun_lulus'].includes(name)) {
-      finalValue = value.replace(/\D/g, ''); // \D berarti karakter selain angka dihapus
+      finalValue = value.replace(/\D/g, ''); 
     }
-    // 2. Auto hapus angka untuk form yang WAJIB HURUF (Nama, Jabatan, Pendidikan, dll)
     else if (['nama_lengkap', 'jabatan', 'pekerjaan', 'universitas', 'jurusan', 'tempat_lahir', 'kebangsaan'].includes(name)) {
-      finalValue = value.replace(/[0-9]/g, ''); // Hapus jika ada inputan angka 0-9
+      finalValue = value.replace(/[0-9]/g, ''); 
     }
 
-    // Batasi input tahun lulus maksimal 4 digit
     if (name === 'tahun_lulus' && finalValue.length > 4) {
       finalValue = finalValue.slice(0, 4);
     }
@@ -220,7 +216,6 @@ const TambahAsesi = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Cek semua validasi sebelum memproses
     let isValid = true;
     Object.keys(formData).forEach(key => {
       if (['email', 'no_hp', 'nik'].includes(key) && isEditMode) return; 
@@ -275,6 +270,22 @@ const TambahAsesi = () => {
         }
       }
     });
+  };
+
+  // ✅ LOGIKA DOWNLOAD TEMPLATE EXCEL
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get("/admin/download-template-asesi", { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "Template_Import_Asesi.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      Swal.fire("Error", "Gagal mendownload template excel", "error");
+    }
   };
 
   const handleImportExcel = async (e) => {
@@ -395,7 +406,15 @@ const TambahAsesi = () => {
             <h2 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">Data Asesi</h2>
             <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">Kelola data profil dan akun asesi.</p>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          
+          {/* ✅ DITAMBAHKAN TOMBOL DOWNLOAD TEMPLATE DI SINI */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <button 
+              onClick={handleDownloadTemplate}
+              className="flex-1 md:flex-none px-4 py-2.5 rounded-lg font-bold bg-white text-[#CC6B27] border border-[#CC6B27]/50 hover:bg-[#CC6B27]/10 hover:border-[#CC6B27] shadow-sm transition-all flex items-center justify-center gap-2 text-[13px]"
+            >
+              <Download size={18} /> Template Excel
+            </button>
             <button 
               className="flex-1 md:flex-none px-4 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 text-[13px]"
               onClick={() => setShowImportModal(true)}
@@ -403,6 +422,7 @@ const TambahAsesi = () => {
               <FileSpreadsheet size={18} /> Import Data Asesi (Excel)
             </button>
           </div>
+
         </div>
       </div>
 
