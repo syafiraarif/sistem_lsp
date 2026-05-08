@@ -20,10 +20,13 @@ const Jadwal = sequelize.define("jadwal", {
     type: DataTypes.STRING(150),
     allowNull: false
   },
+    tgl_pra_asesmen: {
+    type:  DataTypes.DATEONLY,
+    allowNull: true
+  },
   tahun: DataTypes.INTEGER,
   periode_bulan: DataTypes.STRING(20),
   gelombang: DataTypes.STRING(20),
-  tgl_pra_asesmen: DataTypes.DATEONLY,
   tgl_awal: DataTypes.DATEONLY,
   tgl_akhir: DataTypes.DATEONLY,
   jam: DataTypes.TIME,

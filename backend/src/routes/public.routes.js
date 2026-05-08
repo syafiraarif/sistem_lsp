@@ -15,6 +15,8 @@ router.get("/jadwal", jadwalCtrl.getAllPublic);
 router.get("/dropdown/jadwal", dropdown.getWilayahUjiDropdown );
 router.get("/dropdown/skema", dropdown.getSkemaDropdown);
 
+router.get("/dropdown/kebangsaan", dropdown.getKebangsaanDropdown);
+
 router.post("/surveillance", publicFormLimiter, ctrl.createSurveillance);
 
 router.post("/pendaftaran", publicFormLimiter, pendaftaran.create);

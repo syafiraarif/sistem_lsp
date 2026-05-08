@@ -648,7 +648,6 @@ export default function PraAsesmenAsesi() {
                       <TipItem text="Pastikan tanda tangan asesi sudah tersedia di profile." />
                       <TipItem text="Submit presensi hanya bisa dilakukan satu kali." />
                       <TipItem text="Catatan dapat diisi dengan keterangan hadir." />
-                      <TipItem text="PDF dapat diunduh jika endpoint backend sudah tersedia." />
                     </div>
                   </div>
 

@@ -95,15 +95,24 @@ exports.create = async (req, res) => {
     }, { transaction });
 
     await ProfileAsesi.create({
-      id_user: user.id_user,
-      nik: payload.nik,
-      nama_lengkap: payload.nama_lengkap,
-      provinsi: payload.provinsi,
-      kota: payload.kota,
-      kecamatan: payload.kecamatan,
-      kelurahan: payload.kelurahan,
-      alamat: payload.alamat_lengkap
-    }, { transaction });
+    id_user: user.id_user,
+    nik: payload.nik,
+    nama_lengkap: payload.nama_lengkap,
+    provinsi: payload.provinsi,
+    kota: payload.kota,
+    kecamatan: payload.kecamatan,
+    kelurahan: payload.kelurahan,
+    alamat: payload.alamat_lengkap,
+
+    pendidikan_terakhir: payload.pendidikan_terakhir || payload.program_studi || null,
+    pekerjaan: payload.pekerjaan || null,
+    jabatan: payload.jabatan || null,
+    nama_perusahaan: payload.nama_perusahaan || null,
+    alamat_perusahaan: payload.alamat_perusahaan || null,
+    telp_perusahaan: payload.telp_perusahaan || null,
+    fax_perusahaan: payload.fax_perusahaan || null,
+    email_perusahaan: payload.email_perusahaan || null,
+  }, { transaction });
 
     await transaction.commit();
     return response.success(

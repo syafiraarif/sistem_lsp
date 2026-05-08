@@ -19,7 +19,6 @@ import {
   Link as LinkIcon,
   Settings,
   ChevronRight,
-  BadgeCheck,
 } from "lucide-react";
 
 const BuatJadwal = () => {
@@ -153,7 +152,10 @@ const BuatJadwal = () => {
         tahun: parseInt(form.tahun),
         periode_bulan: form.periode_bulan || null,
         gelombang: form.gelombang || null,
+
+        // Field pra asesmen masih ada, tapi sementara tidak ditampilkan di UI.
         tgl_pra_asesmen: form.tgl_pra_asesmen || null,
+
         tgl_awal: form.tgl_awal || null,
         tgl_akhir: form.tgl_akhir || null,
         jam: form.jam || null,
@@ -277,6 +279,7 @@ const BuatJadwal = () => {
                       <option value="">
                         {skemaLoading ? "Memuat skema..." : "Pilih Skema"}
                       </option>
+
                       {skemaOptions.map((s) => (
                         <option key={s.id_skema} value={s.id_skema}>
                           {s.judul_skema} ({s.kode_skema})
@@ -305,6 +308,7 @@ const BuatJadwal = () => {
                       onChange={handleChange}
                     >
                       <option value="">Pilih Bulan</option>
+
                       {getFilteredBulan().map((bulan) => (
                         <option key={bulan} value={bulan}>
                           {bulan}
@@ -336,13 +340,18 @@ const BuatJadwal = () => {
 
                 <Card title="Tanggal Pelaksanaan" icon={<Calendar size={22} />}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <InputField
-                      label="Tanggal Pra Asesmen"
-                      name="tgl_pra_asesmen"
-                      type="date"
-                      value={form.tgl_pra_asesmen}
-                      onChange={handleChange}
-                    />
+                    {/*
+                      Field ini sengaja ditutup sementara, tapi tidak dihapus.
+                      Kalau mau ditampilkan lagi, tinggal hapus komentar ini.
+                      
+                      <InputField
+                        label="Tanggal Pra Asesmen"
+                        name="tgl_pra_asesmen"
+                        type="date"
+                        value={form.tgl_pra_asesmen}
+                        onChange={handleChange}
+                      />
+                    */}
 
                     <InputField
                       label="Tanggal Mulai Uji"
@@ -435,6 +444,7 @@ const BuatJadwal = () => {
                         value="Draft"
                         color="text-orange-500"
                       />
+
                       <SummaryItem
                         label="Skema"
                         value={
@@ -446,10 +456,12 @@ const BuatJadwal = () => {
                             : "Belum dipilih"
                         }
                       />
+
                       <SummaryItem
                         label="Pelaksanaan"
                         value={form.pelaksanaan_uji}
                       />
+
                       <SummaryItem
                         label="Kuota"
                         value={form.kuota ? `${form.kuota} peserta` : "-"}
@@ -471,6 +483,7 @@ const BuatJadwal = () => {
                     ) : (
                       <Save size={18} />
                     )}
+
                     {loading ? "Menyimpan..." : "Simpan Jadwal Baru"}
                   </button>
 
@@ -481,6 +494,7 @@ const BuatJadwal = () => {
                       <h3 className="font-black text-lg mb-2">
                         Catatan Penting
                       </h3>
+
                       <p className="text-white/60 text-sm leading-relaxed">
                         Pastikan tanggal mulai dan selesai sudah benar sebelum
                         menyimpan jadwal.
@@ -608,6 +622,7 @@ const SummaryItem = ({ label, value, color = "text-[#071E3D]" }) => {
       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
         {label}
       </p>
+
       <p className={`font-black text-sm ${color} capitalize line-clamp-2`}>
         {value}
       </p>
