@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import {
   Home,
   User,
@@ -16,34 +17,52 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
+
+const api = axios.create({
+  baseURL: API_BASE,
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
 const SidebarAsesi = ({ isOpen = false, setIsOpen = () => {} }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [userData, setUserData] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-
-    if (storedUser) {
+    const loadProfileName = async () => {
       try {
-        setUserData(JSON.parse(storedUser));
+        const token = localStorage.getItem("token");
+
+        if (!token) return;
+
+        const res = await api.get("/asesi/profile");
+        const profileData = res.data?.data || null;
+
+        setProfile(profileData);
       } catch (error) {
-        console.error("Failed to parse user data", error);
+        console.error("Gagal mengambil nama profile asesi:", error);
       }
-    }
+    };
+
+    loadProfileName();
   }, []);
 
   const isExpanded = isOpen || isHovered;
 
-  const displayName =
-    userData?.nama ||
-    userData?.nama_lengkap ||
-    userData?.username ||
-    userData?.name ||
-    "Asesi";
+  const displayName = profile?.nama_lengkap || "Asesi";
 
   const menus = useMemo(
     () => [
@@ -55,7 +74,7 @@ const SidebarAsesi = ({ isOpen = false, setIsOpen = () => {} }) => {
       },
       {
         id: "profile",
-        name: "Profile Anda",
+        name: "Profile",
         path: "/asesi/profile",
         icon: <User size={21} />,
       },
@@ -67,7 +86,7 @@ const SidebarAsesi = ({ isOpen = false, setIsOpen = () => {} }) => {
       },
       {
         id: "asesmen",
-        name: "Asesmen Anda",
+        name: "Asesmen",
         path: "/asesi/jadwal-saya",
         icon: <ClipboardList size={21} />,
       },
@@ -280,12 +299,14 @@ const SidebarContent = ({
   onClose,
   isMobile = false,
 }) => {
+  const initialName = displayName?.charAt(0)?.toUpperCase() || "A";
+
   return (
     <>
       <div className="h-[120px] border-b border-slate-100 flex items-center shrink-0">
         <div className="w-24 h-full flex items-center justify-center shrink-0">
           <div className="w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center font-black text-xl">
-            {displayName?.charAt(0)?.toUpperCase() || "A"}
+            {initialName}
           </div>
         </div>
 
