@@ -1,4 +1,4 @@
-// frontend/src/components/sidebar/Sidebar.jsx
+// frontend/src/pages/admin/Sidebar.jsx
 
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -371,16 +371,17 @@ const SidebarContent = ({
 
           {openMenus.standar && isExpanded && (
             <SubMenu>
-              <SubItem
-                label="Unit Kompetensi"
-                active={isActive("/admin/unit-kompetensi")}
-                onClick={() => handleNav("/admin/unit-kompetensi")}
-              />
-
+              {/* SKKNI ditaruh di atas Unit Kompetensi */}
               <SubItem
                 label="Data SKKNI"
                 active={isActive("/admin/skkni")}
                 onClick={() => handleNav("/admin/skkni")}
+              />
+
+              <SubItem
+                label="Unit Kompetensi"
+                active={isActive("/admin/unit-kompetensi")}
+                onClick={() => handleNav("/admin/unit-kompetensi")}
               />
             </SubMenu>
           )}

@@ -11,6 +11,11 @@ exports.createTuk = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
+    let surat_keputusan = null;
+    if (req.files && req.files.surat_keputusan) {
+      surat_keputusan = req.files.surat_keputusan[0].filename;
+    }
+
     const tuk = await Tuk.create({
       kode_tuk: req.body.kode_tuk,
       nama_tuk: req.body.nama_tuk,
@@ -26,6 +31,7 @@ exports.createTuk = async (req, res) => {
       kode_pos: req.body.kode_pos,
       no_lisensi: req.body.no_lisensi,
       masa_berlaku_lisensi: req.body.masa_berlaku_lisensi || null,
+      surat_keputusan: surat_keputusan,
       status: "nonaktif",
       id_penanggung_jawab: null 
     }, { transaction: t });
@@ -195,7 +201,12 @@ exports.update = async (req, res) => {
     const tuk = await Tuk.findByPk(req.params.id);
     if (!tuk) return response.error(res, "TUK tidak ditemukan", 404);
 
-    await tuk.update(req.body);
+    const payload = { ...req.body };
+    if (req.files && req.files.surat_keputusan) {
+      payload.surat_keputusan = req.files.surat_keputusan[0].filename;
+    }
+
+    await tuk.update(payload);
     
     if (tuk.id_penanggung_jawab) {
       await ProfileTuk.update({
@@ -207,6 +218,14 @@ exports.update = async (req, res) => {
         kelurahan: req.body.kelurahan,
         kode_pos: req.body.kode_pos
       }, { where: { id_user: tuk.id_penanggung_jawab }});
+
+      // ---> PERBAIKAN 2: SINKRONISASI UPDATE EMAIL KE AKUN LOGIN USERS <---
+      if (req.body.email) {
+        await User.update(
+          { email: req.body.email },
+          { where: { id_user: tuk.id_penanggung_jawab } }
+        );
+      }
     }
 
     return response.success(res, "TUK berhasil diperbarui", tuk);

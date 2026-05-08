@@ -1,5 +1,7 @@
 const UnitKompetensi = require("../../models/unitKompetensi.model");
 const Skkni = require("../../models/skkni.model");
+const UnitElemen = require("../../models/unitElemen.model");
+const UnitKuk = require("../../models/unitKuk.model");
 const response = require("../../utils/response.util");
 
 exports.create = async (req, res) => {
@@ -14,10 +16,27 @@ exports.create = async (req, res) => {
 exports.getAll = async (req, res) => {
   try {
     const data = await UnitKompetensi.findAll({
-      include: {
-        model: Skkni,
-        attributes: ["id_skkni", "judul_skkni"]
-      }
+      include: [
+        {
+          model: Skkni,
+          attributes: ["id_skkni", "judul_skkni", "no_skkni"]
+        },
+        {
+          model: UnitElemen,
+          as: "elemen",
+          include: [
+            {
+              model: UnitKuk,
+              as: "kuk"
+            }
+          ]
+        }
+      ],
+      order: [
+        ['id_unit', 'ASC'],
+        [{ model: UnitElemen, as: 'elemen' }, 'urutan', 'ASC'],
+        [{ model: UnitElemen, as: 'elemen' }, { model: UnitKuk, as: 'kuk' }, 'urutan', 'ASC']
+      ]
     });
 
     return response.success(res, "List unit kompetensi", data);
@@ -29,10 +48,26 @@ exports.getAll = async (req, res) => {
 exports.getById = async (req, res) => {
   try {
     const data = await UnitKompetensi.findByPk(req.params.id, {
-      include: {
-        model: Skkni,
-        attributes: ["id_skkni", "judul_skkni"]
-      }
+      include: [
+        {
+          model: Skkni,
+          attributes: ["id_skkni", "judul_skkni", "no_skkni"]
+        },
+        {
+          model: UnitElemen,
+          as: "elemen",
+          include: [
+            {
+              model: UnitKuk,
+              as: "kuk"
+            }
+          ]
+        }
+      ],
+      order: [
+        [{ model: UnitElemen, as: 'elemen' }, 'urutan', 'ASC'],
+        [{ model: UnitElemen, as: 'elemen' }, { model: UnitKuk, as: 'kuk' }, 'urutan', 'ASC']
+      ]
     });
 
     if (!data) {

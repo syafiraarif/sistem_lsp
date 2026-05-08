@@ -33,64 +33,33 @@ const storage = multer.diskStorage({
       "surat_kerja",
     ];
 
-    /*
-    =============================
-    DOKUMEN ASESI
-    =============================
-    */
     if (dokumenFields.includes(field)) {
       folder = path.join("uploads", "asesi", "dokumen", field);
     }
-
-    /*
-=============================
-TANDA TANGAN (FIX MULTI ROLE)
-=============================
-*/
-else if (field === "ttd") {
-  if (req.user && req.user.role === "asesor") {
-    folder = path.join("uploads", "asesor", "ttd");
-  } else {
-    folder = path.join("uploads", "asesi", "ttd");
-  }
-}
-
-/*
-=============================
-FOTO PROFIL ASESOR (BARU)
-=============================
-*/
-else if (field === "foto_profil") {
-  folder = path.join("uploads", "asesor", "foto_profil");
-}
-
-    /*
-    =============================
-    APL01 DOKUMEN
-    =============================
-    */
+    else if (field === "ttd") {
+      if (req.user && req.user.role === "asesor") {
+        folder = path.join("uploads", "asesor", "ttd");
+      } else {
+        folder = path.join("uploads", "asesi", "ttd");
+      }
+    }
+    else if (field === "foto_profil") {
+      folder = path.join("uploads", "asesor", "foto_profil");
+    }
     else if (field === "file_dokumen_apl01") {
       const id = req.body.id_apl01 || "umum";
       folder = path.join("uploads", "asesi", "apl01", "dokumen", `apl01_${id}`);
     }
-
-    /*
-    =============================
-    APL02 BUKTI
-    =============================
-    */
     else if (field === "file_bukti") {
       const id = req.body.id_detail || "umum";
       folder = path.join("uploads", "asesi", "apl02", "bukti", `detail_${id}`);
     }
-
-    /*
-    =============================
-    FOTO TUK
-    =============================
-    */
     else if (field === "foto") {
       folder = path.join("uploads", "tuk", "foto_profile");
+    }
+    // TAMBAHAN UNTUK SURAT KEPUTUSAN / PENUGASAN TUK
+    else if (field === "surat_keputusan") {
+      folder = path.join("uploads", "tuk", "dokumen");
     }
 
     ensureDir(folder);
@@ -104,11 +73,6 @@ else if (field === "foto_profil") {
 
     let filename = `${timestamp}-${cleanName}`;
 
-    /*
-    =============================
-    CUSTOM NAMING
-    =============================
-    */
     if (file.fieldname === "file_dokumen_apl01") {
       filename = `apl01_${req.body.id_apl01 || "x"}_${timestamp}${ext}`;
     }
@@ -138,18 +102,12 @@ const upload = multer({
     const extname = allowedTypes.test(
       path.extname(file.originalname).toLowerCase()
     );
-
     const mimetype = allowedTypes.test(file.mimetype);
 
     if (mimetype && extname) {
       return cb(null, true);
     }
-
-    cb(
-      new Error(
-        "File type not allowed. Only PDF, JPG, JPEG, PNG are permitted."
-      )
-    );
+    cb(new Error("File type not allowed. Only PDF, JPG, JPEG, PNG are permitted."));
   },
 });
 
@@ -176,6 +134,7 @@ const uploadMiddleware = upload.fields([
   { name: "foto_profil", maxCount: 1 },
   { name: "portofolio", maxCount: 1 },
   { name: "foto", maxCount: 1 },
+  { name: "surat_keputusan", maxCount: 1 }, // TAMBAHAN
 ]);
 
 module.exports = uploadMiddleware;

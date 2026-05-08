@@ -5,7 +5,7 @@ import { getProvinsi, getKota, getKecamatan, getKelurahan } from "../../services
 import { 
   Search, Plus, Eye, Edit2, Trash2, X, Save, Upload, FileSpreadsheet,
   MapPin, User, Building2, Loader2, FileText, Home, Mail, Key, CheckCircle,
-  Filter, Sparkles
+  Filter, Sparkles, Download, FileSearch
 } from 'lucide-react';
 
 const TempatUji = () => {
@@ -20,11 +20,15 @@ const TempatUji = () => {
   // Modal State
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [selectedImportFile, setSelectedImportFile] = useState(null); // Menampung file Excel yg dipilih
+  const [selectedImportFile, setSelectedImportFile] = useState(null); 
   const [isDetailMode, setIsDetailMode] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
   
+  // State Input File & Preview (Surat Keputusan / Penugasan)
+  const [selectedSurat, setSelectedSurat] = useState(null);
+  const [previewSuratUrl, setPreviewSuratUrl] = useState(null);
+
   // Pagination
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
 
@@ -50,10 +54,37 @@ const TempatUji = () => {
     kode_pos: '',
     no_lisensi: '',
     masa_berlaku_lisensi: '',
+    surat_keputusan: '',
     status: 'aktif'
   };
 
   const [formData, setFormData] = useState(initialFormState);
+
+  // --- PERBAIKAN 1: Helper File URL & Preview ---
+  const buildFileUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('blob:') || path.startsWith('http')) return path;
+    
+    const cleanPath = path.replace(/^(\/?uploads\/|\/)/, '');
+    
+    // Jika tidak ada folder dalam path, arahkan ke folder tuk/dokumen/
+    if (!cleanPath.includes('/')) {
+       return `http://localhost:3000/uploads/tuk/dokumen/${cleanPath}`;
+    }
+    return `http://localhost:3000/uploads/${cleanPath}`;
+  };
+
+  const isPdfFile = (filename) => {
+    const checkName = selectedSurat ? selectedSurat.name : filename;
+    return checkName && /\.(pdf)$/i.test(checkName);
+  };
+
+  const isImageFile = (filename) => {
+    const checkName = selectedSurat ? selectedSurat.name : filename;
+    return checkName && /\.(jpg|jpeg|png|gif|webp)$/i.test(checkName);
+  };
+
+  const isPreviewable = (filename) => isPdfFile(filename) || isImageFile(filename);
 
   // --- LOAD DATA ---
   useEffect(() => {
@@ -158,8 +189,21 @@ const TempatUji = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleSuratChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedSurat(file);
+      setPreviewSuratUrl(URL.createObjectURL(file));
+    } else {
+      setSelectedSurat(null);
+      setPreviewSuratUrl(null);
+    }
+  };
+
   const resetForm = () => {
     setFormData(initialFormState);
+    setSelectedSurat(null);
+    setPreviewSuratUrl(null);
     setKotaList([]); setKecamatanList([]); setKelurahanList([]);
     setIsEditMode(false); setIsDetailMode(false); setCurrentId(null);
   };
@@ -191,8 +235,14 @@ const TempatUji = () => {
         kode_pos: item.kode_pos || '',
         no_lisensi: item.no_lisensi || '',
         masa_berlaku_lisensi: toDateInput(item.masa_berlaku_lisensi),
+        surat_keputusan: item.surat_keputusan || '',
         status: item.status || 'aktif'
       });
+      
+      if (item.surat_keputusan) {
+        setPreviewSuratUrl(buildFileUrl(item.surat_keputusan));
+      }
+
       return item;
     } catch (error) {
       Swal.fire({title: 'Error', text: 'Gagal mengambil detail TUK', icon: 'error', confirmButtonColor: '#CC6B27'});
@@ -328,21 +378,37 @@ const TempatUji = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...formData };
-    if (!payload.masa_berlaku_lisensi) payload.masa_berlaku_lisensi = null;
     
-    if (!payload.kode_tuk || !payload.nama_tuk) {
+    if (!formData.kode_tuk || !formData.nama_tuk) {
       Swal.fire({title: 'Peringatan', text: 'Kode TUK dan Nama TUK wajib diisi!', icon: 'warning', confirmButtonColor: '#CC6B27'});
       return;
     }
 
+    const dataPayload = new FormData();
+    Object.keys(formData).forEach((key) => {
+      if (key !== 'surat_keputusan' && formData[key] !== null && formData[key] !== undefined && formData[key] !== "") {
+        dataPayload.append(key, formData[key]);
+      }
+    });
+
+    if (!formData.masa_berlaku_lisensi) {
+      dataPayload.delete("masa_berlaku_lisensi");
+    }
+
+    if (selectedSurat) {
+      dataPayload.append("surat_keputusan", selectedSurat);
+    }
+
     try {
       if (isEditMode) {
-        await api.put(`/admin/tuk/${currentId}`, payload);
+        await api.put(`/admin/tuk/${currentId}`, dataPayload, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
         Swal.fire({title: 'Sukses', text: 'Data TUK berhasil diperbarui', icon: 'success', confirmButtonColor: '#CC6B27'});
       } else {
-        // Create akun user & TUK
-        await api.post('/admin/tuk', payload);
+        await api.post('/admin/tuk', dataPayload, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
         Swal.fire({
           title: 'Sukses',
           text: 'TUK baru berhasil dibuat.',
@@ -380,20 +446,13 @@ const TempatUji = () => {
     }
   };
 
-  // ==========================================
-  // FUNGSI IMPORT EXCEL DENGAN LOADING & STATE FILE
-  // ==========================================
   const handleImportSubmit = async (e) => {
     e.preventDefault();
-    
     if (!selectedImportFile) {
         return Swal.fire({title: 'Peringatan', text: 'Pilih file excel terlebih dahulu', icon: 'warning', confirmButtonColor: '#CC6B27'});
     }
-
     const form = new FormData();
     form.append('file', selectedImportFile);
-
-    // Tampilkan animasi Loading karena pengiriman banyak email memakan waktu lama
     Swal.fire({
       title: 'Memproses Import...',
       text: 'Sistem sedang membaca file, membuat akun, dan mengirimkan email. Harap jangan tutup halaman ini.',
@@ -405,16 +464,14 @@ const TempatUji = () => {
       const response = await api.post('/admin/import-tuk', form, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
       Swal.fire({
         title: 'Import Selesai', 
         text: response.data.message || 'Data berhasil diimport dan email telah dikirim!', 
         icon: 'success', 
         confirmButtonColor: '#CC6B27'
       });
-
       setShowImportModal(false);
-      setSelectedImportFile(null); // Reset form
+      setSelectedImportFile(null); 
       fetchData();
     } catch (err) {
       Swal.fire({
@@ -442,14 +499,14 @@ const TempatUji = () => {
               Data Tempat Uji Kompetensi (TUK)
             </h2>
             <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">
-              Kelola data TUK, lokasi, dan status lisensi.
+              Kelola data TUK, lokasi, surat penugasan dan status lisensi.
             </p>
           </div>
           <div className="flex gap-3 w-full md:w-auto">
             <button 
               className="flex-1 md:flex-none px-4 py-2.5 bg-white border border-[#071E3D]/20 text-[#182D4A] rounded-lg hover:bg-[#E2E8F0] shadow-sm transition-all font-bold flex items-center justify-center gap-2 text-[13px]" 
               onClick={() => {
-                setSelectedImportFile(null); // Reset setiap kali modal dibuka
+                setSelectedImportFile(null);
                 setShowImportModal(true);
               }}
             >
@@ -554,7 +611,6 @@ const TempatUji = () => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex justify-center gap-1.5">
-                        
                         <button 
                           onClick={() => handleSendEmail(item.id_tuk, !!item.penanggungJawab)} 
                           disabled={!!item.penanggungJawab}
@@ -567,7 +623,6 @@ const TempatUji = () => {
                         >
                           <Mail size={18}/>
                         </button>
-                        
                         <button onClick={() => handleResetPassword(item.penanggungJawab?.id_user)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10 transition-colors" title="Reset Password"><Key size={18}/></button>
                         <button onClick={() => openDetailModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#CC6B27] bg-[#CC6B27]/10 hover:bg-[#CC6B27] hover:text-white transition-colors" title="Detail"><Eye size={18}/></button>
                         <button onClick={() => openEditModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10 transition-colors" title="Edit"><Edit2 size={18}/></button>
@@ -610,8 +665,9 @@ const TempatUji = () => {
                 {/* AKUN */}
                 <SectionTitle icon={<User size={16}/>} title="Informasi Akun & Kontak" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FormGroup label={<>Email {isEditMode && <span className="text-[#182D4A]/50 font-normal">(Tidak bisa diubah)</span>}</>}>
-                      <input type="email" name="email" value={formData.email} onChange={handleInputChange} disabled={isEditMode || isDetailMode} required={!isEditMode} className={inputBase} placeholder="Email login TUK..."/>
+                    {/* 2. DISABLED UNTUK EMAIL DI MODE EDIT TELAH DIHAPUS SEHINGGA BISA DI EDIT KAPANPUN */}
+                    <FormGroup label={<>Email</>}>
+                      <input type="email" name="email" value={formData.email} onChange={handleInputChange} disabled={isDetailMode} required className={inputBase} placeholder="Email login TUK..."/>
                     </FormGroup>
                     <FormGroup label="No Handphone / Telp">
                       <input type="text" name="telepon" value={formData.telepon} onChange={handleInputChange} disabled={isDetailMode} required={!isEditMode} className={inputBase} placeholder="08..."/>
@@ -632,9 +688,9 @@ const TempatUji = () => {
                     <div className="md:col-span-2">
                       <FormGroup label="Jenis TUK">
                         <select name="jenis_tuk" value={formData.jenis_tuk} onChange={handleInputChange} disabled={isDetailMode} className={`${inputBase} appearance-none`}>
-                            <option value="sewaktu">TUK Sewaktu</option>
-                            <option value="tempat_kerja">TUK Tempat Kerja</option>
-                            <option value="mandiri">TUK Mandiri</option>
+                            <option value="sewaktu">Sewaktu</option>
+                            <option value="tempat_kerja">Tempat Kerja</option>
+                            <option value="mandiri">Mandiri</option>
                         </select>
                       </FormGroup>
                     </div>
@@ -700,14 +756,14 @@ const TempatUji = () => {
                     </div>
                 </div>
 
-                {/* LEGALITAS */}
-                <SectionTitle icon={<FileText size={16}/>} title="Legalitas & Status" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <FormGroup label="No. Lisensi">
+                {/* LEGALITAS & DOKUMEN */}
+                <SectionTitle icon={<FileText size={16}/>} title="Legalitas & Dokumen Penugasan" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
+                    <FormGroup label="No. Lisensi / Penugasan">
                       <input type="text" name="no_lisensi" value={formData.no_lisensi} onChange={handleInputChange} disabled={isDetailMode} className={inputBase}/>
                     </FormGroup>
 
-                    <FormGroup label="Masa Berlaku Lisensi">
+                    <FormGroup label="Masa Berlaku">
                       <input type="date" name="masa_berlaku_lisensi" value={formData.masa_berlaku_lisensi} onChange={handleInputChange} disabled={isDetailMode} className={inputBase}/>
                     </FormGroup>
 
@@ -718,6 +774,71 @@ const TempatUji = () => {
                       </select>
                     </FormGroup>
                 </div>
+                
+                {/* UPLOAD & PREVIEW SECTION */}
+                <div className="mt-5 flex flex-col lg:flex-row gap-5 border border-slate-100 rounded-[20px] p-5 bg-slate-50/50">
+                  <div className="w-full lg:w-1/3 flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[13px] font-bold text-[#071E3D]">File Surat Keputusan (Opsional)</label>
+                        {!isDetailMode && (
+                          <input 
+                              type="file" 
+                              accept=".pdf,.png,.jpg,.jpeg" 
+                              onChange={handleSuratChange} 
+                              className="w-full text-[12px] p-2 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-[11px] file:font-black file:uppercase file:tracking-widest file:bg-[#CC6B27] file:text-white hover:file:bg-[#a8561f] cursor-pointer"
+                          />
+                        )}
+
+                        {isDetailMode && !formData.surat_keputusan && (
+                           <span className="text-[13px] font-medium text-slate-400 py-2.5 px-3 border border-slate-200 rounded-lg bg-slate-50 w-full block">Tidak ada dokumen</span>
+                        )}
+
+                        {/* 3. TOMBOL DOWNLOAD DIBERIKAN ATRIBUT DOWNLOAD AGAR BISA DIDOWNLOAD SAAT DETAIL MODE */}
+                        {formData.surat_keputusan && !selectedSurat && (
+                          <div className="mt-2 flex flex-col gap-2">
+                            <span className="text-[12px] font-bold text-slate-500 truncate max-w-[200px]">Current: {formData.surat_keputusan}</span>
+                            <a href={buildFileUrl(formData.surat_keputusan)} download target="_blank" rel="noreferrer" className="flex justify-center items-center gap-2 px-4 py-2.5 rounded-lg bg-[#CC6B27]/10 text-[#CC6B27] font-bold text-[12px] hover:bg-[#CC6B27] hover:text-white transition-all">
+                                <Download size={14}/> Unduh Dokumen
+                            </a>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+
+                  <div className="w-full lg:w-2/3">
+                      {/* PREVIEW BOX */}
+                      <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
+                            <span className="text-[11px] font-black uppercase tracking-widest text-[#071E3D]">Pratinjau Dokumen</span>
+                          </div>
+                          
+                          <div className="relative h-[250px] bg-slate-100 flex items-center justify-center">
+                              {/* MEMASTIKAN PREVIEW MENGGUNAKAN URL YANG BENAR */}
+                              {previewSuratUrl ? (
+                                  isPreviewable(previewSuratUrl) ? (
+                                      isImageFile(previewSuratUrl) ? (
+                                          <div className="absolute inset-0 flex items-start justify-center overflow-auto p-3">
+                                              <img src={previewSuratUrl.startsWith('http') || previewSuratUrl.startsWith('blob') ? previewSuratUrl : buildFileUrl(previewSuratUrl)} alt="Preview" className="max-w-full object-contain" />
+                                          </div>
+                                      ) : (
+                                          <iframe src={`${previewSuratUrl.startsWith('http') || previewSuratUrl.startsWith('blob') ? previewSuratUrl : buildFileUrl(previewSuratUrl)}#toolbar=0&navpanes=0`} className="absolute inset-0 h-full w-full border-0" title="Preview PDF" />
+                                      )
+                                  ) : (
+                                      <div className="flex flex-col items-center justify-center text-slate-400">
+                                        <p className="text-[12px] font-bold">Format file ini tidak dapat dipratinjau langsung.</p>
+                                      </div>
+                                  )
+                              ) : (
+                                  <div className="flex flex-col items-center justify-center text-slate-400">
+                                    <FileSearch size={36} className="mb-2 opacity-30" />
+                                    <p className="text-[12px] font-bold">Pilih file untuk melihat pratinjau</p>
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                  </div>
+                </div>
+
                 </form>
             </div>
 
@@ -774,7 +895,7 @@ const TempatUji = () => {
                   accept=".xlsx, .xls" 
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
                   required
-                  onChange={(e) => setSelectedImportFile(e.target.files[0])} // Update state ketika file dipilih
+                  onChange={(e) => setSelectedImportFile(e.target.files[0])} 
                 />
               </div>
               

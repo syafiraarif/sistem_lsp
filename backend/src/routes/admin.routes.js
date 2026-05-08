@@ -34,6 +34,7 @@ const bankSoalPGController = require("../controllers/admin/bankSoalPG.controller
 const ia01Controller = require("../controllers/admin/ia01Observasi.controller");
 const ia03Controller = require("../controllers/admin/ia03Pertanyaan.controller");
 const accountController = require("../controllers/admin/account.controller");
+const elemenKukController = require("../controllers/admin/elemenKuk.controller");
 
 router.use(authMiddleware, roleMiddleware.adminOnly);
 
@@ -65,11 +66,11 @@ router.put("/asesi/:id", asesiAdmin.update);
 router.delete("/asesi/:id", asesiAdmin.delete);
 router.put("/asesi/:id/reset-password", asesiAdmin.resetPassword);
 
-router.post("/tuk", tukAdmin.createTuk);
+router.post("/tuk", upload, tukAdmin.createTuk);
 router.post("/import-tuk", uploadExcel.single("file"), tukAdmin.importTukExcel);
 router.get("/tuk", tukAdmin.getAll);
 router.get("/tuk/:id", tukAdmin.getById);
-router.put("/tuk/:id", tukAdmin.update);
+router.put("/tuk/:id", upload, tukAdmin.update);
 router.delete("/tuk/:id", tukAdmin.delete);
 router.post("/tuk-tempat/attach-skema", tukAdmin.attachSkema);
 router.delete( "/tuk-tempat/detach-skema/:id_tuk/:id_skema", tukAdmin.detachSkema);
@@ -187,5 +188,13 @@ router.post("/ia03-pertanyaan", ia03Controller.create);
 router.put("/ia03-pertanyaan/:id", ia03Controller.update);
 router.get("/ia03-pertanyaan/unit/:id_unit", ia03Controller.getByUnit);
 router.delete("/ia03-pertanyaan/:id", ia03Controller.delete);
+
+router.post("/unit-elemen", elemenKukController.createElemen);
+router.put("/unit-elemen/:id", elemenKukController.updateElemen);
+router.delete("/unit-elemen/:id", elemenKukController.deleteElemen);
+
+router.post("/unit-kuk", elemenKukController.createKuk);
+router.put("/unit-kuk/:id", elemenKukController.updateKuk);
+router.delete("/unit-kuk/:id", elemenKukController.deleteKuk);
 
 module.exports = router;
