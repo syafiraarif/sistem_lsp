@@ -148,6 +148,7 @@ router.put("/banding/:id", bandingController.updateStatusBanding);
 
 router.get("/peserta-jadwal/global", pesertaJadwalController.getAllPesertaGlobal);
 router.get( "/jadwal/:id_jadwal/peserta", pesertaJadwalController.getPesertaByJadwal);
+router.put( "/peserta-jadwal/:id_peserta/assign-asesor", pesertaJadwalController.assignAsesorToPeserta);
 
 router.post("/unit-kompetensi", unitKompetensiController.create);
 router.get("/unit-kompetensi", unitKompetensiController.getAll);

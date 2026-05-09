@@ -11,7 +11,7 @@ import {
   Search, Plus, Eye, Edit2, Trash2, X, Save, User as UserIcon, Loader2, 
   Upload, FileSpreadsheet, Briefcase, GraduationCap, MapPin, Mail, Users, 
   Key, Filter, Sparkles, BadgeCheck, ShieldCheck, Download, ChevronLeft, ChevronRight,
-  ClipboardList // <--- Tambahkan ini
+  ClipboardList
 } from "lucide-react";
 
 const Asesor = () => {
@@ -48,6 +48,7 @@ const Asesor = () => {
   const [kotaList, setKotaList] = useState([]);
   const [kecamatanList, setKecamatanList] = useState([]);
   const [kelurahanList, setKelurahanList] = useState([]);
+  const [kebangsaanList, setKebangsaanList] = useState([]); // State untuk Dropdown Kebangsaan
 
   const [selectedProvinsiId, setSelectedProvinsiId] = useState("");
   const [selectedKotaId, setSelectedKotaId] = useState("");
@@ -102,6 +103,7 @@ const Asesor = () => {
   useEffect(() => {
     fetchData(pagination.page, searchTerm);
     loadProvinsi();
+    loadKebangsaan(); // Memanggil fungsi loadKebangsaan saat komponen dimuat
   }, [pagination.page, searchTerm]);
 
   const loadProvinsi = async () => {
@@ -110,6 +112,20 @@ const Asesor = () => {
       setProvinsiList(extractArray(res));
     } catch (err) {
       console.error("Gagal load provinsi", err);
+    }
+  };
+
+  const loadKebangsaan = async () => {
+    try {
+      // Sebelumnya: const response = await api.get('/dropdown/kebangsaan');
+      
+      // UBAH MENJADI (jika prefix backend kamu adalah /public):
+      const response = await api.get('/public/dropdown/kebangsaan'); 
+      
+      const resData = response.data !== undefined ? response.data : response;
+      setKebangsaanList(extractArray(resData));
+    } catch (error) {
+      console.error("Gagal load kebangsaan", error);
     }
   };
 
@@ -379,34 +395,32 @@ const Asesor = () => {
     }
   };
 
-const handleDownloadTemplate = async () => {
-  try {
-    const response = await api.get("/admin/download-template-asesor", { 
-      responseType: "blob" // 👈 SANGAT PENTING
-    });
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get("/admin/download-template-asesor", { 
+        responseType: "blob" 
+      });
 
-    // Buat Blob dari data response
-    const blob = new Blob([response.data], { 
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
-    });
+      const blob = new Blob([response.data], { 
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+      });
 
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "Template_Import_Asesor.xlsx");
-    document.body.appendChild(link);
-    link.click();
-    
-    // Cleanup
-    link.remove();
-    window.URL.revokeObjectURL(url);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "Template_Import_Asesor.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      
+      link.remove();
+      window.URL.revokeObjectURL(url);
 
-    Swal.fire("Berhasil", "Template berhasil didownload", "success");
-  } catch (error) {
-    console.error("Download error:", error);
-    Swal.fire("Error", "Gagal mengambil template dari server", "error");
-  }
-};
+      Swal.fire("Berhasil", "Template berhasil didownload", "success");
+    } catch (error) {
+      console.error("Download error:", error);
+      Swal.fire("Error", "Gagal mengambil template dari server", "error");
+    }
+  };
 
   const inputClass = (name) => `w-full p-2.5 border rounded-lg text-[13px] text-[#071E3D] bg-[#FAFAFA] focus:bg-white focus:outline-none transition-all disabled:opacity-70 disabled:bg-gray-100 font-medium placeholder:text-[#182D4A]/40
     ${errors[name] ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-[#071E3D]/20 focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10'}`;
@@ -619,7 +633,20 @@ const handleDownloadTemplate = async () => {
                     </select>
                   </FormInput>
                   <FormInput label="Kebangsaan">
-                    <input type="text" name="kebangsaan" value={formData.kebangsaan} onChange={handleChange} disabled={isDetailMode} placeholder="Hanya huruf" className={inputClass('kebangsaan')}/>
+                    <select
+                      name="kebangsaan"
+                      value={formData.kebangsaan}
+                      onChange={handleChange}
+                      disabled={isDetailMode}
+                      className={inputClass('kebangsaan')}
+                    >
+                      <option value="">Pilih Kebangsaan</option>
+                      {kebangsaanList.map((item, index) => (
+                        <option key={index} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
                   </FormInput>
                 </div>
 

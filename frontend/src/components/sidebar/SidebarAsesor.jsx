@@ -13,7 +13,7 @@ import {
   Menu,
   LogOut,
   X,
-  ChevronRight,
+  Pin,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -22,8 +22,16 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
   const [userData, setUserData] = useState(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  const [isPinned, setIsPinned] = useState(() => {
+    return localStorage.getItem("sidebarAsesorPinned") === "true";
+  });
+
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    localStorage.setItem("sidebarAsesorPinned", isPinned);
+  }, [isPinned]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -37,7 +45,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
     }
   }, []);
 
-  const isExpanded = isOpen || isHovered;
+  const isExpanded = isOpen || isHovered || isPinned;
 
   const displayName =
     userData?.nama ||
@@ -157,6 +165,10 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
     navigate("/login", { replace: true });
   };
 
+  const togglePin = () => {
+    setIsPinned((prev) => !prev);
+  };
+
   return (
     <>
       <button
@@ -193,6 +205,8 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
                 displayName={displayName}
                 isExpanded={true}
                 onClose={() => setIsOpen(false)}
+                isPinned={false}
+                togglePin={() => {}}
                 isMobile
               />
             </motion.aside>
@@ -214,6 +228,8 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
           handleLogout={() => setShowLogoutModal(true)}
           displayName={displayName}
           isExpanded={isExpanded}
+          isPinned={isPinned}
+          togglePin={togglePin}
         />
       </aside>
 
@@ -283,16 +299,34 @@ const SidebarContent = ({
   displayName,
   isExpanded,
   onClose,
+  isPinned,
+  togglePin,
   isMobile = false,
 }) => {
+  const initialName = displayName?.charAt(0)?.toUpperCase() || "A";
+
   return (
     <>
       <div className="h-[120px] border-b border-slate-100 flex items-center shrink-0">
-        <div className="w-24 h-full flex items-center justify-center shrink-0">
-          <div className="w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center font-black text-xl">
-            {displayName?.charAt(0)?.toUpperCase() || "A"}
+        <button
+          type="button"
+          onClick={togglePin}
+          title={isPinned ? "Buka Kunci Sidebar" : "Kunci Sidebar"}
+          className="w-24 h-full flex items-center justify-center shrink-0 cursor-pointer group"
+        >
+          <div
+            className={`relative w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center font-black text-xl transition-all duration-300 ${
+              isPinned ? "ring-4 ring-orange-500/30 scale-95" : "group-hover:scale-105"
+            }`}
+          >
+            {initialName}
+            {isPinned && (
+              <div className="absolute -top-1 -right-1 bg-orange-500 rounded-full p-1 text-white">
+                <Pin size={10} className="fill-current" />
+              </div>
+            )}
           </div>
-        </div>
+        </button>
 
         <div
           className={`overflow-hidden whitespace-nowrap transition-opacity duration-150 ${
@@ -358,15 +392,7 @@ const SidebarContent = ({
                   >
                     {item.name}
                   </span>
-
-                  <ChevronRight
-                    size={16}
-                    className={`shrink-0 ${
-                      active
-                        ? "text-orange-500"
-                        : "text-slate-300 group-hover:text-orange-500"
-                    }`}
-                  />
+                  {/* Panah dihilangkan karena tidak ada anakan */}
                 </div>
               </button>
             );
@@ -394,7 +420,7 @@ const SidebarContent = ({
           }`}
         >
           <span className="text-sm font-black whitespace-nowrap">Keluar</span>
-          <ChevronRight size={16} />
+          {/* Panah dihilangkan karena tidak ada anakan */}
         </button>
       </div>
     </>

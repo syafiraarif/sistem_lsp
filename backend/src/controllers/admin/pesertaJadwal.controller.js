@@ -1,4 +1,4 @@
-const { PesertaJadwal, User, Jadwal, ProfileAsesi, Skema } = require("../../models");
+const { PesertaJadwal, User, Jadwal, ProfileAsesi, ProfileAsesor, Skema } = require("../../models");
 const response = require("../../utils/response.util");
 const { Op } = require("sequelize");
 
@@ -15,9 +15,20 @@ exports.getPesertaByJadwal = async (req, res) => {
           include: [{ model: ProfileAsesi }] 
         },
         { 
+<<<<<<< HEAD
           model: Skema,
       as: "skema",
       attributes: ["id_skema", "kode_skema", "judul_skema"],
+=======
+          model: Jadwal, 
+          as: "jadwal",
+          include: [{ model: Skema, as: "skema" }] 
+        },
+        {
+          model: User,
+          as: "asesor_penguji", 
+          include: [{ model: ProfileAsesor }]
+>>>>>>> dac2c8f655fedf3bf74dca4232b301c6b3516c9f
         }
       ],
       distinct: true
@@ -50,9 +61,20 @@ exports.getAllPesertaGlobal = async (req, res) => {
           include: [{ model: ProfileAsesi }] 
         },
         {
+<<<<<<< HEAD
           model: Skema,
       as: "skema",
       attributes: ["id_skema", "kode_skema", "judul_skema"],
+=======
+          model: Jadwal,
+          as: "jadwal",
+          include: [{ model: Skema, as: "skema" }] 
+        },
+        {
+          model: User,
+          as: "asesor_penguji",
+          include: [{ model: ProfileAsesor }]
+>>>>>>> dac2c8f655fedf3bf74dca4232b301c6b3516c9f
         }
       ],
       distinct: true 
@@ -62,5 +84,25 @@ exports.getAllPesertaGlobal = async (req, res) => {
   } catch (err) {
     console.error(err);
     return response.error(res, err.message);
+  }
+};
+
+exports.assignAsesorToPeserta = async (req, res) => {
+  try {
+    const { id_peserta } = req.params;
+    const { id_asesor } = req.body;
+
+    const peserta = await PesertaJadwal.findByPk(id_peserta);
+    if (!peserta) {
+      return response.error(res, "Peserta tidak ditemukan", 404);
+    }
+
+    peserta.id_asesor = id_asesor || null;
+    await peserta.save();
+
+    return response.success(res, "Asesor berhasil ditugaskan ke peserta");
+  } catch (err) {
+    console.error(err);
+    return response.error(res, "Terjadi kesalahan server", 500);
   }
 };

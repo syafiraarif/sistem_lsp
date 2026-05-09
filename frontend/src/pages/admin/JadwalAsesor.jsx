@@ -53,6 +53,16 @@ const JadwalAsesor = () => {
     }
   }, [id_jadwal]);
 
+  // Fungsi helper untuk mengekstrak array data dari response API yang mungkin nested (berlapis)
+  const extractArrayData = (resBody) => {
+    if (!resBody) return [];
+    if (Array.isArray(resBody.data)) return resBody.data;
+    if (resBody.data?.data && Array.isArray(resBody.data.data)) return resBody.data.data;
+    if (resBody.data?.rows && Array.isArray(resBody.data.rows)) return resBody.data.rows;
+    if (Array.isArray(resBody)) return resBody;
+    return [];
+  };
+
   const fetchAllData = async () => {
     try {
       setLoading(true);
@@ -67,15 +77,14 @@ const JadwalAsesor = () => {
 
       // 2. Ambil Asesor yang sudah ditugaskan ke jadwal ini
       const resAssigned = await api.get(`/admin/jadwal-asesor/${id_jadwal}`);
-      let assignedData = resAssigned.data?.data || resAssigned.data || [];
-      if (!Array.isArray(assignedData) && assignedData.rows) assignedData = assignedData.rows;
-      setAssignedAsesors(Array.isArray(assignedData) ? assignedData : []);
+      const assignedBody = resAssigned.data !== undefined ? resAssigned.data : resAssigned;
+      setAssignedAsesors(extractArrayData(assignedBody));
 
       // 3. Ambil daftar semua Asesor yang tersedia (untuk dropdown form)
+      // *Perbaikan: Menggunakan fungsi extractArrayData yang lebih robust
       const resAsesor = await api.get('/admin/asesor');
-      let asesorData = resAsesor.data?.data || resAsesor.data || [];
-      if (!Array.isArray(asesorData) && asesorData.rows) asesorData = asesorData.rows;
-      setAvailableAsesors(Array.isArray(asesorData) ? asesorData : []);
+      const asesorBody = resAsesor.data !== undefined ? resAsesor.data : resAsesor;
+      setAvailableAsesors(extractArrayData(asesorBody));
 
     } catch (error) {
       console.error("Gagal mengambil data", error);
@@ -201,7 +210,7 @@ const JadwalAsesor = () => {
             <div className="flex flex-col justify-center">
               <button
                 type="button"
-                onClick={() => navigate('/admin/jadwal/uji-kompetensi')}
+                onClick={() => navigate('/admin/jadwal')}
                 className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all hover:bg-[#071E3D] hover:text-white"
               >
                 <ArrowLeft size={14} />
@@ -463,7 +472,7 @@ const JadwalAsesor = () => {
                         >
                           <td className="px-5 py-4">
                             <div className="text-sm font-black text-[#071E3D]">
-                              {user.username || user.nama || 'Tanpa Nama'}
+                              {user.nama_lengkap || user.username || user.nama || 'Tanpa Nama'}
                             </div>
                             <div className="mt-1 text-xs font-semibold text-slate-400">
                               {user.email || '-'}

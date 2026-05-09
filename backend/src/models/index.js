@@ -2052,6 +2052,9 @@ PresensiAsesor.belongsTo(ProfileAsesor, {
   as: "profileAsesor"
 });
 
+PesertaJadwal.belongsTo(User, { as: 'asesor_penguji', foreignKey: 'id_asesor' });
+User.hasMany(PesertaJadwal, { as: 'asesi_yang_diuji', foreignKey: 'id_asesor' });
+
 module.exports = {
   User,
   Role,
