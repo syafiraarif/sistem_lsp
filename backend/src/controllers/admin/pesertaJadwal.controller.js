@@ -15,9 +15,9 @@ exports.getPesertaByJadwal = async (req, res) => {
           include: [{ model: ProfileAsesi }] 
         },
         { 
-          model: Jadwal, 
-          as: "jadwal",
-          include: [{ model: Skema, as: "skema" }] 
+          model: Skema,
+      as: "skema",
+      attributes: ["id_skema", "kode_skema", "judul_skema"],
         }
       ],
       distinct: true
@@ -50,9 +50,9 @@ exports.getAllPesertaGlobal = async (req, res) => {
           include: [{ model: ProfileAsesi }] 
         },
         {
-          model: Jadwal,
-          as: "jadwal",
-          include: [{ model: Skema, as: "skema" }] 
+          model: Skema,
+      as: "skema",
+      attributes: ["id_skema", "kode_skema", "judul_skema"],
         }
       ],
       distinct: true 

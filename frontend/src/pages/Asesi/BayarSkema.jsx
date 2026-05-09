@@ -156,67 +156,72 @@ export default function BayarSkema() {
   };
 
   const handleSubmit = async () => {
-    if (statusPembayaran === "menunggu_validasi") {
-      alert("Pembayaran sedang menunggu validasi admin.");
-      return;
-    }
+  const isWaiting =
+    statusPembayaran === "pending" ||
+    statusPembayaran === "menunggu_validasi";
 
-    if (statusPembayaran === "paid") {
-      navigate(`/asesi/jadwal-saya`);
-      return;
-    }
+  if (isWaiting) {
+    alert("Pembayaran sedang menunggu validasi admin.");
+    navigate("/asesi/jadwal-saya");
+    return;
+  }
 
-    if (!validateSubmit()) return;
+  if (statusPembayaran === "paid") {
+    navigate("/asesi/jadwal-saya");
+    return;
+  }
 
-    try {
-      setSubmitLoading(true);
+  if (!validateSubmit()) return;
 
-      const submitRes = await axios.post(
-        `${API_BASE}/asesi/pembayaran/submit`,
+  try {
+    setSubmitLoading(true);
+
+    const submitRes = await axios.post(
+      `${API_BASE}/asesi/pembayaran/submit`,
+      {
+        id_skema,
+        metode_pembayaran: metode,
+        jalur_pembayaran:
+          metode === "tunai"
+            ? "tunai"
+            : metode === "qris"
+            ? "qris"
+            : metode === "virtual_account"
+            ? "virtual_account"
+            : jalurPembayaran,
+        id_tujuan_transfer:
+          metode === "transfer_rekening" ? selectedTujuan : null,
+      },
+      { headers }
+    );
+
+    const newIdPembayaran = submitRes.data?.data?.id_pembayaran;
+
+    if (buktiBayar && newIdPembayaran) {
+      const formData = new FormData();
+      formData.append("bukti_bayar", buktiBayar);
+
+      await axios.put(
+        `${API_BASE}/asesi/pembayaran/${newIdPembayaran}/upload-bukti`,
+        formData,
         {
-          id_skema,
-          metode_pembayaran: metode,
-          jalur_pembayaran:
-            metode === "tunai"
-              ? "tunai"
-              : metode === "qris"
-              ? "qris"
-              : metode === "virtual_account"
-              ? "virtual_account"
-              : jalurPembayaran,
-          id_tujuan_transfer:
-            metode === "transfer_rekening" ? selectedTujuan : null,
-        },
-        { headers }
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
-
-      const newIdPembayaran = submitRes.data?.data?.id_pembayaran;
-
-      if (buktiBayar && newIdPembayaran) {
-        const formData = new FormData();
-        formData.append("bukti_bayar", buktiBayar);
-
-        await axios.put(
-          `${API_BASE}/asesi/pembayaran/${newIdPembayaran}/upload-bukti`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-      }
-
-      alert("Pembayaran berhasil diajukan. Tunggu validasi admin.");
-      await fetchData();
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Gagal mengajukan pembayaran.");
-    } finally {
-      setSubmitLoading(false);
     }
-  };
+
+    alert("Pembayaran berhasil diajukan. Menunggu validasi admin.");
+    navigate("/asesi/jadwal-saya");
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.message || "Gagal mengajukan pembayaran.");
+  } finally {
+    setSubmitLoading(false);
+  }
+};
 
   const statusView = {
     "belum bayar": {
@@ -498,10 +503,11 @@ export default function BayarSkema() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={
-                  submitLoading ||
-                  statusPembayaran === "menunggu_validasi" ||
-                  statusPembayaran === "paid"
-                }
+                    submitLoading ||
+                    statusPembayaran === "pending" ||
+                    statusPembayaran === "menunggu_validasi" ||
+                    statusPembayaran === "paid"
+                  }
                 className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed"
               >
                 {submitLoading ? (
@@ -514,7 +520,8 @@ export default function BayarSkema() {
 
                 {statusPembayaran === "paid"
                   ? "Pembayaran Sudah Diterima"
-                  : statusPembayaran === "menunggu_validasi"
+                  : statusPembayaran === "pending" ||
+                    statusPembayaran === "menunggu_validasi"
                   ? "Menunggu Validasi Admin"
                   : submitLoading
                   ? "Mengajukan..."
