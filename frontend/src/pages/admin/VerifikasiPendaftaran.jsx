@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Eye, Trash2, ShieldCheck, CheckSquare } from "lucide-react";
+import { Search, Eye, Trash2, ShieldCheck, CheckSquare, X, Check, XCircle, User as UserIcon } from "lucide-react";
 import Swal from "sweetalert2";
 import api from "../../services/api";
 
@@ -10,6 +10,10 @@ const VerifikasiPendaftaran = () => {
   
   // State untuk checkbox multi-select
   const [selectedIds, setSelectedIds] = useState([]);
+
+  // State untuk Modal Detail
+  const [showModal, setShowModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   const fetchPendaftar = async () => {
     try {
@@ -48,6 +52,63 @@ const VerifikasiPendaftaran = () => {
       setSelectedIds([...selectedIds, id]);
     } else {
       setSelectedIds(selectedIds.filter((item) => item !== id));
+    }
+  };
+
+  // --- LOGIC DETAIL ---
+  const handleDetail = (item) => {
+    setSelectedItem(item);
+    setShowModal(true);
+  };
+
+  // --- LOGIC APPROVE & REJECT ---
+  const handleApprove = async (id, nama) => {
+    const confirm = await Swal.fire({
+      title: "Terima Pendaftaran?",
+      text: `Pendaftaran atas nama ${nama} akan disetujui dan akun akan dibuatkan.`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10B981", // Warna hijau
+      cancelButtonColor: "#182D4A",
+      confirmButtonText: "Ya, Terima!",
+      cancelButtonText: "Batal"
+    });
+
+    if (confirm.isConfirmed) {
+      try {
+        Swal.fire({ title: "Memproses...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        await api.post(`/admin/pendaftaran/${id}/approve`);
+        Swal.fire("Berhasil", "Pendaftaran disetujui dan email telah dikirim.", "success");
+        setShowModal(false);
+        fetchPendaftar();
+      } catch (error) {
+        Swal.fire("Gagal", error.response?.data?.message || "Terjadi kesalahan saat menyetujui pendaftaran", "error");
+      }
+    }
+  };
+
+  const handleReject = async (id, nama) => {
+    const confirm = await Swal.fire({
+      title: "Tolak Pendaftaran?",
+      text: `Pendaftaran atas nama ${nama} akan ditolak.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#EF4444", // Warna merah
+      cancelButtonColor: "#182D4A",
+      confirmButtonText: "Ya, Tolak!",
+      cancelButtonText: "Batal"
+    });
+
+    if (confirm.isConfirmed) {
+      try {
+        Swal.fire({ title: "Memproses...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        await api.post(`/admin/pendaftaran/${id}/reject`);
+        Swal.fire("Ditolak", "Pendaftaran berhasil ditolak.", "success");
+        setShowModal(false);
+        fetchPendaftar();
+      } catch (error) {
+        Swal.fire("Gagal", error.response?.data?.message || "Terjadi kesalahan saat menolak pendaftaran", "error");
+      }
     }
   };
 
@@ -212,7 +273,12 @@ const VerifikasiPendaftaran = () => {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex justify-center gap-2">
-                        <button className="p-1.5 text-[#182D4A] bg-[#182D4A]/10 rounded-lg hover:bg-[#182D4A] hover:text-white transition-colors" title="Detail Verifikasi">
+                        {/* ✅ TOMBOL DETAIL SEKARANG ADA ONCLICK NYA */}
+                        <button 
+                          onClick={() => handleDetail(item)}
+                          className="p-1.5 text-[#182D4A] bg-[#182D4A]/10 rounded-lg hover:bg-[#182D4A] hover:text-white transition-colors" 
+                          title="Detail Verifikasi"
+                        >
                           <Eye size={16} />
                         </button>
                         <button 
@@ -231,6 +297,135 @@ const VerifikasiPendaftaran = () => {
           </table>
         </div>
       </div>
+
+      {/* --- MODAL DETAIL VERIFIKASI --- */}
+      {showModal && selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-[#CC6B27]/10 rounded-xl text-[#CC6B27]">
+                  <UserIcon size={22} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-[#071E3D] m-0">Detail Pendaftaran</h3>
+                  <p className="text-xs text-[#182D4A]/70 m-0 mt-0.5">Periksa data asesi sebelum disetujui.</p>
+                </div>
+              </div>
+              <button onClick={() => setShowModal(false)} className="text-[#182D4A]/50 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all">
+                <X size={20}/>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 bg-white custom-scrollbar">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                {/* Info Pribadi */}
+                <div>
+                  <h4 className="text-sm font-bold text-[#CC6B27] mb-4 border-b border-[#CC6B27]/20 pb-2">Informasi Pribadi</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <span className="block text-[11px] font-bold text-[#182D4A]/50 uppercase tracking-widest mb-1">NIK</span>
+                      <p className="text-sm font-black text-[#071E3D]">{selectedItem.nik}</p>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] font-bold text-[#182D4A]/50 uppercase tracking-widest mb-1">Nama Lengkap</span>
+                      <p className="text-sm font-bold text-[#071E3D]">{selectedItem.nama_lengkap}</p>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] font-bold text-[#182D4A]/50 uppercase tracking-widest mb-1">Email & No HP</span>
+                      <p className="text-sm font-medium text-[#182D4A]">{selectedItem.email} <br /> {selectedItem.no_hp}</p>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] font-bold text-[#182D4A]/50 uppercase tracking-widest mb-1">Pendidikan Terakhir</span>
+                      <p className="text-sm font-medium text-[#182D4A]">{selectedItem.pendidikan_terakhir || "-"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info Domisili */}
+                <div>
+                  <h4 className="text-sm font-bold text-[#CC6B27] mb-4 border-b border-[#CC6B27]/20 pb-2">Alamat & Pekerjaan</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <span className="block text-[11px] font-bold text-[#182D4A]/50 uppercase tracking-widest mb-1">Alamat Domisili</span>
+                      <p className="text-sm font-medium text-[#182D4A] leading-relaxed">
+                        {selectedItem.alamat_lengkap} <br />
+                        Kec. {selectedItem.kecamatan}, {selectedItem.kota}, {selectedItem.provinsi}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] font-bold text-[#182D4A]/50 uppercase tracking-widest mb-1">Pekerjaan & Jabatan</span>
+                      <p className="text-sm font-medium text-[#182D4A]">{selectedItem.pekerjaan || "-"} ({selectedItem.jabatan || "-"})</p>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] font-bold text-[#182D4A]/50 uppercase tracking-widest mb-1">Perusahaan / Instansi</span>
+                      <p className="text-sm font-medium text-[#182D4A]">{selectedItem.nama_perusahaan || "-"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Kompetensi */}
+              <div className="mt-8">
+                <h4 className="text-sm font-bold text-[#CC6B27] mb-4 border-b border-[#CC6B27]/20 pb-2">Program Studi & Kompetensi</h4>
+                <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div>
+                      <span className="block text-[11px] font-bold text-[#182D4A]/50 uppercase tracking-widest mb-1">Program Studi</span>
+                      <p className="text-sm font-black text-[#071E3D]">{selectedItem.program_studi || "-"}</p>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] font-bold text-[#182D4A]/50 uppercase tracking-widest mb-1">Kompetensi Keahlian</span>
+                      <p className="text-sm font-black text-[#071E3D]">{selectedItem.kompetensi_keahlian || "-"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-5 border-t border-[#071E3D]/10 bg-[#FAFAFA] flex justify-end gap-3">
+              <button 
+                type="button" 
+                className="px-5 py-2.5 rounded-xl font-bold border border-[#071E3D]/20 text-[#182D4A] bg-white hover:bg-slate-100 transition-colors text-sm" 
+                onClick={() => setShowModal(false)}
+              >
+                Tutup
+              </button>
+              
+              {selectedItem.status === 'pending' && (
+                <>
+                  <button 
+                    onClick={() => handleReject(selectedItem.id_pendaftaran, selectedItem.nama_lengkap)}
+                    className="px-5 py-2.5 rounded-xl font-bold bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200 transition-all flex items-center gap-2 text-sm"
+                  >
+                    <XCircle size={18} /> Tolak
+                  </button>
+                  <button 
+                    onClick={() => handleApprove(selectedItem.id_pendaftaran, selectedItem.nama_lengkap)}
+                    className="px-6 py-2.5 rounded-xl font-bold bg-green-500 text-white hover:bg-green-600 shadow-md transition-all flex items-center gap-2 text-sm"
+                  >
+                    <Check size={18} /> Verifikasi & Terima
+                  </button>
+                </>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      `}} />
     </div>
   );
 };
