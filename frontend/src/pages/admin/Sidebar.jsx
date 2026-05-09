@@ -20,7 +20,7 @@ import {
   FaSignOutAlt,
   FaChevronDown,
   FaChevronRight,
-  FaThumbtack, // Tambahan icon jika butuh indikator pin
+  FaThumbtack,
 } from "react-icons/fa";
 import { Menu, X, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,7 +34,6 @@ const Sidebar = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // ✅ State untuk menyimpan status pin sidebar
   const [isPinned, setIsPinned] = useState(() => {
     return localStorage.getItem("sidebarPinned") === "true";
   });
@@ -45,7 +44,6 @@ const Sidebar = () => {
     asesor: false,
   });
 
-  // ✅ Simpan status pin ke local storage setiap kali berubah
   useEffect(() => {
     localStorage.setItem("sidebarPinned", isPinned);
   }, [isPinned]);
@@ -86,7 +84,6 @@ const Sidebar = () => {
     }
   }, []);
 
-  // ✅ Sidebar akan terbuka jika di-pin, di-hover, atau dibuka via menu mobile
   const isExpanded = isOpen || isHovered || isPinned;
 
   const handleScroll = (e) => {
@@ -172,7 +169,7 @@ const Sidebar = () => {
                 isExpanded={true}
                 isMobile
                 onClose={() => setIsOpen(false)}
-                isPinned={false} // Pin tidak berlaku di mobile
+                isPinned={false}
                 togglePin={() => {}}
               />
             </motion.aside>
@@ -299,7 +296,6 @@ const SidebarContent = ({
       `}</style>
 
       <div className="h-[120px] border-b border-slate-100 flex items-center shrink-0">
-        {/* ✅ Tombol Logo di sini untuk lock/unlock sidebar */}
         <button
           type="button"
           onClick={togglePin}
@@ -558,7 +554,7 @@ const SidebarContent = ({
           }`}
         >
           <span className="text-sm font-black whitespace-nowrap">Keluar</span>
-          <FaChevronRight className="text-xs" />
+          {/* Panah dihilangkan karena tidak ada anakan */}
         </button>
       </div>
     </>
@@ -611,12 +607,7 @@ function NavItem({ icon, label, active, onClick, isExpanded }) {
         >
           {label}
         </span>
-
-        <FaChevronRight
-          className={`text-xs shrink-0 ${
-            active ? "text-orange-500" : "text-slate-300 group-hover:text-orange-500"
-          }`}
-        />
+        {/* Panah dihilangkan karena bukan menu anakan */}
       </div>
     </button>
   );
@@ -662,6 +653,7 @@ function DropdownItem({
           {label}
         </span>
 
+        {/* Panah tetap ada karena ini menu dropdown (punya anakan) */}
         {open ? (
           <FaChevronDown
             className={`text-xs shrink-0 ${

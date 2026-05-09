@@ -10,7 +10,7 @@ import {
   LogOut,
   User,
   X,
-  ChevronRight,
+  Pin,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,8 +19,16 @@ const SidebarTUK = ({ isOpen, setIsOpen }) => {
   const [userData, setUserData] = useState(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  const [isPinned, setIsPinned] = useState(() => {
+    return localStorage.getItem("sidebarTukPinned") === "true";
+  });
+
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    localStorage.setItem("sidebarTukPinned", isPinned);
+  }, [isPinned]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -34,7 +42,7 @@ const SidebarTUK = ({ isOpen, setIsOpen }) => {
     }
   }, []);
 
-  const isExpanded = isOpen || isHovered;
+  const isExpanded = isOpen || isHovered || isPinned;
 
   const displayName =
     userData?.nama_tuk ||
@@ -87,6 +95,10 @@ const SidebarTUK = ({ isOpen, setIsOpen }) => {
     navigate("/login", { replace: true });
   };
 
+  const togglePin = () => {
+    setIsPinned((prev) => !prev);
+  };
+
   return (
     <>
       <button
@@ -122,6 +134,8 @@ const SidebarTUK = ({ isOpen, setIsOpen }) => {
                 displayName={displayName}
                 isExpanded={true}
                 onClose={() => setIsOpen(false)}
+                isPinned={false}
+                togglePin={() => {}}
                 isMobile
               />
             </motion.aside>
@@ -143,6 +157,8 @@ const SidebarTUK = ({ isOpen, setIsOpen }) => {
           handleLogout={handleLogoutClick}
           displayName={displayName}
           isExpanded={isExpanded}
+          isPinned={isPinned}
+          togglePin={togglePin}
           onClose={() => setIsOpen(false)}
         />
       </aside>
@@ -213,17 +229,35 @@ const SidebarContent = ({
   displayName,
   isExpanded,
   onClose,
+  isPinned,
+  togglePin,
   isMobile = false,
 }) => {
+  const initialName = displayName?.charAt(0)?.toUpperCase() || "T";
+
   return (
     <>
-      {/* Header: posisi logo tidak berubah */}
+      {/* Header */}
       <div className="h-[120px] border-b border-slate-100 flex items-center shrink-0">
-        <div className="w-24 h-full flex items-center justify-center shrink-0">
-          <div className="w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center font-black text-xl">
-            {displayName?.charAt(0)?.toUpperCase() || "T"}
+        <button
+          type="button"
+          onClick={togglePin}
+          title={isPinned ? "Buka Kunci Sidebar" : "Kunci Sidebar"}
+          className="w-24 h-full flex items-center justify-center shrink-0 cursor-pointer group"
+        >
+          <div
+            className={`relative w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center font-black text-xl transition-all duration-300 ${
+              isPinned ? "ring-4 ring-orange-500/30 scale-95" : "group-hover:scale-105"
+            }`}
+          >
+            {initialName}
+            {isPinned && (
+              <div className="absolute -top-1 -right-1 bg-orange-500 rounded-full p-1 text-white">
+                <Pin size={10} className="fill-current" />
+              </div>
+            )}
           </div>
-        </div>
+        </button>
 
         <div
           className={`overflow-hidden whitespace-nowrap transition-opacity duration-150 ${
@@ -234,7 +268,7 @@ const SidebarContent = ({
             {displayName}
           </h1>
           <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-1">
-            Dashboard Admin
+            Dashboard TUK
           </p>
         </div>
 
@@ -248,7 +282,7 @@ const SidebarContent = ({
         )}
       </div>
 
-      {/* Menu: label dan item punya slot tetap, jadi tidak turun naik */}
+      {/* Menu */}
       <nav className="flex-1 overflow-y-auto py-4">
         <div className="space-y-1">
           {menus.map((item) => {
@@ -261,7 +295,6 @@ const SidebarContent = ({
                 title={!isExpanded ? item.name : ""}
                 className="group w-full h-16 flex items-center"
               >
-                {/* Icon column tetap w-24, icon tidak geser */}
                 <div className="w-24 h-16 flex items-center justify-center shrink-0">
                   <div
                     className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-150 ${
@@ -274,7 +307,6 @@ const SidebarContent = ({
                   </div>
                 </div>
 
-                {/* Text column cuma opacity, tidak mengubah posisi icon */}
                 <div
                   className={`h-16 flex-1 pr-5 flex items-center justify-between overflow-hidden transition-opacity duration-150 ${
                     isExpanded ? "opacity-100" : "opacity-0"
@@ -289,15 +321,7 @@ const SidebarContent = ({
                   >
                     {item.name}
                   </span>
-
-                  <ChevronRight
-                    size={16}
-                    className={
-                      active
-                        ? "text-orange-500"
-                        : "text-slate-300 group-hover:text-orange-500"
-                    }
-                  />
+                  {/* Panah dihilangkan karena tidak ada anakan */}
                 </div>
               </button>
             );
@@ -305,7 +329,7 @@ const SidebarContent = ({
         </div>
       </nav>
 
-      {/* Logout: posisi icon tetap */}
+      {/* Logout */}
       <div className="h-28 border-t border-slate-100 bg-slate-50/50 shrink-0 flex items-center">
         <div className="w-24 h-full flex items-center justify-center shrink-0">
           <button
@@ -324,7 +348,7 @@ const SidebarContent = ({
           }`}
         >
           <span className="text-sm font-black whitespace-nowrap">Keluar</span>
-          <ChevronRight size={16} />
+          {/* Panah dihilangkan karena tidak ada anakan */}
         </button>
       </div>
     </>
