@@ -35,6 +35,7 @@ const ia01Controller = require("../controllers/admin/ia01Observasi.controller");
 const ia03Controller = require("../controllers/admin/ia03Pertanyaan.controller");
 const accountController = require("../controllers/admin/account.controller");
 const elemenKukController = require("../controllers/admin/elemenKuk.controller");
+const pembayaranController = require("../controllers/admin/pembayaran.controller");
 
 router.use(authMiddleware, roleMiddleware.adminOnly);
 
@@ -201,5 +202,9 @@ router.delete("/unit-kuk/:id", elemenKukController.deleteKuk);
 
 router.get("/download-template-asesi", asesiAdmin.downloadTemplate);
 router.get("/download-template-asesor", asesorAdmin.downloadTemplate);
+
+router.get("/pembayaran", pembayaranController.getAll);
+router.put("/pembayaran/:id/approve", pembayaranController.approve);
+router.put("/pembayaran/:id/reject", pembayaranController.reject);
 
 module.exports = router;

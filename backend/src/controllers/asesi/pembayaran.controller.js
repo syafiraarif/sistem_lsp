@@ -1,130 +1,208 @@
 const Skema = require("../../models/skema.model");
-const BiayaUji = require("../../models/biayaUji.model"); // model baru untuk harga
+const BiayaUji = require("../../models/biayaUji.model");
 const TujuanTransfer = require("../../models/tujuanPembayaran.model");
 const Pembayaran = require("../../models/pembayaran.model");
 const response = require("../../utils/response.util");
 
-/* ================= GET DETAIL PEMBAYARAN ================= */
 exports.getDetailPembayaran = async (req, res) => {
   try {
     const { id_skema } = req.params;
 
-    // Ambil judul skema
-    const skema = await Skema.findByPk(id_skema, { attributes: ["judul_skema"] });
-    if (!skema) return response.error(res, "Skema tidak ditemukan", 404);
+    const skema = await Skema.findByPk(id_skema, {
+      attributes: ["id_skema", "judul_skema", "kode_skema"],
+    });
 
-    // Ambil harga dari tabel biaya_uji
+    if (!skema) {
+      return response.error(res, "Skema tidak ditemukan", 404);
+    }
+
     const biaya = await BiayaUji.findAll({
       where: { id_skema },
-      attributes: ["id_biaya", "nominal", "jenis_biaya", "metode_uji", "keterangan"],
+      attributes: [
+        "id_biaya",
+        "nominal",
+        "jenis_biaya",
+        "metode_uji",
+        "keterangan",
+      ],
     });
 
     const tujuanTransfer = await TujuanTransfer.findAll({
-  where: { status: "aktif" },
-  attributes: [
-    ["id_tujuan", "id_tujuan_transfer"],
-    ["bank", "nama_bank"],
-    ["nomor_rekening", "nomor_rekening"],
-    ["nama_tujuan", "atas_nama"],
-    "status",
-  ],
-});
+      where: { status: "aktif" },
+      attributes: [
+        ["id_tujuan", "id_tujuan_transfer"],
+        ["bank", "nama_bank"],
+        ["nomor_rekening", "nomor_rekening"],
+        ["nama_tujuan", "atas_nama"],
+        "status",
+      ],
+    });
 
-    response.success(res, "Detail pembayaran", {
+    return response.success(res, "Detail pembayaran", {
       skema: skema.judul_skema,
+      kode_skema: skema.kode_skema,
       harga: biaya.length > 0 ? biaya[0].nominal : 0,
       tujuan_transfer: tujuanTransfer,
+      qris: {
+        enabled: true,
+        image_url: "/uploads/qris/qris.png",
+        atas_nama: "LSP",
+      },
+      virtual_account: {
+        enabled: true,
+        nomor_va: "8808" + String(id_skema).padStart(6, "0"),
+        nama_bank: "Virtual Account",
+        atas_nama: "LSP",
+      },
     });
   } catch (err) {
-    console.error(err);
-    response.error(res, err.message);
+    console.error("GET DETAIL PEMBAYARAN ERROR:", err);
+    return response.error(res, err.message);
   }
 };
 
-/* ================= SUBMIT PEMBAYARAN ================= */
 exports.submitPembayaran = async (req, res) => {
   try {
-    const { id_skema, metode_pembayaran, jalur_pembayaran, id_tujuan_transfer } = req.body;
+    const {
+      id_skema,
+      metode_pembayaran,
+      jalur_pembayaran,
+      id_tujuan_transfer,
+    } = req.body;
 
     if (!id_skema || !metode_pembayaran) {
       return response.error(res, "ID skema dan metode pembayaran wajib", 400);
     }
 
-    if (metode_pembayaran === "transfer_rekening" && (!jalur_pembayaran || !id_tujuan_transfer)) {
-      return response.error(res, "Jalur pembayaran dan tujuan transfer wajib untuk Transfer Rekening", 400);
+    const allowedMetode = [
+      "tunai",
+      "transfer_rekening",
+      "qris",
+      "virtual_account",
+    ];
+
+    if (!allowedMetode.includes(metode_pembayaran)) {
+      return response.error(res, "Metode pembayaran tidak valid", 400);
     }
 
-    if (metode_pembayaran === "tunai" && jalur_pembayaran !== "tunai") {
-      return response.error(res, "Jalur pembayaran harus tunai jika metode tunai", 400);
+    if (
+      metode_pembayaran === "transfer_rekening" &&
+      (!jalur_pembayaran || !id_tujuan_transfer)
+    ) {
+      return response.error(
+        res,
+        "Jalur pembayaran dan tujuan transfer wajib untuk transfer rekening",
+        400
+      );
     }
 
-    // Ambil harga dari biaya_uji
-    const biaya = await BiayaUji.findAll({ where: { id_skema } });
-    if (!biaya || biaya.length === 0) return response.error(res, "Harga untuk skema tidak ditemukan", 404);
+    const biaya = await BiayaUji.findAll({
+      where: { id_skema },
+    });
 
-    // Cek pembayaran pending sebelumnya
-    const existing = await Pembayaran.findOne({ where: { id_skema, status: "pending" } });
-    if (existing) return response.error(res, "Pembayaran sudah ada dan masih pending", 409);
+    if (!biaya || biaya.length === 0) {
+      return response.error(res, "Harga untuk skema tidak ditemukan", 404);
+    }
 
-    const waktuBatas = new Date(Date.now() + 30 * 60 * 1000); // 30 menit
+    const existing = await Pembayaran.findOne({
+      where: { id_skema },
+      order: [["id_pembayaran", "DESC"]],
+    });
+
+    if (
+      existing &&
+      ["pending", "menunggu_validasi", "paid"].includes(existing.status)
+    ) {
+      return response.error(
+        res,
+        existing.status === "paid"
+          ? "Pembayaran sudah diterima admin"
+          : "Pembayaran sudah diajukan dan sedang menunggu validasi admin",
+        409
+      );
+    }
+
+    const waktuBatas = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     const pembayaran = await Pembayaran.create({
       id_skema,
       metode_pembayaran,
-      jalur_pembayaran,
-      id_tujuan_transfer: id_tujuan_transfer || null,
+      jalur_pembayaran:
+        metode_pembayaran === "tunai"
+          ? "tunai"
+          : metode_pembayaran === "qris"
+          ? "qris"
+          : metode_pembayaran === "virtual_account"
+          ? "virtual_account"
+          : jalur_pembayaran,
+      id_tujuan_transfer:
+        metode_pembayaran === "transfer_rekening"
+          ? id_tujuan_transfer
+          : null,
       nominal: biaya[0].nominal,
       status: "pending",
       waktu_batas: waktuBatas,
     });
 
     let tujuanDetail = null;
+
     if (id_tujuan_transfer) {
       tujuanDetail = await TujuanTransfer.findByPk(id_tujuan_transfer);
     }
 
-    response.success(res, "Pembayaran berhasil dibuat. Lakukan pembayaran sesuai struk.", {
+    return response.success(res, "Pembayaran berhasil dibuat", {
       id_pembayaran: pembayaran.id_pembayaran,
-      skema: biaya[0].jenis_biaya || "Uji Kompetensi",
       metode_pembayaran,
-      jalur_pembayaran,
+      jalur_pembayaran: pembayaran.jalur_pembayaran,
       tujuan_transfer: tujuanDetail,
       nominal: biaya[0].nominal,
+      status: pembayaran.status,
       waktu_batas: pembayaran.waktu_batas,
-      instruksi: "Bayar dalam 30 menit. Setelah bayar, upload bukti jika diperlukan.",
+      instruksi:
+        "Silakan lakukan pembayaran, upload bukti bayar, lalu tunggu validasi admin.",
     });
   } catch (err) {
-    console.error(err);
-    response.error(res, err.message);
+    console.error("SUBMIT PEMBAYARAN ERROR:", err);
+    return response.error(res, err.message);
   }
 };
 
-/* ================= UPLOAD BUKTI BAYAR ================= */
 exports.uploadBuktiBayar = async (req, res) => {
   try {
     const { id_pembayaran } = req.params;
     const file = req.files?.bukti_bayar?.[0];
 
     const pembayaran = await Pembayaran.findByPk(id_pembayaran);
-    if (!pembayaran) return response.error(res, "Pembayaran tidak ditemukan", 404);
+
+    if (!pembayaran) {
+      return response.error(res, "Pembayaran tidak ditemukan", 404);
+    }
+
+    if (pembayaran.status === "paid") {
+      return response.error(res, "Pembayaran sudah divalidasi admin", 400);
+    }
 
     await pembayaran.update({
-      status: "paid",
-      bukti_bayar: file ? file.path : null,
+      status: "menunggu_validasi",
+      bukti_bayar: file ? file.path.replace(/\\/g, "/") : pembayaran.bukti_bayar,
+      waktu_pembayaran: new Date(),
     });
 
-    response.success(res, "Bukti bayar berhasil diupload. Status pembayaran: Paid.", {
-      id_pembayaran: pembayaran.id_pembayaran,
-      status: pembayaran.status,
-      bukti_bayar: pembayaran.bukti_bayar,
-    });
+    return response.success(
+      res,
+      "Bukti bayar berhasil diupload. Menunggu validasi admin.",
+      {
+        id_pembayaran: pembayaran.id_pembayaran,
+        status: "menunggu_validasi",
+        bukti_bayar: pembayaran.bukti_bayar,
+      }
+    );
   } catch (err) {
-    console.error(err);
-    response.error(res, err.message);
+    console.error("UPLOAD BUKTI BAYAR ERROR:", err);
+    return response.error(res, err.message);
   }
 };
 
-/* ================= GET STATUS PEMBAYARAN ================= */
 exports.getStatusPembayaran = async (req, res) => {
   try {
     const { id_skema } = req.params;
@@ -139,18 +217,23 @@ exports.getStatusPembayaran = async (req, res) => {
         id_pembayaran: null,
         status: "belum bayar",
         metode_pembayaran: null,
+        jalur_pembayaran: null,
         waktu_batas: null,
+        bukti_bayar: null,
       });
     }
 
-    response.success(res, "Status pembayaran", {
+    return response.success(res, "Status pembayaran", {
       id_pembayaran: pembayaran.id_pembayaran,
       status: pembayaran.status,
       metode_pembayaran: pembayaran.metode_pembayaran,
+      jalur_pembayaran: pembayaran.jalur_pembayaran,
       waktu_batas: pembayaran.waktu_batas,
+      bukti_bayar: pembayaran.bukti_bayar,
+      catatan_admin: pembayaran.catatan_admin,
     });
   } catch (err) {
-    console.error(err);
-    response.error(res, err.message);
+    console.error("GET STATUS PEMBAYARAN ERROR:", err);
+    return response.error(res, err.message);
   }
 };

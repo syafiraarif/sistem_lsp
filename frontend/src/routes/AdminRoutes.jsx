@@ -34,6 +34,7 @@ import AsesiKompeten from "../pages/admin/AsesiKompeten";
 import PesertaJadwal from "../pages/admin/PesertaJadwal";
 import KelompokPekerjaan from "../pages/admin/KelompokPekerjaan";
 import AsesiBelumKompeten from "../pages/admin/AsesiBelumKompeten";
+import ValidasiPembayaran from "../pages/admin/ValidasiPembayaran";
 
 // IMPORT LAPORAN SERTIFIKASI (MENGGANTIKAN LAPORAN UMUM)
 import LaporanSertifikasi from "../pages/admin/LaporanSertifikasi";
@@ -83,6 +84,7 @@ export default function AdminRoutes() {
           <Route path="jadwal/:id_jadwal/asesor" element={<JadwalAsesor />} />
           <Route path="tuk" element={<TempatUji />} />
           <Route path="verifikasi-pendaftaran" element={<VerifikasiPendaftaran />} />
+          <Route path="pembayaran" element={<ValidasiPembayaran />} />
           <Route path="asesi/tambah" element={<TambahAsesi />} />
           
           <Route path="asesor" element={<Asesor />} />
