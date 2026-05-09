@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 import api from "../../services/api";
 import { 
   Search, ArrowLeft, Loader2, Eye, X, CalendarClock, Info,
-  Users, BadgeCheck, Award, Hash, User, Sparkles, FileText, UserPlus
+  Users, BadgeCheck, Award, Hash, Sparkles, FileText, UserPlus
 } from 'lucide-react';
 
 const PesertaJadwal = () => {
@@ -17,6 +17,7 @@ const PesertaJadwal = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [jadwalInfo, setJadwalInfo] = useState(null);
 
+  // State untuk Modal Detail
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPeserta, setSelectedPeserta] = useState(null);
 
@@ -28,20 +29,23 @@ const PesertaJadwal = () => {
     try {
       setLoading(true);
       
+      // 1. Fetch Peserta
       const resPeserta = await api.get(`/admin/jadwal/${id_jadwal}/peserta`);
-      const data = resPeserta.data.data || [];
+      const data = resPeserta.data?.data || [];
       setPesertaList(data);
       
       if (data && data.length > 0 && data[0].jadwal) {
         setJadwalInfo(data[0].jadwal);
       }
 
+      // 2. Fetch Asesor Penguji dari jadwal ini (Untuk Dropdown)
       const resAsesor = await api.get(`/admin/jadwal-asesor/${id_jadwal}`);
       let allAssignedAsesor = resAsesor.data?.data || resAsesor.data || [];
       if (!Array.isArray(allAssignedAsesor) && allAssignedAsesor.rows) {
           allAssignedAsesor = allAssignedAsesor.rows;
       }
       
+      // Filter: Hanya yang bertugas sebagai asesor penguji dan statusnya aktif
       const asesorPenguji = allAssignedAsesor.filter(a => a.jenis_tugas === 'asesor_penguji' && a.status === 'aktif');
       setListAsesor(asesorPenguji);
 
@@ -52,6 +56,7 @@ const PesertaJadwal = () => {
     }
   };
 
+  // --- FUNGSI: Assign Asesor ke Peserta ---
   const handleAssignAsesor = async (id_peserta, id_asesor) => {
       try {
         Swal.fire({
@@ -61,11 +66,12 @@ const PesertaJadwal = () => {
         });
 
         await api.put(`/admin/peserta-jadwal/${id_peserta}/assign-asesor`, {
-            id_asesor: id_asesor || null
+            id_asesor: id_asesor || null // kirim null jika select box dikosongkan
         });
 
         Swal.fire('Berhasil', 'Asesor penguji berhasil ditugaskan', 'success');
         
+        // Update state lokal agar UI langsung berubah tanpa reload halaman
         setPesertaList(prev => prev.map(p => {
             if (p.id_peserta === id_peserta) {
                 return { ...p, id_asesor: id_asesor || null };
@@ -79,45 +85,57 @@ const PesertaJadwal = () => {
       }
   };
 
-  const handleViewDetail = (peserta) => {
-    setSelectedPeserta(peserta);
-    setShowDetailModal(true);
+  // --- HELPER FUNCTIONS ---
+  const getAsesiName = (userObj) => {
+    if (!userObj) return '-';
+    const profile = userObj.ProfileAsesi || userObj.profileAsesi || userObj.profile_asesi;
+    return profile?.nama_lengkap || userObj.username || '-';
   };
 
-  const getProfile = (userObj) => {
-    if (!userObj) return null;
-    return userObj.ProfileAsesi || userObj.profileAsesi || userObj.profile_asesi;
+  const getAsesiNik = (userObj) => {
+    if (!userObj) return '-';
+    const profile = userObj.ProfileAsesi || userObj.profileAsesi || userObj.profile_asesi;
+    return profile?.nik || '-';
   };
-
-  const getProfileAsesor = (userObj) => {
-    if (!userObj) return null;
-    return userObj.ProfileAsesor || userObj.profileAsesor || userObj.profile_asesor;
-  }
 
   const getSkemaName = (jadwalObj) => {
     const targetJadwal = jadwalObj || jadwalInfo;
     if (!targetJadwal) return '-';
+    return targetJadwal.skema?.judul_skema || targetJadwal.Skema?.judul_skema || '-';
+  };
+
+  // Helper untuk mendapatkan nama Asesor di Dropdown
+  const getDropdownAsesorName = (itemJadwalAsesor) => {
+    const user = itemJadwalAsesor.asesor || {};
+    const profile = user.ProfileAsesor || user.profile_asesor || {};
     
-    return targetJadwal.skema?.judul_skema || 
-           targetJadwal.Skema?.judul_skema || 
-           '-';
+    if (profile.nama_lengkap) return profile.nama_lengkap;
+    if (user.nama) return user.nama;
+    if (user.username && !/^\d+$/.test(user.username)) return user.username;
+    
+    // Fallback terakhir jika profil benar-benar kosong
+    return user.username ? `Asesor (${user.username})` : 'Tanpa Nama';
+  };
+
+  // Helper untuk mendapatkan nama Asesor di baris tabel / Modal (dari data pesertaJadwal)
+  const getAssignedAsesorName = (userPenguji) => {
+    if (!userPenguji) return 'Pilih Asesor Penguji';
+    const profile = userPenguji.ProfileAsesor || userPenguji.profile_asesor || {};
+    
+    if (profile.nama_lengkap) return profile.nama_lengkap;
+    if (userPenguji.nama) return userPenguji.nama;
+    if (userPenguji.username && !/^\d+$/.test(userPenguji.username)) return userPenguji.username;
+    
+    return userPenguji.username ? `Asesor (${userPenguji.username})` : 'Tanpa Nama';
   };
 
   const filteredData = pesertaList.filter(item => {
-    const profile = getProfile(item.user);
-    const nama = profile?.nama_lengkap || item.user?.username || item.user?.nama_lengkap || '';
-    const nik = profile?.nik || '';
-    const email = item.user?.email || '';
-    const skema = getSkemaName(item.jadwal);
-    const nomor = item.nomor_peserta || '';
-
+    const nama = getAsesiName(item.user).toLowerCase();
+    const nik = getAsesiNik(item.user).toLowerCase();
+    const nomor = (item.nomor_peserta || '').toLowerCase();
     const term = searchTerm.toLowerCase();
 
-    return email.toLowerCase().includes(term) ||
-           nomor.toLowerCase().includes(term) ||
-           nama.toLowerCase().includes(term) ||
-           nik.toLowerCase().includes(term) ||
-           skema.toLowerCase().includes(term);
+    return nomor.includes(term) || nama.includes(term) || nik.includes(term);
   });
 
   const formatDate = (dateString) => {
@@ -194,10 +212,6 @@ const PesertaJadwal = () => {
                     {pesertaList.length}
                   </h2>
 
-                  <p className="text-sm font-medium leading-relaxed text-white/60">
-                    Ringkasan peserta yang terdaftar dalam jadwal asesmen ini.
-                  </p>
-
                   <div className="mt-6 grid grid-cols-3 gap-3">
                     <HeroPill label="Proses" value={`${totalProses}`} />
                     <HeroPill label="K" value={`${totalKompeten}`} />
@@ -229,19 +243,14 @@ const PesertaJadwal = () => {
 
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <h2 className="text-2xl font-black text-[#071E3D]">
-                  Kelola Peserta Asesmen
-                </h2>
+                <h2 className="text-2xl font-black text-[#071E3D]">Kelola Peserta Asesmen</h2>
                 <p className="mt-2 text-sm font-medium text-slate-400">
                   Pilih Asesor Penguji untuk masing-masing peserta melalui kolom dropdown.
                 </p>
               </div>
 
               <div className="relative w-full lg:w-[400px]">
-                <Search
-                  size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                />
+                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Cari nama, NIK, atau nomor peserta..."
@@ -277,42 +286,30 @@ const PesertaJadwal = () => {
                   <tr>
                     <td colSpan="7" className="py-16 text-center">
                       <Loader2 className="mx-auto mb-3 animate-spin text-orange-500" size={36} />
-                      <p className="text-sm font-black uppercase tracking-widest text-[#071E3D]">
-                        Memuat Data Peserta
-                      </p>
+                      <p className="text-sm font-black uppercase tracking-widest text-[#071E3D]">Memuat Data Peserta</p>
                     </td>
                   </tr>
                 ) : filteredData.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="py-16 text-center">
                       <Users size={48} className="mx-auto mb-3 text-[#071E3D]/20" />
-                      <p className="text-sm font-black text-[#071E3D]">
-                        Belum ada peserta yang cocok atau terdaftar pada jadwal ini.
-                      </p>
+                      <p className="text-sm font-black text-[#071E3D]">Belum ada peserta yang cocok atau terdaftar pada jadwal ini.</p>
                     </td>
                   </tr>
                 ) : (
                   filteredData.map((row, index) => {
-                    const profile = getProfile(row.user);
-                    const namaLengkap = profile?.nama_lengkap || row.user?.username || row.user?.nama_lengkap || '-';
-                    const nik = profile?.nik || '-';
-                    
-                    return (
-                      <tr
-                        key={row.id_peserta}
-                        className="border-b border-slate-100 transition-all last:border-0 hover:bg-orange-50/30"
-                      >
-                        <td className="px-5 py-4 text-center text-sm font-black text-[#071E3D]">
-                          {index + 1}
-                        </td>
+                    const asesiName = getAsesiName(row.user);
+                    const asesiNik = getAsesiNik(row.user);
 
+                    return (
+                      <tr key={row.id_peserta} className="border-b border-slate-100 transition-all last:border-0 hover:bg-orange-50/30">
+                        <td className="px-5 py-4 text-center text-sm font-black text-[#071E3D]">{index + 1}</td>
                         <td className="px-5 py-4">
-                          <div className="font-black text-[#071E3D]">{namaLengkap}</div>
+                          <div className="font-black text-[#071E3D]">{asesiName}</div>
                           <div className="mt-1 flex items-center gap-1 text-xs font-bold text-slate-400">
-                            <Hash size={12} /> NIK: {nik}
+                            <Hash size={12} /> NIK: {asesiNik}
                           </div>
                         </td>
-
                         <td className="px-5 py-4">
                           <span className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm font-black text-[#071E3D]">
                             {row.nomor_peserta || '-'}
@@ -320,7 +317,6 @@ const PesertaJadwal = () => {
                         </td>
 
                         {/* --- KOLOM PILIH ASESOR --- */}
-                        {/* UPDATE: Logika pengambilan nama agar tampil bersih tanpa embel-email/nik jika memungkinkan */}
                         <td className="px-5 py-4">
                            {listAsesor.length === 0 ? (
                                <span className="text-xs font-semibold italic text-red-500">
@@ -334,25 +330,13 @@ const PesertaJadwal = () => {
                                >
                                    <option value="">-- Pilih Asesor --</option>
                                    {listAsesor.map(a => {
-                                       const u = a.user || a.User || {};
-                                       const asId = u.id_user || u.id || a.id_user;
-                                       
-                                       // Prioritaskan nama lengkap dari profile, jika tidak ada baru nama/username, tanpa NIK/Email
-                                       let asName = 'Asesor (Data Belum Lengkap)';
-                                       
-                                       if(u.ProfileAsesor && u.ProfileAsesor.nama_lengkap) {
-                                           asName = u.ProfileAsesor.nama_lengkap;
-                                       } else if(u.profile_asesor && u.profile_asesor.nama_lengkap) {
-                                           asName = u.profile_asesor.nama_lengkap;
-                                       } else if(u.nama) {
-                                           asName = u.nama;
-                                       } else if (u.username && !u.username.match(/^\d+$/)) {
-                                          // Jika username bukan NIK (angka saja)
-                                           asName = u.username;
-                                       }
+                                       const asId = a.asesor?.id_user;
+                                       if (!asId) return null;
 
                                        return (
-                                          <option key={asId} value={asId}>{asName}</option>
+                                          <option key={asId} value={asId}>
+                                            {getDropdownAsesorName(a)}
+                                          </option>
                                        )
                                    })}
                                </select>
@@ -364,16 +348,12 @@ const PesertaJadwal = () => {
                             {row.status_asesmen?.replace('_', ' ') || 'Terjadwal'}
                           </span>
                         </td>
-
                         <td className="px-5 py-4 text-center">
-                          <span className="text-base font-black text-[#071E3D]">
-                            {row.nilai_akhir ? row.nilai_akhir : '-'}
-                          </span>
+                          <span className="text-base font-black text-[#071E3D]">{row.nilai_akhir || '-'}</span>
                         </td>
-
                         <td className="px-5 py-4 text-center">
                           <button
-                            onClick={() => handleViewDetail(row)}
+                            onClick={() => { setSelectedPeserta(row); setShowDetailModal(true); }}
                             className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-500 transition-all hover:bg-orange-500 hover:text-white"
                             title="Lihat Detail"
                           >
@@ -393,117 +373,57 @@ const PesertaJadwal = () => {
       {/* --- MODAL DETAIL PESERTA --- */}
       {showDetailModal && selectedPeserta && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/60 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[34px] border border-slate-100 bg-white shadow-2xl">
+          <div className="bg-white rounded-[32px] w-full max-w-lg p-8 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-start mb-6">
+              <h3 className="text-2xl font-black text-[#071E3D]">Detail <span className="text-orange-500">Asesi</span></h3>
+              <button onClick={() => setShowDetailModal(false)} className="p-2 bg-slate-50 text-slate-400 rounded-full hover:bg-red-50 hover:text-red-500 transition-all"><X size={20}/></button>
+            </div>
             
-            {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-100 p-6">
-              <div>
-                <h3 className="flex items-center gap-2 text-xl font-black text-[#071E3D]">
-                  <Info size={21} className="text-orange-500" />
-                  Detail Peserta Asesmen
-                </h3>
-                <p className="mt-1 text-sm font-medium text-slate-400">
-                  Rincian data peserta, status asesmen, nilai, dan catatan.
-                </p>
+            <div className="space-y-4 overflow-y-auto custom-scrollbar pr-2 flex-1">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nama Lengkap Asesi</p>
+                  <p className="font-bold text-[#071E3D]">{getAsesiName(selectedPeserta.user)}</p>
               </div>
 
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-6">
-                
-                {/* Info Utama */}
-                <DetailSection icon={<User size={17} />} title="Informasi Utama">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <DetailItem label="Nama Asesi">
-                      {getProfile(selectedPeserta.user)?.nama_lengkap || selectedPeserta.user?.username || '-'}
-                    </DetailItem>
-                    <DetailItem label="NIK Asesi">
-                      {getProfile(selectedPeserta.user)?.nik || '-'}
-                    </DetailItem>
-                    <DetailItem label="Skema" wide>
-                      <span title={getSkemaName(selectedPeserta.jadwal)}>
-                        {getSkemaName(selectedPeserta.jadwal)}
-                      </span>
-                    </DetailItem>
-                    <DetailItem label="Nomor Peserta">
-                      {selectedPeserta.nomor_peserta || 'Belum di-generate'}
-                    </DetailItem>
-                  </div>
-                </DetailSection>
-
-                {/* Status & Asesor */}
-                <DetailSection icon={<Award size={17} />} title="Status & Penguji">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <DetailItem label="Status Asesmen">
-                      <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(selectedPeserta.status_asesmen)}`}>
-                        {selectedPeserta.status_asesmen?.replace('_', ' ') || 'Terjadwal'}
-                      </span>
-                    </DetailItem>
-                    <DetailItem label="Asesor Penguji">
-                        <span className="font-semibold text-orange-600">
-                           {/* Update logika pengambilan nama asesor untuk detail modal */}
-                           {(() => {
-                              const profAs = getProfileAsesor(selectedPeserta.asesor_penguji);
-                              if(profAs && profAs.nama_lengkap) return profAs.nama_lengkap;
-                              if(selectedPeserta.asesor_penguji && selectedPeserta.asesor_penguji.username && !selectedPeserta.asesor_penguji.username.match(/^\d+$/)) return selectedPeserta.asesor_penguji.username;
-                              return 'Belum Ditugaskan';
-                           })()}
-                        </span>
-                    </DetailItem>
-                    <DetailItem label="Nilai Akhir" wide>
-                      <span className="text-lg font-black text-[#071E3D]">
-                        {selectedPeserta.nilai_akhir || 'Belum dinilai'}
-                      </span>
-                    </DetailItem>
-                  </div>
-                </DetailSection>
-
-                {/* Info Waktu */}
-                <DetailSection icon={<CalendarClock size={17} />} title="Riwayat Waktu Asesmen">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <DetailItem label="Waktu Mulai">
-                      {formatDate(selectedPeserta.waktu_mulai)}
-                    </DetailItem>
-                    <DetailItem label="Waktu Selesai">
-                      {formatDate(selectedPeserta.waktu_selesai)}
-                    </DetailItem>
-                  </div>
-                </DetailSection>
-
-                {/* Keterangan */}
-                <DetailSection icon={<FileText size={17} />} title="Keterangan / Catatan Asesor">
-                  <div className="min-h-[80px] rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-semibold leading-relaxed text-[#071E3D]">
-                    {selectedPeserta.keterangan || (
-                      <span className="italic text-slate-400">
-                        Tidak ada catatan keterangan.
-                      </span>
-                    )}
-                  </div>
-                </DetailSection>
+              <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+                  <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Asesor Penguji</p>
+                  <p className="font-bold text-orange-600">
+                    {getAssignedAsesorName(selectedPeserta.asesor_penguji)}
+                  </p>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nilai Akhir</p>
+                  <p className="text-xl font-black text-[#071E3D]">{selectedPeserta.nilai_akhir || '-'}</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                  <p className="font-bold text-blue-600 uppercase text-xs mt-1">{selectedPeserta.status_asesmen?.replace('_', ' ')}</p>
+                </div>
+              </div>
+
+              {selectedPeserta.keterangan && (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Catatan</p>
+                    <p className="text-sm font-medium text-[#071E3D]">{selectedPeserta.keterangan}</p>
+                </div>
+              )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex justify-end border-t border-slate-100 bg-slate-50/70 p-6">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="rounded-2xl border border-slate-100 bg-white px-7 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
-              >
-                Tutup
-              </button>
-            </div>
-
+            <button onClick={() => setShowDetailModal(false)} className="w-full mt-6 py-4 bg-[#071E3D] text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-orange-500 transition-all">
+              Tutup Modal
+            </button>
           </div>
         </div>
       )}
+
+      {/* Style untuk scrollbar modal jika kontennya panjang */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+      `}} />
     </div>
   );
 };
@@ -511,9 +431,7 @@ const PesertaJadwal = () => {
 function HeroPill({ label, value }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
-        {label}
-      </p>
+      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">{label}</p>
       <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );
@@ -526,9 +444,7 @@ function MiniStat({ icon, label, value }) {
         {icon}
       </div>
       <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-          {label}
-        </p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
         <p className="mt-1 text-2xl font-black text-[#071E3D]">{value}</p>
       </div>
     </div>
@@ -537,36 +453,9 @@ function MiniStat({ icon, label, value }) {
 
 function TableHead({ children, center }) {
   return (
-    <th
-      className={`border-b-4 border-orange-500 px-5 py-4 text-[11px] font-black uppercase tracking-widest text-white ${
-        center ? "text-center" : "text-left"
-      }`}
-    >
+    <th className={`border-b-4 border-orange-500 px-5 py-4 text-[11px] font-black uppercase tracking-widest text-white ${center ? "text-center" : "text-left"}`}>
       {children}
     </th>
-  );
-}
-
-function DetailSection({ icon, title, children }) {
-  return (
-    <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
-      <h4 className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3 text-sm font-black text-[#071E3D]">
-        <span className="text-orange-500">{icon}</span>
-        {title}
-      </h4>
-      {children}
-    </div>
-  );
-}
-
-function DetailItem({ label, children, wide }) {
-  return (
-    <div className={wide ? "md:col-span-2" : ""}>
-      <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
-        {label}
-      </p>
-      <div className="text-sm font-bold text-[#071E3D]">{children}</div>
-    </div>
   );
 }
 
