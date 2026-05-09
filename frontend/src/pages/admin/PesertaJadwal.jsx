@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import api from "../../services/api";
 import { 
   Search, ArrowLeft, Loader2, Eye, X, CalendarClock, Info,
-  Users, BadgeCheck, Award, Hash, User, Sparkles, FileText
+  Users, BadgeCheck, Award, Hash, User, Sparkles, FileText, UserPlus
 } from 'lucide-react';
 
 const PesertaJadwal = () => {
@@ -11,36 +12,71 @@ const PesertaJadwal = () => {
   const navigate = useNavigate();
 
   const [pesertaList, setPesertaList] = useState([]);
+  const [listAsesor, setListAsesor] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [jadwalInfo, setJadwalInfo] = useState(null);
 
-  // State untuk Modal Detail
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPeserta, setSelectedPeserta] = useState(null);
 
   useEffect(() => {
-    fetchPeserta();
+    fetchData();
   }, [id_jadwal]);
 
-  const fetchPeserta = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/admin/jadwal/${id_jadwal}/peserta`);
       
-      const data = res.data.data || [];
+      const resPeserta = await api.get(`/admin/jadwal/${id_jadwal}/peserta`);
+      const data = resPeserta.data.data || [];
       setPesertaList(data);
       
-      // Ambil info jadwal dari data pertama jika ada
-      // Ini akan jadi "sumber kebenaran" (source of truth) untuk data Skema semua peserta
       if (data && data.length > 0 && data[0].jadwal) {
         setJadwalInfo(data[0].jadwal);
       }
+
+      const resAsesor = await api.get(`/admin/jadwal-asesor/${id_jadwal}`);
+      let allAssignedAsesor = resAsesor.data?.data || resAsesor.data || [];
+      if (!Array.isArray(allAssignedAsesor) && allAssignedAsesor.rows) {
+          allAssignedAsesor = allAssignedAsesor.rows;
+      }
+      
+      const asesorPenguji = allAssignedAsesor.filter(a => a.jenis_tugas === 'asesor_penguji' && a.status === 'aktif');
+      setListAsesor(asesorPenguji);
+
     } catch (error) {
-      console.error("Gagal mengambil data peserta:", error);
+      console.error("Gagal mengambil data:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAssignAsesor = async (id_peserta, id_asesor) => {
+      try {
+        Swal.fire({
+            title: "Menyimpan...",
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        await api.put(`/admin/peserta-jadwal/${id_peserta}/assign-asesor`, {
+            id_asesor: id_asesor || null
+        });
+
+        Swal.fire('Berhasil', 'Asesor penguji berhasil ditugaskan', 'success');
+        
+        setPesertaList(prev => prev.map(p => {
+            if (p.id_peserta === id_peserta) {
+                return { ...p, id_asesor: id_asesor || null };
+            }
+            return p;
+        }));
+
+      } catch (error) {
+          console.error(error);
+          Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan', 'error');
+      }
   };
 
   const handleViewDetail = (peserta) => {
@@ -48,14 +84,16 @@ const PesertaJadwal = () => {
     setShowDetailModal(true);
   };
 
-  // Helper untuk membaca profile (mengakomodasi berbagai format Sequelize)
   const getProfile = (userObj) => {
     if (!userObj) return null;
     return userObj.ProfileAsesi || userObj.profileAsesi || userObj.profile_asesi;
   };
 
-  // Helper untuk membaca skema dengan logika fallback ke jadwalInfo
-  // DIPERBARUI: Menggunakan "judul_skema" sesuai database backend
+  const getProfileAsesor = (userObj) => {
+    if (!userObj) return null;
+    return userObj.ProfileAsesor || userObj.profileAsesor || userObj.profile_asesor;
+  }
+
   const getSkemaName = (jadwalObj) => {
     const targetJadwal = jadwalObj || jadwalInfo;
     if (!targetJadwal) return '-';
@@ -65,7 +103,6 @@ const PesertaJadwal = () => {
            '-';
   };
 
-  // Filter pencarian
   const filteredData = pesertaList.filter(item => {
     const profile = getProfile(item.user);
     const nama = profile?.nama_lengkap || item.user?.username || item.user?.nama_lengkap || '';
@@ -83,7 +120,6 @@ const PesertaJadwal = () => {
            skema.toLowerCase().includes(term);
   });
 
-  // Helper untuk format tanggal
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -130,15 +166,15 @@ const PesertaJadwal = () => {
                 </div>
 
                 <h1 className="text-4xl font-black leading-tight text-[#071E3D] lg:text-5xl">
-                  Data Peserta
+                  Data Peserta &
                   <br />
-                  <span className="text-orange-500">Jadwal Asesmen</span>
+                  <span className="text-orange-500">Penugasan Asesor</span>
                 </h1>
 
                 <p className="mt-5 max-w-3xl text-base font-medium leading-relaxed text-slate-500 lg:text-lg">
                   {jadwalInfo
                     ? `Jadwal: ${jadwalInfo.nama_kegiatan} | Skema: ${getSkemaName(jadwalInfo)}`
-                    : 'Mengelola asesi yang terdaftar di jadwal ini.'}
+                    : 'Mengelola asesi dan menentukan asesor pengujinya.'}
                 </p>
               </div>
 
@@ -187,17 +223,17 @@ const PesertaJadwal = () => {
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
               <FileText size={15} className="text-orange-500" />
               <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                Daftar Peserta
+                Daftar Peserta & Penugasan
               </span>
             </div>
 
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <h2 className="text-2xl font-black text-[#071E3D]">
-                  Peserta Terdaftar
+                  Kelola Peserta Asesmen
                 </h2>
                 <p className="mt-2 text-sm font-medium text-slate-400">
-                  Cari peserta berdasarkan nama, NIK, nomor peserta, email, atau skema.
+                  Pilih Asesor Penguji untuk masing-masing peserta melalui kolom dropdown.
                 </p>
               </div>
 
@@ -208,7 +244,7 @@ const PesertaJadwal = () => {
                 />
                 <input
                   type="text"
-                  placeholder="Cari nama, NIK, skema, atau email..."
+                  placeholder="Cari nama, NIK, atau nomor peserta..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full rounded-2xl border border-slate-100 bg-slate-50 py-3 pl-11 pr-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
@@ -218,15 +254,20 @@ const PesertaJadwal = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1050px] border-collapse text-left">
+            <table className="w-full min-w-[1100px] border-collapse text-left">
               <thead>
                 <tr className="bg-[#071E3D]">
                   <TableHead center>No</TableHead>
-                  <TableHead>Nama / NIK</TableHead>
-                  <TableHead>Skema</TableHead>
+                  <TableHead>Asesi (Peserta)</TableHead>
                   <TableHead>Nomor Peserta</TableHead>
-                  <TableHead>Status Asesmen</TableHead>
-                  <TableHead center>Nilai Akhir</TableHead>
+                  <TableHead>
+                      <div className="flex items-center gap-2">
+                          <UserPlus size={14} className="text-orange-500" /> 
+                          Asesor Penguji
+                      </div>
+                  </TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead center>Nilai</TableHead>
                   <TableHead center>Aksi</TableHead>
                 </tr>
               </thead>
@@ -255,8 +296,7 @@ const PesertaJadwal = () => {
                     const profile = getProfile(row.user);
                     const namaLengkap = profile?.nama_lengkap || row.user?.username || row.user?.nama_lengkap || '-';
                     const nik = profile?.nik || '-';
-                    const namaSkema = getSkemaName(row.jadwal);
-
+                    
                     return (
                       <tr
                         key={row.id_peserta}
@@ -274,15 +314,49 @@ const PesertaJadwal = () => {
                         </td>
 
                         <td className="px-5 py-4">
-                          <div className="max-w-[280px] text-sm font-semibold leading-relaxed text-slate-500 line-clamp-2" title={namaSkema}>
-                            {namaSkema}
-                          </div>
-                        </td>
-
-                        <td className="px-5 py-4">
                           <span className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm font-black text-[#071E3D]">
                             {row.nomor_peserta || '-'}
                           </span>
+                        </td>
+
+                        {/* --- KOLOM PILIH ASESOR --- */}
+                        {/* UPDATE: Logika pengambilan nama agar tampil bersih tanpa embel-email/nik jika memungkinkan */}
+                        <td className="px-5 py-4">
+                           {listAsesor.length === 0 ? (
+                               <span className="text-xs font-semibold italic text-red-500">
+                                   *Belum ada Asesor Penguji
+                               </span>
+                           ) : (
+                               <select 
+                                  value={row.id_asesor || ""}
+                                  onChange={(e) => handleAssignAsesor(row.id_peserta, e.target.value)}
+                                  className={`w-full max-w-[220px] cursor-pointer appearance-none rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold outline-none transition-all focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 ${row.id_asesor ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-50 text-slate-500'}`}
+                               >
+                                   <option value="">-- Pilih Asesor --</option>
+                                   {listAsesor.map(a => {
+                                       const u = a.user || a.User || {};
+                                       const asId = u.id_user || u.id || a.id_user;
+                                       
+                                       // Prioritaskan nama lengkap dari profile, jika tidak ada baru nama/username, tanpa NIK/Email
+                                       let asName = 'Asesor (Data Belum Lengkap)';
+                                       
+                                       if(u.ProfileAsesor && u.ProfileAsesor.nama_lengkap) {
+                                           asName = u.ProfileAsesor.nama_lengkap;
+                                       } else if(u.profile_asesor && u.profile_asesor.nama_lengkap) {
+                                           asName = u.profile_asesor.nama_lengkap;
+                                       } else if(u.nama) {
+                                           asName = u.nama;
+                                       } else if (u.username && !u.username.match(/^\d+$/)) {
+                                          // Jika username bukan NIK (angka saja)
+                                           asName = u.username;
+                                       }
+
+                                       return (
+                                          <option key={asId} value={asId}>{asName}</option>
+                                       )
+                                   })}
+                               </select>
+                           )}
                         </td>
 
                         <td className="px-5 py-4">
@@ -329,7 +403,7 @@ const PesertaJadwal = () => {
                   Detail Peserta Asesmen
                 </h3>
                 <p className="mt-1 text-sm font-medium text-slate-400">
-                  Rincian data peserta, status asesmen, nilai, dan catatan asesor.
+                  Rincian data peserta, status asesmen, nilai, dan catatan.
                 </p>
               </div>
 
@@ -365,16 +439,27 @@ const PesertaJadwal = () => {
                   </div>
                 </DetailSection>
 
-                {/* Status & Nilai */}
-                <DetailSection icon={<Award size={17} />} title="Status & Nilai">
+                {/* Status & Asesor */}
+                <DetailSection icon={<Award size={17} />} title="Status & Penguji">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <DetailItem label="Status Asesmen">
                       <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(selectedPeserta.status_asesmen)}`}>
                         {selectedPeserta.status_asesmen?.replace('_', ' ') || 'Terjadwal'}
                       </span>
                     </DetailItem>
-                    <DetailItem label="Nilai Akhir">
-                      <span className="text-lg font-black text-orange-500">
+                    <DetailItem label="Asesor Penguji">
+                        <span className="font-semibold text-orange-600">
+                           {/* Update logika pengambilan nama asesor untuk detail modal */}
+                           {(() => {
+                              const profAs = getProfileAsesor(selectedPeserta.asesor_penguji);
+                              if(profAs && profAs.nama_lengkap) return profAs.nama_lengkap;
+                              if(selectedPeserta.asesor_penguji && selectedPeserta.asesor_penguji.username && !selectedPeserta.asesor_penguji.username.match(/^\d+$/)) return selectedPeserta.asesor_penguji.username;
+                              return 'Belum Ditugaskan';
+                           })()}
+                        </span>
+                    </DetailItem>
+                    <DetailItem label="Nilai Akhir" wide>
+                      <span className="text-lg font-black text-[#071E3D]">
                         {selectedPeserta.nilai_akhir || 'Belum dinilai'}
                       </span>
                     </DetailItem>

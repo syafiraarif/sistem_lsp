@@ -15,6 +15,11 @@ const PesertaJadwal = sequelize.define("peserta_jadwal", {
     type: DataTypes.INTEGER,
     allowNull: false
   },
+  // --- TAMBAHAN BARU ---
+  id_asesor: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
   status_asesmen: {
     type: DataTypes.ENUM(
       "terdaftar",

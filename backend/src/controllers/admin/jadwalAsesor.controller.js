@@ -1,13 +1,12 @@
-const { JadwalAsesor, User } = require("../../models");
+// PASTIKAN ProfileAsesor ditambahkan di import ini
+const { JadwalAsesor, User, ProfileAsesor } = require("../../models"); 
 const response = require("../../utils/response.util");
 const sequelize = require("../../config/database");
 
 exports.assign = async (req, res) => {
-
   const t = await sequelize.transaction();
 
   try {
-
     const { id_jadwal, id_user, jenis_tugas, catatan } = req.body;
 
     if (!id_jadwal || !id_user || !jenis_tugas) {
@@ -24,7 +23,6 @@ exports.assign = async (req, res) => {
     }, { transaction: t });
 
     await t.commit();
-
     return response.success(res, "Asesor berhasil ditugaskan", data);
 
   } catch (err) {
@@ -35,11 +33,18 @@ exports.assign = async (req, res) => {
 
 exports.getByJadwal = async (req, res) => {
   try {
-
     const data = await JadwalAsesor.findAll({
       where: { id_jadwal: req.params.id_jadwal },
       include: [
-        { model: User, as: "asesor", attributes: ["id_user","username","email"] }
+        { 
+          model: User, 
+          as: "asesor", 
+          attributes: ["id_user","username","email"],
+          // TAMBAHKAN INCLUDE PROFILE ASESOR DI SINI
+          include: [
+            { model: ProfileAsesor } 
+          ]
+        }
       ]
     });
 
@@ -52,7 +57,6 @@ exports.getByJadwal = async (req, res) => {
 
 exports.updateStatus = async (req, res) => {
   try {
-
     const { status } = req.body;
 
     const data = await JadwalAsesor.findOne({
@@ -67,7 +71,6 @@ exports.updateStatus = async (req, res) => {
       return response.error(res, "Data tidak ditemukan", 404);
 
     await data.update({ status });
-
     return response.success(res, "Status tugas diperbarui", data);
 
   } catch (err) {
@@ -77,7 +80,6 @@ exports.updateStatus = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-
     const deleted = await JadwalAsesor.destroy({
       where: {
         id_jadwal: req.params.id_jadwal,
