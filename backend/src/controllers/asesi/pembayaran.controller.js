@@ -50,7 +50,7 @@ exports.getDetailPembayaran = async (req, res) => {
       },
       virtual_account: {
         enabled: true,
-        nomor_va: "8808" + String(id_skema).padStart(6, "0"),
+        nomor_va: `8808${String(id_skema).padStart(6, "0")}`,
         nama_bank: "Virtual Account",
         atas_nama: "LSP",
       },
@@ -122,8 +122,6 @@ exports.submitPembayaran = async (req, res) => {
       );
     }
 
-    const waktuBatas = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
     const pembayaran = await Pembayaran.create({
       id_skema,
       metode_pembayaran,
@@ -141,25 +139,18 @@ exports.submitPembayaran = async (req, res) => {
           : null,
       nominal: biaya[0].nominal,
       status: "pending",
-      waktu_batas: waktuBatas,
+      waktu_batas: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
-
-    let tujuanDetail = null;
-
-    if (id_tujuan_transfer) {
-      tujuanDetail = await TujuanTransfer.findByPk(id_tujuan_transfer);
-    }
 
     return response.success(res, "Pembayaran berhasil dibuat", {
       id_pembayaran: pembayaran.id_pembayaran,
-      metode_pembayaran,
-      jalur_pembayaran: pembayaran.jalur_pembayaran,
-      tujuan_transfer: tujuanDetail,
-      nominal: biaya[0].nominal,
       status: pembayaran.status,
+      metode_pembayaran: pembayaran.metode_pembayaran,
+      jalur_pembayaran: pembayaran.jalur_pembayaran,
+      nominal: pembayaran.nominal,
       waktu_batas: pembayaran.waktu_batas,
       instruksi:
-        "Silakan lakukan pembayaran, upload bukti bayar, lalu tunggu validasi admin.",
+        "Silakan bayar, upload bukti pembayaran, lalu tunggu validasi admin.",
     });
   } catch (err) {
     console.error("SUBMIT PEMBAYARAN ERROR:", err);
@@ -184,7 +175,9 @@ exports.uploadBuktiBayar = async (req, res) => {
 
     await pembayaran.update({
       status: "menunggu_validasi",
-      bukti_bayar: file ? file.path.replace(/\\/g, "/") : pembayaran.bukti_bayar,
+      bukti_bayar: file
+        ? file.path.replace(/\\/g, "/")
+        : pembayaran.bukti_bayar,
       waktu_pembayaran: new Date(),
     });
 
@@ -216,10 +209,6 @@ exports.getStatusPembayaran = async (req, res) => {
       return response.success(res, "Belum ada pembayaran untuk skema ini", {
         id_pembayaran: null,
         status: "belum bayar",
-        metode_pembayaran: null,
-        jalur_pembayaran: null,
-        waktu_batas: null,
-        bukti_bayar: null,
       });
     }
 

@@ -365,6 +365,9 @@ export default function JadwalSaya() {
         filter === "semua" ||
         (filter === "dipilih" && sudahDipilih) ||
         (filter === "belum" && !sudahDipilih) ||
+        (filter === "validasi" &&
+          (statusBayar === "pending" ||
+            statusBayar === "menunggu_validasi")) ||
         (filter === "paid" && statusBayar === "paid");
 
       return matchSearch && matchFilter;
@@ -547,6 +550,7 @@ export default function JadwalSaya() {
                 <option value="semua">Semua</option>
                 <option value="dipilih">Dipilih</option>
                 <option value="belum">Belum Dipilih</option>
+                <option value="validasi">Menunggu Validasi</option>
                 <option value="paid">Paid</option>
               </select>
             </div>
@@ -565,7 +569,8 @@ export default function JadwalSaya() {
                 const statusBayar = getStatusPembayaran(item);
                 const sudahPaid = statusBayar === "paid";
                 const menungguValidasi =
-                  statusBayar === "pending" || statusBayar === "menunggu_validasi";
+                  statusBayar === "pending" ||
+                  statusBayar === "menunggu_validasi";
                 const apl01Done = isAPL01Done(item);
 
                 return (
@@ -579,6 +584,7 @@ export default function JadwalSaya() {
                     sedangMemilih={sedangMemilih}
                     statusBayar={statusBayar}
                     sudahPaid={sudahPaid}
+                    menungguValidasi={menungguValidasi}
                     apl01Done={apl01Done}
                     formatTanggal={formatTanggal}
                     pilihJadwal={pilihJadwal}
@@ -606,6 +612,7 @@ function ScheduleCard({
   sedangMemilih,
   statusBayar,
   sudahPaid,
+  menungguValidasi,
   apl01Done,
   formatTanggal,
   pilihJadwal,
@@ -639,8 +646,8 @@ function ScheduleCard({
                   <StatusBadge type="light" label="Tersedia" />
                 )}
 
-                {statusBayar === "pending" && (
-                  <StatusBadge type="warning" label="Menunggu ACC" />
+                {menungguValidasi && (
+                  <StatusBadge type="warning" label="Menunggu Validasi" />
                 )}
 
                 {statusBayar === "paid" && (
