@@ -15,11 +15,9 @@ exports.getPesertaByJadwal = async (req, res) => {
           include: [{ model: ProfileAsesi }] 
         },
         { 
-<<<<<<< HEAD
           model: Skema,
-      as: "skema",
-      attributes: ["id_skema", "kode_skema", "judul_skema"],
-=======
+          as: "skema",
+          attributes: ["id_skema", "kode_skema", "judul_skema"],
           model: Jadwal, 
           as: "jadwal",
           include: [{ model: Skema, as: "skema" }] 
@@ -28,7 +26,6 @@ exports.getPesertaByJadwal = async (req, res) => {
           model: User,
           as: "asesor_penguji", 
           include: [{ model: ProfileAsesor }]
->>>>>>> dac2c8f655fedf3bf74dca4232b301c6b3516c9f
         }
       ],
       distinct: true
@@ -61,11 +58,9 @@ exports.getAllPesertaGlobal = async (req, res) => {
           include: [{ model: ProfileAsesi }] 
         },
         {
-<<<<<<< HEAD
-          model: Skema,
-      as: "skema",
-      attributes: ["id_skema", "kode_skema", "judul_skema"],
-=======
+              model: Skema,
+          as: "skema",
+          attributes: ["id_skema", "kode_skema", "judul_skema"],
           model: Jadwal,
           as: "jadwal",
           include: [{ model: Skema, as: "skema" }] 
@@ -74,7 +69,6 @@ exports.getAllPesertaGlobal = async (req, res) => {
           model: User,
           as: "asesor_penguji",
           include: [{ model: ProfileAsesor }]
->>>>>>> dac2c8f655fedf3bf74dca4232b301c6b3516c9f
         }
       ],
       distinct: true 

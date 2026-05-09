@@ -8,6 +8,7 @@ exports.getAll = async (req, res) => {
       include: [
         {
           model: Skema,
+          as: "skema",
           required: false,
           attributes: ["id_skema", "kode_skema", "judul_skema"],
         },

@@ -21,10 +21,7 @@ import {
   FaChevronDown,
   FaChevronRight,
   FaThumbtack,
-<<<<<<< HEAD
   FaMoneyBillWave, // Tambahan icon jika butuh indikator pin
-=======
->>>>>>> dac2c8f655fedf3bf74dca4232b301c6b3516c9f
 } from "react-icons/fa";
 import { Menu, X, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
