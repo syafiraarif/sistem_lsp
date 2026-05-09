@@ -21,6 +21,7 @@ import {
   FaChevronDown,
   FaChevronRight,
   FaThumbtack,
+  FaMoneyBillWave, // Tambahan icon jika butuh indikator pin
 } from "react-icons/fa";
 import { Menu, X, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -523,6 +524,14 @@ const SidebarContent = ({
           />
 
           <SectionLabel isExpanded={isExpanded}>Keuangan & Admin</SectionLabel>
+
+          <NavItem
+            icon={<FaMoneyBillWave />}
+            label="Validasi Pembayaran"
+            active={isActive("/admin/pembayaran")}
+            onClick={() => handleNav("/admin/pembayaran")}
+            isExpanded={isExpanded}
+          />
 
           <NavItem
             icon={<FaEye />}

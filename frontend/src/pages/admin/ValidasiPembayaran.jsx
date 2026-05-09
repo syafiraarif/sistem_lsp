@@ -170,28 +170,28 @@ export default function ValidasiPembayaran() {
                         )}
                       </td>
                       <td className="p-4 text-center">
-                        {item.status === "menunggu_validasi" ? (
-                          <div className="flex justify-center gap-2">
-                            <button
-                              onClick={() => approve(item.id_pembayaran)}
-                              className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-xs font-black text-emerald-600 hover:bg-emerald-600 hover:text-white"
-                            >
-                              <CheckCircle size={15} />
-                              Terima
-                            </button>
-                            <button
-                              onClick={() => reject(item.id_pembayaran)}
-                              className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-xs font-black text-red-600 hover:bg-red-600 hover:text-white"
-                            >
-                              <XCircle size={15} />
-                              Tolak
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs font-bold text-slate-400">
-                            Tidak ada aksi
-                          </span>
-                        )}
+                        {["pending", "menunggu_validasi"].includes(item.status) ? (
+                    <div className="flex justify-center gap-2">
+                        <button
+                        onClick={() => approve(item.id_pembayaran)}
+                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-xs font-black text-emerald-600 hover:bg-emerald-600 hover:text-white"
+                        >
+                        <CheckCircle size={15} />
+                        Terima
+                        </button>
+                        <button
+                        onClick={() => reject(item.id_pembayaran)}
+                        className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-xs font-black text-red-600 hover:bg-red-600 hover:text-white"
+                        >
+                        <XCircle size={15} />
+                        Tolak
+                        </button>
+                    </div>
+                    ) : (
+                    <span className="text-xs font-bold text-slate-400">
+                        Tidak ada aksi
+                    </span>
+                    )}
                       </td>
                     </tr>
                   ))}
@@ -215,11 +215,11 @@ export default function ValidasiPembayaran() {
 
 function StatusBadge({ status }) {
   const map = {
-    menunggu_validasi: "bg-amber-50 text-amber-700 border-amber-100",
-    paid: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    ditolak: "bg-red-50 text-red-700 border-red-100",
-    pending: "bg-slate-50 text-slate-600 border-slate-100",
-  };
+  menunggu_validasi: "bg-amber-50 text-amber-700 border-amber-100",
+  paid: "bg-emerald-50 text-emerald-700 border-emerald-100",
+  rejected: "bg-red-50 text-red-700 border-red-100",
+  pending: "bg-slate-50 text-slate-600 border-slate-100",
+};
 
   return (
     <span

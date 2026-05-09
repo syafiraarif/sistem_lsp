@@ -8,6 +8,7 @@ exports.getAll = async (req, res) => {
       include: [
         {
           model: Skema,
+          as: "skema",
           required: false,
           attributes: ["id_skema", "kode_skema", "judul_skema"],
         },
@@ -30,17 +31,14 @@ exports.approve = async (req, res) => {
       return response.error(res, "Pembayaran tidak ditemukan", 404);
     }
 
-    if (pembayaran.status !== "menunggu_validasi") {
-      return response.error(
-        res,
-        "Pembayaran belum upload bukti atau sudah diproses",
-        400
-      );
+    if (!["pending", "menunggu_validasi"].includes(pembayaran.status)) {
+      return response.error(res, "Pembayaran sudah diproses", 400);
     }
 
     await pembayaran.update({
       status: "paid",
       catatan_admin: req.body?.catatan_admin || null,
+      divalidasi_pada: new Date(),
     });
 
     return response.success(res, "Pembayaran berhasil diterima", pembayaran);
@@ -63,8 +61,9 @@ exports.reject = async (req, res) => {
     }
 
     await pembayaran.update({
-      status: "ditolak",
+      status: "rejected",
       catatan_admin: req.body?.catatan_admin || "Pembayaran ditolak admin",
+      divalidasi_pada: new Date(),
     });
 
     return response.success(res, "Pembayaran berhasil ditolak", pembayaran);

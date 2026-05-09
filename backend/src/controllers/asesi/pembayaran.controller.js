@@ -16,15 +16,9 @@ exports.getDetailPembayaran = async (req, res) => {
       return response.error(res, "Skema tidak ditemukan", 404);
     }
 
-    const biaya = await BiayaUji.findAll({
+    const biaya = await BiayaUji.findOne({
       where: { id_skema },
-      attributes: [
-        "id_biaya",
-        "nominal",
-        "jenis_biaya",
-        "metode_uji",
-        "keterangan",
-      ],
+      order: [["id_biaya", "DESC"]],
     });
 
     const tujuanTransfer = await TujuanTransfer.findAll({
@@ -41,7 +35,7 @@ exports.getDetailPembayaran = async (req, res) => {
     return response.success(res, "Detail pembayaran", {
       skema: skema.judul_skema,
       kode_skema: skema.kode_skema,
-      harga: biaya.length > 0 ? biaya[0].nominal : 0,
+      harga: biaya?.nominal || 0,
       tujuan_transfer: tujuanTransfer,
       qris: {
         enabled: true,
@@ -96,11 +90,12 @@ exports.submitPembayaran = async (req, res) => {
       );
     }
 
-    const biaya = await BiayaUji.findAll({
+    const biaya = await BiayaUji.findOne({
       where: { id_skema },
+      order: [["id_biaya", "DESC"]],
     });
 
-    if (!biaya || biaya.length === 0) {
+    if (!biaya) {
       return response.error(res, "Harga untuk skema tidak ditemukan", 404);
     }
 
@@ -134,11 +129,9 @@ exports.submitPembayaran = async (req, res) => {
           ? "virtual_account"
           : jalur_pembayaran,
       id_tujuan_transfer:
-        metode_pembayaran === "transfer_rekening"
-          ? id_tujuan_transfer
-          : null,
-      nominal: biaya[0].nominal,
-      status: "pending",
+        metode_pembayaran === "transfer_rekening" ? id_tujuan_transfer : null,
+      nominal: biaya.nominal,
+      status: metode_pembayaran === "tunai" ? "menunggu_validasi" : "pending",
       waktu_batas: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
@@ -149,8 +142,6 @@ exports.submitPembayaran = async (req, res) => {
       jalur_pembayaran: pembayaran.jalur_pembayaran,
       nominal: pembayaran.nominal,
       waktu_batas: pembayaran.waktu_batas,
-      instruksi:
-        "Silakan bayar, upload bukti pembayaran, lalu tunggu validasi admin.",
     });
   } catch (err) {
     console.error("SUBMIT PEMBAYARAN ERROR:", err);
@@ -184,11 +175,7 @@ exports.uploadBuktiBayar = async (req, res) => {
     return response.success(
       res,
       "Bukti bayar berhasil diupload. Menunggu validasi admin.",
-      {
-        id_pembayaran: pembayaran.id_pembayaran,
-        status: "menunggu_validasi",
-        bukti_bayar: pembayaran.bukti_bayar,
-      }
+      pembayaran
     );
   } catch (err) {
     console.error("UPLOAD BUKTI BAYAR ERROR:", err);
@@ -212,15 +199,7 @@ exports.getStatusPembayaran = async (req, res) => {
       });
     }
 
-    return response.success(res, "Status pembayaran", {
-      id_pembayaran: pembayaran.id_pembayaran,
-      status: pembayaran.status,
-      metode_pembayaran: pembayaran.metode_pembayaran,
-      jalur_pembayaran: pembayaran.jalur_pembayaran,
-      waktu_batas: pembayaran.waktu_batas,
-      bukti_bayar: pembayaran.bukti_bayar,
-      catatan_admin: pembayaran.catatan_admin,
-    });
+    return response.success(res, "Status pembayaran", pembayaran);
   } catch (err) {
     console.error("GET STATUS PEMBAYARAN ERROR:", err);
     return response.error(res, err.message);
