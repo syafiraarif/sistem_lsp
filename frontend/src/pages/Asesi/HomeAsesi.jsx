@@ -62,7 +62,7 @@ const HomeAsesi = () => {
   const cards = [
     {
       icon: <User size={24} />,
-      title: "Profile Anda",
+      title: "Profile",
       desc: "Lihat dan lengkapi data pribadi asesi.",
       path: "/asesi/profile",
     },
@@ -74,7 +74,7 @@ const HomeAsesi = () => {
     },
     {
       icon: <ClipboardList size={24} />,
-      title: "Asesmen Anda",
+      title: "Asesmen",
       desc: "Pantau proses APL01, APL02, dan asesmen.",
       path: "/asesi/jadwal-saya",
     },
@@ -148,7 +148,7 @@ const HomeAsesi = () => {
                   </p>
 
                   <h2 className="text-2xl font-black leading-tight">
-                    Kelola Sertifikasi Anda
+                    Kelola Sertifikasi
                   </h2>
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">

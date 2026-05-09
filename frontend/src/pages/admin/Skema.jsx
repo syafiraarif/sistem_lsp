@@ -558,7 +558,7 @@ const Skema = () => {
                     <DetailItem label="Kode Sektor">{selectedSkema.kode_sektor || '-'}</DetailItem>
                     <DetailItem label="Kode KBLI">{selectedSkema.kode_kbli || '-'}</DetailItem>
                     <DetailItem label="Kode KBJI">{selectedSkema.kode_kbji || '-'}</DetailItem>
-                    <DetailItem label="Skor Min AI 05">{selectedSkema.skor_min_ai05 || '-'}</DetailItem>
+                    <DetailItem label="Skor Min IA 05">{selectedSkema.skor_min_ai05 || '-'}</DetailItem>
                   </div>
                 </InfoPanel>
 
@@ -757,7 +757,7 @@ const Skema = () => {
                         </div>
 
                         <div>
-                          <Label>Skor Min. (AI 05) <span className="text-red-500">*</span></Label>
+                          <Label>Skor Min. (IA 05) <span className="text-red-500">*</span></Label>
                           <input type="number" name="skor_min_ai05" value={formData.skor_min_ai05} onChange={handleInputChange} className={inputClass('skor_min_ai05')} required />
                           {errors.skor_min_ai05 && <ErrorText>{errors.skor_min_ai05}</ErrorText>}
                         </div>

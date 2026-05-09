@@ -365,6 +365,9 @@ export default function JadwalSaya() {
         filter === "semua" ||
         (filter === "dipilih" && sudahDipilih) ||
         (filter === "belum" && !sudahDipilih) ||
+        (filter === "validasi" &&
+          (statusBayar === "pending" ||
+            statusBayar === "menunggu_validasi")) ||
         (filter === "paid" && statusBayar === "paid");
 
       return matchSearch && matchFilter;
@@ -547,6 +550,7 @@ export default function JadwalSaya() {
                 <option value="semua">Semua</option>
                 <option value="dipilih">Dipilih</option>
                 <option value="belum">Belum Dipilih</option>
+                <option value="validasi">Menunggu Validasi</option>
                 <option value="paid">Paid</option>
               </select>
             </div>
@@ -564,6 +568,9 @@ export default function JadwalSaya() {
                 const sedangMemilih = choosingId === item.id_jadwal;
                 const statusBayar = getStatusPembayaran(item);
                 const sudahPaid = statusBayar === "paid";
+                const menungguValidasi =
+                  statusBayar === "pending" ||
+                  statusBayar === "menunggu_validasi";
                 const apl01Done = isAPL01Done(item);
 
                 return (
@@ -577,6 +584,7 @@ export default function JadwalSaya() {
                     sedangMemilih={sedangMemilih}
                     statusBayar={statusBayar}
                     sudahPaid={sudahPaid}
+                    menungguValidasi={menungguValidasi}
                     apl01Done={apl01Done}
                     formatTanggal={formatTanggal}
                     pilihJadwal={pilihJadwal}
@@ -604,6 +612,7 @@ function ScheduleCard({
   sedangMemilih,
   statusBayar,
   sudahPaid,
+  menungguValidasi,
   apl01Done,
   formatTanggal,
   pilihJadwal,
@@ -637,8 +646,8 @@ function ScheduleCard({
                   <StatusBadge type="light" label="Tersedia" />
                 )}
 
-                {statusBayar === "pending" && (
-                  <StatusBadge type="warning" label="Menunggu ACC" />
+                {menungguValidasi && (
+                  <StatusBadge type="warning" label="Menunggu Validasi" />
                 )}
 
                 {statusBayar === "paid" && (
@@ -749,10 +758,17 @@ function ScheduleCard({
                 </div>
               )}
 
-              <ActionButton
-                title="Presensi"
-                onClick={() => pergiPresensi(item)}
-              />
+              {apl01Done ? (
+                <ActionButton title="Presensi" onClick={() => pergiPresensi(item)} />
+              ) : (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-[11px] font-bold text-slate-500 leading-relaxed">
+                  Presensi akan tersedia setelah alur asesmen dibuka.
+                </div>
+              )}
+            </div>
+          ) : menungguValidasi ? (
+            <div className="rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-[11px] font-bold text-amber-700 leading-relaxed">
+              Pembayaran sedang menunggu validasi admin. APL01 akan muncul setelah pembayaran diterima.
             </div>
           ) : (
             <button
