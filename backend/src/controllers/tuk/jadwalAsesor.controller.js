@@ -13,10 +13,26 @@ const { Op } = require("sequelize");
 // ======================================
 
 const JENIS_TUGAS_RULE = {
-  asesor_penguji: 1,
-  verifikator_tuk: 1,
-  validator_mkva: 2,
-  komite_teknis: 1
+
+  asesor_penguji: {
+    min: 1,
+    dynamic: true
+  },
+
+  verifikator_tuk: {
+    min: 2,
+    max: 2
+  },
+
+  validator_mkva: {
+    min: 2,
+    max: 3
+  },
+
+  komite_teknis: {
+    min: 3,
+    max: 3
+  }
 };
 
 
@@ -26,11 +42,13 @@ const JENIS_TUGAS_RULE = {
 
 const manageAsesor = async (req, res) => {
 
-  const transaction = await JadwalAsesor.sequelize.transaction();
+  const transaction =
+    await JadwalAsesor.sequelize.transaction();
 
   try {
 
     const { id, jenisTugas } = req.params;
+
     const { listAsesor } = req.body;
 
     // ======================================
@@ -51,29 +69,17 @@ const manageAsesor = async (req, res) => {
     // VALIDASI LIST ASESOR
     // ======================================
 
-    if (!Array.isArray(listAsesor) || listAsesor.length === 0) {
+    if (
+      !Array.isArray(listAsesor) ||
+      listAsesor.length === 0
+    ) {
 
       await transaction.rollback();
 
       return res.status(400).json({
         success: false,
-        message: "List asesor wajib diisi"
-      });
-    }
-
-    // ======================================
-    // VALIDASI MAX ASESOR
-    // ======================================
-
-    const maxAsesor = JENIS_TUGAS_RULE[jenisTugas];
-
-    if (listAsesor.length > maxAsesor) {
-
-      await transaction.rollback();
-
-      return res.status(400).json({
-        success: false,
-        message: `Maksimal ${maxAsesor} asesor untuk ${jenisTugas}`
+        message:
+          "List asesor wajib diisi"
       });
     }
 
@@ -81,11 +87,17 @@ const manageAsesor = async (req, res) => {
     // CEK JADWAL
     // ======================================
 
-    const jadwal = await Jadwal.findOne({
+    const jadwal =
+      await Jadwal.findOne({
+
       where: {
-        id_jadwal: parseInt(id),
-        id_tuk: req.user.id_tuk
+        id_jadwal:
+          parseInt(id),
+
+        id_tuk:
+          req.user.id_tuk
       },
+
       transaction
     });
 
@@ -95,7 +107,23 @@ const manageAsesor = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "Jadwal tidak ditemukan"
+        message:
+          "Jadwal tidak ditemukan"
+      });
+    }
+
+    // ======================================
+    // HANYA JADWAL OPEN
+    // ======================================
+
+    if (jadwal.status !== "open") {
+
+      await transaction.rollback();
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Asesor hanya bisa ditambahkan pada jadwal open"
       });
     }
 
@@ -103,37 +131,118 @@ const manageAsesor = async (req, res) => {
     // AMBIL ID USER
     // ======================================
 
-    const asesorIds = listAsesor.map(item =>
-      parseInt(item.id_user)
-    );
+    const asesorIds =
+      listAsesor.map(item =>
+        parseInt(item.id_user)
+      );
 
     // ======================================
     // VALIDASI DUPLIKAT
     // ======================================
 
-    const uniqueIds = [...new Set(asesorIds)];
+    const uniqueIds =
+      [...new Set(asesorIds)];
 
-    if (uniqueIds.length !== asesorIds.length) {
+    if (
+      uniqueIds.length !== asesorIds.length
+    ) {
 
       await transaction.rollback();
 
       return res.status(400).json({
         success: false,
-        message: "Terdapat asesor duplicate"
+        message:
+          "Terdapat asesor duplicate"
       });
+    }
+
+    // ======================================
+    // VALIDASI JUMLAH ASESOR
+    // ======================================
+
+    const rule =
+      JENIS_TUGAS_RULE[jenisTugas];
+
+    // ======================================
+    // KHUSUS ASESOR PENGUJI
+    // 1 ASESOR = 10 ASESI
+    // ======================================
+
+    if (
+      jenisTugas === "asesor_penguji"
+    ) {
+
+      const totalAsesorNeeded =
+        Math.ceil(
+          jadwal.kuota / 10
+        );
+
+      if (
+        listAsesor.length !==
+        totalAsesorNeeded
+      ) {
+
+        await transaction.rollback();
+
+        return res.status(400).json({
+          success: false,
+          message:
+            `Kuota ${jadwal.kuota} peserta membutuhkan ${totalAsesorNeeded} asesor penguji`
+        });
+      }
+    }
+
+    // ======================================
+    // VALIDASI FIXED TEAM
+    // ======================================
+
+    else {
+
+      if (
+        listAsesor.length <
+        rule.min
+      ) {
+
+        await transaction.rollback();
+
+        return res.status(400).json({
+          success: false,
+          message:
+            `Minimal ${rule.min} asesor untuk ${jenisTugas}`
+        });
+      }
+
+      if (
+        listAsesor.length >
+        rule.max
+      ) {
+
+        await transaction.rollback();
+
+        return res.status(400).json({
+          success: false,
+          message:
+            `Maksimal ${rule.max} asesor untuk ${jenisTugas}`
+        });
+      }
     }
 
     // ======================================
     // VALIDASI ASESOR AKTIF
     // ======================================
 
-    const asesorValid = await ProfileAsesor.findAll({
+    const asesorValid =
+      await ProfileAsesor.findAll({
 
       where: {
+
         id_user: {
-          [Op.in]: asesorIds
+          [Op.in]:
+            asesorIds
         },
-        status_asesor: "aktif"
+
+        status_asesor:
+          "aktif"
       },
 
       include: [
@@ -142,7 +251,8 @@ const manageAsesor = async (req, res) => {
           as: "user",
           required: true,
           where: {
-            status_user: "aktif"
+            status_user:
+              "aktif"
           },
           attributes: [
             "id_user",
@@ -156,13 +266,83 @@ const manageAsesor = async (req, res) => {
       transaction
     });
 
-    if (asesorValid.length !== asesorIds.length) {
+    if (
+      asesorValid.length !==
+      asesorIds.length
+    ) {
 
       await transaction.rollback();
 
       return res.status(400).json({
         success: false,
-        message: "Terdapat asesor tidak valid / nonaktif"
+        message:
+          "Terdapat asesor tidak valid / nonaktif"
+      });
+    }
+
+    // ======================================
+    // VALIDASI BENTROK JADWAL
+    // ======================================
+
+    const bentrok =
+      await JadwalAsesor.findAll({
+
+      include: [
+        {
+          model: Jadwal,
+          required: true,
+
+          where: {
+
+            status: {
+              [Op.in]: [
+                "open",
+                "ongoing"
+              ]
+            },
+
+            [Op.or]: [
+
+              {
+                tgl_awal:
+                  jadwal.tgl_awal
+              },
+
+              {
+                tgl_akhir:
+                  jadwal.tgl_akhir
+              }
+            ]
+          }
+        }
+      ],
+
+      where: {
+
+        id_user: {
+          [Op.in]:
+            asesorIds
+        },
+
+        status: "aktif",
+
+        id_jadwal: {
+          [Op.ne]:
+            parseInt(id)
+        }
+      },
+
+      transaction
+    });
+
+    if (bentrok.length > 0) {
+
+      await transaction.rollback();
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Terdapat asesor yang sudah memiliki jadwal pada tanggal tersebut"
       });
     }
 
@@ -171,10 +351,16 @@ const manageAsesor = async (req, res) => {
     // ======================================
 
     await JadwalAsesor.destroy({
+
       where: {
-        id_jadwal: parseInt(id),
-        jenis_tugas: jenisTugas
+
+        id_jadwal:
+          parseInt(id),
+
+        jenis_tugas:
+          jenisTugas
       },
+
       transaction
     });
 
@@ -182,32 +368,39 @@ const manageAsesor = async (req, res) => {
     // INSERT BARU
     // ======================================
 
-    const payload = asesorIds.map(id_user => ({
+    const payload =
+      asesorIds.map(id_user => ({
 
-      id_jadwal: parseInt(id),
+      id_jadwal:
+        parseInt(id),
 
-      id_user: parseInt(id_user),
+      id_user:
+        parseInt(id_user),
 
-      jenis_tugas: jenisTugas,
+      jenis_tugas:
+        jenisTugas,
 
       status: "aktif",
 
-      assigned_by: req.user.id_user,
+      assigned_by:
+        req.user.id_user,
 
-      created_at: new Date()
+      created_at:
+        new Date()
 
     }));
 
-
-    await JadwalAsesor.bulkCreate(payload, {
-      transaction
-    });
+    await JadwalAsesor.bulkCreate(
+      payload,
+      { transaction }
+    );
 
     await transaction.commit();
 
     return res.json({
       success: true,
-      message: `${jenisTugas} berhasil disimpan`,
+      message:
+        `${jenisTugas} berhasil disimpan`,
       total: payload.length,
       data: payload
     });
@@ -216,7 +409,10 @@ const manageAsesor = async (req, res) => {
 
     await transaction.rollback();
 
-    console.error("MANAGE ASESOR ERROR:", err);
+    console.error(
+      "MANAGE ASESOR ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -234,28 +430,29 @@ const listAsesorJadwal = async (req, res) => {
 
   try {
 
-    const { id, jenisTugas } = req.params;
+    const { id, jenisTugas } =
+      req.params;
 
-    // ======================================
-    // VALIDASI JENIS TUGAS
-    // ======================================
-
-    if (!JENIS_TUGAS_RULE[jenisTugas]) {
+    if (
+      !JENIS_TUGAS_RULE[jenisTugas]
+    ) {
 
       return res.status(400).json({
         success: false,
-        message: "Jenis tugas tidak valid"
+        message:
+          "Jenis tugas tidak valid"
       });
     }
 
-    // ======================================
-    // CEK JADWAL
-    // ======================================
+    const jadwal =
+      await Jadwal.findOne({
 
-    const jadwal = await Jadwal.findOne({
       where: {
-        id_jadwal: parseInt(id),
-        id_tuk: req.user.id_tuk
+        id_jadwal:
+          parseInt(id),
+
+        id_tuk:
+          req.user.id_tuk
       }
     });
 
@@ -263,19 +460,22 @@ const listAsesorJadwal = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "Jadwal tidak ditemukan"
+        message:
+          "Jadwal tidak ditemukan"
       });
     }
 
-    // ======================================
-    // GET DATA
-    // ======================================
-
-    const data = await JadwalAsesor.findAll({
+    const data =
+      await JadwalAsesor.findAll({
 
       where: {
-        id_jadwal: parseInt(id),
-        jenis_tugas: jenisTugas,
+
+        id_jadwal:
+          parseInt(id),
+
+        jenis_tugas:
+          jenisTugas,
+
         status: "aktif"
       },
 
@@ -284,6 +484,7 @@ const listAsesorJadwal = async (req, res) => {
         {
           model: User,
           as: "asesor",
+
           attributes: [
             "id_user",
             "username",
@@ -295,6 +496,7 @@ const listAsesorJadwal = async (req, res) => {
         {
           model: ProfileAsesor,
           as: "profileAsesor",
+
           attributes: [
             "nama_lengkap",
             "gelar_depan",
@@ -321,7 +523,10 @@ const listAsesorJadwal = async (req, res) => {
 
   } catch (err) {
 
-    console.error("LIST ASESOR ERROR:", err);
+    console.error(
+      "LIST ASESOR ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -337,35 +542,41 @@ const listAsesorJadwal = async (req, res) => {
 
 const removeAsesor = async (req, res) => {
 
-  const transaction = await JadwalAsesor.sequelize.transaction();
+  const transaction =
+    await JadwalAsesor.sequelize.transaction();
 
   try {
 
-    const { id, jenisTugas, idUser } = req.params;
+    const {
+      id,
+      jenisTugas,
+      idUser
+    } = req.params;
 
-    // ======================================
-    // VALIDASI JENIS TUGAS
-    // ======================================
-
-    if (!JENIS_TUGAS_RULE[jenisTugas]) {
+    if (
+      !JENIS_TUGAS_RULE[jenisTugas]
+    ) {
 
       await transaction.rollback();
 
       return res.status(400).json({
         success: false,
-        message: "Jenis tugas tidak valid"
+        message:
+          "Jenis tugas tidak valid"
       });
     }
 
-    // ======================================
-    // CEK JADWAL
-    // ======================================
+    const jadwal =
+      await Jadwal.findOne({
 
-    const jadwal = await Jadwal.findOne({
       where: {
-        id_jadwal: parseInt(id),
-        id_tuk: req.user.id_tuk
+        id_jadwal:
+          parseInt(id),
+
+        id_tuk:
+          req.user.id_tuk
       },
+
       transaction
     });
 
@@ -375,20 +586,42 @@ const removeAsesor = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "Jadwal tidak ditemukan"
+        message:
+          "Jadwal tidak ditemukan"
       });
     }
 
     // ======================================
-    // DELETE
+    // HANYA OPEN / DRAFT
     // ======================================
 
-    const deleted = await JadwalAsesor.destroy({
+    if (
+      !["draft", "open"]
+        .includes(jadwal.status)
+    ) {
+
+      await transaction.rollback();
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Asesor tidak bisa dihapus pada jadwal ongoing/selesai"
+      });
+    }
+
+    const deleted =
+      await JadwalAsesor.destroy({
 
       where: {
-        id_jadwal: parseInt(id),
-        id_user: parseInt(idUser),
-        jenis_tugas: jenisTugas
+
+        id_jadwal:
+          parseInt(id),
+
+        id_user:
+          parseInt(idUser),
+
+        jenis_tugas:
+          jenisTugas
       },
 
       transaction
@@ -400,7 +633,8 @@ const removeAsesor = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "Asesor tidak ditemukan"
+        message:
+          "Asesor tidak ditemukan"
       });
     }
 
@@ -408,14 +642,18 @@ const removeAsesor = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Asesor berhasil dihapus"
+      message:
+        "Asesor berhasil dihapus"
     });
 
   } catch (err) {
 
     await transaction.rollback();
 
-    console.error("REMOVE ASESOR ERROR:", err);
+    console.error(
+      "REMOVE ASESOR ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -433,20 +671,26 @@ const getAsesorTuk = async (req, res) => {
 
   try {
 
-    const data = await ProfileAsesor.findAll({
+    const data =
+      await ProfileAsesor.findAll({
 
       where: {
-        status_asesor: "aktif"
+        status_asesor:
+          "aktif"
       },
 
       include: [
         {
           model: User,
           as: "user",
+
           required: true,
+
           where: {
-            status_user: "aktif"
+            status_user:
+              "aktif"
           },
+
           attributes: [
             "id_user",
             "username",
@@ -480,7 +724,10 @@ const getAsesorTuk = async (req, res) => {
 
   } catch (err) {
 
-    console.error("GET ASESOR ERROR:", err);
+    console.error(
+      "GET ASESOR ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -494,29 +741,49 @@ const getAsesorTuk = async (req, res) => {
 // JENIS TUGAS AVAILABLE
 // ======================================
 
-const getJenisTugasAvailable = async (req, res) => {
+const getJenisTugasAvailable =
+  async (req, res) => {
 
   try {
 
     return res.json({
+
       success: true,
+
       data: [
+
         {
-          jenis_tugas: "asesor_penguji",
-          maksimal: 1
+          jenis_tugas:
+            "asesor_penguji",
+
+          keterangan:
+            "1 asesor menangani maksimal 10 asesi"
         },
+
         {
-          jenis_tugas: "verifikator_tuk",
-          maksimal: 1
-        },
-        {
-          jenis_tugas: "validator_mkva",
+          jenis_tugas:
+            "verifikator_tuk",
+
+          minimal: 2,
           maksimal: 2
         },
+
         {
-          jenis_tugas: "komite_teknis",
-          maksimal: 1
+          jenis_tugas:
+            "validator_mkva",
+
+          minimal: 2,
+          maksimal: 3
+        },
+
+        {
+          jenis_tugas:
+            "komite_teknis",
+
+          minimal: 3,
+          maksimal: 3
         }
+
       ]
     });
 
@@ -537,4 +804,3 @@ module.exports = {
   getAsesorTuk,
   getJenisTugasAvailable
 };
-

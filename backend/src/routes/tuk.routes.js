@@ -45,21 +45,25 @@ router.post(
 // JADWAL
 // ======================================
 
+// ✅ GET SKEMA MANDIRI
 router.get(
   "/skema",
   jadwalController.getSkemaTuk
 );
 
+// ✅ CREATE JADWAL
 router.post(
   "/jadwal",
   jadwalController.createJadwal
 );
 
+// ✅ LIST JADWAL
 router.get(
   "/jadwal",
   jadwalController.getAllJadwal
 );
 
+// ✅ DETAIL JADWAL
 router.get(
   "/jadwal/:id",
   jadwalController.getJadwalById
@@ -71,11 +75,13 @@ router.get(
   jadwalController.getDetailJadwalLengkap
 );
 
+// ✅ UPDATE JADWAL
 router.put(
   "/jadwal/:id",
   jadwalController.updateJadwal
 );
 
+// ✅ DELETE JADWAL
 router.delete(
   "/jadwal/:id",
   jadwalController.deleteJadwal
@@ -142,5 +148,8 @@ router.get(
 );
 
 
-module.exports = router;
+// ======================================
+// EXPORT
+// ======================================
 
+module.exports = router;

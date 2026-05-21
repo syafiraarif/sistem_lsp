@@ -8,8 +8,6 @@ const {
   JadwalAsesor
 } = require("../../models");
 
-const { Op } = require("sequelize");
-
 
 // ======================================
 // HELPER GET TUK ID
@@ -42,6 +40,7 @@ const getTukId = async (req) => {
 
 // ======================================
 // GET SKEMA TUK
+// HANYA TUK MANDIRI
 // ======================================
 
 const getSkemaTuk = async (req, res) => {
@@ -66,10 +65,28 @@ const getSkemaTuk = async (req, res) => {
       });
     }
 
+    // ======================================
+    // HANYA TUK MANDIRI
+    // ======================================
+
+    if (tuk.jenis_tuk !== "mandiri") {
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "Hanya TUK mandiri yang boleh mengelola jadwal"
+      });
+    }
+
+    // ======================================
+    // AMBIL SKEMA KHUSUS MANDIRI
+    // ======================================
+
     const data = await Skema.findAll({
 
       where: {
-        status: "aktif"
+        status: "aktif",
+        is_mandiri_tuk: true
       },
 
       order: [
@@ -97,15 +114,19 @@ const getSkemaTuk = async (req, res) => {
 
 // ======================================
 // CREATE JADWAL
+// HANYA TUK MANDIRI
+// STATUS AUTO DRAFT
 // ======================================
 
 const createJadwal = async (req, res) => {
 
-  const transaction = await Jadwal.sequelize.transaction();
+  const transaction =
+    await Jadwal.sequelize.transaction();
 
   try {
 
-    const tukId = await getTukId(req);
+    const tukId =
+      await getTukId(req);
 
     if (!tukId) {
 
@@ -113,7 +134,8 @@ const createJadwal = async (req, res) => {
 
       return res.status(400).json({
         success: false,
-        message: "ID TUK tidak ditemukan"
+        message:
+          "ID TUK tidak ditemukan"
       });
     }
 
@@ -121,7 +143,8 @@ const createJadwal = async (req, res) => {
     // VALIDASI ID SKEMA
     // ======================================
 
-    const idSkema = parseInt(req.body.id_skema);
+    const idSkema =
+      parseInt(req.body.id_skema);
 
     if (!idSkema || isNaN(idSkema)) {
 
@@ -129,7 +152,8 @@ const createJadwal = async (req, res) => {
 
       return res.status(400).json({
         success: false,
-        message: "ID Skema tidak valid"
+        message:
+          "ID Skema tidak valid"
       });
     }
 
@@ -137,7 +161,8 @@ const createJadwal = async (req, res) => {
     // VALIDASI TUK
     // ======================================
 
-    const tuk = await Tuk.findByPk(tukId);
+    const tuk =
+      await Tuk.findByPk(tukId);
 
     if (!tuk) {
 
@@ -145,7 +170,23 @@ const createJadwal = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "TUK tidak ditemukan"
+        message:
+          "TUK tidak ditemukan"
+      });
+    }
+
+    // ======================================
+    // HANYA TUK MANDIRI
+    // ======================================
+
+    if (tuk.jenis_tuk !== "mandiri") {
+
+      await transaction.rollback();
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "Hanya TUK mandiri yang boleh membuat jadwal"
       });
     }
 
@@ -153,10 +194,13 @@ const createJadwal = async (req, res) => {
     // VALIDASI SKEMA
     // ======================================
 
-    const skema = await Skema.findOne({
+    const skema =
+      await Skema.findOne({
+
       where: {
         id_skema: idSkema,
-        status: "aktif"
+        status: "aktif",
+        is_mandiri_tuk: true
       }
     });
 
@@ -166,7 +210,8 @@ const createJadwal = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "Skema tidak ditemukan / nonaktif"
+        message:
+          "Skema tidak ditemukan / tidak diperbolehkan"
       });
     }
 
@@ -174,7 +219,19 @@ const createJadwal = async (req, res) => {
     // VALIDASI KUOTA
     // ======================================
 
-    const kuota = parseInt(req.body.kuota || 0);
+    const kuota =
+      parseInt(req.body.kuota || 0);
+
+    if (kuota <= 0) {
+
+      await transaction.rollback();
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Kuota wajib lebih dari 0"
+      });
+    }
 
     if (kuota > 10) {
 
@@ -182,7 +239,8 @@ const createJadwal = async (req, res) => {
 
       return res.status(400).json({
         success: false,
-        message: "Kuota maksimal 10 peserta"
+        message:
+          "Kuota maksimal 10 peserta"
       });
     }
 
@@ -193,14 +251,16 @@ const createJadwal = async (req, res) => {
     if (
       req.body.tgl_awal &&
       req.body.tgl_akhir &&
-      req.body.tgl_awal > req.body.tgl_akhir
+      req.body.tgl_awal >
+      req.body.tgl_akhir
     ) {
 
       await transaction.rollback();
 
       return res.status(400).json({
         success: false,
-        message: "Tanggal awal tidak boleh melebihi tanggal akhir"
+        message:
+          "Tanggal awal tidak boleh melebihi tanggal akhir"
       });
     }
 
@@ -215,57 +275,67 @@ const createJadwal = async (req, res) => {
       "onsite"
     ];
 
-    const allowedStatus = [
-      "draft",
-      "open",
-      "ongoing",
-      "selesai",
-      "arsip"
-    ];
-
     // ======================================
     // CREATE JADWAL
     // ======================================
 
-    const data = await Jadwal.create({
+    const data =
+      await Jadwal.create({
 
-      kode_jadwal: req.body.kode_jadwal || null,
+      kode_jadwal:
+        req.body.kode_jadwal || null,
 
       id_skema: idSkema,
 
       id_tuk: tukId,
 
-      nama_kegiatan: req.body.nama_kegiatan,
+      nama_kegiatan:
+        req.body.nama_kegiatan,
 
-      tgl_pra_asesmen: req.body.tgl_pra_asesmen || null,
+      tgl_pra_asesmen:
+        req.body.tgl_pra_asesmen || null,
 
-      tahun: req.body.tahun
-        ? parseInt(req.body.tahun)
-        : null,
+      tahun:
+        req.body.tahun
+          ? parseInt(req.body.tahun)
+          : new Date().getFullYear(),
 
-      periode_bulan: req.body.periode_bulan || null,
+      periode_bulan:
+        req.body.periode_bulan || null,
 
-      gelombang: req.body.gelombang || null,
+      gelombang:
+        req.body.gelombang || null,
 
-      tgl_awal: req.body.tgl_awal || null,
+      tgl_awal:
+        req.body.tgl_awal || null,
 
-      tgl_akhir: req.body.tgl_akhir || null,
+      tgl_akhir:
+        req.body.tgl_akhir || null,
 
-      jam: req.body.jam || null,
+      jam:
+        req.body.jam || null,
 
       kuota,
 
-      pelaksanaan_uji: allowedPelaksanaan.includes(req.body.pelaksanaan_uji)
-        ? req.body.pelaksanaan_uji
-        : "luring",
+      pelaksanaan_uji:
+        allowedPelaksanaan.includes(
+          req.body.pelaksanaan_uji
+        )
+          ? req.body.pelaksanaan_uji
+          : "luring",
 
-      url_agenda: req.body.url_agenda || null,
+      url_agenda:
+        req.body.url_agenda || null,
 
-      status: allowedStatus.includes(req.body.status)
-        ? req.body.status
-        : "draft",
+      // ======================================
+      // AUTO DRAFT
+      // MENUNGGU VERIFIKASI ADMIN
+      // ======================================
 
-      created_by: req.user.id_user,
+      status: "draft",
+
+      created_by:
+        req.user.id_user,
 
       created_at: new Date(),
 
@@ -274,7 +344,7 @@ const createJadwal = async (req, res) => {
     }, { transaction });
 
     // ======================================
-    // SIMPAN TUK SKEMA
+    // SIMPAN RELASI TUK SKEMA
     // ======================================
 
     await TukSkema.findOrCreate({
@@ -296,7 +366,8 @@ const createJadwal = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Jadwal berhasil dibuat",
+      message:
+        "Jadwal berhasil dibuat dan menunggu verifikasi admin",
       data
     });
 
@@ -304,7 +375,10 @@ const createJadwal = async (req, res) => {
 
     await transaction.rollback();
 
-    console.error("CREATE JADWAL ERROR:", err);
+    console.error(
+      "CREATE JADWAL ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -322,9 +396,11 @@ const getAllJadwal = async (req, res) => {
 
   try {
 
-    const tukId = await getTukId(req);
+    const tukId =
+      await getTukId(req);
 
-    const data = await Jadwal.findAll({
+    const data =
+      await Jadwal.findAll({
 
       where: {
         id_tuk: tukId
@@ -338,6 +414,7 @@ const getAllJadwal = async (req, res) => {
           attributes: [
             "id_tuk",
             "nama_tuk",
+            "jenis_tuk",
             "email"
           ]
         },
@@ -368,7 +445,10 @@ const getAllJadwal = async (req, res) => {
 
   } catch (err) {
 
-    console.error("GET ALL JADWAL ERROR:", err);
+    console.error(
+      "GET ALL JADWAL ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -386,14 +466,18 @@ const getJadwalById = async (req, res) => {
 
   try {
 
-    const tukId = await getTukId(req);
+    const tukId =
+      await getTukId(req);
 
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
-    const data = await Jadwal.findOne({
+    const data =
+      await Jadwal.findOne({
 
       where: {
-        id_jadwal: parseInt(id),
+        id_jadwal:
+          parseInt(id),
         id_tuk: tukId
       },
 
@@ -416,7 +500,8 @@ const getJadwalById = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "Jadwal tidak ditemukan"
+        message:
+          "Jadwal tidak ditemukan"
       });
     }
 
@@ -427,7 +512,10 @@ const getJadwalById = async (req, res) => {
 
   } catch (err) {
 
-    console.error("GET JADWAL BY ID ERROR:", err);
+    console.error(
+      "GET JADWAL BY ID ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -439,20 +527,26 @@ const getJadwalById = async (req, res) => {
 
 // ======================================
 // UPDATE JADWAL
+// HANYA DRAFT BOLEH DIUBAH
+// STATUS TIDAK BOLEH DIUBAH TUK
 // ======================================
 
 const updateJadwal = async (req, res) => {
 
   try {
 
-    const tukId = await getTukId(req);
+    const tukId =
+      await getTukId(req);
 
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
-    const jadwal = await Jadwal.findOne({
+    const jadwal =
+      await Jadwal.findOne({
 
       where: {
-        id_jadwal: parseInt(id),
+        id_jadwal:
+          parseInt(id),
         id_tuk: tukId
       }
     });
@@ -461,7 +555,23 @@ const updateJadwal = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "Jadwal tidak ditemukan"
+        message:
+          "Jadwal tidak ditemukan"
+      });
+    }
+
+    // ======================================
+    // HANYA DRAFT
+    // ======================================
+
+    if (
+      jadwal.status !== "draft"
+    ) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Hanya jadwal draft yang boleh diubah"
       });
     }
 
@@ -471,13 +581,15 @@ const updateJadwal = async (req, res) => {
 
     if (req.body.kuota) {
 
-      const kuota = parseInt(req.body.kuota);
+      const kuota =
+        parseInt(req.body.kuota);
 
       if (kuota > 10) {
 
         return res.status(400).json({
           success: false,
-          message: "Kuota maksimal 10 peserta"
+          message:
+            "Kuota maksimal 10 peserta"
         });
       }
     }
@@ -486,14 +598,20 @@ const updateJadwal = async (req, res) => {
     // VALIDASI TANGGAL
     // ======================================
 
-    const tglAwal = req.body.tgl_awal || jadwal.tgl_awal;
-    const tglAkhir = req.body.tgl_akhir || jadwal.tgl_akhir;
+    const tglAwal =
+      req.body.tgl_awal ||
+      jadwal.tgl_awal;
+
+    const tglAkhir =
+      req.body.tgl_akhir ||
+      jadwal.tgl_akhir;
 
     if (tglAwal > tglAkhir) {
 
       return res.status(400).json({
         success: false,
-        message: "Tanggal awal tidak boleh melebihi tanggal akhir"
+        message:
+          "Tanggal awal tidak boleh melebihi tanggal akhir"
       });
     }
 
@@ -508,14 +626,6 @@ const updateJadwal = async (req, res) => {
       "onsite"
     ];
 
-    const allowedStatus = [
-      "draft",
-      "open",
-      "ongoing",
-      "selesai",
-      "arsip"
-    ];
-
     // ======================================
     // UPDATE
     // ======================================
@@ -524,31 +634,43 @@ const updateJadwal = async (req, res) => {
 
       ...req.body,
 
-      kuota: req.body.kuota
-        ? parseInt(req.body.kuota)
-        : jadwal.kuota,
+      kuota:
+        req.body.kuota
+          ? parseInt(req.body.kuota)
+          : jadwal.kuota,
 
-      pelaksanaan_uji: allowedPelaksanaan.includes(req.body.pelaksanaan_uji)
-        ? req.body.pelaksanaan_uji
-        : jadwal.pelaksanaan_uji,
+      pelaksanaan_uji:
+        allowedPelaksanaan.includes(
+          req.body.pelaksanaan_uji
+        )
+          ? req.body.pelaksanaan_uji
+          : jadwal.pelaksanaan_uji,
 
-      status: allowedStatus.includes(req.body.status)
-        ? req.body.status
-        : jadwal.status,
+      // ======================================
+      // STATUS TIDAK BOLEH DIUBAH TUK
+      // ======================================
 
-      updated_at: new Date()
+      status:
+        jadwal.status,
+
+      updated_at:
+        new Date()
 
     });
 
     return res.json({
       success: true,
-      message: "Jadwal berhasil diupdate",
+      message:
+        "Jadwal berhasil diupdate",
       data: jadwal
     });
 
   } catch (err) {
 
-    console.error("UPDATE JADWAL ERROR:", err);
+    console.error(
+      "UPDATE JADWAL ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -560,20 +682,25 @@ const updateJadwal = async (req, res) => {
 
 // ======================================
 // DELETE JADWAL
+// HANYA DRAFT BOLEH DIHAPUS
 // ======================================
 
 const deleteJadwal = async (req, res) => {
 
   try {
 
-    const tukId = await getTukId(req);
+    const tukId =
+      await getTukId(req);
 
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
-    const jadwal = await Jadwal.findOne({
+    const jadwal =
+      await Jadwal.findOne({
 
       where: {
-        id_jadwal: parseInt(id),
+        id_jadwal:
+          parseInt(id),
         id_tuk: tukId
       }
     });
@@ -582,17 +709,35 @@ const deleteJadwal = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "Jadwal tidak ditemukan"
+        message:
+          "Jadwal tidak ditemukan"
       });
     }
 
     // ======================================
-    // HAPUS ASESOR DULU
+    // HANYA DRAFT
+    // ======================================
+
+    if (
+      jadwal.status !== "draft"
+    ) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Hanya jadwal draft yang boleh dihapus"
+      });
+    }
+
+    // ======================================
+    // HAPUS ASESOR
     // ======================================
 
     await JadwalAsesor.destroy({
+
       where: {
-        id_jadwal: parseInt(id)
+        id_jadwal:
+          parseInt(id)
       }
     });
 
@@ -604,12 +749,16 @@ const deleteJadwal = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Jadwal berhasil dihapus"
+      message:
+        "Jadwal berhasil dihapus"
     });
 
   } catch (err) {
 
-    console.error("DELETE JADWAL ERROR:", err);
+    console.error(
+      "DELETE JADWAL ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -627,14 +776,18 @@ const getDetailJadwalLengkap = async (req, res) => {
 
   try {
 
-    const tukId = await getTukId(req);
+    const tukId =
+      await getTukId(req);
 
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
-    const data = await Jadwal.findOne({
+    const data =
+      await Jadwal.findOne({
 
       where: {
-        id_jadwal: parseInt(id),
+        id_jadwal:
+          parseInt(id),
         id_tuk: tukId
       },
 
@@ -704,7 +857,8 @@ const getDetailJadwalLengkap = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "Jadwal tidak ditemukan"
+        message:
+          "Jadwal tidak ditemukan"
       });
     }
 
@@ -715,7 +869,10 @@ const getDetailJadwalLengkap = async (req, res) => {
 
   } catch (err) {
 
-    console.error("DETAIL JADWAL ERROR:", err);
+    console.error(
+      "DETAIL JADWAL ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -734,4 +891,3 @@ module.exports = {
   updateJadwal,
   deleteJadwal
 };
-
