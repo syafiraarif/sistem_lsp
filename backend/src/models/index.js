@@ -1483,6 +1483,17 @@ UnitKuk.belongsTo(UnitElemen, { foreignKey: "id_elemen" });
 // APL02 FORM RELATION
 // ==========================
 
+// ✅ Skema → SkemaUnit
+Skema.hasMany(SkemaUnit, {
+  foreignKey: "id_skema",
+  as: "skemaUnit"
+});
+
+SkemaUnit.belongsTo(Skema, {
+  foreignKey: "id_skema",
+  as: "skema"
+});
+
 // SkemaUnit → UnitKompetensi
 SkemaUnit.belongsTo(UnitKompetensi, {
   foreignKey: "id_unit",
