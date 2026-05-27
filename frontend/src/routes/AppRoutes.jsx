@@ -14,7 +14,6 @@ import AssessorExplore from "../pages/public/AssessorExplore";
 import JadwalDetail from "../pages/public/JadwalDetail";
 import Jadwal from "../components/info/Jadwal";
 
-
 export default function AppRoutes() {
   return (
     <Routes>

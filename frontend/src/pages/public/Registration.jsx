@@ -621,7 +621,7 @@ export default function Registration() {
 
                       <div className="md:col-span-2">
                         <InputGroup
-                          label="Alamat Lengkap (Sesuai KTP)*"
+                          label="Alamat Lengkap"
                           name="alamat_lengkap"
                           value={formData.alamat_lengkap}
                           onChange={handleChange}

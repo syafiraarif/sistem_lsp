@@ -14,17 +14,32 @@ export default function AssessorCard({
   competency,
   institution,
   status,
-  image
+  image,
+  license,
+  email,
+  kota,
+  provinsi,
 }) {
   const isActive = status === "Aktif";
-  // Membuat slug dari nama untuk URL yang rapi
-  const slug = name.toLowerCase().replace(/\s+/g, '-');
+
+  const assessorData = {
+    id,
+    name,
+    competency,
+    institution,
+    status,
+    image,
+    license,
+    email,
+    kota,
+    provinsi,
+  };
 
   return (
     <motion.div
       variants={{
         hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0 }
+        visible: { opacity: 1, y: 0 },
       }}
       whileHover={{ y: -12 }}
       className="group relative bg-white rounded-[2.5rem] p-8
@@ -37,17 +52,23 @@ export default function AssessorCard({
 
       <div className="flex flex-col items-center">
         <div className="relative mb-6">
-          <div className="w-28 h-28 rounded-3xl bg-[#071E3D]/10
+          <div
+            className="w-28 h-28 rounded-3xl bg-[#071E3D]/10
                           border border-[#071E3D]/20
                           flex items-center justify-center p-1.5
                           transition-all duration-500
-                          group-hover:border-orange-500">
+                          group-hover:border-orange-500"
+          >
             <div className="w-full h-full rounded-2xl bg-white flex items-center justify-center shadow-sm overflow-hidden">
               {image ? (
-                <img src={image} alt={name} className="w-full h-full object-cover" />
+                <img
+                  src={image}
+                  alt={name}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <span className="text-[#071E3D] font-black text-4xl select-none group-hover:text-orange-500 transition-colors">
-                  {name.charAt(0)}
+                  {(name || "A").charAt(0)}
                 </span>
               )}
             </div>
@@ -67,11 +88,13 @@ export default function AssessorCard({
         </div>
 
         <h3 className="text-xl font-bold text-[#071E3D] text-center mb-2">
-          {name}
+          {name || "Asesor LSP"}
         </h3>
 
-        <p className={`text-[10px] font-black uppercase tracking-[0.25em]
-          ${isActive ? "text-[#071E3D]" : "text-slate-300"}`}>
+        <p
+          className={`text-[10px] font-black uppercase tracking-[0.25em]
+          ${isActive ? "text-[#071E3D]" : "text-slate-300"}`}
+        >
           {isActive ? "Asesor Tersertifikasi" : "Non-Aktif"}
         </p>
       </div>
@@ -80,31 +103,39 @@ export default function AssessorCard({
 
       <div className="space-y-6 flex-grow">
         <div className="flex gap-4">
-          <div className="p-2.5 rounded-xl bg-[#071E3D]/10 text-[#071E3D]
-                          group-hover:bg-orange-50 group-hover:text-orange-500 transition-all">
+          <div
+            className="p-2.5 rounded-xl bg-[#071E3D]/10 text-[#071E3D]
+                          group-hover:bg-orange-50 group-hover:text-orange-500 transition-all"
+          >
             <Award size={18} />
           </div>
+
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               Bidang Keahlian
             </p>
+
             <p className="text-sm font-bold text-slate-700 line-clamp-1">
-              {competency}
+              {competency || "Asesor Kompetensi"}
             </p>
           </div>
         </div>
 
         <div className="flex gap-4">
-          <div className="p-2.5 rounded-xl bg-[#071E3D]/10 text-[#071E3D]
-                          group-hover:bg-orange-50 group-hover:text-orange-500 transition-all">
+          <div
+            className="p-2.5 rounded-xl bg-[#071E3D]/10 text-[#071E3D]
+                          group-hover:bg-orange-50 group-hover:text-orange-500 transition-all"
+          >
             <Building2 size={18} />
           </div>
+
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               Unit Kerja / TUK
             </p>
+
             <p className="text-sm font-bold text-slate-700 line-clamp-1">
-              {institution}
+              {institution || "LSP Teknologi Informasi"}
             </p>
           </div>
         </div>
@@ -112,8 +143,8 @@ export default function AssessorCard({
 
       <div className="mt-10">
         <Link
-          to={`/assessor/${slug}`}
-          state={{ id, name, competency, institution, status, image }}
+          to={`/assessor/${id}`}
+          state={assessorData}
           className="w-full py-4 rounded-2xl
                     bg-[#071E3D] text-white
                     font-black text-xs tracking-widest uppercase
