@@ -17,7 +17,14 @@ const PendaftaranAsesi = sequelize.define("pendaftaran_asesi", {
   kecamatan: DataTypes.STRING(50),
   kelurahan: DataTypes.STRING(50),
   alamat_lengkap: DataTypes.STRING(255),
+
+  // ✅ TAMBAHAN BARU UNTUK WILAYAH UJI
+  provinsi_wilayah_uji: DataTypes.STRING(100),
+  kota_wilayah_uji: DataTypes.STRING(100),
+
+  // ✅ TETAP ADA, BIAR LOGIKA LAMA TIDAK RUSAK
   wilayah_rji: DataTypes.STRING(100),
+
   program_studi: DataTypes.STRING(100),
   kompetensi_keahlian: DataTypes.STRING(100),
   status: {

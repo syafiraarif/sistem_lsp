@@ -1,11 +1,10 @@
 const axios = require("axios");
 const bcrypt = require("bcryptjs");
 const sequelize = require("../../config/database");
-const {PendaftaranAsesi, User, Role, ProfileAsesi} = require("../../models");
+const { PendaftaranAsesi, User, Role, ProfileAsesi } = require("../../models");
 const response = require("../../utils/response.util");
 
 exports.create = async (req, res) => {
-
   const transaction = await sequelize.transaction();
 
   try {
@@ -38,12 +37,10 @@ exports.create = async (req, res) => {
     });
 
     if (!roleAsesi) {
-
       roleAsesi = await Role.create(
         { role_name: "ASESI" },
         { transaction }
       );
-
     }
 
     const existingEmail = await User.findOne({
@@ -76,8 +73,21 @@ exports.create = async (req, res) => {
       return response.error(res, "NIK sudah terdaftar");
     }
 
+    const provinsiWilayahUji = payload.provinsi_wilayah_uji || "";
+    const kotaWilayahUji = payload.kota_wilayah_uji || "";
+
+    const wilayahRji =
+      provinsiWilayahUji && kotaWilayahUji
+        ? `${provinsiWilayahUji} - ${kotaWilayahUji}`
+        : payload.wilayah_rji || "";
+
     const data = await PendaftaranAsesi.create(
-      payload,
+      {
+        ...payload,
+        provinsi_wilayah_uji: provinsiWilayahUji,
+        kota_wilayah_uji: kotaWilayahUji,
+        wilayah_rji: wilayahRji
+      },
       { transaction }
     );
 
@@ -95,33 +105,33 @@ exports.create = async (req, res) => {
     }, { transaction });
 
     await ProfileAsesi.create({
-    id_user: user.id_user,
-    nik: payload.nik,
-    nama_lengkap: payload.nama_lengkap,
-    provinsi: payload.provinsi,
-    kota: payload.kota,
-    kecamatan: payload.kecamatan,
-    kelurahan: payload.kelurahan,
-    alamat: payload.alamat_lengkap,
+      id_user: user.id_user,
+      nik: payload.nik,
+      nama_lengkap: payload.nama_lengkap,
+      provinsi: payload.provinsi,
+      kota: payload.kota,
+      kecamatan: payload.kecamatan,
+      kelurahan: payload.kelurahan,
+      alamat: payload.alamat_lengkap,
 
-    pendidikan_terakhir: payload.pendidikan_terakhir || payload.program_studi || null,
-    pekerjaan: payload.pekerjaan || null,
-    jabatan: payload.jabatan || null,
-    nama_perusahaan: payload.nama_perusahaan || null,
-    alamat_perusahaan: payload.alamat_perusahaan || null,
-    telp_perusahaan: payload.telp_perusahaan || null,
-    fax_perusahaan: payload.fax_perusahaan || null,
-    email_perusahaan: payload.email_perusahaan || null,
-  }, { transaction });
+      pendidikan_terakhir: payload.pendidikan_terakhir || payload.program_studi || null,
+      pekerjaan: payload.pekerjaan || null,
+      jabatan: payload.jabatan || null,
+      nama_perusahaan: payload.nama_perusahaan || null,
+      alamat_perusahaan: payload.alamat_perusahaan || null,
+      telp_perusahaan: payload.telp_perusahaan || null,
+      fax_perusahaan: payload.fax_perusahaan || null,
+      email_perusahaan: payload.email_perusahaan || null,
+    }, { transaction });
 
     await transaction.commit();
+
     return response.success(
       res,
       "Pendaftaran berhasil",
       data
     );
   } catch (err) {
-
     await transaction.rollback();
 
     console.error("PENDAFTARAN ERROR:", err);
@@ -130,7 +140,5 @@ exports.create = async (req, res) => {
       res,
       "Gagal mendaftar"
     );
-
   }
-
 };
