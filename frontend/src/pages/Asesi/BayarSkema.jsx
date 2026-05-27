@@ -1,6 +1,6 @@
 // frontend/src/pages/Asesi/BayarSkema.jsx
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
@@ -49,6 +49,9 @@ export default function BayarSkema() {
   const [waktuBatas, setWaktuBatas] = useState(null);
   const [error, setError] = useState("");
 
+  const hasFetchedRef = useRef(false);
+  const requestRunningRef = useRef(false);
+
   const headers = useMemo(
     () => ({
       Authorization: `Bearer ${token}`,
@@ -57,12 +60,18 @@ export default function BayarSkema() {
   );
 
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+
+    hasFetchedRef.current = true;
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id_skema]);
 
   const fetchData = async () => {
+    if (requestRunningRef.current) return;
+
     try {
+      requestRunningRef.current = true;
       setLoading(true);
       setError("");
 
@@ -80,24 +89,36 @@ export default function BayarSkema() {
 
       setSkemaJudul(detail.skema || "-");
       setHarga(detail.harga || 0);
-      setTujuanTransfer(detail.tujuan_transfer || []);
+      setTujuanTransfer(Array.isArray(detail.tujuan_transfer) ? detail.tujuan_transfer : []);
       setQris(detail.qris || null);
       setVirtualAccount(detail.virtual_account || null);
 
-      const statusRes = await axios.get(
-        `${API_BASE}/asesi/pembayaran/${id_skema}/status`,
-        { headers }
-      );
+      try {
+        const statusRes = await axios.get(
+          `${API_BASE}/asesi/pembayaran/${id_skema}/status`,
+          { headers }
+        );
 
-      const statusData = statusRes.data?.data || {};
+        const statusData = statusRes.data?.data || {};
 
-      setStatusPembayaran(statusData.status || "belum bayar");
-      setIdPembayaran(statusData.id_pembayaran || null);
-      setWaktuBatas(statusData.waktu_batas || null);
+        setStatusPembayaran(statusData.status || "belum bayar");
+        setIdPembayaran(statusData.id_pembayaran || null);
+        setWaktuBatas(statusData.waktu_batas || null);
+      } catch (statusErr) {
+        console.error("Gagal mengambil status pembayaran:", statusErr);
+
+        setStatusPembayaran("belum bayar");
+        setIdPembayaran(null);
+        setWaktuBatas(null);
+      }
     } catch (err) {
       console.error(err);
-      setError("Gagal mengambil data pembayaran.");
+      setError(
+        err.response?.data?.message ||
+          "Gagal mengambil data pembayaran."
+      );
     } finally {
+      requestRunningRef.current = false;
       setLoading(false);
     }
   };
@@ -107,7 +128,12 @@ export default function BayarSkema() {
 
   const formatTanggal = (date) => {
     if (!date) return "-";
-    return new Date(date).toLocaleString("id-ID", {
+
+    const parsed = new Date(date);
+
+    if (Number.isNaN(parsed.getTime())) return "-";
+
+    return parsed.toLocaleString("id-ID", {
       day: "2-digit",
       month: "long",
       year: "numeric",
@@ -156,72 +182,72 @@ export default function BayarSkema() {
   };
 
   const handleSubmit = async () => {
-  const isWaiting =
-    statusPembayaran === "pending" ||
-    statusPembayaran === "menunggu_validasi";
+    const isWaiting =
+      statusPembayaran === "pending" ||
+      statusPembayaran === "menunggu_validasi";
 
-  if (isWaiting) {
-    alert("Pembayaran sedang menunggu validasi admin.");
-    navigate("/asesi/jadwal-saya");
-    return;
-  }
-
-  if (statusPembayaran === "paid") {
-    navigate("/asesi/jadwal-saya");
-    return;
-  }
-
-  if (!validateSubmit()) return;
-
-  try {
-    setSubmitLoading(true);
-
-    const submitRes = await axios.post(
-      `${API_BASE}/asesi/pembayaran/submit`,
-      {
-        id_skema,
-        metode_pembayaran: metode,
-        jalur_pembayaran:
-          metode === "tunai"
-            ? "tunai"
-            : metode === "qris"
-            ? "qris"
-            : metode === "virtual_account"
-            ? "virtual_account"
-            : jalurPembayaran,
-        id_tujuan_transfer:
-          metode === "transfer_rekening" ? selectedTujuan : null,
-      },
-      { headers }
-    );
-
-    const newIdPembayaran = submitRes.data?.data?.id_pembayaran;
-
-    if (buktiBayar && newIdPembayaran) {
-      const formData = new FormData();
-      formData.append("bukti_bayar", buktiBayar);
-
-      await axios.put(
-        `${API_BASE}/asesi/pembayaran/${newIdPembayaran}/upload-bukti`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+    if (isWaiting) {
+      alert("Pembayaran sedang menunggu validasi admin.");
+      navigate("/asesi/jadwal-saya");
+      return;
     }
 
-    alert("Pembayaran berhasil diajukan. Menunggu validasi admin.");
-    navigate("/asesi/jadwal-saya");
-  } catch (err) {
-    console.error(err);
-    alert(err.response?.data?.message || "Gagal mengajukan pembayaran.");
-  } finally {
-    setSubmitLoading(false);
-  }
-};
+    if (statusPembayaran === "paid") {
+      navigate("/asesi/jadwal-saya");
+      return;
+    }
+
+    if (!validateSubmit()) return;
+
+    try {
+      setSubmitLoading(true);
+
+      const submitRes = await axios.post(
+        `${API_BASE}/asesi/pembayaran/submit`,
+        {
+          id_skema,
+          metode_pembayaran: metode,
+          jalur_pembayaran:
+            metode === "tunai"
+              ? "tunai"
+              : metode === "qris"
+              ? "qris"
+              : metode === "virtual_account"
+              ? "virtual_account"
+              : jalurPembayaran,
+          id_tujuan_transfer:
+            metode === "transfer_rekening" ? selectedTujuan : null,
+        },
+        { headers }
+      );
+
+      const newIdPembayaran = submitRes.data?.data?.id_pembayaran;
+
+      if (buktiBayar && newIdPembayaran) {
+        const formData = new FormData();
+        formData.append("bukti_bayar", buktiBayar);
+
+        await axios.put(
+          `${API_BASE}/asesi/pembayaran/${newIdPembayaran}/upload-bukti`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+      }
+
+      alert("Pembayaran berhasil diajukan. Menunggu validasi admin.");
+      navigate("/asesi/jadwal-saya");
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Gagal mengajukan pembayaran.");
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
 
   const statusView = {
     "belum bayar": {
@@ -300,9 +326,14 @@ export default function BayarSkema() {
                   <button
                     type="button"
                     onClick={fetchData}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white hover:bg-[#071E3D]"
+                    disabled={loading}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white hover:bg-[#071E3D] disabled:bg-slate-300 disabled:cursor-not-allowed"
                   >
-                    <RefreshCcw size={17} />
+                    {loading ? (
+                      <Loader2 size={17} className="animate-spin" />
+                    ) : (
+                      <RefreshCcw size={17} />
+                    )}
                     Refresh
                   </button>
 
@@ -503,11 +534,11 @@ export default function BayarSkema() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={
-                    submitLoading ||
-                    statusPembayaran === "pending" ||
-                    statusPembayaran === "menunggu_validasi" ||
-                    statusPembayaran === "paid"
-                  }
+                  submitLoading ||
+                  statusPembayaran === "pending" ||
+                  statusPembayaran === "menunggu_validasi" ||
+                  statusPembayaran === "paid"
+                }
                 className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed"
               >
                 {submitLoading ? (
