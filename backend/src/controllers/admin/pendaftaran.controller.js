@@ -46,144 +46,116 @@ exports.approvePendaftaran = async (req, res) => {
 
     if (!roleAsesi) {
       roleAsesi = await Role.create(
-        {
-          role_name: "ASESI",
-        },
+        { role_name: "ASESI" },
         { transaction: t }
       );
     }
 
-    let user = await User.findOne({
+    const existingUser = await User.findOne({
       where: {
-        [Op.or]: [{ email: pendaftaran.email }, { username: pendaftaran.nik }],
+        [Op.or]: [
+          { email: pendaftaran.email },
+          { username: pendaftaran.nik },
+        ],
       },
       transaction: t,
     });
 
-    let rawPassword = null;
-    let isNewUser = false;
-
-    if (!user) {
-      const { createUser } = require("../../services/account.service");
-
-      const created = await createUser(
-        {
-          username: pendaftaran.nik,
-          email: pendaftaran.email,
-          no_hp: pendaftaran.no_hp,
-          id_role: roleAsesi.id_role,
-        },
-        { transaction: t }
+    if (existingUser) {
+      await t.rollback();
+      return response.error(
+        res,
+        "Email atau NIK sudah terdaftar sebagai user",
+        400
       );
-
-      user = created.user;
-      rawPassword = created.rawPassword;
-      isNewUser = true;
     }
 
-    let profile = await ProfileAsesi.findOne({
+    const existingProfile = await ProfileAsesi.findOne({
       where: { nik: pendaftaran.nik },
       transaction: t,
     });
 
-    if (!profile) {
-      await ProfileAsesi.create(
-        {
-          id_user: user.id_user,
-          nik: pendaftaran.nik,
-          nama_lengkap: pendaftaran.nama_lengkap,
-          provinsi: pendaftaran.provinsi,
-          kota: pendaftaran.kota,
-          kecamatan: pendaftaran.kecamatan,
-          kelurahan: pendaftaran.kelurahan,
-          alamat: pendaftaran.alamat_lengkap,
-
-          pendidikan_terakhir:
-            pendaftaran.pendidikan_terakhir ||
-            pendaftaran.program_studi ||
-            null,
-
-          pekerjaan: pendaftaran.pekerjaan || null,
-          jabatan: pendaftaran.jabatan || null,
-          nama_perusahaan: pendaftaran.nama_perusahaan || null,
-          alamat_perusahaan: pendaftaran.alamat_perusahaan || null,
-          telp_perusahaan: pendaftaran.telp_perusahaan || null,
-          fax_perusahaan: pendaftaran.fax_perusahaan || null,
-          email_perusahaan: pendaftaran.email_perusahaan || null,
-        },
-        { transaction: t }
-      );
-    } else {
-      await profile.update(
-        {
-          id_user: profile.id_user || user.id_user,
-
-          nama_lengkap: profile.nama_lengkap || pendaftaran.nama_lengkap,
-          provinsi: profile.provinsi || pendaftaran.provinsi,
-          kota: profile.kota || pendaftaran.kota,
-          kecamatan: profile.kecamatan || pendaftaran.kecamatan,
-          kelurahan: profile.kelurahan || pendaftaran.kelurahan,
-          alamat: profile.alamat || pendaftaran.alamat_lengkap,
-
-          pendidikan_terakhir:
-            profile.pendidikan_terakhir ||
-            pendaftaran.pendidikan_terakhir ||
-            pendaftaran.program_studi ||
-            null,
-
-          pekerjaan: profile.pekerjaan || pendaftaran.pekerjaan || null,
-          jabatan: profile.jabatan || pendaftaran.jabatan || null,
-          nama_perusahaan:
-            profile.nama_perusahaan || pendaftaran.nama_perusahaan || null,
-          alamat_perusahaan:
-            profile.alamat_perusahaan || pendaftaran.alamat_perusahaan || null,
-          telp_perusahaan:
-            profile.telp_perusahaan || pendaftaran.telp_perusahaan || null,
-          fax_perusahaan:
-            profile.fax_perusahaan || pendaftaran.fax_perusahaan || null,
-          email_perusahaan:
-            profile.email_perusahaan || pendaftaran.email_perusahaan || null,
-        },
-        { transaction: t }
+    if (existingProfile) {
+      await t.rollback();
+      return response.error(
+        res,
+        "Profile asesi dengan NIK ini sudah ada",
+        400
       );
     }
 
-    await pendaftaran.update(
+    const { createUser } = require("../../services/account.service");
+
+    const { user, rawPassword } = await createUser(
       {
-        status: "approved",
+        username: pendaftaran.nik,
+        email: pendaftaran.email,
+        no_hp: pendaftaran.no_hp,
+        id_role: roleAsesi.id_role,
       },
+      { transaction: t }
+    );
+
+    await ProfileAsesi.create(
+      {
+        id_user: user.id_user,
+        nik: pendaftaran.nik,
+        nama_lengkap: pendaftaran.nama_lengkap,
+        provinsi: pendaftaran.provinsi,
+        kota: pendaftaran.kota,
+        kecamatan: pendaftaran.kecamatan,
+        kelurahan: pendaftaran.kelurahan,
+        alamat: pendaftaran.alamat_lengkap,
+        pendidikan_terakhir:
+          pendaftaran.pendidikan_terakhir ||
+          pendaftaran.program_studi ||
+          null,
+        pekerjaan: pendaftaran.pekerjaan || null,
+        jabatan: pendaftaran.jabatan || null,
+        nama_perusahaan: pendaftaran.nama_perusahaan || null,
+        alamat_perusahaan: pendaftaran.alamat_perusahaan || null,
+        telp_perusahaan: pendaftaran.telp_perusahaan || null,
+        fax_perusahaan: pendaftaran.fax_perusahaan || null,
+        email_perusahaan: pendaftaran.email_perusahaan || null,
+      },
+      { transaction: t }
+    );
+
+    await pendaftaran.update(
+      { status: "approved" },
       { transaction: t }
     );
 
     await t.commit();
 
     let statusKirim = "terkirim";
+    let pesanNotif = `Akun asesi berhasil dibuat. Username: ${user.username}`;
+    let emailErrorMessage = null;
 
-    if (isNewUser && rawPassword) {
-      try {
-        await sendAccountEmail(user.email, user.username, rawPassword);
-      } catch (err) {
-        console.error("Gagal kirim email akun:", err.message);
-        statusKirim = "gagal";
-      }
-    } else {
-      statusKirim = "tidak_dikirim";
+    try {
+      await sendAccountEmail(user.email, user.username, rawPassword);
+    } catch (emailErr) {
+      console.error("GAGAL KIRIM EMAIL AKUN:", emailErr);
+      statusKirim = "gagal";
+      emailErrorMessage = emailErr.message;
+      pesanNotif = `Akun asesi berhasil dibuat, tetapi email gagal dikirim. Username: ${user.username}`;
     }
 
     await createNotifikasi({
       channel: "email",
       tujuan: user.email,
-      pesan: isNewUser
-        ? `Akun asesi berhasil dibuat. Username: ${user.username}`
-        : `Pendaftaran asesi berhasil diverifikasi. Akun sudah tersedia. Username: ${user.username}`,
+      pesan: pesanNotif,
       status_kirim: statusKirim,
       ref_type: "akun",
       ref_id: user.id_user,
     });
 
     return response.success(res, "Pendaftaran berhasil di-approve", {
-      user_status: isNewUser ? "created" : "existing",
       username: user.username,
+      email: user.email,
+      email_status: statusKirim,
+      email_error: emailErrorMessage,
+      password_default: rawPassword,
     });
   } catch (err) {
     await t.rollback();
@@ -241,7 +213,10 @@ exports.deletePendaftaran = async (req, res) => {
 
     await pendaftaran.destroy();
 
-    return response.success(res, "Data pendaftaran berhasil dihapus secara permanen");
+    return response.success(
+      res,
+      "Data pendaftaran berhasil dihapus secara permanen"
+    );
   } catch (err) {
     console.error("DELETE PENDAFTARAN ERROR:", err);
     return response.error(res, err.message);
@@ -250,18 +225,26 @@ exports.deletePendaftaran = async (req, res) => {
 
 exports.bulkDeletePendaftaran = async (req, res) => {
   try {
-    const { ids } = req.body; 
+    const { ids } = req.body;
+
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return response.error(res, "Tidak ada data yang dipilih untuk dihapus", 400);
+      return response.error(
+        res,
+        "Tidak ada data yang dipilih untuk dihapus",
+        400
+      );
     }
 
     await Pendaftaran.destroy({
       where: {
-        id_pendaftaran: ids
-      }
+        id_pendaftaran: ids,
+      },
     });
 
-    return response.success(res, `${ids.length} data pendaftaran berhasil dihapus`);
+    return response.success(
+      res,
+      `${ids.length} data pendaftaran berhasil dihapus`
+    );
   } catch (err) {
     console.error("BULK DELETE PENDAFTARAN ERROR:", err);
     return response.error(res, err.message);

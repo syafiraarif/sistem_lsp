@@ -1,17 +1,18 @@
 const nodemailer = require("nodemailer");
-const env = require("./env");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail", 
+  host: process.env.EMAIL_HOST || "smtp.gmail.com",
+  port: Number(process.env.EMAIL_PORT || 587),
+  secure: false,
   auth: {
-    user: env.EMAIL_USER,
-    pass: env.EMAIL_PASS
-  }
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
-transporter.verify((error, success) => {
+transporter.verify((error) => {
   if (error) {
-    console.error("❌ Mailer error:", error);
+    console.error("❌ Mailer error:", error.message);
   } else {
     console.log("✅ Mailer ready to send emails");
   }
