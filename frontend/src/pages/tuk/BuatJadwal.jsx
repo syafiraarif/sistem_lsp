@@ -14,7 +14,6 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Users,
   Hash,
   Link as LinkIcon,
   Settings,
@@ -56,7 +55,6 @@ const BuatJadwal = () => {
     tahun: currentYear,
     periode_bulan: "",
     gelombang: "",
-    kuota: "",
     tgl_pra_asesmen: "",
     tgl_awal: "",
     tgl_akhir: "",
@@ -117,10 +115,6 @@ const BuatJadwal = () => {
       return setMsg({ type: "error", text: "Pilih Skema terlebih dahulu!" });
     }
 
-    if (!form.kuota || isNaN(form.kuota)) {
-      return setMsg({ type: "error", text: "Kuota harus angka!" });
-    }
-
     if (!form.tgl_awal || !form.tgl_akhir) {
       return setMsg({
         type: "error",
@@ -159,7 +153,6 @@ const BuatJadwal = () => {
         tgl_awal: form.tgl_awal || null,
         tgl_akhir: form.tgl_akhir || null,
         jam: form.jam || null,
-        kuota: parseInt(form.kuota),
         pelaksanaan_uji: form.pelaksanaan_uji,
         url_agenda: form.url_agenda || null,
         status: form.status,
@@ -169,7 +162,10 @@ const BuatJadwal = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setMsg({ type: "success", text: "Jadwal berhasil dibuat!" });
+      setMsg({
+        type: "success",
+        text: "Jadwal berhasil dibuat dan menunggu verifikasi admin!"
+      });
 
       setTimeout(() => navigate("/tuk/jadwal"), 1500);
     } catch (err) {
@@ -215,8 +211,8 @@ const BuatJadwal = () => {
                 </h1>
 
                 <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
-                  Lengkapi detail skema, waktu pelaksanaan, kuota peserta, dan
-                  pengaturan jadwal untuk diajukan ke admin.
+                  Lengkapi detail skema, waktu pelaksanaan, dan pengaturan jadwal
+                    untuk diajukan ke admin.
                 </p>
               </div>
 
@@ -324,17 +320,6 @@ const BuatJadwal = () => {
                       placeholder="Opsional"
                     />
 
-                    <InputField
-                      label="Kuota Peserta"
-                      name="kuota"
-                      type="number"
-                      value={form.kuota}
-                      onChange={handleChange}
-                      placeholder="Contoh: 30"
-                      min="1"
-                      required
-                      icon={<Users size={18} />}
-                    />
                   </div>
                 </Card>
 
@@ -461,11 +446,7 @@ const BuatJadwal = () => {
                         label="Pelaksanaan"
                         value={form.pelaksanaan_uji}
                       />
-
-                      <SummaryItem
-                        label="Kuota"
-                        value={form.kuota ? `${form.kuota} peserta` : "-"}
-                      />
+                      
                     </div>
                   </div>
 

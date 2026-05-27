@@ -1,6 +1,6 @@
 // frontend/src/pages/asesi/JadwalSaya.jsx
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +24,6 @@ import {
   ShieldCheck,
   Sparkles,
   Tag,
-  Users,
   XCircle,
 } from "lucide-react";
 
@@ -40,6 +39,9 @@ export default function JadwalSaya() {
   const [error, setError] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
+  const hasLoadedRef = useRef(false);
+  const requestRunningRef = useRef(false);
+
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
@@ -49,7 +51,12 @@ export default function JadwalSaya() {
     Authorization: `Bearer ${getToken()}`,
   });
 
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
   useEffect(() => {
+    if (hasLoadedRef.current) return;
+
+    hasLoadedRef.current = true;
     loadData();
   }, []);
 
@@ -126,6 +133,9 @@ export default function JadwalSaya() {
   };
 
   const loadData = async () => {
+    if (requestRunningRef.current) return;
+
+    requestRunningRef.current = true;
     setLoading(true);
     setError("");
 
@@ -156,39 +166,44 @@ export default function JadwalSaya() {
       setJadwal(jadwalData);
       setMyJadwal(selected);
 
-      await Promise.all([
-        loadStatusPembayaran(jadwalData),
-        loadStatusAPL01(selected),
-      ]);
+      await loadStatusPembayaran(jadwalData);
+      await loadStatusAPL01(selected);
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Gagal memuat jadwal.");
+
+      if (err.response?.status === 429) {
+        setError(
+          "Terlalu banyak request ke server. Tunggu sebentar lalu klik Refresh Jadwal."
+        );
+      } else {
+        setError(err.response?.data?.message || "Gagal memuat jadwal.");
+      }
     } finally {
+      requestRunningRef.current = false;
       setLoading(false);
     }
   };
 
   const loadStatusPembayaran = async (jadwalData) => {
     const result = {};
+    const uniqueSkemaIds = [
+      ...new Set(jadwalData.map((item) => getIdSkema(item)).filter(Boolean)),
+    ];
 
-    await Promise.all(
-      jadwalData.map(async (item) => {
-        const idSkema = getIdSkema(item);
+    for (const idSkema of uniqueSkemaIds) {
+      try {
+        const res = await axios.get(
+          `${API}/asesi/pembayaran/${idSkema}/status`,
+          { headers: getHeaders() }
+        );
 
-        if (!idSkema) return;
+        result[idSkema] = res.data?.data?.status || "belum bayar";
+      } catch (err) {
+        result[idSkema] = "belum bayar";
+      }
 
-        try {
-          const res = await axios.get(
-            `${API}/asesi/pembayaran/${idSkema}/status`,
-            { headers: getHeaders() }
-          );
-
-          result[idSkema] = res.data?.data?.status || "belum bayar";
-        } catch (err) {
-          result[idSkema] = "belum bayar";
-        }
-      })
-    );
+      await sleep(120);
+    }
 
     setPembayaran(result);
   };
@@ -196,34 +211,34 @@ export default function JadwalSaya() {
   const loadStatusAPL01 = async (selectedData) => {
     const result = {};
 
-    await Promise.all(
-      selectedData.map(async (item) => {
-        const idPeserta =
-          item.id_peserta ||
-          item.raw?.id_peserta ||
-          item.raw?.id_peserta_jadwal ||
-          item.raw?.id ||
-          item.raw?.id_pendaftaran;
+    for (const item of selectedData) {
+      const idPeserta =
+        item.id_peserta ||
+        item.raw?.id_peserta ||
+        item.raw?.id_peserta_jadwal ||
+        item.raw?.id ||
+        item.raw?.id_pendaftaran;
 
-        if (!idPeserta) return;
+      if (!idPeserta) continue;
 
-        try {
-          const res = await axios.get(`${API}/asesi/apl01/${idPeserta}`, {
-            headers: getHeaders(),
-          });
+      try {
+        const res = await axios.get(`${API}/asesi/apl01/${idPeserta}`, {
+          headers: getHeaders(),
+        });
 
-          const data = res.data?.data || null;
+        const data = res.data?.data || null;
 
-          result[idPeserta] =
-            data?.status === "submit" ||
-            data?.status === "submitted" ||
-            data?.status === "valid" ||
-            data?.status === "selesai";
-        } catch (err) {
-          result[idPeserta] = false;
-        }
-      })
-    );
+        result[idPeserta] =
+          data?.status === "submit" ||
+          data?.status === "submitted" ||
+          data?.status === "valid" ||
+          data?.status === "selesai";
+      } catch (err) {
+        result[idPeserta] = false;
+      }
+
+      await sleep(120);
+    }
 
     setApl01Status(result);
   };
@@ -671,7 +686,7 @@ function ScheduleCard({
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <DetailItem
               icon={<MapPin size={18} />}
               label="TUK"
@@ -688,12 +703,6 @@ function ScheduleCard({
               icon={<CalendarCheck size={18} />}
               label="Tanggal"
               value={tanggal}
-            />
-
-            <DetailItem
-              icon={<Users size={18} />}
-              label="Kuota"
-              value={`${item.kuota || 0} peserta`}
             />
           </div>
 

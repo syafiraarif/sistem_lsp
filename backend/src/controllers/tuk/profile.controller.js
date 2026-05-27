@@ -5,6 +5,24 @@ const path = require("path");
 const { Op } = require("sequelize");
 
 /* ===================================================== */
+/* HELPER USERNAME / KODE TUK */
+/* ===================================================== */
+
+const cleanUsername = (value) => {
+  if (!value) return "";
+
+  return String(value)
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "")
+    .toUpperCase();
+};
+
+const generateUsernameTuk = (userId) => {
+  return `TUK-${String(userId).padStart(6, "0")}`;
+};
+
+/* ===================================================== */
 /* GET PROFILE */
 /* ===================================================== */
 exports.getProfile = async (req, res) => {
@@ -15,6 +33,14 @@ exports.getProfile = async (req, res) => {
       return response.error(res, "User tidak valid", 400);
     }
 
+    const user = await User.findByPk(userId, {
+      attributes: ["id_user", "username", "email", "no_hp", "status_user"]
+    });
+
+    if (!user) {
+      return response.error(res, "User tidak ditemukan", 404);
+    }
+
     const profile = await ProfileTuk.findOne({
       where: { id_user: userId }
     });
@@ -23,23 +49,22 @@ exports.getProfile = async (req, res) => {
       where: { id_penanggung_jawab: userId }
     });
 
-    let user = null;
-
-    if (!tuk) {
-      user = await User.findByPk(userId, {
-        attributes: ["username"]
+    if (!tuk && user?.username) {
+      tuk = await Tuk.findOne({
+        where: { kode_tuk: user.username }
       });
-
-      if (user?.username) {
-        tuk = await Tuk.findOne({
-          where: { kode_tuk: user.username }
-        });
-      }
     }
 
     const baseUrl = `${req.protocol}://${req.get("host")}`;
 
     return response.success(res, "Profil TUK berhasil dimuat", {
+      user: {
+        id_user: user.id_user,
+        username: user.username,
+        email: user.email,
+        no_hp: user.no_hp,
+        status_user: user.status_user
+      },
       profile_tuk: profile
         ? {
             ...profile.toJSON(),
@@ -69,6 +94,12 @@ exports.updateProfile = async (req, res) => {
       return response.error(res, "User tidak valid", 400);
     }
 
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return response.error(res, "User tidak ditemukan", 404);
+    }
+
     let profile = await ProfileTuk.findOne({
       where: { id_user: userId }
     });
@@ -81,18 +112,45 @@ exports.updateProfile = async (req, res) => {
       where: { id_penanggung_jawab: userId }
     });
 
-    let user = null;
-
-    if (!tuk) {
-      user = await User.findByPk(userId, {
-        attributes: ["username"]
+    if (!tuk && user?.username) {
+      tuk = await Tuk.findOne({
+        where: { kode_tuk: user.username }
       });
+    }
 
-      if (user?.username) {
-        tuk = await Tuk.findOne({
-          where: { kode_tuk: user.username }
-        });
+    const requestedUsername = cleanUsername(
+      req.body.username || req.body.kode_tuk || user.username
+    );
+
+    const finalUsername =
+      requestedUsername || generateUsernameTuk(userId);
+
+    if (finalUsername.length < 3) {
+      return response.error(res, "Username / Kode TUK minimal 3 karakter", 400);
+    }
+
+    const existingUser = await User.findOne({
+      where: {
+        username: finalUsername,
+        id_user: { [Op.ne]: userId }
       }
+    });
+
+    if (existingUser) {
+      return response.error(res, "Username sudah digunakan", 400);
+    }
+
+    const existingTuk = await Tuk.findOne({
+      where: {
+        kode_tuk: finalUsername,
+        ...(tuk?.id_tuk
+          ? { id_tuk: { [Op.ne]: tuk.id_tuk } }
+          : {})
+      }
+    });
+
+    if (existingTuk) {
+      return response.error(res, "Kode TUK / username sudah digunakan", 400);
     }
 
     const allowedFields = [
@@ -110,7 +168,6 @@ exports.updateProfile = async (req, res) => {
 
     const updateData = {};
 
-    // ✅ FIX VALIDASI (biar tidak skip value kosong valid)
     for (const field of allowedFields) {
       if (
         req.body[field] !== undefined &&
@@ -121,35 +178,78 @@ exports.updateProfile = async (req, res) => {
       }
     }
 
-    if (Object.keys(updateData).length === 0) {
+    const usernameChanged = user.username !== finalUsername;
+
+    if (Object.keys(updateData).length === 0 && !usernameChanged) {
       return response.error(res, "Tidak ada data yang diupdate", 400);
     }
 
-    await profile.update(updateData);
+    if (usernameChanged) {
+      await user.update({
+        username: finalUsername
+      });
+    }
 
-    // 🔥 sync ke tabel TUK
-    if (tuk) {
-      const tukFields = [
-        "alamat",
-        "provinsi",
-        "kota",
-        "kecamatan",
-        "kelurahan",
-        "kode_pos"
-      ];
+    if (Object.keys(updateData).length > 0) {
+      await profile.update(updateData);
+    }
 
-      const tukUpdateData = {};
+    const tukUpdateData = {
+      kode_tuk: finalUsername,
+      id_penanggung_jawab: userId
+    };
 
-      for (const field of tukFields) {
-        if (updateData[field]) {
-          tukUpdateData[field] = updateData[field];
-        }
-      }
+    const tukFields = [
+      "alamat",
+      "provinsi",
+      "kota",
+      "kecamatan",
+      "kelurahan",
+      "kode_pos"
+    ];
 
-      if (Object.keys(tukUpdateData).length > 0) {
-        await tuk.update(tukUpdateData);
+    for (const field of tukFields) {
+      if (updateData[field]) {
+        tukUpdateData[field] = updateData[field];
       }
     }
+
+    if (req.body.nama_tuk !== undefined && req.body.nama_tuk !== null && req.body.nama_tuk !== "") {
+      tukUpdateData.nama_tuk = req.body.nama_tuk;
+    }
+
+    if (req.body.telepon !== undefined && req.body.telepon !== null && req.body.telepon !== "") {
+      tukUpdateData.telepon = req.body.telepon;
+    }
+
+    if (req.body.email !== undefined && req.body.email !== null && req.body.email !== "") {
+      tukUpdateData.email = req.body.email;
+    }
+
+    if (tuk) {
+      await tuk.update(tukUpdateData);
+    } else {
+      await Tuk.create({
+        kode_tuk: finalUsername,
+        nama_tuk: req.body.nama_tuk || `TUK ${finalUsername}`,
+        jenis_tuk: req.body.jenis_tuk || "mandiri",
+        institusi_induk: req.body.institusi_induk || null,
+        telepon: req.body.telepon || user.no_hp || null,
+        email: req.body.email || user.email || null,
+        alamat: req.body.alamat || null,
+        provinsi: req.body.provinsi || null,
+        kota: req.body.kota || null,
+        kecamatan: req.body.kecamatan || null,
+        kelurahan: req.body.kelurahan || null,
+        kode_pos: req.body.kode_pos || null,
+        status: "aktif",
+        id_penanggung_jawab: userId
+      });
+    }
+
+    const updatedUser = await User.findByPk(userId, {
+      attributes: ["id_user", "username", "email", "no_hp", "status_user"]
+    });
 
     const updatedProfile = await ProfileTuk.findOne({
       where: { id_user: userId }
@@ -159,14 +259,15 @@ exports.updateProfile = async (req, res) => {
       where: {
         [Op.or]: [
           { id_penanggung_jawab: userId },
-          user?.username ? { kode_tuk: user.username } : null
-        ].filter(Boolean)
+          { kode_tuk: finalUsername }
+        ]
       }
     });
 
     const baseUrl = `${req.protocol}://${req.get("host")}`;
 
     return response.success(res, "Profil berhasil diperbarui", {
+      user: updatedUser,
       profile_tuk: {
         ...updatedProfile.toJSON(),
         foto_url: updatedProfile.foto
@@ -194,7 +295,6 @@ exports.uploadFoto = async (req, res) => {
       return response.error(res, "User tidak valid", 400);
     }
 
-    // ✅ validasi file
     if (!req.files || !req.files.foto) {
       return response.error(res, "Tidak ada file foto yang diupload", 400);
     }
@@ -209,7 +309,6 @@ exports.uploadFoto = async (req, res) => {
       profile = await ProfileTuk.create({ id_user: userId });
     }
 
-    // 🔥 hapus foto lama (SAFE)
     if (profile.foto && typeof profile.foto === "string") {
       const oldPath = path.join(process.cwd(), profile.foto);
       if (fs.existsSync(oldPath)) {
@@ -217,7 +316,6 @@ exports.uploadFoto = async (req, res) => {
       }
     }
 
-    // ✅ pakai path dari multer
     const fotoPath = file.path.replace(/\\/g, "/");
 
     await profile.update({

@@ -30,6 +30,7 @@ const ListJadwal = () => {
   const token = localStorage.getItem("token");
 
   const [jadwal, setJadwal] = useState([]);
+  const [jenisTuk, setJenisTuk] = useState("");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -37,6 +38,21 @@ const ListJadwal = () => {
   const [showModal, setShowModal] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  const isMandiri = jenisTuk === "mandiri";
+
+  const fetchProfileTuk = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE}/tuk/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const jenis = res.data?.data?.tuk?.jenis_tuk || "";
+      setJenisTuk(jenis);
+    } catch (err) {
+      console.error("Gagal mengambil profil TUK:", err);
+    }
+  };
 
   const fetchJadwal = async () => {
     try {
@@ -48,9 +64,17 @@ const ListJadwal = () => {
 
       const jadwalList = res.data?.data || [];
 
+      if (!jenisTuk && res.data?.jenis_tuk) {
+        setJenisTuk(res.data.jenis_tuk);
+      }
+
       const jadwalWithAsesor = await Promise.all(
         jadwalList.map(async (item) => {
-          if (item.status === "draft") {
+          if (
+            item.status === "draft" ||
+            item.status === "ditolak" ||
+            !isMandiri
+          ) {
             return {
               ...item,
               asesorSummary: {
@@ -130,8 +154,14 @@ const ListJadwal = () => {
       return;
     }
 
-    fetchJadwal();
+    fetchProfileTuk();
   }, []);
+
+  useEffect(() => {
+    if (!token) return;
+
+    fetchJadwal();
+  }, [jenisTuk]);
 
   const handleDeleteClick = (id) => {
     setDeleteId(id);
@@ -179,6 +209,8 @@ const ListJadwal = () => {
   const getStatusBadge = (status) => {
     const map = {
       draft: "bg-orange-50 text-orange-600 border-orange-100",
+      disetujui: "bg-emerald-50 text-emerald-600 border-emerald-100",
+      ditolak: "bg-red-50 text-red-600 border-red-100",
       open: "bg-emerald-50 text-emerald-600 border-emerald-100",
       ongoing: "bg-blue-50 text-blue-600 border-blue-100",
       selesai: "bg-purple-50 text-purple-600 border-purple-100",
@@ -187,6 +219,8 @@ const ListJadwal = () => {
 
     const label = {
       draft: "Draft",
+      disetujui: "Disetujui",
+      ditolak: "Ditolak",
       open: "Open",
       ongoing: "Ongoing",
       selesai: "Selesai",
@@ -292,18 +326,21 @@ const ListJadwal = () => {
                 </h1>
 
                 <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
-                  Kelola jadwal asesmen kompetensi, status persetujuan,
-                  asesor penguji, verifikator TUK, dan validator MKVA.
+                  {isMandiri
+                    ? "Kelola jadwal asesmen kompetensi, status persetujuan, asesor penguji, verifikator TUK, dan validator MKVA."
+                    : "Lihat jadwal uji kompetensi yang telah dibuat dan dikelola oleh admin."}
                 </p>
               </div>
 
-              <button
-                onClick={() => navigate("/tuk/jadwal/buat")}
-                className="w-full sm:w-fit px-6 py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
-              >
-                <Plus size={19} />
-                Buat Jadwal Baru
-              </button>
+              {isMandiri && (
+                <button
+                  onClick={() => navigate("/tuk/jadwal/buat")}
+                  className="w-full sm:w-fit px-6 py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Plus size={19} />
+                  Buat Jadwal Baru
+                </button>
+              )}
             </div>
           </div>
 
@@ -359,12 +396,14 @@ const ListJadwal = () => {
                 Belum ada jadwal, atau kata kunci pencarian tidak cocok.
               </p>
 
-              <button
-                onClick={() => navigate("/tuk/jadwal/buat")}
-                className="px-6 py-3 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all"
-              >
-                Buat Jadwal
-              </button>
+              {isMandiri && (
+                <button
+                  onClick={() => navigate("/tuk/jadwal/buat")}
+                  className="px-6 py-3 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all"
+                >
+                  Buat Jadwal
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -408,7 +447,7 @@ const ListJadwal = () => {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                           <InfoCard label="Skema Sertifikasi">
                             <p className="text-sm font-black text-[#071E3D] leading-snug">
                               {item.skema?.judul_skema || "-"}
@@ -421,18 +460,6 @@ const ListJadwal = () => {
                             )}
                           </InfoCard>
 
-                          <InfoCard label="Kuota">
-                            <div className="flex items-center gap-2">
-                              <Users size={18} className="text-orange-500" />
-                              <p className="text-lg font-black text-[#071E3D]">
-                                {item.kuota || 0}{" "}
-                                <span className="text-xs text-slate-400 font-bold">
-                                  orang
-                                </span>
-                              </p>
-                            </div>
-                          </InfoCard>
-
                           <InfoCard label="Asesor">
                             {renderAsesorSummary(item.asesorSummary || {})}
                           </InfoCard>
@@ -441,38 +468,68 @@ const ListJadwal = () => {
 
                       {/* Actions */}
                       <div className="xl:w-[260px] shrink-0">
-                        {item.status === "draft" ? (
-                          <div className="rounded-[24px] bg-orange-50 border border-orange-100 p-5 text-center">
+                        {!isMandiri ? (
+                          <div className="rounded-[24px] bg-slate-50 border border-slate-100 p-5 text-center">
                             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
-                              <AlertTriangle className="text-orange-500" size={22} />
+                              <ShieldCheck className="text-slate-400" size={22} />
                             </div>
 
                             <p className="text-sm font-black text-[#071E3D]">
-                              Menunggu Persetujuan
+                              Mode Lihat Saja
                             </p>
 
-                            <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-1">
-                              Belum di-acc Admin
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">
+                              Jadwal dari Admin
                             </p>
                           </div>
-                        ) : (
+                        ) : item.status === "draft" ? (
                           <div className="grid grid-cols-2 xl:grid-cols-1 gap-2">
                             <ActionButton
                               onClick={() =>
                                 navigate(`/tuk/jadwal/${item.id_jadwal}/edit`)
                               }
                               icon={<Pencil size={15} />}
-                              label="Edit Jadwal"
+                              label="Edit Draft"
                               className="bg-orange-500 hover:bg-orange-600 text-white"
                             />
 
                             <ActionButton
                               onClick={() => handleDeleteClick(item.id_jadwal)}
                               icon={<Trash2 size={15} />}
-                              label="Hapus"
+                              label="Hapus Draft"
                               className="bg-red-500 hover:bg-red-600 text-white"
                             />
 
+                            <div className="col-span-2 xl:col-span-1 rounded-[24px] bg-orange-50 border border-orange-100 p-5 text-center">
+                              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
+                                <AlertTriangle className="text-orange-500" size={22} />
+                              </div>
+
+                              <p className="text-sm font-black text-[#071E3D]">
+                                Menunggu Persetujuan
+                              </p>
+
+                              <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-1">
+                                Belum diverifikasi Admin
+                              </p>
+                            </div>
+                          </div>
+                        ) : item.status === "ditolak" ? (
+                          <div className="rounded-[24px] bg-red-50 border border-red-100 p-5 text-center">
+                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
+                              <AlertTriangle className="text-red-500" size={22} />
+                            </div>
+
+                            <p className="text-sm font-black text-[#071E3D]">
+                              Jadwal Ditolak
+                            </p>
+
+                            <p className="text-[10px] text-red-500 font-black uppercase tracking-widest mt-1">
+                              Tidak dapat dikelola
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 xl:grid-cols-1 gap-2">
                             <ActionButton
                               onClick={() =>
                                 navigate(`/tuk/jadwal/${item.id_jadwal}/asesor`)
@@ -512,13 +569,13 @@ const ListJadwal = () => {
 
                     <button
                       onClick={() =>
-                        item.status === "draft"
+                        !isMandiri || item.status === "draft" || item.status === "ditolak"
                           ? null
                           : navigate(`/tuk/jadwal/${item.id_jadwal}/asesor`)
                       }
-                      disabled={item.status === "draft"}
+                      disabled={!isMandiri || item.status === "draft" || item.status === "ditolak"}
                       className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-all ${
-                        item.status === "draft"
+                        !isMandiri || item.status === "draft" || item.status === "ditolak"
                           ? "text-slate-300 cursor-not-allowed"
                           : "text-orange-500 hover:text-[#071E3D]"
                       }`}

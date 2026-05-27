@@ -59,7 +59,6 @@ const JadwalUji = () => {
     tgl_awal: "",
     tgl_akhir: "",
     jam: "",
-    kuota: 0,
     pelaksanaan_uji: "luring",
     url_agenda: "",
     status: "draft",
@@ -178,7 +177,6 @@ const JadwalUji = () => {
       tgl_awal: formatDate(item.tgl_awal),
       tgl_akhir: formatDate(item.tgl_akhir),
       jam: item.jam || "",
-      kuota: item.kuota || 0,
       pelaksanaan_uji: item.pelaksanaan_uji || "luring",
       url_agenda: item.url_agenda || "",
       status: item.status || "draft",
@@ -224,10 +222,11 @@ const JadwalUji = () => {
   const sanitizeData = (data) => {
     const clean = { ...data };
 
+    delete clean.kuota;
+
     clean.id_skema = clean.id_skema ? parseInt(clean.id_skema) : null;
     clean.id_tuk = clean.id_tuk ? parseInt(clean.id_tuk) : null;
     clean.tahun = clean.tahun ? parseInt(clean.tahun) : null;
-    clean.kuota = clean.kuota ? parseInt(clean.kuota) : 0;
 
     [
       "tgl_pra_asesmen",
@@ -341,7 +340,7 @@ const JadwalUji = () => {
 
               <p className="mt-5 max-w-2xl text-base font-medium leading-relaxed text-slate-500 lg:text-lg">
                 Atur jadwal pelaksanaan uji kompetensi, relasi skema, TUK,
-                periode, kuota, mode pelaksanaan, dan status pendaftaran.
+                periode, mode pelaksanaan, dan status pendaftaran.
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -392,7 +391,8 @@ const JadwalUji = () => {
 
                 <p className="text-sm font-medium leading-relaxed text-white/60">
                   Gunakan status open untuk membuka pendaftaran, ongoing untuk
-                  jadwal berjalan, dan draft untuk menyembunyikan jadwal.
+                  jadwal berjalan, dan draft untuk jadwal yang menunggu
+                  verifikasi.
                 </p>
 
                 <div className="mt-6 grid grid-cols-2 gap-3">
@@ -486,14 +486,13 @@ const JadwalUji = () => {
         {/* TABLE */}
         <section className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1180px] border-collapse text-left">
+            <table className="w-full min-w-[1080px] border-collapse text-left">
               <thead>
                 <tr className="bg-[#071E3D]">
                   <TableHead className="w-16 text-center">No</TableHead>
                   <TableHead>Informasi Kegiatan</TableHead>
                   <TableHead>Skema & TUK</TableHead>
                   <TableHead>Waktu Pelaksanaan</TableHead>
-                  <TableHead className="w-24 text-center">Kuota</TableHead>
                   <TableHead className="w-32 text-center">Status</TableHead>
                   <TableHead className="w-44 text-center">Kelola</TableHead>
                   <TableHead className="w-28 text-center">Aksi</TableHead>
@@ -503,7 +502,7 @@ const JadwalUji = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="py-16 text-center">
+                    <td colSpan="7" className="py-16 text-center">
                       <Loader2
                         className="mx-auto mb-4 animate-spin text-orange-500"
                         size={42}
@@ -518,7 +517,7 @@ const JadwalUji = () => {
                   </tr>
                 ) : filteredData.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="py-16 text-center">
+                    <td colSpan="7" className="py-16 text-center">
                       <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
                         <Inbox size={32} />
                       </div>
@@ -609,12 +608,6 @@ const JadwalUji = () => {
                               </span>
                             </div>
                           </div>
-                        </td>
-
-                        <td className="px-5 py-5 text-center">
-                          <span className="inline-flex h-11 min-w-11 items-center justify-center rounded-2xl bg-slate-50 px-4 text-sm font-black text-[#071E3D]">
-                            {item.kuota || 0}
-                          </span>
                         </td>
 
                         <td className="px-5 py-5 text-center">
@@ -879,8 +872,8 @@ const JadwalUji = () => {
                 </FormGroup>
 
                 {/* 4. DETAIL */}
-                <FormGroup icon={<Layers size={16} />} title="Periode & Kuota">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <FormGroup icon={<Layers size={16} />} title="Periode Jadwal">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
                       <label className={labelClass}>Tahun</label>
                       <input
@@ -920,18 +913,6 @@ const JadwalUji = () => {
                         placeholder="Cth: 1"
                       />
                     </div>
-
-                    <div>
-                      <label className={labelClass}>Maksimal Kuota</label>
-                      <input
-                        type="number"
-                        name="kuota"
-                        value={formData.kuota}
-                        onChange={handleInputChange}
-                        className={inputClass}
-                        placeholder="Cth: 20"
-                      />
-                    </div>
                   </div>
                 </FormGroup>
 
@@ -964,7 +945,9 @@ const JadwalUji = () => {
                         onChange={handleInputChange}
                         className={inputClass}
                       >
-                        <option value="draft">Draft (Disembunyikan)</option>
+                        <option value="draft">Draft / Menunggu Verifikasi</option>
+                        <option value="disetujui">Disetujui Admin</option>
+                        <option value="ditolak">Ditolak Admin</option>
                         <option value="open">Open (Bisa Mendaftar)</option>
                         <option value="ongoing">
                           Ongoing (Sedang Berjalan)
@@ -1061,10 +1044,22 @@ function StatusBadge({ status }) {
 
   const styles = {
     open: "bg-green-50 text-green-600 border-green-100",
+    disetujui: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    ditolak: "bg-red-50 text-red-600 border-red-100",
     ongoing: "bg-blue-50 text-blue-600 border-blue-100",
     selesai: "bg-slate-50 text-slate-600 border-slate-100",
     arsip: "bg-slate-100 text-slate-500 border-slate-200",
     draft: "bg-amber-50 text-amber-600 border-amber-100",
+  };
+
+  const labels = {
+    draft: "Draft",
+    disetujui: "Disetujui",
+    ditolak: "Ditolak",
+    open: "Open",
+    ongoing: "Ongoing",
+    selesai: "Selesai",
+    arsip: "Arsip",
   };
 
   return (
@@ -1073,7 +1068,7 @@ function StatusBadge({ status }) {
         styles[normalizedStatus] || styles.draft
       }`}
     >
-      {normalizedStatus}
+      {labels[normalizedStatus] || normalizedStatus}
     </span>
   );
 }

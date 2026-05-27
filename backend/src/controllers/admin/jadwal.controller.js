@@ -18,9 +18,9 @@ exports.create = async (req, res) => {
       tgl_awal,
       tgl_akhir,
       jam,
-      kuota,
       pelaksanaan_uji,
-      url_agenda
+      url_agenda,
+      status
     } = req.body;
 
     if (!id_skema || !id_tuk || !nama_kegiatan) {
@@ -40,10 +40,12 @@ exports.create = async (req, res) => {
       tgl_awal,
       tgl_akhir,
       jam,
-      kuota,
       pelaksanaan_uji,
       url_agenda,
-      created_by: req.user.id_user
+      status: status || "open",
+      created_by: req.user.id_user,
+      created_at: new Date(),
+      updated_at: new Date()
     }, { transaction: t });
 
     await t.commit();
@@ -111,12 +113,19 @@ exports.getById = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-
     const jadwal = await Jadwal.findByPk(req.params.id);
-    if (!jadwal)
-      return response.error(res, "Jadwal tidak ditemukan", 404);
 
-    await jadwal.update(req.body);
+    if (!jadwal) {
+      return response.error(res, "Jadwal tidak ditemukan", 404);
+    }
+
+    const payload = { ...req.body };
+
+    delete payload.kuota;
+
+    payload.updated_at = new Date();
+
+    await jadwal.update(payload);
 
     return response.success(res, "Jadwal berhasil diperbarui", jadwal);
 
@@ -127,14 +136,32 @@ exports.update = async (req, res) => {
 
 exports.updateStatus = async (req, res) => {
   try {
-
     const { status } = req.body;
 
-    const jadwal = await Jadwal.findByPk(req.params.id);
-    if (!jadwal)
-      return response.error(res, "Jadwal tidak ditemukan", 404);
+    const allowedStatus = [
+      "draft",
+      "disetujui",
+      "ditolak",
+      "open",
+      "ongoing",
+      "selesai",
+      "arsip"
+    ];
 
-    await jadwal.update({ status });
+    if (!allowedStatus.includes(status)) {
+      return response.error(res, "Status jadwal tidak valid", 400);
+    }
+
+    const jadwal = await Jadwal.findByPk(req.params.id);
+
+    if (!jadwal) {
+      return response.error(res, "Jadwal tidak ditemukan", 404);
+    }
+
+    await jadwal.update({
+      status,
+      updated_at: new Date()
+    });
 
     return response.success(res, "Status jadwal diperbarui", jadwal);
 

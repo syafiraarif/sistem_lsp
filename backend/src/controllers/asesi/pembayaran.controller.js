@@ -23,20 +23,21 @@ exports.getDetailPembayaran = async (req, res) => {
 
     const tujuanTransfer = await TujuanTransfer.findAll({
       where: { status: "aktif" },
-      attributes: [
-        ["id_tujuan", "id_tujuan_transfer"],
-        ["bank", "nama_bank"],
-        ["nomor_rekening", "nomor_rekening"],
-        ["nama_tujuan", "atas_nama"],
-        "status",
-      ],
     });
+
+    const tujuanTransferFormatted = tujuanTransfer.map((item) => ({
+      id_tujuan_transfer: item.id_tujuan || item.id_tujuan_transfer || item.id,
+      nama_bank: item.bank || item.nama_bank || "-",
+      nomor_rekening: item.nomor_rekening || "-",
+      atas_nama: item.nama_tujuan || item.atas_nama || "-",
+      status: item.status,
+    }));
 
     return response.success(res, "Detail pembayaran", {
       skema: skema.judul_skema,
       kode_skema: skema.kode_skema,
       harga: biaya?.nominal || 0,
-      tujuan_transfer: tujuanTransfer,
+      tujuan_transfer: tujuanTransferFormatted,
       qris: {
         enabled: true,
         image_url: "/uploads/qris/qris.png",
@@ -196,12 +197,38 @@ exports.getStatusPembayaran = async (req, res) => {
       return response.success(res, "Belum ada pembayaran untuk skema ini", {
         id_pembayaran: null,
         status: "belum bayar",
+        metode_pembayaran: null,
+        jalur_pembayaran: null,
+        nominal: 0,
+        waktu_batas: null,
+        waktu_pembayaran: null,
+        bukti_bayar: null,
       });
     }
 
-    return response.success(res, "Status pembayaran", pembayaran);
+    return response.success(res, "Status pembayaran", {
+      id_pembayaran: pembayaran.id_pembayaran,
+      id_skema: pembayaran.id_skema,
+      status: pembayaran.status || "belum bayar",
+      metode_pembayaran: pembayaran.metode_pembayaran || null,
+      jalur_pembayaran: pembayaran.jalur_pembayaran || null,
+      nominal: pembayaran.nominal || 0,
+      waktu_batas: pembayaran.waktu_batas || null,
+      waktu_pembayaran: pembayaran.waktu_pembayaran || null,
+      bukti_bayar: pembayaran.bukti_bayar || null,
+    });
   } catch (err) {
     console.error("GET STATUS PEMBAYARAN ERROR:", err);
-    return response.error(res, err.message);
+
+    return response.success(res, "Belum ada pembayaran untuk skema ini", {
+      id_pembayaran: null,
+      status: "belum bayar",
+      metode_pembayaran: null,
+      jalur_pembayaran: null,
+      nominal: 0,
+      waktu_batas: null,
+      waktu_pembayaran: null,
+      bukti_bayar: null,
+    });
   }
 };

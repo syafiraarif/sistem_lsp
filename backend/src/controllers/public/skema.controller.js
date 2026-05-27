@@ -1,4 +1,9 @@
-const { Skema, Persyaratan } = require("../../models");
+const {
+  Skema,
+  Persyaratan,
+  SkemaUnit,
+  UnitKompetensi,
+} = require("../../models");
 
 exports.getAllPublic = async (req, res) => {
   try {
@@ -8,21 +13,39 @@ exports.getAllPublic = async (req, res) => {
         {
           model: Persyaratan,
           attributes: ["id_persyaratan", "nama_persyaratan"],
-          through: { attributes: [] } 
-        }
+          through: { attributes: [] },
+        },
+        {
+          model: SkemaUnit,
+          as: "skemaUnit",
+          attributes: ["id_skema", "id_unit", "urutan"],
+          required: false,
+          include: [
+            {
+              model: UnitKompetensi,
+              as: "unit",
+              attributes: ["id_unit", "kode_unit", "judul_unit"],
+              required: false,
+            },
+          ],
+        },
       ],
-      order: [["judul_skema", "ASC"]]
+      order: [
+        ["judul_skema", "ASC"],
+        [{ model: SkemaUnit, as: "skemaUnit" }, "urutan", "ASC"],
+      ],
     });
 
     res.json({
       success: true,
-      data
+      data,
     });
-
   } catch (error) {
+    console.error("GET PUBLIC SKEMA ERROR:", error);
+
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };

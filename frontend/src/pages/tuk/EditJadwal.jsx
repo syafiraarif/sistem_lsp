@@ -13,7 +13,6 @@ import {
   Clock,
   FileText,
   Hash,
-  Users,
   Link as LinkIcon,
   Settings,
   ClipboardList,
@@ -55,7 +54,6 @@ const EditJadwal = () => {
     tahun: "",
     periode_bulan: "",
     gelombang: "",
-    kuota: "",
     tgl_awal: "",
     tgl_akhir: "",
     jam: "",
@@ -85,7 +83,6 @@ const EditJadwal = () => {
           tahun: data.tahun || "",
           periode_bulan: data.periode_bulan || "",
           gelombang: data.gelombang || "",
-          kuota: data.kuota || "",
           tgl_awal: data.tgl_awal?.split("T")[0] || "",
           tgl_akhir: data.tgl_akhir?.split("T")[0] || "",
           jam: data.jam || "",
@@ -127,13 +124,6 @@ const EditJadwal = () => {
       });
     }
 
-    if (!form.kuota || isNaN(form.kuota)) {
-      return setMsg({
-        type: "error",
-        text: "Kuota harus berupa angka!",
-      });
-    }
-
     if (!form.tgl_awal || !form.tgl_akhir) {
       return setMsg({
         type: "error",
@@ -152,10 +142,11 @@ const EditJadwal = () => {
       setSaving(true);
 
       const payload = {
-        ...form,
-        tahun: parseInt(form.tahun) || null,
-        kuota: parseInt(form.kuota) || null,
-      };
+          ...form,
+          tahun: parseInt(form.tahun) || null,
+        };
+
+        delete payload.kuota;
 
       await axios.put(`http://localhost:3000/api/tuk/jadwal/${id}`, payload, {
         headers: {
@@ -240,8 +231,8 @@ const EditJadwal = () => {
                 </h1>
 
                 <p className="text-slate-500 mt-3 max-w-2xl font-medium leading-relaxed">
-                  Perbarui detail jadwal, waktu pelaksanaan, kuota peserta, dan
-                  pengaturan uji kompetensi.
+                  Perbarui detail jadwal, waktu pelaksanaan, dan pengaturan uji
+                  kompetensi.
                 </p>
               </div>
 
@@ -345,18 +336,6 @@ const EditJadwal = () => {
                       value={form.gelombang}
                       onChange={handleChange}
                       placeholder="Gelombang"
-                    />
-
-                    <InputField
-                      label="Kuota Peserta"
-                      name="kuota"
-                      type="number"
-                      value={form.kuota}
-                      onChange={handleChange}
-                      placeholder="Kuota"
-                      min="1"
-                      required
-                      icon={<Users size={18} />}
                     />
                   </div>
                 </Card>
@@ -469,11 +448,6 @@ const EditJadwal = () => {
                             ? `${form.tgl_awal} s/d ${form.tgl_akhir}`
                             : "-"
                         }
-                      />
-
-                      <SummaryItem
-                        label="Kuota"
-                        value={form.kuota ? `${form.kuota} peserta` : "-"}
                       />
 
                       <SummaryItem

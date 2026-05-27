@@ -51,7 +51,15 @@ export default function Registration() {
     kelurahan_nama: "",
     alamat_lengkap: "",
 
+    // ✅ FIELD BARU WILAYAH UJI
+    provinsi_wilayah_uji_id: "",
+    provinsi_wilayah_uji: "",
+    kota_wilayah_uji_id: "",
+    kota_wilayah_uji: "",
+
+    // ✅ FIELD LAMA TETAP DIPAKAI
     wilayah_rji: "",
+
     pendidikan_terakhir: "",
     id_skema: "",
     skema_yang_dipilih: "",
@@ -63,19 +71,25 @@ export default function Registration() {
   const [kota, setKota] = useState([]);
   const [kecamatan, setKecamatan] = useState([]);
   const [kelurahan, setKelurahan] = useState([]);
-  const [wilayahUjiList, setWilayahUjiList] = useState([]);
+
+  // ✅ STATE BARU UNTUK WILAYAH UJI
+  const [provinsiWilayahUji, setProvinsiWilayahUji] = useState([]);
+  const [kotaWilayahUji, setKotaWilayahUji] = useState([]);
+
   const [skemaList, setSkemaList] = useState([]);
 
   useEffect(() => {
     axios
       .get(`${API_URL}/provinsi`)
-      .then((res) => setProvinsi(res.data))
+      .then((res) => {
+        setProvinsi(res.data || []);
+        setProvinsiWilayahUji(res.data || []);
+      })
       .catch((err) => console.error("Gagal load provinsi:", err));
 
-    axios
-      .get(`${API_URL}/dropdown/jadwal`)
-      .then((res) => setWilayahUjiList(res.data || []))
-      .catch((err) => console.error("Gagal load wilayah uji:", err));
+    // ❌ DIHAPUS:
+    // axios.get(`${API_URL}/dropdown/jadwal`)
+    // karena wilayah uji sekarang ambil dari provinsi dan kota/kabupaten
 
     axios
       .get(`${API_URL}/dropdown/skema`)
@@ -115,6 +129,8 @@ export default function Registration() {
       } catch (err) {
         console.error(err);
       }
+    } else {
+      setKota([]);
     }
 
     setKecamatan([]);
@@ -147,6 +163,8 @@ export default function Registration() {
       } catch (err) {
         console.error(err);
       }
+    } else {
+      setKecamatan([]);
     }
 
     setKelurahan([]);
@@ -172,6 +190,8 @@ export default function Registration() {
       } catch (err) {
         console.error(err);
       }
+    } else {
+      setKelurahan([]);
     }
   };
 
@@ -184,6 +204,55 @@ export default function Registration() {
       ...prev,
       kelurahan_id: id,
       kelurahan_nama: name,
+    }));
+  };
+
+  // ✅ HANDLER BARU: PROVINSI WILAYAH UJI
+  const handleProvinsiWilayahUjiChange = async (e) => {
+    const selectedOption = e.target.selectedOptions[0];
+    const id = selectedOption.dataset.id;
+    const name = e.target.value;
+
+    if (errors.provinsi_wilayah_uji) {
+      setErrors((prev) => ({ ...prev, provinsi_wilayah_uji: null }));
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      provinsi_wilayah_uji_id: id,
+      provinsi_wilayah_uji: name,
+      kota_wilayah_uji_id: "",
+      kota_wilayah_uji: "",
+      wilayah_rji: "",
+    }));
+
+    if (id) {
+      try {
+        const res = await axios.get(`${API_URL}/kota/${id}`);
+        setKotaWilayahUji(res.data || []);
+      } catch (err) {
+        console.error("Gagal load kota/kabupaten wilayah uji:", err);
+      }
+    } else {
+      setKotaWilayahUji([]);
+    }
+  };
+
+  // ✅ HANDLER BARU: KOTA/KABUPATEN WILAYAH UJI
+  const handleKotaWilayahUjiChange = (e) => {
+    const selectedOption = e.target.selectedOptions[0];
+    const id = selectedOption.dataset.id;
+    const name = e.target.value;
+
+    if (errors.kota_wilayah_uji) {
+      setErrors((prev) => ({ ...prev, kota_wilayah_uji: null }));
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      kota_wilayah_uji_id: id,
+      kota_wilayah_uji: name,
+      wilayah_rji: `${prev.provinsi_wilayah_uji} - ${name}`,
     }));
   };
 
@@ -262,8 +331,12 @@ export default function Registration() {
         newErrors.alamat_lengkap = "Alamat lengkap wajib diisi";
       }
 
-      if (!formData.wilayah_rji) {
-        newErrors.wilayah_rji = "Pilih wilayah uji";
+      if (!formData.provinsi_wilayah_uji_id) {
+        newErrors.provinsi_wilayah_uji = "Pilih provinsi wilayah uji";
+      }
+
+      if (!formData.kota_wilayah_uji_id) {
+        newErrors.kota_wilayah_uji = "Pilih kota/kabupaten wilayah uji";
       }
     } else if (step === 3) {
       if (!formData.pendidikan_terakhir) {
@@ -303,6 +376,13 @@ export default function Registration() {
         kecamatan: formData.kecamatan_nama,
         kelurahan: formData.kelurahan_nama,
 
+        // ✅ FIELD BARU YANG DIKIRIM KE BACKEND
+        provinsi_wilayah_uji: formData.provinsi_wilayah_uji,
+        kota_wilayah_uji: formData.kota_wilayah_uji,
+
+        // ✅ FIELD LAMA TETAP DIKIRIM
+        wilayah_rji: `${formData.provinsi_wilayah_uji} - ${formData.kota_wilayah_uji}`,
+
         // supaya backend lama yang masih baca field ini tetap aman
         program_studi: formData.pendidikan_terakhir,
         kompetensi_keahlian: formData.skema_yang_dipilih,
@@ -331,13 +411,23 @@ export default function Registration() {
         kelurahan_nama: "",
         alamat_lengkap: "",
 
+        provinsi_wilayah_uji_id: "",
+        provinsi_wilayah_uji: "",
+        kota_wilayah_uji_id: "",
+        kota_wilayah_uji: "",
         wilayah_rji: "",
+
         pendidikan_terakhir: "",
         id_skema: "",
         skema_yang_dipilih: "",
 
         captchaToken: "",
       });
+
+      setKota([]);
+      setKecamatan([]);
+      setKelurahan([]);
+      setKotaWilayahUji([]);
 
       setStep(1);
 
@@ -596,32 +686,37 @@ export default function Registration() {
                       </SelectGroup>
 
                       <SelectGroup
-                        label="Wilayah Uji*"
-                        name="wilayah_rji"
-                        value={formData.wilayah_rji}
-                        onChange={handleChange}
-                        error={errors.wilayah_rji}
+                        label="Provinsi Wilayah Uji*"
+                        onChange={handleProvinsiWilayahUjiChange}
+                        value={formData.provinsi_wilayah_uji}
+                        error={errors.provinsi_wilayah_uji}
                       >
-                        <option value="">Pilih Wilayah Uji</option>
-                        {wilayahUjiList.map((item) => (
-                          <option
-                            key={item.id_jadwal}
-                            value={`${item.nama_kegiatan} - ${
-                              item.tuk?.nama_tuk || ""
-                            }`}
-                          >
-                            {item.nama_kegiatan}
-                            {item.tuk?.nama_tuk
-                              ? ` - ${item.tuk.nama_tuk}`
-                              : ""}
-                            {item.tuk?.kota ? ` (${item.tuk.kota})` : ""}
+                        <option value="">Pilih Provinsi Wilayah Uji</option>
+                        {provinsiWilayahUji.map((p) => (
+                          <option key={p.id} data-id={p.id} value={p.name}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </SelectGroup>
+
+                      <SelectGroup
+                        label="Kota / Kabupaten Wilayah Uji*"
+                        onChange={handleKotaWilayahUjiChange}
+                        value={formData.kota_wilayah_uji}
+                        disabled={!formData.provinsi_wilayah_uji_id}
+                        error={errors.kota_wilayah_uji}
+                      >
+                        <option value="">Pilih Kota / Kabupaten Wilayah Uji</option>
+                        {kotaWilayahUji.map((k) => (
+                          <option key={k.id} data-id={k.id} value={k.name}>
+                            {k.name}
                           </option>
                         ))}
                       </SelectGroup>
 
                       <div className="md:col-span-2">
                         <InputGroup
-                          label="Alamat Lengkap (Sesuai KTP)*"
+                          label="Alamat Lengkap"
                           name="alamat_lengkap"
                           value={formData.alamat_lengkap}
                           onChange={handleChange}
@@ -659,7 +754,6 @@ export default function Registration() {
                         error={errors.pendidikan_terakhir}
                       >
                         <option value="">Pilih Pendidikan Terakhir</option>
-                        <option value="SMA/SMK">SMA/SMK</option>
                         <option value="D3">D3</option>
                         <option value="D4">D4</option>
                         <option value="S1">S1</option>

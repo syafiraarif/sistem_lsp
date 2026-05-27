@@ -39,6 +39,24 @@ const getTukId = async (req) => {
 
 
 // ======================================
+// HELPER GET TUK LOGIN
+// ======================================
+
+const getTukLogin = async (req) => {
+
+  const tukId = await getTukId(req);
+
+  if (!tukId) return null;
+
+  const tuk = await Tuk.findByPk(tukId);
+
+  if (!tuk) return null;
+
+  return tuk;
+};
+
+
+// ======================================
 // GET SKEMA TUK
 // HANYA TUK MANDIRI
 // ======================================
@@ -47,16 +65,7 @@ const getSkemaTuk = async (req, res) => {
 
   try {
 
-    const tukId = await getTukId(req);
-
-    if (!tukId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID TUK tidak ditemukan"
-      });
-    }
-
-    const tuk = await Tuk.findByPk(tukId);
+    const tuk = await getTukLogin(req);
 
     if (!tuk) {
       return res.status(404).json({
@@ -85,8 +94,7 @@ const getSkemaTuk = async (req, res) => {
     const data = await Skema.findAll({
 
       where: {
-        status: "aktif",
-        is_mandiri_tuk: true
+        status: "aktif"
       },
 
       order: [
@@ -125,44 +133,7 @@ const createJadwal = async (req, res) => {
 
   try {
 
-    const tukId =
-      await getTukId(req);
-
-    if (!tukId) {
-
-      await transaction.rollback();
-
-      return res.status(400).json({
-        success: false,
-        message:
-          "ID TUK tidak ditemukan"
-      });
-    }
-
-    // ======================================
-    // VALIDASI ID SKEMA
-    // ======================================
-
-    const idSkema =
-      parseInt(req.body.id_skema);
-
-    if (!idSkema || isNaN(idSkema)) {
-
-      await transaction.rollback();
-
-      return res.status(400).json({
-        success: false,
-        message:
-          "ID Skema tidak valid"
-      });
-    }
-
-    // ======================================
-    // VALIDASI TUK
-    // ======================================
-
-    const tuk =
-      await Tuk.findByPk(tukId);
+    const tuk = await getTukLogin(req);
 
     if (!tuk) {
 
@@ -190,6 +161,26 @@ const createJadwal = async (req, res) => {
       });
     }
 
+    const tukId = tuk.id_tuk;
+
+    // ======================================
+    // VALIDASI ID SKEMA
+    // ======================================
+
+    const idSkema =
+      parseInt(req.body.id_skema);
+
+    if (!idSkema || isNaN(idSkema)) {
+
+      await transaction.rollback();
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "ID Skema tidak valid"
+      });
+    }
+
     // ======================================
     // VALIDASI SKEMA
     // ======================================
@@ -199,8 +190,7 @@ const createJadwal = async (req, res) => {
 
       where: {
         id_skema: idSkema,
-        status: "aktif",
-        is_mandiri_tuk: true
+        status: "aktif"
       }
     });
 
@@ -216,31 +206,17 @@ const createJadwal = async (req, res) => {
     }
 
     // ======================================
-    // VALIDASI KUOTA
+    // VALIDASI NAMA KEGIATAN
     // ======================================
 
-    const kuota =
-      parseInt(req.body.kuota || 0);
-
-    if (kuota <= 0) {
+    if (!req.body.nama_kegiatan) {
 
       await transaction.rollback();
 
       return res.status(400).json({
         success: false,
         message:
-          "Kuota wajib lebih dari 0"
-      });
-    }
-
-    if (kuota > 10) {
-
-      await transaction.rollback();
-
-      return res.status(400).json({
-        success: false,
-        message:
-          "Kuota maksimal 10 peserta"
+          "Nama kegiatan wajib diisi"
       });
     }
 
@@ -315,8 +291,6 @@ const createJadwal = async (req, res) => {
       jam:
         req.body.jam || null,
 
-      kuota,
-
       pelaksanaan_uji:
         allowedPelaksanaan.includes(
           req.body.pelaksanaan_uji
@@ -390,20 +364,28 @@ const createJadwal = async (req, res) => {
 
 // ======================================
 // GET ALL JADWAL
+// SEMUA TUK BOLEH LIHAT
+// TUK MANDIRI / SEWAKTU / TEMPAT KERJA
 // ======================================
 
 const getAllJadwal = async (req, res) => {
 
   try {
 
-    const tukId =
-      await getTukId(req);
+    const tuk = await getTukLogin(req);
+
+    if (!tuk) {
+      return res.status(404).json({
+        success: false,
+        message: "TUK tidak ditemukan"
+      });
+    }
 
     const data =
       await Jadwal.findAll({
 
       where: {
-        id_tuk: tukId
+        id_tuk: tuk.id_tuk
       },
 
       include: [
@@ -440,6 +422,7 @@ const getAllJadwal = async (req, res) => {
     return res.json({
       success: true,
       total: data.length,
+      jenis_tuk: tuk.jenis_tuk,
       data
     });
 
@@ -460,14 +443,21 @@ const getAllJadwal = async (req, res) => {
 
 // ======================================
 // GET JADWAL BY ID
+// SEMUA TUK BOLEH LIHAT
 // ======================================
 
 const getJadwalById = async (req, res) => {
 
   try {
 
-    const tukId =
-      await getTukId(req);
+    const tuk = await getTukLogin(req);
+
+    if (!tuk) {
+      return res.status(404).json({
+        success: false,
+        message: "TUK tidak ditemukan"
+      });
+    }
 
     const { id } =
       req.params;
@@ -478,7 +468,7 @@ const getJadwalById = async (req, res) => {
       where: {
         id_jadwal:
           parseInt(id),
-        id_tuk: tukId
+        id_tuk: tuk.id_tuk
       },
 
       include: [
@@ -507,6 +497,7 @@ const getJadwalById = async (req, res) => {
 
     return res.json({
       success: true,
+      jenis_tuk: tuk.jenis_tuk,
       data
     });
 
@@ -527,6 +518,7 @@ const getJadwalById = async (req, res) => {
 
 // ======================================
 // UPDATE JADWAL
+// HANYA TUK MANDIRI
 // HANYA DRAFT BOLEH DIUBAH
 // STATUS TIDAK BOLEH DIUBAH TUK
 // ======================================
@@ -535,8 +527,26 @@ const updateJadwal = async (req, res) => {
 
   try {
 
-    const tukId =
-      await getTukId(req);
+    const tuk = await getTukLogin(req);
+
+    if (!tuk) {
+      return res.status(404).json({
+        success: false,
+        message: "TUK tidak ditemukan"
+      });
+    }
+
+    // ======================================
+    // HANYA TUK MANDIRI
+    // ======================================
+
+    if (tuk.jenis_tuk !== "mandiri") {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Hanya TUK mandiri yang boleh mengubah jadwal"
+      });
+    }
 
     const { id } =
       req.params;
@@ -547,7 +557,7 @@ const updateJadwal = async (req, res) => {
       where: {
         id_jadwal:
           parseInt(id),
-        id_tuk: tukId
+        id_tuk: tuk.id_tuk
       }
     });
 
@@ -576,25 +586,6 @@ const updateJadwal = async (req, res) => {
     }
 
     // ======================================
-    // VALIDASI KUOTA
-    // ======================================
-
-    if (req.body.kuota) {
-
-      const kuota =
-        parseInt(req.body.kuota);
-
-      if (kuota > 10) {
-
-        return res.status(400).json({
-          success: false,
-          message:
-            "Kuota maksimal 10 peserta"
-        });
-      }
-    }
-
-    // ======================================
     // VALIDASI TANGGAL
     // ======================================
 
@@ -606,7 +597,11 @@ const updateJadwal = async (req, res) => {
       req.body.tgl_akhir ||
       jadwal.tgl_akhir;
 
-    if (tglAwal > tglAkhir) {
+    if (
+      tglAwal &&
+      tglAkhir &&
+      tglAwal > tglAkhir
+    ) {
 
       return res.status(400).json({
         success: false,
@@ -627,17 +622,28 @@ const updateJadwal = async (req, res) => {
     ];
 
     // ======================================
+    // AMANKAN PAYLOAD
+    // FIELD INI TIDAK BOLEH DIUBAH TUK
+    // ======================================
+
+    const payload = {
+      ...req.body
+    };
+
+    delete payload.kuota;
+    delete payload.status;
+    delete payload.id_tuk;
+    delete payload.created_by;
+    delete payload.created_at;
+    delete payload.updated_at;
+
+    // ======================================
     // UPDATE
     // ======================================
 
     await jadwal.update({
 
-      ...req.body,
-
-      kuota:
-        req.body.kuota
-          ? parseInt(req.body.kuota)
-          : jadwal.kuota,
+      ...payload,
 
       pelaksanaan_uji:
         allowedPelaksanaan.includes(
@@ -682,6 +688,7 @@ const updateJadwal = async (req, res) => {
 
 // ======================================
 // DELETE JADWAL
+// HANYA TUK MANDIRI
 // HANYA DRAFT BOLEH DIHAPUS
 // ======================================
 
@@ -689,8 +696,26 @@ const deleteJadwal = async (req, res) => {
 
   try {
 
-    const tukId =
-      await getTukId(req);
+    const tuk = await getTukLogin(req);
+
+    if (!tuk) {
+      return res.status(404).json({
+        success: false,
+        message: "TUK tidak ditemukan"
+      });
+    }
+
+    // ======================================
+    // HANYA TUK MANDIRI
+    // ======================================
+
+    if (tuk.jenis_tuk !== "mandiri") {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Hanya TUK mandiri yang boleh menghapus jadwal"
+      });
+    }
 
     const { id } =
       req.params;
@@ -701,7 +726,7 @@ const deleteJadwal = async (req, res) => {
       where: {
         id_jadwal:
           parseInt(id),
-        id_tuk: tukId
+        id_tuk: tuk.id_tuk
       }
     });
 
@@ -770,14 +795,21 @@ const deleteJadwal = async (req, res) => {
 
 // ======================================
 // DETAIL JADWAL LENGKAP
+// SEMUA TUK BOLEH LIHAT
 // ======================================
 
 const getDetailJadwalLengkap = async (req, res) => {
 
   try {
 
-    const tukId =
-      await getTukId(req);
+    const tuk = await getTukLogin(req);
+
+    if (!tuk) {
+      return res.status(404).json({
+        success: false,
+        message: "TUK tidak ditemukan"
+      });
+    }
 
     const { id } =
       req.params;
@@ -788,7 +820,7 @@ const getDetailJadwalLengkap = async (req, res) => {
       where: {
         id_jadwal:
           parseInt(id),
-        id_tuk: tukId
+        id_tuk: tuk.id_tuk
       },
 
       include: [
@@ -810,7 +842,8 @@ const getDetailJadwalLengkap = async (req, res) => {
           attributes: [
             "id_tuk",
             "nama_tuk",
-            "email"
+            "email",
+            "jenis_tuk"
           ]
         },
 
@@ -864,6 +897,7 @@ const getDetailJadwalLengkap = async (req, res) => {
 
     return res.json({
       success: true,
+      jenis_tuk: tuk.jenis_tuk,
       data
     });
 
