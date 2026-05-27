@@ -49,6 +49,7 @@ export default function ProfileTUK() {
   });
 
   const [formData, setFormData] = useState({
+    username: "",
     nik: "",
     jenis_kelamin: "",
     tempat_lahir: "",
@@ -163,11 +164,13 @@ export default function ProfileTUK() {
       });
 
       const data = res.data?.data || {};
+      const user = data.user || {};
       const profile_tuk = data.profile_tuk || {};
       const tuk = data.tuk || {};
 
       setFormData((prev) => ({
         ...prev,
+        username: user.username || tuk.kode_tuk || "",
         nik: profile_tuk.nik || "",
         jenis_kelamin: profile_tuk.jenis_kelamin || "",
         tempat_lahir: profile_tuk.tempat_lahir || "",
@@ -178,7 +181,7 @@ export default function ProfileTUK() {
         kecamatan: profile_tuk.kecamatan || "",
         kelurahan: profile_tuk.kelurahan || "",
         kode_pos: profile_tuk.kode_pos || "",
-        kode_tuk: tuk.kode_tuk || "",
+        kode_tuk: tuk.kode_tuk || user.username || "",
         nama_tuk: tuk.nama_tuk || "",
         telepon: tuk.telepon || "",
         email: tuk.email || "",
@@ -339,6 +342,14 @@ export default function ProfileTUK() {
 
     let val = value;
 
+    if (name === "username") {
+      val = value
+        .replace(/\s+/g, "-")
+        .replace(/[^a-zA-Z0-9._-]/g, "")
+        .toUpperCase()
+        .slice(0, 50);
+    }
+
     if (name === "nik") {
       val = value.replace(/[^0-9]/g, "").slice(0, 16);
     }
@@ -362,6 +373,8 @@ export default function ProfileTUK() {
     }
 
     const profileData = {
+      username: formData.username.trim(),
+      kode_tuk: formData.username.trim(),
       nik: formData.nik.trim(),
       jenis_kelamin: formData.jenis_kelamin.trim(),
       tempat_lahir: formData.tempat_lahir.trim(),
@@ -519,16 +532,21 @@ export default function ProfileTUK() {
               <section className="xl:col-span-1 space-y-6">
                 <Card title="Identitas TUK" icon={<FileText size={22} />}>
                   <div className="space-y-4">
-                    <ReadonlyBox
-                      label="Kode TUK"
-                      value={formData.kode_tuk || "-"}
-                      icon={<Hash size={18} />}
+                    <InputField
+                      label="Username / Kode TUK"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleChange}
+                      placeholder="Contoh: TUK-JOGJA-01"
+                      maxLength={50}
                     />
+
                     <ReadonlyBox
                       label="Nama TUK"
                       value={formData.nama_tuk || "-"}
                       icon={<BadgeCheck size={18} />}
                     />
+
                     <ReadonlyBox
                       label="Status"
                       value={(formData.status || "aktif").toUpperCase()}
