@@ -1,6 +1,6 @@
 // frontend/src/pages/admin/Notifikasi.jsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
 import api from "../../services/api";
 import {
@@ -27,9 +27,13 @@ import {
 
 const NotifikasiAdmin = () => {
   // --- STATE ---
-  const [allData, setAllData] = useState([]); // Data mentah dari DB
-  const [data, setData] = useState([]); // Data yang ditampilkan (paginated)
+  const [allData, setAllData] = useState([]);
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // --- REF UNTUK CEGAH REQUEST DOBEL ---
+  const hasFetchedRef = useRef(false);
+  const requestRunningRef = useRef(false);
 
   // Filter & Pagination
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,21 +52,39 @@ const NotifikasiAdmin = () => {
 
   // --- FETCH DATA ---
   const fetchData = async () => {
+    if (requestRunningRef.current) return;
+
+    requestRunningRef.current = true;
     setLoading(true);
+
     try {
       const response = await api.get("/admin/notifikasi");
+
       if (response.data.success) {
         setAllData(response.data.data || []);
       }
     } catch (error) {
       console.error(error);
-      Swal.fire("Error", "Gagal mengambil data notifikasi", "error");
+
+      if (error.response?.status === 429) {
+        Swal.fire(
+          "Terlalu Banyak Request",
+          "Permintaan data notifikasi terlalu sering. Tunggu sebentar lalu coba refresh lagi.",
+          "warning"
+        );
+      } else {
+        Swal.fire("Error", "Gagal mengambil data notifikasi", "error");
+      }
     } finally {
+      requestRunningRef.current = false;
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+
+    hasFetchedRef.current = true;
     fetchData();
   }, []);
 
@@ -108,7 +130,7 @@ const NotifikasiAdmin = () => {
       total: totalItems,
       totalPages: totalPages || 1,
     }));
-  }, [allData, searchTerm, filterType, filterChannel, pagination.page]);
+  }, [allData, searchTerm, filterType, filterChannel, pagination.page, pagination.limit]);
 
   // --- HANDLERS ---
   const handleDelete = async (id) => {
@@ -272,7 +294,10 @@ const NotifikasiAdmin = () => {
                   />
                   <select
                     value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
+                    onChange={(e) => {
+                      setFilterType(e.target.value);
+                      setPagination((p) => ({ ...p, page: 1 }));
+                    }}
                     className="w-full appearance-none rounded-2xl border border-slate-100 bg-slate-50 py-3 pl-11 pr-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                   >
                     <option value="">Semua Kategori</option>
@@ -289,7 +314,10 @@ const NotifikasiAdmin = () => {
                   />
                   <select
                     value={filterChannel}
-                    onChange={(e) => setFilterChannel(e.target.value)}
+                    onChange={(e) => {
+                      setFilterChannel(e.target.value);
+                      setPagination((p) => ({ ...p, page: 1 }));
+                    }}
                     className="w-full appearance-none rounded-2xl border border-slate-100 bg-slate-50 py-3 pl-11 pr-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                   >
                     <option value="">Semua Channel</option>

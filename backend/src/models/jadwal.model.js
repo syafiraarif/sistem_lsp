@@ -20,8 +20,8 @@ const Jadwal = sequelize.define("jadwal", {
     type: DataTypes.STRING(150),
     allowNull: false
   },
-    tgl_pra_asesmen: {
-    type:  DataTypes.DATEONLY,
+  tgl_pra_asesmen: {
+    type: DataTypes.DATEONLY,
     allowNull: true
   },
   tahun: DataTypes.INTEGER,
@@ -30,11 +30,18 @@ const Jadwal = sequelize.define("jadwal", {
   tgl_awal: DataTypes.DATEONLY,
   tgl_akhir: DataTypes.DATEONLY,
   jam: DataTypes.TIME,
-  kuota: DataTypes.INTEGER,
-  pelaksanaan_uji: DataTypes.ENUM("luring","daring","hybrid","onsite"),
+  pelaksanaan_uji: DataTypes.ENUM("luring", "daring", "hybrid", "onsite"),
   url_agenda: DataTypes.STRING(255),
   status: {
-    type: DataTypes.ENUM("draft","open","ongoing","selesai","arsip"),
+    type: DataTypes.ENUM(
+      "draft",
+      "disetujui",
+      "ditolak",
+      "open",
+      "ongoing",
+      "selesai",
+      "arsip"
+    ),
     defaultValue: "draft"
   },
   created_by: DataTypes.INTEGER,
