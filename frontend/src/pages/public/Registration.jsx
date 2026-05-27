@@ -754,7 +754,6 @@ export default function Registration() {
                         error={errors.pendidikan_terakhir}
                       >
                         <option value="">Pilih Pendidikan Terakhir</option>
-                        <option value="SMA/SMK">SMA/SMK</option>
                         <option value="D3">D3</option>
                         <option value="D4">D4</option>
                         <option value="S1">S1</option>
