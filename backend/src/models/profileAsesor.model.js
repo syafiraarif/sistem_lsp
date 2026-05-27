@@ -25,6 +25,8 @@ const ProfileAsesor = sequelize.define("profile_asesor", {
   kelurahan: DataTypes.STRING(50),
   kode_pos: DataTypes.STRING(10),
 
+  alamat_domisili: DataTypes.TEXT,
+
   bidang_keahlian: DataTypes.STRING(150),
 
   no_reg_asesor: DataTypes.STRING(50),

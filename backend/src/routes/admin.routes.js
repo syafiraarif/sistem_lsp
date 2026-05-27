@@ -53,6 +53,7 @@ router.get("/dokumen-mutu", dokumenMutuController.getAllDokumen);
 router.delete("/dokumen-mutu/:id", dokumenMutuController.deleteDokumen);
 
 router.post("/asesor", asesorAdmin.createAsesor);
+router.get("/dropdown/skema", asesorAdmin.getSkemaDropdown);
 router.get("/asesor", asesorAdmin.getAll);
 router.get("/asesor/:id", asesorAdmin.getById);
 router.put("/asesor/:id", asesorAdmin.update);

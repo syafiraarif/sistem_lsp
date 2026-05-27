@@ -33,7 +33,6 @@ const BiayaUji = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const initialForm = {
-    jenis_biaya: "uji_kompetensi",
     metode_uji: "luring",
     nominal: "",
     keterangan: "",
@@ -66,8 +65,29 @@ const BiayaUji = () => {
     if (id) fetchData();
   }, [id]);
 
+  const formatNumberInput = (value) => {
+  const numberString = value.replace(/\D/g, "");
+  return numberString.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const parseNumberInput = (value) => {
+    return value.replace(/\./g, "");
+  };
+
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "nominal") {
+      setFormData({
+        ...formData,
+        nominal: formatNumberInput(value),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   const handleAdd = () => {
@@ -78,13 +98,14 @@ const BiayaUji = () => {
 
   const handleEdit = (item) => {
     setIsEdit(true);
+
     setFormData({
       id_biaya: item.id_biaya,
-      jenis_biaya: item.jenis_biaya,
       metode_uji: item.metode_uji,
-      nominal: item.nominal,
+      nominal: formatNumberInput(String(item.nominal)),
       keterangan: item.keterangan || "",
     });
+
     setShowModal(true);
   };
 
@@ -94,16 +115,28 @@ const BiayaUji = () => {
 
     try {
       const payload = {
-        ...formData,
         id_skema: parseInt(id),
+        metode_uji: formData.metode_uji,
+        nominal: parseInt(parseNumberInput(formData.nominal)),
+        keterangan: formData.keterangan,
       };
 
       if (isEdit) {
         await api.put(`/admin/biaya-uji/${formData.id_biaya}`, payload);
-        Swal.fire("Berhasil", "Data biaya berhasil diperbarui", "success");
+
+        Swal.fire(
+          "Berhasil",
+          "Data biaya berhasil diperbarui",
+          "success"
+        );
       } else {
         await api.post("/admin/biaya-uji", payload);
-        Swal.fire("Berhasil", "Data biaya berhasil ditambahkan", "success");
+
+        Swal.fire(
+          "Berhasil",
+          "Data biaya berhasil ditambahkan",
+          "success"
+        );
       }
 
       setShowModal(false);
@@ -111,7 +144,8 @@ const BiayaUji = () => {
     } catch (error) {
       Swal.fire(
         "Gagal",
-        error.response?.data?.message || "Terjadi kesalahan saat menyimpan",
+        error.response?.data?.message ||
+          "Terjadi kesalahan saat menyimpan",
         "error"
       );
     } finally {
@@ -323,7 +357,6 @@ const BiayaUji = () => {
               <thead>
                 <tr className="bg-[#071E3D]">
                   <TableHead center>No</TableHead>
-                  <TableHead>Jenis Biaya</TableHead>
                   <TableHead>Metode Uji</TableHead>
                   <TableHead>Nominal</TableHead>
                   <TableHead>Keterangan</TableHead>
@@ -334,7 +367,7 @@ const BiayaUji = () => {
               <tbody>
                 {biayaList.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="p-16 text-center">
+                    <td colSpan="5" className="p-16 text-center">
                       <FileText
                         size={48}
                         className="mx-auto mb-4 text-slate-300"
@@ -352,10 +385,6 @@ const BiayaUji = () => {
                     >
                       <td className="px-5 py-4 text-center text-sm font-bold text-slate-500">
                         {index + 1}
-                      </td>
-
-                      <td className="px-5 py-4 text-sm font-black text-[#071E3D]">
-                        {formatEnum(item.jenis_biaya)}
                       </td>
 
                       <td className="px-5 py-4 text-sm font-semibold text-slate-600">
@@ -436,23 +465,6 @@ const BiayaUji = () => {
             <form onSubmit={handleSubmit} className="space-y-5 p-6">
               <div>
                 <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Jenis Biaya <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="jenis_biaya"
-                  value={formData.jenis_biaya}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-                >
-                  <option value="uji_kompetensi">Uji Kompetensi</option>
-                  <option value="pra_asesmen">Pra Asesmen</option>
-                  <option value="lainnya">Lainnya</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Metode Uji <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -462,9 +474,8 @@ const BiayaUji = () => {
                   required
                   className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                 >
-                  <option value="luring">Luring (Offline / Tatap Muka)</option>
-                  <option value="daring">Daring (Online)</option>
-                  <option value="hybrid">Hybrid (Campuran)</option>
+                  <option value="luring">Luring </option>
+                  <option value="daring">Daring </option>
                 </select>
               </div>
 
@@ -473,13 +484,12 @@ const BiayaUji = () => {
                   Nominal Biaya (Rp) <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   name="nominal"
                   value={formData.nominal}
                   onChange={handleInputChange}
                   required
-                  min="0"
-                  placeholder="Contoh: 1500000"
+                  placeholder="Contoh: 1.500.000"
                   className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                 />
               </div>

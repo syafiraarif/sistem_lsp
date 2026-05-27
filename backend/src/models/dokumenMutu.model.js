@@ -26,6 +26,7 @@ const DokumenMutu = sequelize.define("dokumen_mutu", {
   nomor_dokumen: DataTypes.STRING(100),
   nomor_revisi: DataTypes.STRING(50),
   penyusun: DataTypes.STRING(150),
+  review: DataTypes.STRING(150), 
   disahkan_oleh: DataTypes.STRING(150),
   tanggal_dokumen: DataTypes.DATE,
   file_dokumen: DataTypes.STRING(255),

@@ -15,15 +15,29 @@ const buildPayload = (body, files) => {
     kode_skema: body.kode_skema || null,
     judul_skema: body.judul_skema || null,
     judul_skema_en: body.judul_skema_en || null,
+
     jenis_skema: body.jenis_skema || "kkni",
-    level_kkni: body.level_kkni ? Number(body.level_kkni) : null,
-    bidang_okupasi: body.bidang_okupasi || null,
+
+    level_kkni: body.level_kkni
+      ? Number(body.level_kkni)
+      : null,
+
+    bidang: body.bidang || null,
+
+    jenjang_kualifikasi:
+      body.jenjang_kualifikasi || "I",
+
     kode_sektor: body.kode_sektor || null,
+
     kode_kbli: body.kode_kbli || null,
+
     kode_kbji: body.kode_kbji || null,
-    keterangan_bukti: body.keterangan_bukti || null,
-    skor_min_ai05: body.skor_min_ai05 ? Number(body.skor_min_ai05) : null,
-    kedalaman_bukti: body.kedalaman_bukti || "elemen_kompetensi",
+
+    nomor_revisi: body.nomor_revisi || null,
+
+    status_dokumen:
+      body.status_dokumen || "terkendali",
+
     status: body.status || "draft",
   };
 
@@ -66,13 +80,17 @@ exports.create = async (req, res) => {
 exports.getAll = async (req, res) => {
   try {
     const data = await Skema.findAll({
-      include: [{ model: Skkni }, { model: Persyaratan }],
+      // Pastikan relasi ini terdefinisi dengan benar di models/index.js
+      include: [
+        { model: Skkni, as: 'skknis' }, 
+        { model: Persyaratan }
+      ],
       order: [["id_skema", "DESC"]],
     });
 
     return response.success(res, "List skema", data);
   } catch (err) {
-    console.error("GET ALL SKEMA ERROR:", err);
+    console.error("GET ALL SKEMA ERROR:", err); // Lihat log di terminal backend kamu!
     return response.error(res, err.message || "Gagal mengambil skema", 500);
   }
 };
@@ -81,7 +99,7 @@ exports.getDetail = async (req, res) => {
   try {
     const data = await Skema.findByPk(req.params.id, {
       include: [
-        Skkni,
+        { model: Skkni, as: 'skknis' },
         BiayaUji,
         Persyaratan,
         PersyaratanTuk,

@@ -538,12 +538,12 @@ const Skkni = () => {
 
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                          <Label>Legalitas</Label>
-                          <input type="text" name="legalitas" value={formData.legalitas} onChange={handleInputChange} className={inputClass}/>
+                          <Label>Tahun Terbit</Label>
+                          <input type="text" name="" value={formData.legalitas} onChange={handleInputChange} className={inputClass}/>
                         </div>
 
                         <div>
-                          <Label>Penerbit</Label>
+                          <Label>Lembaga Penerbit</Label>
                           <input type="text" name="penerbit" value={formData.penerbit} onChange={handleInputChange} className={inputClass}/>
                         </div>
                       </div>

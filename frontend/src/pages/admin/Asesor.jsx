@@ -19,6 +19,8 @@ const Asesor = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [skemaList, setSkemaList] = useState([]);
+  const [sameAsKtp, setSameAsKtp] = useState(false);
 
   const [emailSentIds, setEmailSentIds] = useState(() => {
     const saved = localStorage.getItem("emailSentAsesor");
@@ -60,7 +62,7 @@ const Asesor = () => {
     nik: "", email: "", no_hp: "", gelar_depan: "", nama_lengkap: "",
     gelar_belakang: "", jenis_kelamin: "laki-laki", tempat_lahir: "",
     tanggal_lahir: "", kebangsaan: "Indonesia", pendidikan_terakhir: "S1",
-    tahun_lulus: "", institut_asal: "", alamat: "", rt: "", rw: "",
+    tahun_lulus: "", institut_asal: "", alamat: "", alamat_domisili: "", rt: "", rw: "",
     provinsi: "", kota: "", kecamatan: "", kelurahan: "", kode_pos: "",
     bidang_keahlian: "", no_reg_asesor: "", no_lisensi: "", masa_berlaku: "",
     status_asesor: "aktif",
@@ -104,6 +106,7 @@ const Asesor = () => {
     fetchData(pagination.page, searchTerm);
     loadProvinsi();
     loadKebangsaan(); // Memanggil fungsi loadKebangsaan saat komponen dimuat
+    loadSkema();
   }, [pagination.page, searchTerm]);
 
   const loadProvinsi = async () => {
@@ -112,6 +115,17 @@ const Asesor = () => {
       setProvinsiList(extractArray(res));
     } catch (err) {
       console.error("Gagal load provinsi", err);
+    }
+  };
+
+    const loadSkema = async () => {
+    try {
+      const response = await api.get("/admin/dropdown/skema");
+      const resData = response.data !== undefined ? response.data : response;
+
+      setSkemaList(extractArray(resData));
+    } catch (error) {
+      console.error("Gagal load skema", error);
     }
   };
 
@@ -151,6 +165,22 @@ const Asesor = () => {
         const res = await getKota(id);
         setKotaList(extractArray(res));
       } catch (err) { console.error(err); }
+    }
+  };
+
+    const handleSameAddress = (checked) => {
+    setSameAsKtp(checked);
+
+    if (checked) {
+      setFormData((prev) => ({
+        ...prev,
+        alamat_domisili: prev.alamat,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        alamat_domisili: "",
+      }));
     }
   };
 
@@ -240,7 +270,18 @@ const Asesor = () => {
     if (name === "tahun_lulus" && finalValue.length > 4) finalValue = finalValue.slice(0, 4);
     if (name === "kode_pos" && finalValue.length > 5) finalValue = finalValue.slice(0, 5);
 
-    setFormData((prev) => ({ ...prev, [name]: finalValue }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: finalValue,
+      };
+
+      if (name === "alamat" && sameAsKtp) {
+        updated.alamat_domisili = finalValue;
+      }
+
+      return updated;
+    });
     validateInput(name, finalValue);
   };
 
@@ -348,7 +389,7 @@ const Asesor = () => {
       tanggal_lahir: item.tanggal_lahir ? item.tanggal_lahir.split("T")[0] : "",
       kebangsaan: item.kebangsaan || "Indonesia", pendidikan_terakhir: item.pendidikan_terakhir || "S1",
       tahun_lulus: item.tahun_lulus || "", institut_asal: item.institut_asal || "",
-      alamat: item.alamat || "", rt: item.rt || "", rw: item.rw || "",
+      alamat: item.alamat || "", alamat_domisili: item.alamat_domisili || "", rt: item.rt || "", rw: item.rw || "",
       provinsi: item.provinsi || "", kota: item.kota || "", kecamatan: item.kecamatan || "",
       kelurahan: item.kelurahan || "", kode_pos: item.kode_pos || "",
       bidang_keahlian: item.bidang_keahlian || "", no_reg_asesor: item.no_reg_asesor || "",
@@ -654,14 +695,32 @@ const Asesor = () => {
                 <SectionTitle icon={<Briefcase size={16}/>} title="Data Sertifikasi" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <FormInput label="Bidang Keahlian" required error={errors.bidang_keahlian}>
-                      <input type="text" name="bidang_keahlian" value={formData.bidang_keahlian} onChange={handleChange} required disabled={isDetailMode} placeholder="Contoh: Pemrograman Web, Jaringan" className={inputClass('bidang_keahlian')}/>
-                    </FormInput>
+                  <FormInput label="Bidang Keahlian" required error={errors.bidang_keahlian}>
+                    <select
+                      name="bidang_keahlian"
+                      value={formData.bidang_keahlian}
+                      onChange={handleChange}
+                      required
+                      disabled={isDetailMode}
+                      className={inputClass("bidang_keahlian")}
+                    >
+                      <option value="">Pilih Skema</option>
+
+                      {skemaList.map((item) => (
+                        <option
+                          key={item.id_skema}
+                          value={item.judul_skema}
+                        >
+                          {item.judul_skema}
+                        </option>
+                      ))}
+                    </select>
+                  </FormInput>
                   </div>
                   <FormInput label="No. Registrasi (MET)">
                     <input type="text" name="no_reg_asesor" value={formData.no_reg_asesor} onChange={handleChange} disabled={isDetailMode} className={inputClass('no_reg_asesor')}/>
                   </FormInput>
-                  <FormInput label="No. Lisensi">
+                  <FormInput label="No. Sertifikat Kompetensi">
                     <input type="text" name="no_lisensi" value={formData.no_lisensi} onChange={handleChange} disabled={isDetailMode} className={inputClass('no_lisensi')}/>
                   </FormInput>
                   <FormInput label="Masa Berlaku Sertifikat">
@@ -680,7 +739,6 @@ const Asesor = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormInput label="Pendidikan Terakhir">
                     <select name="pendidikan_terakhir" value={formData.pendidikan_terakhir} onChange={handleChange} disabled={isDetailMode} className={inputClass('pendidikan_terakhir')}>
-                      <option value="SMA/SMK">SMA/SMK</option>
                       <option value="D3">D3</option>
                       <option value="D4">D4</option>
                       <option value="S1">S1</option>
@@ -702,8 +760,35 @@ const Asesor = () => {
                 <SectionTitle icon={<MapPin size={16}/>} title="Alamat & Domisili" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <FormInput label="Alamat Lengkap" error={errors.alamat}>
+                    <FormInput label="Alamat KTP" error={errors.alamat}>
                       <textarea name="alamat" rows="2" value={formData.alamat} onChange={handleChange} disabled={isDetailMode} placeholder="Nama jalan, perumahan..." className={`${inputClass('alamat')} resize-none`}></textarea>
+                    </FormInput>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="flex items-center gap-2 text-[12px] font-medium text-[#182D4A] mb-2">
+                      <input
+                        type="checkbox"
+                        checked={sameAsKtp}
+                        onChange={(e) => handleSameAddress(e.target.checked)}
+                        disabled={isDetailMode}
+                        className="accent-[#CC6B27]"
+                      />
+                      Alamat domisili sesuai dengan alamat KTP
+                    </label>
+
+                    <FormInput label="Alamat Domisili">
+                      <textarea
+                        name="alamat_domisili"
+                        rows="2"
+                        value={formData.alamat_domisili}
+                        onChange={handleChange}
+                        disabled={isDetailMode || sameAsKtp}
+                        placeholder="Isi alamat domisili"
+                        className={`${inputClass('alamat_domisili')} resize-none ${
+                          sameAsKtp ? "bg-gray-100 text-gray-500" : ""
+                        }`}
+                      />
                     </FormInput>
                   </div>
 

@@ -37,14 +37,14 @@ const Skema = () => {
     judul_skema: '',
     judul_skema_en: '',
     jenis_skema: 'kkni',
-    level_kkni: '', 
-    bidang_okupasi: '',
+    level_kkni: '',
+    bidang: '',
+    jenjang_kualifikasi: 'I',
     kode_sektor: '',
     kode_kbli: '',
     kode_kbji: '',
-    keterangan_bukti: '',
-    skor_min_ai05: '',
-    kedalaman_bukti: 'elemen_kompetensi',
+    nomor_revisi: '',
+    status_dokumen: 'terkendali',
     dokumen: '',
     status: 'draft'
   };
@@ -92,20 +92,32 @@ const Skema = () => {
   // --- VALIDASI MANUAL ---
   const validateInput = (name, value) => {
     let errorMsg = '';
-    
-    if (name === 'level_kkni' || name === 'skor_min_ai05') {
+
+    const minLengthFields = [
+      'kode_skema',
+      'judul_skema',
+      'judul_skema_en'
+    ];
+
+    if (name === 'level_kkni') {
       if (value === null || value === '') {
         errorMsg = 'Tidak boleh kosong.';
       }
-    } else if (['kode_sektor', 'kode_kbli', 'kode_kbji'].includes(name)) {
-      // Abaikan aturan 4 karakter untuk kode angka yang pendek
-    } else {
-      if (typeof value === 'string' && value.trim().length > 0 && value.trim().length <= 3) {
-        errorMsg = 'Terlalu pendek (minimal 4 karakter).';
-      }
+    } 
+    else if (
+      minLengthFields.includes(name) &&
+      typeof value === 'string' &&
+      value.trim().length > 0 &&
+      value.trim().length <= 3
+    ) {
+      errorMsg = 'Terlalu pendek (minimal 4 karakter).';
     }
 
-    setErrors(prev => ({ ...prev, [name]: errorMsg }));
+    setErrors(prev => ({
+      ...prev,
+      [name]: errorMsg
+    }));
+
     return errorMsg === '';
   };
 
@@ -144,14 +156,14 @@ const Skema = () => {
       judul_skema_en: item.judul_skema_en || '',
       jenis_skema: item.jenis_skema || 'kkni',
       level_kkni: item.level_kkni || '',
-      bidang_okupasi: item.bidang_okupasi || '',
+      bidang: item.bidang || '',
+      jenjang_kualifikasi: item.jenjang_kualifikasi || 'I',
       kode_sektor: item.kode_sektor || '',
       kode_kbli: item.kode_kbli || '',
       kode_kbji: item.kode_kbji || '',
-      keterangan_bukti: item.keterangan_bukti || '',
-      skor_min_ai05: item.skor_min_ai05 || '',
-      kedalaman_bukti: item.kedalaman_bukti || 'elemen_kompetensi',
-      dokumen: item.dokumen || '', 
+      nomor_revisi: item.nomor_revisi || '',
+      status_dokumen: item.status_dokumen || 'terkendali',
+      dokumen: item.dokumen || '',
       status: item.status || 'draft'
     });
 
@@ -553,22 +565,15 @@ const Skema = () => {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <DetailItem label="Jenis Skema">{selectedSkema.jenis_skema}</DetailItem>
                     <DetailItem label="Level KKNI">{selectedSkema.level_kkni || '-'}</DetailItem>
-                    <DetailItem label="Bidang Okupasi">{selectedSkema.bidang_okupasi || '-'}</DetailItem>
-                    <DetailItem label="Kedalaman Bukti">{selectedSkema.kedalaman_bukti?.replace(/_/g, ' ') || '-'}</DetailItem>
+                    <DetailItem label="Bidang">{selectedSkema.bidang || '-'}</DetailItem>                    
                     <DetailItem label="Kode Sektor">{selectedSkema.kode_sektor || '-'}</DetailItem>
                     <DetailItem label="Kode KBLI">{selectedSkema.kode_kbli || '-'}</DetailItem>
                     <DetailItem label="Kode KBJI">{selectedSkema.kode_kbji || '-'}</DetailItem>
-                    <DetailItem label="Skor Min IA 05">{selectedSkema.skor_min_ai05 || '-'}</DetailItem>
+                    <DetailItem label="Jenjang Kualifikasi">{selectedSkema.jenjang_kualifikasi || '-'}</DetailItem>
+                    <DetailItem label="Nomor Revisi">{selectedSkema.nomor_revisi || '-'}</DetailItem>
+                    <DetailItem label="Status Dokumen">{selectedSkema.status_dokumen || '-'}</DetailItem>
                   </div>
                 </InfoPanel>
-
-                {selectedSkema.keterangan_bukti && (
-                  <InfoPanel title="Keterangan Bukti">
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-semibold leading-relaxed text-[#071E3D]">
-                      {selectedSkema.keterangan_bukti}
-                    </div>
-                  </InfoPanel>
-                )}
 
                 {selectedSkema.dokumen && (
                   <InfoPanel title="Preview Dokumen Skema">
@@ -722,9 +727,29 @@ const Skema = () => {
                       </div>
 
                       <div>
-                        <Label>Bidang Okupasi</Label>
-                        <input type="text" name="bidang_okupasi" value={formData.bidang_okupasi} onChange={handleInputChange} className={inputClass('bidang_okupasi')} />
-                        {errors.bidang_okupasi && <ErrorText>{errors.bidang_okupasi}</ErrorText>}
+                        <Label>Jenjang Kualifikasi</Label>
+                        <select
+                          name="jenjang_kualifikasi"
+                          value={formData.jenjang_kualifikasi}
+                          onChange={handleInputChange}
+                          className={inputClass('jenjang_kualifikasi')}
+                        >
+                          <option value="I">I</option>
+                          <option value="II">II</option>
+                          <option value="III">III</option>
+                          <option value="IV">IV</option>
+                          <option value="V">V</option>
+                          <option value="VI">VI</option>
+                          <option value="VII">VII</option>
+                          <option value="VIII">VIII</option>
+                          <option value="IX">IX</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label>Bidang (Perpustakaan)</Label>
+                        <input type="text" name="bidang" value={formData.bidang} onChange={handleInputChange} className={inputClass('bidang')} />
+                        {errors.bidang && <ErrorText>{errors.bidang}</ErrorText>}
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -748,26 +773,37 @@ const Skema = () => {
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                          <Label>Kedalaman Bukti</Label>
-                          <select name="kedalaman_bukti" value={formData.kedalaman_bukti} onChange={handleInputChange} className={inputClass('kedalaman_bukti')}>
-                            <option value="elemen_kompetensi">Elemen Kompetensi</option>
-                            <option value="kriteria_unjuk_kerja">Kriteria Unjuk Kerja</option>
-                          </select>
-                        </div>
 
-                        <div>
-                          <Label>Skor Min. (IA 05) <span className="text-red-500">*</span></Label>
-                          <input type="number" name="skor_min_ai05" value={formData.skor_min_ai05} onChange={handleInputChange} className={inputClass('skor_min_ai05')} required />
-                          {errors.skor_min_ai05 && <ErrorText>{errors.skor_min_ai05}</ErrorText>}
-                        </div>
+                      <div>
+                        <Label>Nomor Revisi / Salinan</Label>
+                        <input
+                          type="text"
+                          name="nomor_revisi"
+                          value={formData.nomor_revisi}
+                          onChange={handleInputChange}
+                          className={inputClass('nomor_revisi')}
+                        />
                       </div>
 
                       <div>
-                        <Label>Keterangan Bukti</Label>
-                        <textarea name="keterangan_bukti" rows="3" value={formData.keterangan_bukti} onChange={handleInputChange} className={inputClass('keterangan_bukti') + " resize-none"}></textarea>
-                        {errors.keterangan_bukti && <ErrorText>{errors.keterangan_bukti}</ErrorText>}
+                        <Label>Status Dokumen</Label>
+
+                        <select
+                          name="status_dokumen"
+                          value={formData.status_dokumen}
+                          onChange={handleInputChange}
+                          className={inputClass('status_dokumen')}
+                        >
+                          <option value="terkendali">
+                            Terkendali
+                          </option>
+
+                          <option value="tidak_terkendali">
+                            Tidak Terkendali
+                          </option>
+                        </select>
                       </div>
+                    </div>
                     </FormSection>
                   </div>
 

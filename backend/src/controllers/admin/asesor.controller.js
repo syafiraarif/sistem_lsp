@@ -1,7 +1,7 @@
 // controllers/admin/asesor.controller.js
 const XLSX = require("xlsx");
 const { Op } = require("sequelize"); // Tambahan untuk fitur pencarian
-const { User, ProfileAsesor, Role, Notifikasi } = require("../../models");
+const { User, ProfileAsesor, Role, Notifikasi, Skema  } = require("../../models");
 const response = require("../../utils/response.util");
 const { 
   createUser, 
@@ -45,6 +45,11 @@ exports.createAsesor = async (req, res) => {
     await t.rollback();
     return response.error(res, err.message);
   }
+};
+
+exports.getSkemaDropdown = async (req, res) => {
+  const skema = await Skema.findAll({ attributes: ['id_skema', 'judul_skema'] });
+  return response.success(res, "Data Skema", skema);
 };
 
 exports.downloadTemplate = async (req, res) => {

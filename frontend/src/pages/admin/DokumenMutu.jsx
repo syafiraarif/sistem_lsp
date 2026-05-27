@@ -35,7 +35,7 @@ const DokumenMutu = () => {
   const [pagination, setPagination] = useState({ page: 1, limit: 10 });
   const [errors, setErrors] = useState({});
 
-  // UPDATE: Mengubah default state menjadi string kosong agar placeholder "--Pilih--" muncul
+  // 🔥 STATE INITIAL FORM: Menambahkan field review
   const initialFormState = {
     jenis_dokumen: "", 
     kategori: "",
@@ -44,6 +44,7 @@ const DokumenMutu = () => {
     nomor_dokumen: "",
     nomor_revisi: "",
     penyusun: "",
+    review: "", // <- Tambahan Field Review
     disahkan_oleh: "",
     tanggal_dokumen: "",
   };
@@ -59,8 +60,7 @@ const DokumenMutu = () => {
   const [showFullPreviewUtama, setShowFullPreviewUtama] = useState(false);
 
   const [previewUrlPendukung, setPreviewUrlPendukung] = useState(null);
-  const [showFullPreviewPendukung, setShowFullPreviewPendukung] =
-    useState(false);
+  const [showFullPreviewPendukung, setShowFullPreviewPendukung] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -179,6 +179,7 @@ const DokumenMutu = () => {
         nomor_dokumen: item.nomor_dokumen || "",
         nomor_revisi: item.nomor_revisi || "",
         penyusun: item.penyusun || "",
+        review: item.review || "", // 🔥 Menyimpan nilai review saat mode Edit/Detail
         disahkan_oleh: item.disahkan_oleh || "",
         tanggal_dokumen: item.tanggal_dokumen
           ? item.tanggal_dokumen.split("T")[0]
@@ -759,7 +760,8 @@ const DokumenMutu = () => {
                   </div>
 
                   <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2 lg:grid-cols-4">
-                    {/* UPDATE: Nama Dokumen Placeholder */}
+                    
+                    {/* Baris 1: Nama, Jenis, Kategori */}
                     <div className="lg:col-span-2">
                       <Label required>Nama/Judul Dokumen</Label>
                       <input
@@ -775,7 +777,6 @@ const DokumenMutu = () => {
                       <ErrorMessage message={errors.nama_dokumen} />
                     </div>
 
-                    {/* UPDATE: Jenis Dokumen Dropdown Label */}
                     <div className="lg:col-span-1">
                       <Label required>Jenis Dokumen</Label>
                       <select
@@ -786,16 +787,15 @@ const DokumenMutu = () => {
                         disabled={modalType === "detail"}
                         required
                       >
-                        <option value="" disabled>--Pilih Jenis Dokumen--</option>
+                        <option value="" disabled>--Pilih Jenis--</option>
                         <option value="kebijakan_mutu">Kebijakan Mutu</option>
                         <option value="manual_mutu">Manual/Panduan Mutu</option>
                         <option value="standar_mutu">Standar Mutu</option>
                         <option value="formulir_mutu">Formulir Mutu</option>
-                        <option value="referensi">Referensi/Dokumen Ekternal</option>
+                        <option value="referensi">Referensi/Eksternal</option>
                       </select>
                     </div>
 
-                    {/* UPDATE: Kategori Dropdown sesuai gambar referensi */}
                     <div className="lg:col-span-1">
                       <Label>Kategori Dokumen</Label>
                       <select
@@ -805,7 +805,7 @@ const DokumenMutu = () => {
                         onChange={handleInputChange}
                         disabled={modalType === "detail"}
                       >
-                        <option value="" disabled>--Pilih Kategori Dokumen--</option>
+                        <option value="" disabled>--Pilih Kategori--</option>
                         <option value="Kelembagaan LSP">Kelembagaan LSP</option>
                         <option value="Standar Kompetensi">Standar Kompetensi</option>
                         <option value="Skema Kompetensi">Skema Kompetensi</option>
@@ -815,13 +815,13 @@ const DokumenMutu = () => {
                         <option value="Jadwal Uji Kompetensi">Jadwal Uji Kompetensi</option>
                         <option value="Biaya Uji Kompetensi">Biaya Uji Kompetensi</option>
                         <option value="Dokumen dan Administrasi">Dokumen dan Administrasi</option>
-                        <option value="Referensi/ Acuan">Referensi/ Acuan</option>
+                        <option value="Referensi / Acuan / undang-undang / perundangan">Referensi / Acuan / undang-undang / perundangan</option>
                         <option value="Lain-lain">Lain-lain</option>
                       </select>
                       <ErrorMessage message={errors.kategori} />
                     </div>
 
-                    {/* UPDATE: Deskripsi Placeholder */}
+                    {/* Baris 2: Deskripsi */}
                     <div className="lg:col-span-4">
                       <Label>Deskripsi Dokumen</Label>
                       <textarea
@@ -836,7 +836,7 @@ const DokumenMutu = () => {
                       <ErrorMessage message={errors.deskripsi} />
                     </div>
 
-                    {/* UPDATE: Nomor Dokumen Placeholder */}
+                    {/* Baris 3: No Doc, No Rev, Tanggal */}
                     <div>
                       <Label>Nomor Dokumen</Label>
                       <input
@@ -851,7 +851,6 @@ const DokumenMutu = () => {
                       <ErrorMessage message={errors.nomor_dokumen} />
                     </div>
 
-                    {/* UPDATE: Nomor Revisi Placeholder */}
                     <div>
                       <Label>Nomor Revisi</Label>
                       <input
@@ -866,38 +865,7 @@ const DokumenMutu = () => {
                       <ErrorMessage message={errors.nomor_revisi} />
                     </div>
 
-                    {/* UPDATE: Penyusun Placeholder */}
-                    <div>
-                      <Label>Penyusun Dokumen</Label>
-                      <input
-                        className={inputClass("penyusun")}
-                        type="text"
-                        name="penyusun"
-                        value={formData.penyusun}
-                        onChange={handleInputChange}
-                        placeholder="Nama dan Gelar Penyusun"
-                        disabled={modalType === "detail"}
-                      />
-                      <ErrorMessage message={errors.penyusun} />
-                    </div>
-
-                    {/* UPDATE: Disahkan Oleh Placeholder */}
-                    <div>
-                      <Label>Disahkan Oleh</Label>
-                      <input
-                        className={inputClass("disahkan_oleh")}
-                        type="text"
-                        name="disahkan_oleh"
-                        value={formData.disahkan_oleh}
-                        onChange={handleInputChange}
-                        placeholder="Nama dan Gelar Pengesah Dokumen"
-                        disabled={modalType === "detail"}
-                      />
-                      <ErrorMessage message={errors.disahkan_oleh} />
-                    </div>
-                    
-                    {/* Input Tanggal */}
-                    <div>
+                    <div className="lg:col-span-2">
                       <Label>Tanggal Dokumen</Label>
                       <input
                         className={inputClass("tanggal_dokumen")}
@@ -909,10 +877,57 @@ const DokumenMutu = () => {
                       />
                       <ErrorMessage message={errors.tanggal_dokumen} />
                     </div>
+
+                    {/* Baris 4: PENYUSUN, REVIEW (BARU), PENGESAH */}
+                    <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-5 border-t border-slate-200 pt-5 mt-2">
+                      <div>
+                        <Label>Penyusun Dokumen</Label>
+                        <input
+                          className={inputClass("penyusun")}
+                          type="text"
+                          name="penyusun"
+                          value={formData.penyusun}
+                          onChange={handleInputChange}
+                          placeholder="Nama dan Gelar Penyusun"
+                          disabled={modalType === "detail"}
+                        />
+                        <ErrorMessage message={errors.penyusun} />
+                      </div>
+
+                      {/* 🔥 FIELD REVIEW BARU DITAMBAHKAN DI SINI 🔥 */}
+                      <div>
+                        <Label>Direview Oleh</Label>
+                        <input
+                          className={inputClass("review")}
+                          type="text"
+                          name="review"
+                          value={formData.review}
+                          onChange={handleInputChange}
+                          placeholder="Nama dan Gelar Pereview"
+                          disabled={modalType === "detail"}
+                        />
+                        <ErrorMessage message={errors.review} />
+                      </div>
+
+                      <div>
+                        <Label>Disahkan Oleh</Label>
+                        <input
+                          className={inputClass("disahkan_oleh")}
+                          type="text"
+                          name="disahkan_oleh"
+                          value={formData.disahkan_oleh}
+                          onChange={handleInputChange}
+                          placeholder="Nama dan Gelar Pengesah"
+                          disabled={modalType === "detail"}
+                        />
+                        <ErrorMessage message={errors.disahkan_oleh} />
+                      </div>
+                    </div>
+
                   </div>
                 </section>
 
-                {/* FILES */}
+                {/* FILES (Tetap sama, tidak ada perubahan) */}
                 <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <FilePreviewPanel
                     title="Berkas (File) Dokumen Utama"
@@ -989,6 +1004,7 @@ const DokumenMutu = () => {
   );
 };
 
+// ... (Sisa helper function component seperti FilePreviewPanel, HeroPill, dll biarkan sama persis dengan yang asli)
 function FilePreviewPanel({
   title,
   required,
