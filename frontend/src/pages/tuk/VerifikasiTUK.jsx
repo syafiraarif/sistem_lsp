@@ -33,134 +33,210 @@ const VerifikasiTUK = () => {
   const token = localStorage.getItem("token");
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const [jadwal, setJadwal] = useState(null);
   const [asesorJadwal, setAsesorJadwal] = useState([]);
   const [allAsesor, setAllAsesor] = useState([]);
   const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const [search, setSearch] = useState("");
 
-  const filteredAsesor = useMemo(() => {
-    return allAsesor.filter((a) => {
-      const keyword = search.toLowerCase();
+  const authHeader = useMemo(
+    () => ({
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }),
+    [token]
+  );
 
+  const getActiveId = (item) => {
+    return (
+      item?.id_user ||
+      item?.asesor?.id_user ||
+      item?.profileAsesor?.id_user ||
+      item?.id_asesor
+    );
+  };
+
+  const normalizeActiveAsesor = (item) => {
+    const profile = item?.profileAsesor || item || {};
+    const user = item?.asesor || item?.user || {};
+
+    return {
+      id_user: getActiveId(item),
+      nama_lengkap:
+        profile?.nama_lengkap ||
+        item?.nama_lengkap ||
+        user?.nama_lengkap ||
+        user?.username ||
+        "-",
+      bidang_keahlian:
+        profile?.bidang_keahlian || item?.bidang_keahlian || "-",
+      no_reg_asesor:
+        profile?.no_reg_asesor || item?.no_reg_asesor || "-",
+      no_lisensi:
+        profile?.no_lisensi || item?.no_lisensi || "-",
+      username: user?.username || item?.username || "-",
+      no_hp: user?.no_hp || item?.no_hp || profile?.no_hp || "-",
+    };
+  };
+
+  const normalizeAvailableAsesor = (item) => {
+    const user = item?.user || item?.asesor || {};
+
+    return {
+      id_user: item?.id_user || user?.id_user || item?.id_asesor,
+      nama_lengkap:
+        item?.nama_lengkap ||
+        user?.nama_lengkap ||
+        user?.username ||
+        "-",
+      bidang_keahlian: item?.bidang_keahlian || "-",
+      no_reg_asesor: item?.no_reg_asesor || "-",
+      no_lisensi: item?.no_lisensi || "-",
+      username: user?.username || item?.username || "-",
+      no_hp: user?.no_hp || item?.no_hp || "-",
+    };
+  };
+
+  const activeAsesor = useMemo(() => {
+    return asesorJadwal
+      .map(normalizeActiveAsesor)
+      .filter((item) => item.id_user);
+  }, [asesorJadwal]);
+
+  const activeIds = useMemo(() => {
+    return activeAsesor.map((item) => Number(item.id_user));
+  }, [activeAsesor]);
+
+  const availableAsesor = useMemo(() => {
+    return allAsesor
+      .map(normalizeAvailableAsesor)
+      .filter((item) => item.id_user)
+      .filter((item) => !activeIds.includes(Number(item.id_user)));
+  }, [allAsesor, activeIds]);
+
+  const filteredAsesor = useMemo(() => {
+    const keyword = search.toLowerCase().trim();
+
+    if (!keyword) return availableAsesor;
+
+    return availableAsesor.filter((a) => {
       return (
         a.nama_lengkap?.toLowerCase().includes(keyword) ||
         a.no_reg_asesor?.toLowerCase().includes(keyword) ||
         a.username?.toLowerCase().includes(keyword) ||
-        a.no_hp?.toLowerCase().includes(keyword)
+        a.no_hp?.toLowerCase().includes(keyword) ||
+        a.bidang_keahlian?.toLowerCase().includes(keyword)
       );
     });
-  }, [allAsesor, search]);
-
-  const availableCount = useMemo(() => {
-    return allAsesor.filter(
-      (a) => !asesorJadwal.some((j) => j.id_user === a.id_user)
-    ).length;
-  }, [allAsesor, asesorJadwal]);
+  }, [availableAsesor, search]);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
       const [resJadwal, resAsesorJadwal, resAllAsesor] = await Promise.all([
-        axios.get(`${API_BASE}/tuk/jadwal/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get(`${API_BASE}/tuk/jadwal/${id}/asesor/verifikator_tuk`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get(`${API_BASE}/tuk/asesor`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        axios.get(`${API_BASE}/tuk/jadwal/${id}`, authHeader),
+        axios.get(
+          `${API_BASE}/tuk/jadwal/${id}/asesor/verifikator_tuk`,
+          authHeader
+        ),
+        axios.get(`${API_BASE}/tuk/asesor`, authHeader),
       ]);
 
       setJadwal(resJadwal.data?.data || null);
       setAsesorJadwal(resAsesorJadwal.data?.data || []);
       setAllAsesor(resAllAsesor.data?.data || []);
     } catch (err) {
-      console.error("Error fetch data:", err);
+      console.error("Error fetch verifikasi TUK:", err);
 
       if (err.response?.status === 401) {
         alert("Session habis, silakan login kembali");
         localStorage.clear();
         navigate("/login");
-      } else {
-        alert(err?.response?.data?.message || "Gagal memuat data");
+        return;
       }
+
+      alert(err?.response?.data?.message || "Gagal memuat data verifikasi TUK");
     } finally {
       setLoading(false);
     }
-  }, [id, token, navigate]);
+  }, [id, navigate, authHeader]);
 
   useEffect(() => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
     if (id) fetchData();
-  }, [id, fetchData]);
+  }, [id, token, navigate, fetchData]);
 
   const handleAdd = (id_user) => {
+    const parsedId = Number(id_user);
+
     setSelected((prev) => {
-      if (prev.includes(id_user)) return prev;
-      return [...prev, id_user];
+      if (prev.includes(parsedId)) return prev;
+      return [...prev, parsedId];
     });
   };
 
   const handleRemove = (id_user) => {
-    setSelected((prev) => prev.filter((i) => i !== id_user));
+    const parsedId = Number(id_user);
+    setSelected((prev) => prev.filter((item) => item !== parsedId));
   };
 
   const handleSave = async () => {
-    try {
-      if (selected.length === 0) {
-        alert("Pilih minimal 1 asesor");
-        return;
-      }
+    if (selected.length === 0) {
+      alert("Pilih minimal 1 verifikator dulu");
+      return;
+    }
 
+    const mergedIds = [...new Set([...activeIds, ...selected])];
+
+    try {
       setSaving(true);
 
       const payload = {
-        listAsesor: selected.map((id_user) => ({
-          id_user: parseInt(id_user),
+        listAsesor: mergedIds.map((id_user) => ({
+          id_user: Number(id_user),
         })),
       };
 
       await axios.post(
         `${API_BASE}/tuk/jadwal/${id}/asesor/verifikator_tuk`,
         payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        authHeader
       );
 
       setSelected([]);
-      alert("Berhasil menyimpan asesor verifikasi TUK!");
-      fetchData();
+      await fetchData();
+      alert("Verifikator TUK berhasil disimpan");
     } catch (err) {
-      console.error("Error save:", err);
-      alert(err?.response?.data?.message || "Gagal menyimpan");
+      console.error("Error save verifikasi TUK:", err);
+      alert(err?.response?.data?.message || "Gagal menyimpan verifikator");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteAsesor = async (id_user) => {
-    if (!window.confirm("Hapus asesor dari verifikasi TUK?")) return;
+  const handleDeleteAsesor = async (id_user, nama = "verifikator ini") => {
+    if (!window.confirm(`Hapus ${nama} dari verifikasi TUK?`)) return;
 
     try {
       await axios.delete(
         `${API_BASE}/tuk/jadwal/${id}/asesor/verifikator_tuk/${id_user}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        authHeader
       );
 
-      alert("Asesor berhasil dihapus!");
-      fetchData();
+      setSelected((prev) => prev.filter((item) => item !== Number(id_user)));
+      await fetchData();
+      alert("Verifikator berhasil dihapus");
     } catch (err) {
-      console.error("Error delete:", err);
-      alert(err?.response?.data?.message || "Gagal menghapus");
+      console.error("Error delete verifikasi TUK:", err);
+      alert(err?.response?.data?.message || "Gagal menghapus verifikator");
     }
   };
 
@@ -181,34 +257,43 @@ const VerifikasiTUK = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center">
-          <Loader2
-            className="animate-spin text-orange-500 mx-auto mb-5"
-            size={44}
-          />
-          <p className="text-[#071E3D] font-black text-lg">
-            Memuat Verifikasi TUK
-          </p>
-          <p className="text-slate-400 text-sm mt-1 font-medium">
-            Mohon tunggu sebentar...
-          </p>
-        </div>
+      <div className="min-h-screen bg-[#F8FAFC] flex">
+        <SidebarTUK
+          isOpen={sidebarOpen}
+          setIsOpen={setSidebarOpen}
+          onLogout={handleLogout}
+          handleLogout={handleLogout}
+        />
+
+        <main className="flex-1 p-6 lg:p-10 flex items-center justify-center">
+          <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center">
+            <Loader2
+              className="animate-spin text-orange-500 mx-auto mb-5"
+              size={44}
+            />
+            <p className="text-[#071E3D] font-black text-lg">
+              Memuat Verifikasi TUK
+            </p>
+            <p className="text-slate-400 text-sm mt-1 font-medium">
+              Mohon tunggu sebentar...
+            </p>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className="min-h-screen bg-[#F8FAFC] flex overflow-x-hidden">
       <SidebarTUK
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
         onLogout={handleLogout}
+        handleLogout={handleLogout}
       />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300">
+      <main className="flex-1 w-full p-4 md:p-6 lg:p-8 transition-all duration-300">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
           <section className="relative overflow-hidden bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 lg:p-8 mb-6">
             <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-[90px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#071E3D]/5 rounded-full blur-[90px] pointer-events-none" />
@@ -245,37 +330,32 @@ const VerifikasiTUK = () => {
                 </p>
               </div>
 
-              <div className="bg-[#071E3D] text-white rounded-[26px] p-5 min-w-[240px] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/30 rounded-full blur-3xl -mr-12 -mt-12" />
-
-                <div className="relative z-10">
-                  <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">
-                    Verifikator Aktif
-                  </p>
-
-                  <div className="flex items-end justify-between mt-2">
-                    <h2 className="text-4xl font-black">
-                      {asesorJadwal.length}
-                    </h2>
-                    <UserCheck className="text-orange-400" size={30} />
-                  </div>
-                </div>
+              <div className="grid grid-cols-3 gap-3 w-full lg:w-auto lg:min-w-[460px]">
+                <TopStat
+                  label="Aktif"
+                  value={activeAsesor.length}
+                  icon={<UserCheck size={21} />}
+                />
+                <TopStat
+                  label="Tersedia"
+                  value={availableAsesor.length}
+                  icon={<UserPlus size={21} />}
+                />
+                <TopStat
+                  label="Dipilih"
+                  value={selected.length}
+                  icon={<CheckCircle size={21} />}
+                  highlight
+                />
               </div>
             </div>
           </section>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Left Panel */}
-            <section className="xl:col-span-1 space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-start">
+            <section className="space-y-6">
               <Card title="Informasi Jadwal" icon={<ClipboardList size={22} />}>
                 {jadwal ? (
                   <div className="space-y-4">
-                    <InfoBox label="Skema">
-                      <p className="text-[#071E3D] font-black leading-snug">
-                        {jadwal?.skema?.judul_skema || "-"}
-                      </p>
-                    </InfoBox>
-
                     <InfoBox label="Kegiatan">
                       <p className="text-[#071E3D] font-black leading-snug">
                         {jadwal?.nama_kegiatan || "-"}
@@ -291,13 +371,6 @@ const VerifikasiTUK = () => {
                         </span>
                       </div>
                     </InfoBox>
-
-                    <InfoBox label="Kuota">
-                      <div className="flex items-center gap-2 text-[#071E3D] font-black">
-                        <Users size={17} className="text-orange-500" />
-                        <span>{jadwal?.kuota || 0} peserta</span>
-                      </div>
-                    </InfoBox>
                   </div>
                 ) : (
                   <EmptyState
@@ -311,56 +384,60 @@ const VerifikasiTUK = () => {
               <Card
                 title="Verifikator Aktif"
                 icon={<ShieldCheck size={22} />}
-                rightBadge={asesorJadwal.length}
+                rightBadge={activeAsesor.length}
               >
-                {asesorJadwal.length === 0 ? (
+                {activeAsesor.length === 0 ? (
                   <EmptyState
                     icon={<Inbox size={34} />}
                     title="Belum ada verifikator"
                     desc="Tambahkan asesor verifikasi TUK untuk jadwal ini."
                   />
                 ) : (
-                  <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
-                    {asesorJadwal.map((asesor) => (
+                  <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                    {activeAsesor.map((asesor) => (
                       <div
                         key={asesor.id_user}
-                        className="rounded-[24px] bg-emerald-50/60 border border-emerald-100 p-4"
+                        className="rounded-[24px] bg-orange-50/60 border border-orange-100 p-4"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <h4
-                              className="font-black text-[#071E3D] truncate"
+                              className="font-black text-[#071E3D] text-base leading-snug truncate"
                               title={asesor.nama_lengkap}
                             >
                               {asesor.nama_lengkap}
                             </h4>
 
-                            <div className="mt-3 space-y-2 text-xs text-slate-500 font-medium">
-                              {asesor.no_reg_asesor && (
-                                <MiniInfo
-                                  icon={<Hash size={13} />}
-                                  value={`Reg: ${asesor.no_reg_asesor}`}
-                                />
-                              )}
-                              {asesor.no_hp && (
-                                <MiniInfo
-                                  icon={<Phone size={13} />}
-                                  value={asesor.no_hp}
-                                />
-                              )}
-                              {asesor.username && (
-                                <MiniInfo
-                                  icon={<User size={13} />}
-                                  value={asesor.username}
-                                />
-                              )}
+                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-1 line-clamp-2">
+                              {asesor.bidang_keahlian || "-"}
+                            </p>
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <MiniInfo
+                                icon={<Hash size={13} />}
+                                value={`Reg: ${asesor.no_reg_asesor || "-"}`}
+                              />
+                              <MiniInfo
+                                icon={<Phone size={13} />}
+                                value={`HP: ${asesor.no_hp || "-"}`}
+                              />
+                              <MiniInfo
+                                icon={<Award size={13} />}
+                                value={`Lisensi: ${asesor.no_lisensi || "-"}`}
+                              />
                             </div>
                           </div>
 
                           <button
-                            onClick={() => handleDeleteAsesor(asesor.id_user)}
+                            type="button"
+                            onClick={() =>
+                              handleDeleteAsesor(
+                                asesor.id_user,
+                                asesor.nama_lengkap
+                              )
+                            }
                             className="w-10 h-10 rounded-2xl bg-white border border-red-100 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center shrink-0"
-                            title="Hapus asesor"
+                            title="Hapus verifikator"
                           >
                             <Trash2 size={17} />
                           </button>
@@ -372,8 +449,7 @@ const VerifikasiTUK = () => {
               </Card>
             </section>
 
-            {/* Right Panel */}
-            <section className="xl:col-span-2">
+            <section>
               <Card
                 title="Pilih Asesor Verifikasi TUK"
                 icon={<UserPlus size={22} />}
@@ -381,18 +457,21 @@ const VerifikasiTUK = () => {
               >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <StatBox
-                    label="Total Asesor"
-                    value={allAsesor.length}
-                    icon={<Users size={20} />}
+                    label="Total Aktif"
+                    value={activeAsesor.length}
+                    desc="verifikator"
+                    icon={<UserCheck size={20} />}
                   />
                   <StatBox
                     label="Tersedia"
-                    value={availableCount}
+                    value={availableAsesor.length}
+                    desc="asesor"
                     icon={<UserPlus size={20} />}
                   />
                   <StatBox
                     label="Dipilih"
                     value={selected.length}
+                    desc="baru"
                     icon={<CheckCircle size={20} />}
                     highlight
                   />
@@ -415,25 +494,28 @@ const VerifikasiTUK = () => {
                 {filteredAsesor.length === 0 ? (
                   <EmptyState
                     icon={<Search size={36} />}
-                    title="Asesor tidak ditemukan"
-                    desc="Coba gunakan kata kunci pencarian lain."
+                    title={
+                      search
+                        ? "Asesor tidak ditemukan"
+                        : "Semua asesor sudah menjadi verifikator"
+                    }
+                    desc={
+                      search
+                        ? "Coba gunakan kata kunci pencarian lain."
+                        : "Tidak ada asesor lain yang bisa ditambahkan."
+                    }
                   />
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[620px] overflow-y-auto pr-1">
                     {filteredAsesor.map((a) => {
-                      const sudahAda = asesorJadwal.some(
-                        (j) => j.id_user === a.id_user
-                      );
-                      const isSelected = selected.includes(a.id_user);
+                      const isSelected = selected.includes(Number(a.id_user));
 
                       return (
                         <div
                           key={a.id_user}
                           className={`rounded-[26px] border p-5 transition-all ${
-                            sudahAda
-                              ? "bg-slate-50 border-slate-100 opacity-75"
-                              : isSelected
-                              ? "bg-orange-50 border-orange-200"
+                            isSelected
+                              ? "bg-orange-50 border-orange-200 shadow-sm"
                               : "bg-white border-slate-100 hover:border-orange-200 hover:bg-orange-50/30"
                           }`}
                         >
@@ -446,23 +528,19 @@ const VerifikasiTUK = () => {
                                 {a.nama_lengkap}
                               </h4>
 
-                              {a.bidang_keahlian && (
-                                <p className="text-xs text-slate-400 font-bold mt-1 line-clamp-2">
-                                  {a.bidang_keahlian}
-                                </p>
-                              )}
+                              <p className="text-xs text-slate-400 font-bold mt-1 line-clamp-2">
+                                {a.bidang_keahlian || "-"}
+                              </p>
                             </div>
 
                             <div
                               className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
-                                sudahAda
-                                  ? "bg-emerald-50 text-emerald-500"
-                                  : isSelected
+                                isSelected
                                   ? "bg-orange-500 text-white"
                                   : "bg-orange-50 text-orange-500"
                               }`}
                             >
-                              {sudahAda ? (
+                              {isSelected ? (
                                 <CheckCircle size={20} />
                               ) : (
                                 <UserPlus size={20} />
@@ -470,7 +548,7 @@ const VerifikasiTUK = () => {
                             </div>
                           </div>
 
-                          <div className="space-y-2 mb-5">
+                          <div className="flex flex-wrap gap-2 mb-5">
                             <MiniInfo
                               icon={<Hash size={14} />}
                               value={`Reg: ${a.no_reg_asesor || "-"}`}
@@ -479,27 +557,19 @@ const VerifikasiTUK = () => {
                               icon={<Phone size={14} />}
                               value={`HP: ${a.no_hp || "-"}`}
                             />
-                            {a.username && (
-                              <MiniInfo
-                                icon={<User size={14} />}
-                                value={`Username: ${a.username}`}
-                              />
-                            )}
-                            {a.no_lisensi && (
-                              <MiniInfo
-                                icon={<Award size={14} />}
-                                value={`Lisensi: ${a.no_lisensi}`}
-                              />
-                            )}
+                            <MiniInfo
+                              icon={<User size={14} />}
+                              value={`Username: ${a.username || "-"}`}
+                            />
+                            <MiniInfo
+                              icon={<Award size={14} />}
+                              value={`Lisensi: ${a.no_lisensi || "-"}`}
+                            />
                           </div>
 
-                          {sudahAda ? (
-                            <div className="w-full px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
-                              <CheckCircle size={17} />
-                              Sudah Dipilih
-                            </div>
-                          ) : isSelected ? (
+                          {isSelected ? (
                             <button
+                              type="button"
                               onClick={() => handleRemove(a.id_user)}
                               className="w-full px-4 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                             >
@@ -508,6 +578,7 @@ const VerifikasiTUK = () => {
                             </button>
                           ) : (
                             <button
+                              type="button"
                               onClick={() => handleAdd(a.id_user)}
                               className="w-full px-4 py-3 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                             >
@@ -522,7 +593,7 @@ const VerifikasiTUK = () => {
                 )}
 
                 {selected.length > 0 && (
-                  <div className="mt-6 rounded-[28px] bg-[#071E3D] text-white p-6 relative overflow-hidden">
+                  <div className="sticky bottom-5 mt-6 rounded-[28px] bg-[#071E3D] text-white p-6 relative overflow-hidden shadow-xl shadow-[#071E3D]/10">
                     <div className="absolute top-0 right-0 w-44 h-44 bg-orange-500/20 rounded-full blur-3xl -mr-20 -mt-20" />
 
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
@@ -533,9 +604,14 @@ const VerifikasiTUK = () => {
                         <h3 className="text-2xl font-black mt-1">
                           {selected.length} Verifikator Dipilih
                         </h3>
+                        <p className="text-white/50 text-sm font-bold mt-1">
+                          Total setelah disimpan:{" "}
+                          {activeAsesor.length + selected.length} verifikator
+                        </p>
                       </div>
 
                       <button
+                        type="button"
                         onClick={handleSave}
                         disabled={saving}
                         className="px-6 py-4 rounded-2xl bg-orange-500 hover:bg-white hover:text-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60"
@@ -566,12 +642,15 @@ const Card = ({ title, icon, children, rightBadge }) => {
   return (
     <div className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
             {icon}
           </div>
-          <div>
-            <h2 className="text-xl font-black text-[#071E3D]">{title}</h2>
+
+          <div className="min-w-0">
+            <h2 className="text-xl font-black text-[#071E3D] truncate">
+              {title}
+            </h2>
             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
               Data Verifikasi
             </p>
@@ -579,7 +658,7 @@ const Card = ({ title, icon, children, rightBadge }) => {
         </div>
 
         {rightBadge !== undefined && (
-          <span className="px-4 py-2 rounded-full bg-orange-50 border border-orange-100 text-orange-500 text-xs font-black">
+          <span className="min-w-10 h-10 px-3 rounded-2xl bg-orange-50 border border-orange-100 text-orange-500 text-xs font-black flex items-center justify-center">
             {rightBadge}
           </span>
         )}
@@ -603,14 +682,39 @@ const InfoBox = ({ label, children }) => {
 
 const MiniInfo = ({ icon, value }) => {
   return (
-    <div className="inline-flex items-center gap-2 mr-2 mb-1 px-3 py-1.5 rounded-full bg-white border border-slate-100 text-slate-500">
-      {icon}
-      <span className="text-xs font-bold">{value}</span>
+    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-100 text-slate-500 max-w-full">
+      <span className="shrink-0">{icon}</span>
+      <span className="text-xs font-bold truncate">{value}</span>
     </div>
   );
 };
 
-const StatBox = ({ label, value, icon, highlight = false }) => {
+const TopStat = ({ label, value, icon, highlight = false }) => {
+  return (
+    <div
+      className={`rounded-[24px] border p-4 ${
+        highlight
+          ? "bg-orange-50 border-orange-100 text-orange-500"
+          : "bg-slate-50 border-slate-100 text-[#071E3D]"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            {label}
+          </p>
+          <h3 className="text-2xl font-black mt-1">{value}</h3>
+        </div>
+
+        <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center shrink-0">
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const StatBox = ({ label, value, desc, icon, highlight = false }) => {
   return (
     <div
       className={`rounded-2xl border p-4 ${
@@ -619,18 +723,23 @@ const StatBox = ({ label, value, icon, highlight = false }) => {
           : "bg-slate-50 border-slate-100 text-[#071E3D]"
       }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
             {label}
           </p>
-          <p className="text-2xl font-black mt-1">{value}</p>
+
+          <div className="flex items-end gap-2 mt-1">
+            <p className="text-2xl font-black">{value}</p>
+            {desc && (
+              <span className="text-xs font-black opacity-60 mb-1">
+                {desc}
+              </span>
+            )}
+          </div>
         </div>
-        <div
-          className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
-            highlight ? "bg-white" : "bg-white text-orange-500"
-          }`}
-        >
+
+        <div className="w-10 h-10 rounded-2xl bg-white text-orange-500 flex items-center justify-center shrink-0">
           {icon}
         </div>
       </div>
@@ -641,7 +750,7 @@ const StatBox = ({ label, value, icon, highlight = false }) => {
 const EmptyState = ({ icon, title, desc }) => {
   return (
     <div className="text-center py-14 px-6 bg-slate-50 rounded-[28px] border border-dashed border-slate-200">
-      <div className="w-18 h-18 mx-auto mb-4 text-slate-300 flex items-center justify-center">
+      <div className="w-16 h-16 mx-auto mb-4 text-slate-300 flex items-center justify-center">
         {icon}
       </div>
       <h3 className="text-lg font-black text-[#071E3D] mb-2">{title}</h3>

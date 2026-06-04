@@ -1,4 +1,5 @@
 // src/App.jsx
+
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
@@ -26,44 +27,11 @@ function getStoredRole() {
   }
 }
 
-function ProtectedAdmin({ children }) {
+function ProtectedRoute({ children, allowedRole }) {
   const token = localStorage.getItem("token");
   const role = getStoredRole();
 
-  if (!token || role !== "admin") {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
-}
-
-function ProtectedTuk({ children }) {
-  const token = localStorage.getItem("token");
-  const role = getStoredRole();
-
-  if (!token || role !== "tuk") {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
-}
-
-function ProtectedAsesi({ children }) {
-  const token = localStorage.getItem("token");
-  const role = getStoredRole();
-
-  if (!token || role !== "asesi") {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
-}
-
-function ProtectedAsesor({ children }) {
-  const token = localStorage.getItem("token");
-  const role = getStoredRole();
-
-  if (!token || role !== "asesor") {
+  if (!token || role !== allowedRole) {
     return <Navigate to="/login" replace />;
   }
 
@@ -77,9 +45,9 @@ function App() {
       <Route
         path="/admin/*"
         element={
-          <ProtectedAdmin>
+          <ProtectedRoute allowedRole="admin">
             <AdminRoutes />
-          </ProtectedAdmin>
+          </ProtectedRoute>
         }
       />
 
@@ -87,9 +55,9 @@ function App() {
       <Route
         path="/tuk/*"
         element={
-          <ProtectedTuk>
+          <ProtectedRoute allowedRole="tuk">
             <TukRoutes />
-          </ProtectedTuk>
+          </ProtectedRoute>
         }
       />
 
@@ -97,9 +65,9 @@ function App() {
       <Route
         path="/asesor/*"
         element={
-          <ProtectedAsesor>
+          <ProtectedRoute allowedRole="asesor">
             <AsesorRoutes />
-          </ProtectedAsesor>
+          </ProtectedRoute>
         }
       />
 
@@ -107,9 +75,9 @@ function App() {
       <Route
         path="/asesi/*"
         element={
-          <ProtectedAsesi>
+          <ProtectedRoute allowedRole="asesi">
             <AsesiRoutes />
-          </ProtectedAsesi>
+          </ProtectedRoute>
         }
       />
 
