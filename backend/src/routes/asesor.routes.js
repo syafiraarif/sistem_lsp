@@ -225,17 +225,51 @@ verifikasiTukController
 
 /* ========================= PRESENSI ========================= */
 
-// cek apakah sudah presensi
-router.get("/presensi/cek", presensiController.cekPresensi);
+// cek apakah boleh presensi / sudah presensi
+router.get(
+"/presensi/cek",
+presensiController.cekPresensi
+);
 
-// detail presensi (opsional untuk UI)
-router.get("/presensi/:id_jadwal", presensiController.getDetailPresensi);
 
-// submit presensi (TTD)
-router.post("/presensi", presensiController.presensiAsesor);
+// submit presensi
+router.post(
 
-// list presensi (optional untuk admin / monitoring)
-router.get("/presensi/list/:id_jadwal", presensiController.listPresensi);
+"/presensi",
+
+presensiController.presensiAsesor
+
+);
+
+
+// detail presensi asesor login
+router.get(
+
+"/presensi/:id_jadwal",
+
+presensiController.getDetailPresensi
+
+);
+
+
+// list seluruh presensi asesor pada jadwal
+router.get(
+
+"/presensi/list/:id_jadwal",
+
+presensiController.listPresensi
+
+);
+
+
+// download pdf presensi asesor
+router.get(
+
+"/presensi/pdf/:id_jadwal",
+
+presensiController.downloadPdf
+
+);
 
 /* ========================= FR.AK.01 ========================= */
 
