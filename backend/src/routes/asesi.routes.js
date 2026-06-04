@@ -17,8 +17,8 @@ const presensiController = require("../controllers/asesi/presensi.controller");
 const frAk03Controller = require("../controllers/asesi/frAk03.controller");
 const frAk04Controller = require("../controllers/asesi/frAk04.controller");
 const frIa05AsesiController = require("../controllers/asesi/frIa05Asesi.controller");
-const controller = require("../controllers/asesi/frIa06Asesi.controller");
-const praAsesmenController = require("../controllers/asesi/praAsesmen.controller");
+const hasilAkhirAsesiController =
+require("../controllers/asesi/hasilAkhirAsesi.controller");
 
 router.use(authMiddleware, roleMiddleware.asesiOnly);
 
@@ -111,34 +111,112 @@ router.post("/fr-ak04", frAk04Controller.createFrAk04);
 router.get("/fr-ak04/pdf/:id_peserta", frAk04Controller.generatePdfFrAk04);
 
 /* ========================= FR.IA.05 ASESI ========================= */
-router.get("/fr-ia05/asesi/:id_fr_ia_05/:id_peserta", frIa05AsesiController.getSoal);
-router.post("/fr-ia05/asesi/submit", frIa05AsesiController.submit);
+
+
+/*
+========================================
+AMBIL SOAL
+========================================
+
+- cek apakah sudah submit
+- kalau sudah submit -> tidak bisa buka soal lagi
+- tidak menampilkan jawaban benar
+*/
+
 router.get(
-  "/fr-ia05/asesi/hasil/:id_peserta/:id_fr_ia_05",
-  frIa05AsesiController.getHasil
+
+"/fr-ia05/:id_fr_ia_05/:id_peserta",
+
+frIa05AsesiController.getSoal
+
 );
 
-/* ========================= FR.IA.06 ASESI ========================= */
-router.get("/fr-ia06/asesi/:id_fr_ia_06/:id_peserta", controller.getSoal);
-router.post("/fr-ia06/asesi/save", controller.saveJawaban);
-router.post("/fr-ia06/asesi/submit", controller.submit);
-router.get(
-  "/fr-ia06/asesi/jawaban/:id_peserta/:id_fr_ia_06",
-  controller.getJawabanSaya
-);
-router.get(
-  "/fr-ia06/asesi/status/:id_peserta/:id_fr_ia_06",
-  controller.getStatus
+
+
+/*
+========================================
+SUBMIT UJIAN
+========================================
+
+- submit sekali
+- langsung lock
+- otomatis hitung nilai
+*/
+
+router.post(
+
+"/fr-ia05/submit",
+
+frIa05AsesiController.submit
+
 );
 
-/* ========================= PRA ASESMEN ASESI ========================= */
-router.get("/pra-asesmen/form", praAsesmenController.getFormPraAsesmen);
-router.post("/pra-asesmen/submit", praAsesmenController.submitPraAsesmen);
-router.get("/pra-asesmen/download", praAsesmenController.downloadPraAsesmen);
+
+
+/*
+========================================
+LIHAT HASIL UJIAN
+========================================
+
+*/
+
+router.get(
+
+"/fr-ia05/hasil/:id_fr_ia_05/:id_peserta",
+
+frIa05AsesiController.getHasil
+
+);
 
 /* ========================= 404 fallback ========================= */
 router.use((req, res) => {
   res.status(404).json({ status: "error", message: "Route not found" });
 });
+
+/* ========================= HASIL AKHIR ASESI ========================= */
+
+
+/*
+========================================
+CEK STATUS HASIL ASESMEN
+========================================
+
+kompeten
+
+atau
+
+belum kompeten
+*/
+
+router.get(
+
+"/hasil-saya",
+
+hasilAkhirAsesiController.getStatusSaya
+
+);
+
+
+
+/*
+========================================
+DETAIL HASIL ASESMEN
+========================================
+
+jika kompeten:
+
+Presensi
+APL01
+APL02
+FRIA PDF
+*/
+
+router.get(
+
+"/hasil-saya/detail",
+
+hasilAkhirAsesiController.getHasilSaya
+
+);
 
 module.exports = router;

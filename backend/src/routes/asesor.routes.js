@@ -19,21 +19,16 @@ const frMapa02Controller = require("../controllers/asesor/frMapa02.controller");
 const frIa02Controller = require("../controllers/komite/frIa02.controller");
 const frIa03KomiteController = require("../controllers/komite/frIa03.controller");
 const frIa03AsesorController = require("../controllers/asesor/frIa03.controller");
-const frIa04aController = require("../controllers/komite/frIa04a.controller");
-const frIa04bKomiteController = require("../controllers/komite/frIa04b.controller");
-const frIa04bAsesorController = require("../controllers/asesor/frIa04b.controller");
 const frIa01Controller = require("../controllers/asesor/frIa01.controller");
 const frIa05KomiteController = require("../controllers/komite/frIa05Komite.controller");
-const frIa05AsesorController = require("../controllers/asesor/frIa05Penguji.controller");
-const frIa06KomiteController = require("../controllers/komite/frIa06Komite.controller");
-const frIa06AsesorController = require("../controllers/asesor/frIa06Penguji.controller");
-const frIa07KomiteController = require("../controllers/komite/frIa07Komite.controller");
-const frIa07AsesorController = require("../controllers/asesor/frIa07Penguji.controller");
-const frIa08KomiteController = require("../controllers/komite/frIa08Komite.controller");
-const frIa08Controller = require("../controllers/asesor/frIa08.controller");
-const frIa09Controller = require("../controllers/asesor/frIa09Penguji.controller");
-const frIa10Controller = require("../controllers/asesor/frIa10.controller");
+const frIa05PengujiController =
+require("../controllers/asesor/frIa05Penguji.controller");
+
+const frIa05AsesiController =
+require("../controllers/asesi/frIa05Asesi.controller");
 const lupaPasswordAsesorController = require("../controllers/asesor/lupapasswordAsesor.controller");
+const hasilKeputusanController =
+require("../controllers/asesor/hasilKeputusanAsesmen.controller");
 
 // 🔐 hanya asesor
 router.use(authMiddleware, roleMiddleware.asesorOnly);
@@ -98,28 +93,135 @@ router.put(
   pesertaJadwalController.updateNilaiPeserta
 );
 
-/* ========================= MKVA ========================= */
+/* ===================================================
+======================= MKVA ==========================
+=================================================== */
 
-// daftar jadwal MKVA
-router.get("/mkva/jadwal", mkvaController.getJadwalMkva);
 
-// detail MKVA
-router.get("/mkva/:id_mkva", mkvaController.getDetailMkva);
+/* jadwal mkva */
 
-// submit MKVA
-router.post("/mkva/:id_jadwal/submit", mkvaController.submitMkva);
+router.get(
+"/mkva/jadwal",
+mkvaController.getJadwalMkva
+);
 
-// update MKVA
-router.put("/mkva/:id_mkva/update", mkvaController.updateMkva);
 
-// download PDF
-router.get("/mkva/:id_mkva/pdf", mkvaController.downloadPdf);
+/* cek mkva by jadwal */
 
-router.get("/verifikasi-tuk/form", verifikasiTukController.getForm);
-router.get("/verifikasi-tuk/:id_jadwal", verifikasiTukController.getDetail);
-router.post("/verifikasi-tuk/:id_jadwal/submit", verifikasiTukController.submit);
-router.put("/verifikasi-tuk/:id_verifikasi/update", verifikasiTukController.update);
-router.get("/verifikasi-tuk/:id_verifikasi/pdf", verifikasiTukController.downloadPdf);
+router.get(
+"/mkva/jadwal/:id_jadwal",
+mkvaController.getMkvaByJadwal
+);
+
+
+/* submit */
+
+router.post(
+"/mkva/:id_jadwal/submit",
+mkvaController.submitMkva
+);
+
+
+/* update */
+
+router.put(
+"/mkva/:id_mkva/update",
+mkvaController.updateMkva
+);
+
+
+/* pdf */
+
+router.get(
+"/mkva/:id_mkva/pdf",
+mkvaController.downloadPdf
+);
+
+
+/* detail mkva */
+
+router.get(
+"/mkva/:id_mkva",
+mkvaController.getDetailMkva
+);
+
+
+
+/* ===================================================
+=================== VERIFIKASI TUK ===================
+=================================================== */
+
+
+/* jadwal verifikasi */
+
+router.get(
+
+"/verifikasi-tuk/jadwal",
+
+verifikasiTukController
+.getJadwalVerifikasi
+
+);
+
+
+/* master form */
+
+router.get(
+
+"/verifikasi-tuk/form",
+
+verifikasiTukController
+.getForm
+
+);
+
+
+/* submit */
+
+router.post(
+
+"/verifikasi-tuk/:id_jadwal/submit",
+
+verifikasiTukController
+.submit
+
+);
+
+
+/* update */
+
+router.put(
+
+"/verifikasi-tuk/:id_verifikasi/update",
+
+verifikasiTukController
+.update
+
+);
+
+
+/* pdf */
+
+router.get(
+
+"/verifikasi-tuk/:id_verifikasi/pdf",
+
+verifikasiTukController
+.downloadPdf
+
+);
+
+
+/* detail terakhir */
+
+router.get(
+
+"/verifikasi-tuk/:id_jadwal",
+
+verifikasiTukController
+.getDetail
+
+);
 
 /* ========================= PRESENSI ========================= */
 
@@ -236,16 +338,42 @@ router.get("/fr-mapa02/:id/pdf", frMapa02Controller.downloadPdfMapa02);
 
 /* ========================= FR.IA.02 (KOMITE TEKNIS) ========================= */
 
-// ambil detail FR.IA.02 (untuk load form / edit)
-router.get("/fr-ia02", frIa02Controller.getDetail);
-// submit FR.IA.02
-router.post("/fr-ia02", frIa02Controller.createFrIa02);
-// update FR.IA.02
-router.put("/fr-ia02/:id", frIa02Controller.updateFrIa02);
-// list FR.IA.02 per jadwal
-router.get("/fr-ia02/list/:id_jadwal", frIa02Controller.getByJadwal);
-// delete (optional tapi bagus buat testing)
-router.delete("/fr-ia02/:id", frIa02Controller.deleteFrIa02);
+/* FR.IA.02 */
+
+router.get(
+"/fr-ia02/tugas",
+frIa02Controller.getTugasKomite
+);
+
+router.get(
+"/fr-ia02",
+frIa02Controller.getDetail
+);
+
+router.post(
+"/fr-ia02",
+frIa02Controller.createFrIa02
+);
+
+router.put(
+"/fr-ia02/:id",
+frIa02Controller.updateFrIa02
+);
+
+router.get(
+"/fr-ia02/list/:id_jadwal",
+frIa02Controller.getByJadwal
+);
+
+router.get(
+"/fr-ia02/:id/pdf",
+frIa02Controller.downloadPdf
+);
+
+router.delete(
+"/fr-ia02/:id",
+frIa02Controller.deleteFrIa02
+);
 
 /* ========================= FR.IA.03 ========================= */
 
@@ -281,196 +409,213 @@ router.post("/fr-ia03/asesor/jawaban", frIa03AsesorController.saveJawaban);
 router.get("/fr-ia03/asesor/:id/pdf", frIa03AsesorController.downloadPdf);
 
 
-/* ========================= FR.IA.04A ========================= */
-
-// create / get header
-router.post("/fr-ia04a", frIa04aController.createOrGet);
-
-// ambil full data
-router.get("/fr-ia04a/:id", frIa04aController.getForm);
-
-// simpan detail
-router.post("/fr-ia04a/detail", frIa04aController.saveDetail);
-
-// download PDF
-router.get("/fr-ia04a/:id/pdf", frIa04aController.downloadPdf);
-
-/* ========================= FR.IA.04B ========================= */
-
-/* ==================== KOMITE TEKNIS ==================== */
-
-// create / get header + auto generate detail
-router.post("/fr-ia04b", frIa04bKomiteController.createOrGet);
-
-// ambil form (komite)
-router.get("/fr-ia04b/komite/:id", frIa04bKomiteController.getForm);
-
-// simpan lingkup, pertanyaan, kesesuaian
-router.post("/fr-ia04b/komite", frIa04bKomiteController.saveKomite);
-
-
-////////////////////////////////////////////////////////////
-
-/* ==================== ASESOR PENGUJI ==================== */
-
-// ambil form
-router.get("/fr-ia04b/asesor/:id", frIa04bAsesorController.getForm);
-
-// simpan tanggapan + pencapaian
-router.post("/fr-ia04b/asesor", frIa04bAsesorController.saveAsesor);
-
-// submit rekomendasi + ttd
-router.post("/fr-ia04b/submit", frIa04bAsesorController.submit);
-
-// download PDF
-router.get("/fr-ia04b/:id/pdf", frIa04bAsesorController.downloadPdf);
 
 /* ========================= FR.IA.01 (ASESOR PENGUJI) ========================= */
 
+// list tugas assessor
+router.get(
+"/fr-ia01/tugas",
+frIa01Controller.getTugasAsesor
+);
+
 // create / simpan
 router.post("/fr-ia01", frIa01Controller.create);
-// ambil data by id (full + detail)
+
+// ambil data by id
 router.get("/fr-ia01/:id", frIa01Controller.getById);
-// update data
+
+// update
 router.put("/fr-ia01/:id", frIa01Controller.update);
-// ambil berdasarkan peserta + jadwal (buat frontend load)
+
+// load berdasarkan peserta+jadwal
 router.get("/fr-ia01", frIa01Controller.getByPeserta);
-// download PDF
+
+// download pdf
 router.get("/fr-ia01/:id/pdf", frIa01Controller.downloadPdf);
 
 
 /* ========================= FR.IA.05 ========================= */
 
-/* ==================== KOMITE TEKNIS ==================== */
 
-// create paket soal
-router.post("/fr-ia05/komite", frIa05KomiteController.createPaket);
-// get paket by jadwal
-router.get("/fr-ia05/komite/jadwal/:id_jadwal", frIa05KomiteController.getByJadwal);
-// tambah soal
-router.post("/fr-ia05/komite/soal", frIa05KomiteController.createSoal);
-// update soal
-router.put("/fr-ia05/komite/soal/:id", frIa05KomiteController.updateSoal);
-// delete soal
-router.delete("/fr-ia05/komite/soal/:id", frIa05KomiteController.deleteSoal);
-// tambah opsi jawaban
-router.post("/fr-ia05/komite/opsi", frIa05KomiteController.createOpsi);
-// get detail (soal + opsi)
-router.get("/fr-ia05/komite/:id", frIa05KomiteController.getDetail);
+/* ===========================================
+================ KOMITE TEKNIS ===============
+=========================================== */
+
+router.post(
+"/fr-ia05/komite",
+frIa05KomiteController.createPaket
+);
+
+router.get(
+"/fr-ia05/komite/jadwal/:id_jadwal",
+frIa05KomiteController.getByJadwal
+);
+
+router.post(
+"/fr-ia05/komite/soal",
+frIa05KomiteController.createSoal
+);
+
+router.put(
+"/fr-ia05/komite/soal/:id",
+frIa05KomiteController.updateSoal
+);
+
+router.delete(
+"/fr-ia05/komite/soal/:id",
+frIa05KomiteController.deleteSoal
+);
+
+router.post(
+"/fr-ia05/komite/opsi",
+frIa05KomiteController.createOpsi
+);
+
+router.get(
+"/fr-ia05/komite/:id",
+frIa05KomiteController.getDetail
+);
+
+router.get(
+"/fr-ia05/komite/:id/pdf",
+frIa05KomiteController.downloadPdf
+);
 
 
-/* ==================== ASESOR PENGUJI ==================== */
 
-// lihat hasil jawaban asesi
-router.get("/fr-ia05/asesor/hasil/:id_peserta", frIa05AsesorController.getHasilAsesi);
-// hitung nilai otomatis
-router.get("/fr-ia05/asesor/nilai/:id_peserta", frIa05AsesorController.hitungNilai);
-// simpan penilaian + feedback + ttd
-router.post("/fr-ia05/asesor/penilaian", frIa05AsesorController.simpanPenilaian);
-// ambil penilaian
-router.get("/fr-ia05/asesor/penilaian/:id_peserta", frIa05AsesorController.getPenilaian);
+/* ===========================================
+===================== ASESI ==================
+=========================================== */
 
-/* ========================= FR.IA.06 ========================= */
+router.get(
 
-/* ==================== KOMITE TEKNIS ==================== */
+"/fr-ia05/asesi/:id_fr_ia_05/:id_peserta",
 
-// create paket essay
-router.post("/fr-ia06/komite", frIa06KomiteController.createPaket);
-// tambah soal essay + jawaban referensi
-router.post("/fr-ia06/komite/soal", frIa06KomiteController.createSoal);
-// update soal
-router.put("/fr-ia06/komite/soal/:id", frIa06KomiteController.updateSoal);
-// delete soal
-router.delete("/fr-ia06/komite/soal/:id", frIa06KomiteController.deleteSoal);
-// get detail (soal + jawaban referensi)
-router.get("/fr-ia06/komite/:id", frIa06KomiteController.getDetail);
+frIa05AsesiController.getSoal
 
-/* ==================== ASESOR PENGUJI ==================== */
+);
 
-// lihat jawaban asesi + soal + kunci
-router.get("/fr-ia06/asesor/hasil/:id_peserta", frIa06AsesorController.getJawabanAsesi);
-// nilai per soal (ya / tidak)
-router.put("/fr-ia06/asesor/nilai/:id", frIa06AsesorController.nilaiJawaban);
-// hitung hasil (optional)
-router.get("/fr-ia06/asesor/hasil-nilai/:id_peserta", frIa06AsesorController.hitungHasil);
-// simpan penilaian akhir + umpan balik + ttd
-router.post("/fr-ia06/asesor/penilaian", frIa06AsesorController.simpanPenilaian);
-// ambil penilaian
-router.get("/fr-ia06/asesor/penilaian/:id_peserta", frIa06AsesorController.getPenilaian);
 
-/* ========================= FR.IA.07 ========================= */
+router.post(
 
-/* ==================== KOMITE TEKNIS ==================== */
+"/fr-ia05/asesi/submit",
 
-// create paket
-router.post("/fr-ia07/komite", frIa07KomiteController.createPaket);
-// tambah soal lisan + kunci jawaban
-router.post("/fr-ia07/komite/soal", frIa07KomiteController.createSoal);
-// update soal
-router.put("/fr-ia07/komite/soal/:id", frIa07KomiteController.updateSoal);
-// delete soal
-router.delete("/fr-ia07/komite/soal/:id", frIa07KomiteController.deleteSoal);
-// get detail (soal + kunci)
-router.get("/fr-ia07/komite/:id", frIa07KomiteController.getDetail);
+frIa05AsesiController.submit
 
-/* ==================== ASESOR PENGUJI ==================== */
+);
 
-// ambil form (soal + jawaban asesi)
-router.get("/fr-ia07/asesor/:id_peserta", frIa07AsesorController.getForm);
-// simpan jawaban asesi + pencapaian
-router.post("/fr-ia07/asesor/jawaban", frIa07AsesorController.saveJawaban);
-// simpan penilaian akhir + umpan balik + ttd
-router.post("/fr-ia07/asesor/penilaian", frIa07AsesorController.savePenilaian);
-// ambil penilaian
-router.get("/fr-ia07/asesor/penilaian/:id_peserta", frIa07AsesorController.getPenilaian);
 
-/* ========================= FR.IA.08 ========================= */
-// ==================== KOMITE TEKNIS ====================
+router.get(
 
-// create soal wawancara
-router.post("/fr-ia08/komite/soal", frIa08KomiteController.createSoal);
-// update soal
-router.put("/fr-ia08/komite/soal/:id", frIa08KomiteController.updateSoal);
-// delete soal
-router.delete("/fr-ia08/komite/soal/:id", frIa08KomiteController.deleteSoal); 
-// get soal berdasarkan skema
-router.get("/fr-ia08/komite/skema/:id_skema", frIa08KomiteController.getSoalBySkema);
+"/fr-ia05/asesi/hasil/:id_fr_ia_05/:id_peserta",
 
-// ==================== ASESOR PENGUJI ====================
+frIa05AsesiController.getHasil
 
-// ambil data APL01 + APL02 (untuk ditampilkan di UI)
-router.get("/fr-ia08/asesor/data/:id_peserta", frIa08Controller.getData);
-// create header FR.IA.08
-router.post("/fr-ia08", frIa08Controller.create);
-// simpan penilaian dokumen
-router.post("/fr-ia08/penilaian", frIa08Controller.savePenilaian);
-// ambil penilaian (reload form)
-router.get("/fr-ia08/penilaian/:id", frIa08Controller.getPenilaian);
+);
 
-/* ========================= FR.IA.09 ========================= */
-// ==================== ASESOR PENGUJI ====================
 
-// ambil data (soal + jawaban jika ada)
-router.get("/fr-ia09", frIa09Controller.getData);
-// create header FR.IA.09
-router.post("/fr-ia09", frIa09Controller.create);
-// simpan jawaban per soal (kesimpulan + K/BK)
-router.post("/fr-ia09/detail", frIa09Controller.saveDetail);
-// hapus detail (optional)
-router.delete("/fr-ia09/detail/:id", frIa09Controller.deleteDetail);
-// submit akhir (rekomendasi + ttd)
-router.post("/fr-ia09/submit", frIa09Controller.submit);
 
-/* ========================= FR.IA.10 ========================= */
-// ==================== ASESOR PENGUJI ====================
+/* ===========================================
+============== ASESOR PENGUJI ===============
+=========================================== */
 
-// ambil data FR.IA.10 (by peserta + jadwal)
-router.get("/fr-ia10", frIa10Controller.getByPeserta);
-// create / update FR.IA.10
-router.post("/fr-ia10", frIa10Controller.save);
-// (optional admin / debug)
-router.get("/fr-ia10/list", frIa10Controller.getAll);
+router.get(
 
+"/fr-ia05/asesor/hasil/:id_peserta",
+
+frIa05PengujiController.getHasilAsesi
+
+);
+
+
+router.get(
+
+"/fr-ia05/asesor/nilai/:id_peserta",
+
+frIa05PengujiController.hitungNilai
+
+);
+
+
+router.post(
+
+"/fr-ia05/asesor/penilaian",
+
+frIa05PengujiController.simpanPenilaian
+
+);
+
+
+router.get(
+
+"/fr-ia05/asesor/penilaian/:id_peserta",
+
+frIa05PengujiController.getPenilaian
+
+);
+
+
+router.get(
+
+"/fr-ia05/asesor/:id_peserta/pdf",
+
+frIa05PengujiController.downloadPdf
+
+);
+
+/* ========================= HASIL KEPUTUSAN ASESMEN ========================= */
+
+
+/*
+=====================================
+ASESOR MENENTUKAN HASIL AKHIR
+=====================================
+
+kompeten
+atau
+
+belum kompeten
+*/
+
+router.post(
+
+"/hasil-keputusan",
+
+hasilKeputusanController.submitKeputusan
+
+);
+
+
+
+/*
+=====================================
+DETAIL HASIL KEPUTUSAN
+=====================================
+*/
+
+router.get(
+
+"/hasil-keputusan/:id_peserta",
+
+hasilKeputusanController.getKeputusan
+
+);
+
+
+
+/*
+=====================================
+LIHAT HASIL AKHIR ASESI
+=====================================
+*/
+
+router.get(
+
+"/hasil-akhir/:id_peserta",
+
+hasilKeputusanController.getHasilAkhir
+
+);
 
 router.put(
   "/change-password",

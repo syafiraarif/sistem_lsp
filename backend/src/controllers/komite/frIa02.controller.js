@@ -1,238 +1,535 @@
-// ===============================
-// ✅ IMPORT MODEL (FIXED)
-// ===============================
-const FrIa02 = require("../../models/frIa02.model");
-const FrIa02Detail = require("../../models/frIa02Detail.model");
-const FrIa02Validator = require("../../models/frIa02Validator.model");
+const {
+FrIa02,
+FrIa02Detail,
+FrIa02Validator,
+Jadwal,
+JadwalAsesor,
+Skema,
+Tuk,
+KelompokPekerjaan,
+ProfileAsesor,
+ProfileAsesi
+}=require("../../models");
 
-const Jadwal = require("../../models/jadwal.model");
-const Skema = require("../../models/skema.model");
-const Tuk = require("../../models/tuk.model");
-const KelompokPekerjaan = require("../../models/kelompokPekerjaan.model");
-const ProfileAsesor = require("../../models/profileAsesor.model");
-const ProfileAsesi = require("../../models/profileAsesi.model");
+const PDFDocument=require("pdfkit");
 
+exports.getTugasKomite=async(req,res)=>{
+try{
 
-// ===============================
-// ✅ CREATE
-// ===============================
-exports.createFrIa02 = async (req, res) => {
-  try {
-    const {
-      id_jadwal,
-      id_skema,
-      id_tuk,
-      id_asesor,
-      id_asesi,
-      tanggal,
-      details = [],
-      validators = []
-    } = req.body;
+const assessorId=req.user.id_user||req.user.id;
 
-    const fr = await FrIa02.create({
-      id_jadwal,
-      id_skema,
-      id_tuk,
-      id_asesor,
-      id_asesi,
-      tanggal
-    });
+const data=await JadwalAsesor.findAll({
 
-    // DETAIL
-    if (details.length > 0) {
-      const detailData = details.map(d => ({
-        id_fr_ia_02: fr.id_fr_ia_02,
-        id_kelompok: d.id_kelompok,
-        skenario: d.skenario,
-        langkah_kerja: d.langkah_kerja,
-        peralatan: d.peralatan,
-        durasi: d.durasi
-      }));
+where:{
+id_user:assessorId,
+jenis_tugas:"komite_teknis",
+status:"aktif"
+},
 
-      await FrIa02Detail.bulkCreate(detailData);
-    }
+include:[{
+model:Jadwal,
+include:[
+{model:Skema,as:"skema"},
+{model:Tuk,as:"tuk"}
+]
+}]
 
-    // VALIDATOR
-    if (validators.length > 0) {
-      const validatorData = validators.map(v => ({
-        id_fr_ia_02: fr.id_fr_ia_02,
-        id_asesor: v.id_asesor,
-        peran: v.peran,
-        urutan: v.urutan
-      }));
+});
 
-      await FrIa02Validator.bulkCreate(validatorData);
-    }
+res.json(
+data.map(x=>x.Jadwal).filter(Boolean)
+);
 
-    res.status(201).json({
-      message: "FR IA 02 berhasil disimpan",
-      data: fr
-    });
+}catch(err){
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Gagal menyimpan FR IA 02",
-      error: error.message
-    });
-  }
+res.status(500).json({error:err.message});
+
+}
 };
 
 
-// ===============================
-// ✅ GET LIST BY JADWAL
-// ===============================
-exports.getByJadwal = async (req, res) => {
-  try {
-    const { id_jadwal } = req.params;
 
-    const data = await FrIa02.findAll({
-      where: { id_jadwal },
-      include: [
-        { model: Skema, as: "skema" },
-        { model: Tuk, as: "tuk" },
-        { model: ProfileAsesor, as: "asesor" },
-        { model: ProfileAsesi, as: "asesi" }
-      ],
-      order: [["id_fr_ia_02", "DESC"]]
-    });
+exports.getDetail=async(req,res)=>{
+try{
 
-    res.json(data);
+const {id_jadwal}=req.query;
 
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+const assessorId=
+req.user.id_user||
+req.user.id;
+
+const existing=
+await FrIa02.findOne({
+
+where:{
+id_jadwal,
+id_asesor:assessorId
+},
+
+include:[
+
+{
+model:FrIa02Detail,
+as:"detail",
+include:[{
+model:KelompokPekerjaan,
+as:"kelompok"
+}]
+},
+
+{
+model:FrIa02Validator,
+as:"validator",
+include:[{
+model:ProfileAsesor,
+as:"asesor"
+}]
+}
+
+]
+
+});
+
+if(existing){
+
+return res.json(existing);
+
+}
+
+const jadwal=
+await Jadwal.findByPk(id_jadwal);
+
+if(!jadwal){
+
+return res.status(404).json({
+message:"jadwal tidak ditemukan"
+});
+
+}
+
+const kelompok=
+await KelompokPekerjaan.findAll({
+
+where:{
+id_skema:jadwal.id_skema
+},
+
+order:[
+["urutan","ASC"]
+]
+
+});
+
+res.json({
+
+generated:true,
+
+jadwal,
+
+detail:kelompok.map(x=>({
+
+id_kelompok:x.id_kelompok,
+
+nama_kelompok:x.nama_kelompok,
+
+skenario:null,
+
+langkah_kerja:null,
+
+peralatan:null,
+
+durasi:null
+
+}))
+
+});
+
+}catch(err){
+
+res.status(500).json({error:err.message});
+
+}
+
 };
 
 
-// ===============================
-// ✅ GET DETAIL
-// ===============================
-exports.getDetail = async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    const data = await FrIa02.findOne({
-      where: { id_fr_ia_02: id },
-      include: [
-        {
-          model: FrIa02Detail,
-          as: "detail",
-          include: [
-            {
-              model: KelompokPekerjaan,
-              as: "kelompok"
-            }
-          ]
-        },
-        {
-          model: FrIa02Validator,
-          as: "validator",
-          include: [
-            {
-              model: ProfileAsesor,
-              as: "asesor",
-              attributes: ["id_user", "nama_lengkap"]
-            }
-          ]
-        },
-        { model: Skema, as: "skema" },
-        { model: Tuk, as: "tuk" },
-        { model: ProfileAsesor, as: "asesor" },
-        { model: ProfileAsesi, as: "asesi" }
-      ]
-    });
+exports.createFrIa02=async(req,res)=>{
+try{
 
-    res.json(data);
+const {
+id_jadwal,
+id_asesi,
+tanggal,
+details=[],
+validators=[]
+}=req.body;
 
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+const assessorId=
+req.user.id_user||
+req.user.id;
+
+const cek=
+await JadwalAsesor.findOne({
+
+where:{
+id_jadwal,
+id_user:assessorId,
+jenis_tugas:"komite_teknis",
+status:"aktif"
+}
+
+});
+
+if(!cek){
+
+return res.status(403).json({
+message:"anda bukan komite teknis"
+});
+
+}
+
+const jadwal=
+await Jadwal.findByPk(id_jadwal);
+
+if(!jadwal){
+
+return res.status(404).json({
+message:"jadwal tidak ditemukan"
+});
+
+}
+
+const fr=
+await FrIa02.create({
+
+id_jadwal,
+id_skema:jadwal.id_skema,
+id_tuk:jadwal.id_tuk,
+id_asesor:assessorId,
+id_asesi,
+tanggal,
+created_by:assessorId
+
+});
+
+if(details.length){
+
+await FrIa02Detail.bulkCreate(
+details.map(d=>({
+
+id_fr_ia_02:fr.id_fr_ia_02,
+
+id_kelompok:d.id_kelompok,
+
+skenario:d.skenario,
+
+langkah_kerja:d.langkah_kerja,
+
+peralatan:d.peralatan,
+
+durasi:d.durasi
+
+}))
+);
+
+}
+
+if(validators.length){
+
+await FrIa02Validator.bulkCreate(
+validators.map(v=>({
+
+id_fr_ia_02:fr.id_fr_ia_02,
+
+id_asesor:v.id_asesor,
+
+peran:v.peran,
+
+urutan:v.urutan
+
+}))
+);
+
+}
+
+res.json(fr);
+
+}catch(err){
+
+res.status(500).json({error:err.message});
+
+}
+
 };
 
 
-// ===============================
-// ✅ UPDATE
-// ===============================
-exports.updateFrIa02 = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      id_jadwal,
-      id_skema,
-      id_tuk,
-      id_asesor,
-      id_asesi,
-      tanggal,
-      details = [],
-      validators = []
-    } = req.body;
 
-    await FrIa02.update({
-      id_jadwal,
-      id_skema,
-      id_tuk,
-      id_asesor,
-      id_asesi,
-      tanggal
-    }, {
-      where: { id_fr_ia_02: id }
-    });
+exports.updateFrIa02=async(req,res)=>{
+try{
 
-    // RESET DETAIL
-    await FrIa02Detail.destroy({ where: { id_fr_ia_02: id } });
+const id=req.params.id;
 
-    if (details.length > 0) {
-      const detailData = details.map(d => ({
-        id_fr_ia_02: id,
-        id_kelompok: d.id_kelompok,
-        skenario: d.skenario,
-        langkah_kerja: d.langkah_kerja,
-        peralatan: d.peralatan,
-        durasi: d.durasi
-      }));
+await FrIa02.update({
 
-      await FrIa02Detail.bulkCreate(detailData);
-    }
+id_asesi:req.body.id_asesi,
 
-    // RESET VALIDATOR
-    await FrIa02Validator.destroy({ where: { id_fr_ia_02: id } });
+tanggal:req.body.tanggal,
 
-    if (validators.length > 0) {
-      const validatorData = validators.map(v => ({
-        id_fr_ia_02: id,
-        id_asesor: v.id_asesor,
-        peran: v.peran,
-        urutan: v.urutan
-      }));
+updated_at:new Date()
 
-      await FrIa02Validator.bulkCreate(validatorData);
-    }
+},
 
-    res.json({ message: "FR IA 02 berhasil diupdate" });
+{
 
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+where:{
+id_fr_ia_02:id
+}
+
+}
+
+);
+
+await FrIa02Detail.destroy({
+
+where:{
+id_fr_ia_02:id
+}
+
+});
+
+await FrIa02Validator.destroy({
+
+where:{
+id_fr_ia_02:id
+}
+
+});
+
+if(req.body.details?.length){
+
+await FrIa02Detail.bulkCreate(
+req.body.details.map(x=>({
+
+id_fr_ia_02:id,
+
+id_kelompok:x.id_kelompok,
+
+skenario:x.skenario,
+
+langkah_kerja:x.langkah_kerja,
+
+peralatan:x.peralatan,
+
+durasi:x.durasi
+
+}))
+);
+
+}
+
+if(req.body.validators?.length){
+
+await FrIa02Validator.bulkCreate(
+req.body.validators.map(x=>({
+
+id_fr_ia_02:id,
+
+id_asesor:x.id_asesor,
+
+peran:x.peran,
+
+urutan:x.urutan
+
+}))
+);
+
+}
+
+res.json({
+message:"updated"
+});
+
+}catch(err){
+
+res.status(500).json({error:err.message});
+
+}
+
 };
 
 
-// ===============================
-// ✅ DELETE
-// ===============================
-exports.deleteFrIa02 = async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    await FrIa02.destroy({
-      where: { id_fr_ia_02: id }
-    });
+exports.getByJadwal=async(req,res)=>{
+try{
 
-    res.json({
-      message: "FR IA 02 berhasil dihapus"
-    });
+const data=
+await FrIa02.findAll({
 
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+where:{
+id_jadwal:req.params.id_jadwal
+}
+
+});
+
+res.json(data);
+
+}catch(err){
+
+res.status(500).json({
+error:err.message
+});
+
+}
+
+};
+
+
+
+exports.downloadPdf=async(req,res)=>{
+try{
+
+const data=
+await FrIa02.findByPk(
+
+req.params.id,
+
+{
+
+include:[
+
+{
+model:FrIa02Detail,
+as:"detail",
+include:[{
+model:KelompokPekerjaan,
+as:"kelompok"
+}]
+},
+
+{
+model:FrIa02Validator,
+as:"validator",
+include:[{
+model:ProfileAsesor,
+as:"asesor"
+}]
+},
+
+{model:Skema,as:"skema"},
+{model:Tuk,as:"tuk"},
+{model:ProfileAsesor,as:"asesor"},
+{model:ProfileAsesi,as:"asesi"}
+
+]
+
+}
+
+);
+
+if(!data){
+
+return res.status(404).json({
+message:"data tidak ditemukan"
+});
+
+}
+
+const doc=new PDFDocument({
+margin:40
+});
+
+res.setHeader(
+"Content-Type",
+"application/pdf"
+);
+
+res.setHeader(
+"Content-Disposition",
+`attachment; filename=FRIA02-${data.id_fr_ia_02}.pdf`
+);
+
+doc.pipe(res);
+
+doc.fontSize(15)
+.text(
+"FR.IA.02 TUGAS PRAKTIK DEMONSTRASI",
+{align:"center"}
+);
+
+doc.moveDown();
+
+doc.text(`Skema : ${data.skema?.judul_skema||"-"}`);
+doc.text(`TUK : ${data.tuk?.nama_tuk||"-"}`);
+doc.text(`Asesor : ${data.asesor?.nama_lengkap||"-"}`);
+
+(data.detail||[]).forEach((x,i)=>{
+
+doc.moveDown();
+
+doc.text(
+`${i+1}. ${x.kelompok?.nama_kelompok||"-"}`
+);
+
+doc.text(
+`Skenario : ${x.skenario||"-"}`
+);
+
+doc.text(
+`Langkah : ${x.langkah_kerja||"-"}`
+);
+
+doc.text(
+`Peralatan : ${x.peralatan||"-"}`
+);
+
+doc.text(
+`Durasi : ${x.durasi||0}`
+);
+
+});
+
+doc.end();
+
+}catch(err){
+
+res.status(500).json({
+error:err.message
+});
+
+}
+
+};
+
+
+
+exports.deleteFrIa02=async(req,res)=>{
+try{
+
+const id=req.params.id;
+
+await FrIa02Detail.destroy({
+where:{id_fr_ia_02:id}
+});
+
+await FrIa02Validator.destroy({
+where:{id_fr_ia_02:id}
+});
+
+await FrIa02.destroy({
+where:{id_fr_ia_02:id}
+});
+
+res.json({
+message:"deleted"
+});
+
+}catch(err){
+
+res.status(500).json({
+error:err.message
+});
+
+}
+
 };

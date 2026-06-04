@@ -61,10 +61,6 @@ const FrIa02Validator = require("./frIa02Validator.model");
 const FrIa03 = require("./frIa03.model");
 const FrIa03Pertanyaan = require("./frIa03Pertanyaan.model");
 const FrIa03Jawaban = require("./frIa03Jawaban.model");
-const FrIa04a = require("./frIa04a.model");
-const FrIa04aDetail = require("./frIa04aDetail.model");
-const FrIa04b = require("./frIa04b.model");
-const FrIa04bDetail = require("./frIa04bDetail.model");
 const FrIa01 = require("./frIa01.model");
 const FrIa01Detail = require("./frIa01Detail.model");
 const FrIa05 = require("./frIa05.model");
@@ -72,23 +68,10 @@ const FrIa05Soal = require("./frIa05Soal.model");
 const FrIa05Opsi = require("./frIa05Opsi.model");
 const FrIa05Jawaban = require("./frIa05Jawaban.model");
 const FrIa05Penilaian = require("./frIa05Penilaian.model");
-const FrIa06 = require("./frIa06.model");
-const FrIa06Soal = require("./frIa06Soal.model");
-const FrIa06Jawaban = require("./frIa06Jawaban.model");
-const FrIa06Penilaian = require("./frIa06Penilaian.model");
-const FrIa07 = require("./frIa07.model");
-const FrIa07Soal = require("./frIa07Soal.model");
-const FrIa07Jawaban = require("./frIa07Jawaban.model");
-const FrIa07Penilaian = require("./frIa07Penilaian.model");
-const FrIa08 = require("./frIa08.model");
-const FrIa08PenilaianDokumen = require("./frIa08PenilaianDokumen.model");
-const FrIa08BankSoal = require("./frIa08BankSoal.model");
-const FrIa09 = require("./frIa09.model");
-const FrIa09Detail = require("./frIa09Detail.model");
-const FrIa10 = require("./frIa10.model");
 const FrAk03 = require("./frAk03.model");
 const FrAk03Detail = require("./frAk03Detail.model");
 const FrAk04 = require("./frAk04.model");
+const HasilKeputusanAsesmen = require("./hasilKeputusanAsesmen.model");
 
 // ==========================
 // FR.MAPA.01 (FINAL)
@@ -179,39 +162,9 @@ ProfileAsesor.hasMany(FrIa03, { foreignKey: "id_asesor", sourceKey: "id_user", a
 FrIa03.belongsTo(ProfileAsesi, { foreignKey: "id_asesi", targetKey: "id_user", as: "asesi" });
 ProfileAsesi.hasMany(FrIa03, { foreignKey: "id_asesi", sourceKey: "id_user", as: "frIa03" });
 
-// ==========================
-// FR.IA.04A & 04B
-// ==========================
-FrIa04a.hasMany(FrIa04aDetail, { foreignKey: "id_fr_ia_04a", as: "detail", onDelete: "CASCADE" });
-FrIa04aDetail.belongsTo(FrIa04a, { foreignKey: "id_fr_ia_04a" });
-FrIa04a.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
-Jadwal.hasMany(FrIa04a, { foreignKey: "id_jadwal", as: "frIa04aList" });
-FrIa04a.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
-Skema.hasMany(FrIa04a, { foreignKey: "id_skema", as: "frIa04aList" });
-FrIa04a.belongsTo(Tuk, { foreignKey: "id_tuk", as: "tuk" });
-Tuk.hasMany(FrIa04a, { foreignKey: "id_tuk", as: "frIa04aList" });
-FrIa04a.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", targetKey: "id_user", as: "asesor" });
-ProfileAsesor.hasMany(FrIa04a, { foreignKey: "id_asesor", sourceKey: "id_user", as: "frIa04aList" });
-FrIa04aDetail.belongsTo(KelompokPekerjaan, { foreignKey: "id_kelompok", as: "kelompok" });
-KelompokPekerjaan.hasMany(FrIa04aDetail, { foreignKey: "id_kelompok", as: "frIa04aDetail" });
-
-FrIa04b.hasMany(FrIa04bDetail, { foreignKey: "id_fr_ia_04b", as: "detail", onDelete: "CASCADE" });
-FrIa04bDetail.belongsTo(FrIa04b, { foreignKey: "id_fr_ia_04b" });
-FrIa04b.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
-Jadwal.hasMany(FrIa04b, { foreignKey: "id_jadwal", as: "frIa04bList" });
-FrIa04b.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
-PesertaJadwal.hasMany(FrIa04b, { foreignKey: "id_peserta", as: "frIa04bList" });
-FrIa04b.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
-Skema.hasMany(FrIa04b, { foreignKey: "id_skema", as: "frIa04bList" });
-FrIa04b.belongsTo(Tuk, { foreignKey: "id_tuk", as: "tuk" });
-Tuk.hasMany(FrIa04b, { foreignKey: "id_tuk", as: "frIa04bList" });
-FrIa04b.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", targetKey: "id_user", as: "asesor" });
-ProfileAsesor.hasMany(FrIa04b, { foreignKey: "id_asesor", sourceKey: "id_user", as: "frIa04bList" });
-FrIa04bDetail.belongsTo(KelompokPekerjaan, { foreignKey: "id_kelompok", as: "kelompok" });
-KelompokPekerjaan.hasMany(FrIa04bDetail, { foreignKey: "id_kelompok", as: "frIa04bDetail" });
 
 // ==========================
-// FR.IA.05, 06, 07
+// FR.IA.05
 // ==========================
 FrIa05Soal.hasMany(FrIa05Jawaban, { foreignKey: "id_soal", as: "jawaban" });
 FrIa05Opsi.hasMany(FrIa05Jawaban, { foreignKey: "id_opsi", as: "jawabanAsesi" });
@@ -235,100 +188,6 @@ FrIa05Penilaian.belongsTo(FrIa05, { foreignKey: "id_fr_ia_05", as: "paket" });
 FrIa05.hasMany(FrIa05Penilaian, { foreignKey: "id_fr_ia_05", as: "penilaian" });
 FrIa05.belongsTo(ProfileAsesor, { foreignKey: "created_by", targetKey: "id_user", as: "pembuat" });
 ProfileAsesor.hasMany(FrIa05, { foreignKey: "created_by", sourceKey: "id_user", as: "frIa05" });
-
-FrIa06.hasMany(FrIa06Soal, { foreignKey: "id_fr_ia_06", as: "soal", onDelete: "CASCADE" });
-FrIa06Soal.belongsTo(FrIa06, { foreignKey: "id_fr_ia_06", as: "paket" });
-FrIa06Soal.hasMany(FrIa06Jawaban, { foreignKey: "id_soal", as: "jawaban", onDelete: "CASCADE" });
-FrIa06Jawaban.belongsTo(FrIa06Soal, { foreignKey: "id_soal", as: "soal" });
-FrIa06Soal.belongsTo(KelompokPekerjaan, { foreignKey: "id_kelompok", as: "kelompok" });
-KelompokPekerjaan.hasMany(FrIa06Soal, { foreignKey: "id_kelompok", as: "frIa06Soal" });
-FrIa06Jawaban.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
-PesertaJadwal.hasMany(FrIa06Jawaban, { foreignKey: "id_peserta", as: "frIa06Jawaban" });
-FrIa06.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
-Jadwal.hasMany(FrIa06, { foreignKey: "id_jadwal", as: "frIa06" });
-FrIa06.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
-Skema.hasMany(FrIa06, { foreignKey: "id_skema", as: "frIa06" });
-FrIa06Penilaian.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
-PesertaJadwal.hasMany(FrIa06Penilaian, { foreignKey: "id_peserta", as: "frIa06Penilaian" });
-FrIa06Penilaian.belongsTo(FrIa06, { foreignKey: "id_fr_ia_06", as: "paket" });
-FrIa06.hasMany(FrIa06Penilaian, { foreignKey: "id_fr_ia_06", as: "penilaian" });
-FrIa06.belongsTo(ProfileAsesor, { foreignKey: "created_by", targetKey: "id_user", as: "pembuat" });
-ProfileAsesor.hasMany(FrIa06, { foreignKey: "created_by", sourceKey: "id_user", as: "frIa06" });
-
-FrIa07Jawaban.belongsTo(FrIa07, { foreignKey: "id_fr_ia_07", as: "paket" });
-FrIa07.hasMany(FrIa07Jawaban, { foreignKey: "id_fr_ia_07", as: "jawaban_paket" });
-FrIa07Jawaban.belongsTo(ProfileAsesor, { foreignKey: "created_by", targetKey: "id_user", as: "asesor" });
-FrIa07.hasMany(FrIa07Soal, { foreignKey: "id_fr_ia_07", as: "soal", onDelete: "CASCADE" });
-FrIa07Soal.belongsTo(FrIa07, { foreignKey: "id_fr_ia_07", as: "paket" });
-FrIa07Soal.hasMany(FrIa07Jawaban, { foreignKey: "id_soal", as: "jawaban", onDelete: "CASCADE" });
-FrIa07Jawaban.belongsTo(FrIa07Soal, { foreignKey: "id_soal", as: "soal" });
-FrIa07Soal.belongsTo(UnitKompetensi, { foreignKey: "id_unit", as: "unit" });
-UnitKompetensi.hasMany(FrIa07Soal, { foreignKey: "id_unit", as: "frIa07Soal" });
-FrIa07Soal.belongsTo(KelompokPekerjaan, { foreignKey: "id_kelompok", as: "kelompok" });
-KelompokPekerjaan.hasMany(FrIa07Soal, { foreignKey: "id_kelompok", as: "frIa07Soal" });
-FrIa07Jawaban.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
-PesertaJadwal.hasMany(FrIa07Jawaban, { foreignKey: "id_peserta", as: "frIa07Jawaban" });
-FrIa07.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
-Jadwal.hasMany(FrIa07, { foreignKey: "id_jadwal", as: "frIa07" });
-FrIa07.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
-Skema.hasMany(FrIa07, { foreignKey: "id_skema", as: "frIa07" });
-FrIa07Penilaian.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
-PesertaJadwal.hasMany(FrIa07Penilaian, { foreignKey: "id_peserta", as: "frIa07Penilaian" });
-FrIa07Penilaian.belongsTo(FrIa07, { foreignKey: "id_fr_ia_07", as: "paket" });
-FrIa07.hasMany(FrIa07Penilaian, { foreignKey: "id_fr_ia_07", as: "penilaian" });
-FrIa07.belongsTo(ProfileAsesor, { foreignKey: "created_by", targetKey: "id_user", as: "pembuat" });
-ProfileAsesor.hasMany(FrIa07, { foreignKey: "created_by", sourceKey: "id_user", as: "frIa07" });
-
-// ==========================
-// FR.IA.08, 09, 10
-// ==========================
-FrIa08.hasMany(FrIa08PenilaianDokumen, { foreignKey: "id_fr_ia_08", as: "penilaian", onDelete: "CASCADE" });
-FrIa08PenilaianDokumen.belongsTo(FrIa08, { foreignKey: "id_fr_ia_08", as: "frIa08" });
-FrIa08.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
-PesertaJadwal.hasMany(FrIa08, { foreignKey: "id_peserta", as: "frIa08List" });
-FrIa08.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
-Jadwal.hasMany(FrIa08, { foreignKey: "id_jadwal", as: "frIa08" });
-FrIa08.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
-Skema.hasMany(FrIa08, { foreignKey: "id_skema", as: "frIa08" });
-FrIa08.belongsTo(ProfileAsesor, { foreignKey: "created_by", targetKey: "id_user", as: "asesor" });
-ProfileAsesor.hasMany(FrIa08, { foreignKey: "created_by", sourceKey: "id_user", as: "frIa08" });
-
-FrIa08BankSoal.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
-Skema.hasMany(FrIa08BankSoal, { foreignKey: "id_skema", as: "bankSoalWawancara" });
-FrIa08BankSoal.belongsTo(UnitKompetensi, { foreignKey: "id_unit", as: "unit" });
-UnitKompetensi.hasMany(FrIa08BankSoal, { foreignKey: "id_unit", as: "bankSoalWawancara" });
-FrIa08BankSoal.belongsTo(UnitElemen, { foreignKey: "id_elemen", as: "elemen" });
-UnitElemen.hasMany(FrIa08BankSoal, { foreignKey: "id_elemen", as: "bankSoalWawancara" });
-FrIa08BankSoal.belongsTo(UnitKuk, { foreignKey: "id_kuk", as: "kuk" });
-UnitKuk.hasMany(FrIa08BankSoal, { foreignKey: "id_kuk", as: "bankSoalWawancara" });
-FrIa08BankSoal.belongsTo(ProfileAsesor, { foreignKey: "created_by", targetKey: "id_user", as: "pembuat" });
-ProfileAsesor.hasMany(FrIa08BankSoal, { foreignKey: "created_by", sourceKey: "id_user", as: "bankSoalWawancara" });
-
-FrIa09.hasMany(FrIa09Detail, { foreignKey: "id_fr_ia_09", as: "detailJawaban", onDelete: "CASCADE" });
-FrIa09Detail.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
-PesertaJadwal.hasMany(FrIa09Detail, { foreignKey: "id_peserta", as: "frIa09Detail" });
-FrIa09Detail.belongsTo(FrIa09, { foreignKey: "id_fr_ia_09", as: "frIa09" });
-FrIa09Detail.belongsTo(FrIa08BankSoal, { foreignKey: "id_soal", as: "soal" });
-FrIa08BankSoal.hasMany(FrIa09Detail, { foreignKey: "id_soal", as: "jawabanAsesor" });
-FrIa09.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
-PesertaJadwal.hasMany(FrIa09, { foreignKey: "id_peserta", as: "frIa09List" });
-FrIa09.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
-Jadwal.hasMany(FrIa09, { foreignKey: "id_jadwal", as: "frIa09" });
-FrIa09.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
-Skema.hasMany(FrIa09, { foreignKey: "id_skema", as: "frIa09" });
-FrIa09.belongsTo(ProfileAsesor, { foreignKey: "created_by", targetKey: "id_user", as: "asesor" });
-ProfileAsesor.hasMany(FrIa09, { foreignKey: "created_by", sourceKey: "id_user", as: "frIa09" });
-FrIa09.belongsTo(FrIa08, { foreignKey: "id_fr_ia_08", as: "frIa08" });
-FrIa08.hasOne(FrIa09, { foreignKey: "id_fr_ia_08", as: "frIa09" });
-
-FrIa10.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
-PesertaJadwal.hasMany(FrIa10, { foreignKey: "id_peserta", as: "frIa10List" });
-FrIa10.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
-Jadwal.hasMany(FrIa10, { foreignKey: "id_jadwal", as: "frIa10" });
-FrIa10.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
-Skema.hasMany(FrIa10, { foreignKey: "id_skema", as: "frIa10" });
-FrIa10.belongsTo(ProfileAsesor, { foreignKey: "created_by", targetKey: "id_user", as: "asesor" });
-ProfileAsesor.hasMany(FrIa10, { foreignKey: "created_by", sourceKey: "id_user", as: "frIa10" });
 
 // ==========================
 // OTHER CORE RELATIONS
@@ -576,21 +435,145 @@ PresensiAsesor.belongsTo(ProfileAsesor, { foreignKey: "id_user", as: "profileAse
 PesertaJadwal.belongsTo(User, { as: 'asesor_penguji', foreignKey: 'id_asesor' });
 User.hasMany(PesertaJadwal, { as: 'asesi_yang_diuji', foreignKey: 'id_asesor' });
 
+// ==========================
+// HASIL KEPUTUSAN ASESMEN
+// ==========================
+
+HasilKeputusanAsesmen.belongsTo(
+PesertaJadwal,
+{
+
+foreignKey:
+"id_peserta",
+
+as:
+"peserta"
+
+}
+);
+
+PesertaJadwal.hasMany(
+HasilKeputusanAsesmen,
+{
+
+foreignKey:
+"id_peserta",
+
+as:
+"hasilKeputusan"
+
+}
+);
+
+
+
+HasilKeputusanAsesmen.belongsTo(
+Jadwal,
+{
+
+foreignKey:
+"id_jadwal",
+
+as:
+"jadwal"
+
+}
+);
+
+Jadwal.hasMany(
+HasilKeputusanAsesmen,
+{
+
+foreignKey:
+"id_jadwal",
+
+as:
+"hasilKeputusan"
+
+}
+);
+
+
+
+HasilKeputusanAsesmen.belongsTo(
+ProfileAsesor,
+{
+
+foreignKey:
+"id_asesor",
+
+targetKey:
+"id_user",
+
+as:
+"asesor"
+
+}
+);
+
+ProfileAsesor.hasMany(
+HasilKeputusanAsesmen,
+{
+
+foreignKey:
+"id_asesor",
+
+sourceKey:
+"id_user",
+
+as:
+"hasilKeputusan"
+
+}
+);
+
 module.exports = {
-  User, Role, ProfileAsesi, ProfileAsesor, ProfileAdmin, ProfileTuk,
-  Pengaduan, PendaftaranAsesi, Notifikasi, Skkni, Skema, SkemaUnit,
-  BiayaUji, Persyaratan, SkemaPersyaratan, PersyaratanTuk, SkemaPersyaratanTuk,
-  KelompokPekerjaan, Tuk, TukSkema, BandingAsesmen, DokumenMutu, Jadwal,
-  JadwalAsesor, PesertaJadwal, Apl01Asesmen, TujuanPembayaran, Pembayaran,
-  UnitKompetensi, SkemaSkkni, Surveillance, BankSoal, BankSoalPG,
-  UnitElemen, UnitKuk, Mkva, FrAk01, FrAk02, FrAk05, FrAk06, FrAk06Detail,
-  FrAk07, MkvaDetail, VerifikasiTukDetail, VerifikasiTuk, Presensi,
-  Apl01Dokumen, Apl02, Apl02Detail, Apl02Bukti, PresensiAsesor, FrAk02Detail,
-  FrMapa01, FrMapa01Detail, FrMapa02, FrMapa02Unit, FrMapa02Muk, FrIa02,
-  FrIa02Detail, FrIa02Validator, FrIa03, FrIa03Pertanyaan, FrIa03Jawaban,
-  FrIa04a, FrIa04aDetail, FrIa04b, FrIa04bDetail, FrIa01, FrIa01Detail,
-  FrIa05, FrIa05Soal, FrIa05Opsi, FrIa05Jawaban, FrIa05Penilaian, FrIa06,
-  FrIa06Soal, FrIa06Jawaban, FrIa06Penilaian, FrIa07, FrIa07Soal, FrIa07Jawaban,
-  FrIa07Penilaian, FrIa08, FrIa08PenilaianDokumen, FrIa08BankSoal, FrIa09,
-  FrIa09Detail, FrIa10, FrAk03, FrAk03Detail, FrAk04
+User, Role, ProfileAsesi, ProfileAsesor, ProfileAdmin, ProfileTuk,
+Pengaduan, PendaftaranAsesi, Notifikasi, Skkni, Skema, SkemaUnit,
+BiayaUji, Persyaratan, SkemaPersyaratan, PersyaratanTuk,
+SkemaPersyaratanTuk, KelompokPekerjaan, Tuk, TukSkema,
+BandingAsesmen, DokumenMutu, Jadwal, JadwalAsesor,
+PesertaJadwal, Apl01Asesmen, TujuanPembayaran, Pembayaran,
+UnitKompetensi, SkemaSkkni, Surveillance, BankSoal,
+BankSoalPG, UnitElemen, UnitKuk, Mkva,
+FrAk01, FrAk02, FrAk05,
+FrAk06, FrAk06Detail,
+FrAk07, MkvaDetail,
+VerifikasiTukDetail,
+VerifikasiTuk,
+Presensi,
+Apl01Dokumen,
+Apl02,
+Apl02Detail,
+Apl02Bukti,
+PresensiAsesor,
+FrAk02Detail,
+
+FrMapa01,
+FrMapa01Detail,
+FrMapa02,
+FrMapa02Unit,
+FrMapa02Muk,
+
+FrIa01,
+FrIa01Detail,
+
+FrIa02,
+FrIa02Detail,
+FrIa02Validator,
+
+FrIa03,
+FrIa03Pertanyaan,
+FrIa03Jawaban,
+
+FrIa05,
+FrIa05Soal,
+FrIa05Opsi,
+FrIa05Jawaban,
+FrIa05Penilaian,
+
+FrAk03,
+FrAk03Detail,
+FrAk04,
+HasilKeputusanAsesmen
 };

@@ -1,166 +1,473 @@
-const Jawaban = require("../../models/frIa05Jawaban.model");
-const Penilaian = require("../../models/frIa05Penilaian.model");
-const Soal = require("../../models/frIa05Soal.model");
-const Opsi = require("../../models/frIa05Opsi.model");
-const FrIa05 = require("../../models/frIa05.model");
+const Jawaban=require("../../models/frIa05Jawaban.model");
+const Penilaian=require("../../models/frIa05Penilaian.model");
+const Soal=require("../../models/frIa05Soal.model");
+const Opsi=require("../../models/frIa05Opsi.model");
+const FrIa05=require("../../models/frIa05.model");
 
 
-// ===============================
-// GET SOAL UNTUK ASESI
-// ===============================
-exports.getSoal = async (req, res) => {
-  try {
-    const { id_fr_ia_05, id_peserta } = req.params;
 
-    // 🔒 cek sudah submit atau belum
-    const sudah = await Penilaian.findOne({
-      where: { id_peserta, id_fr_ia_05 }
-    });
+/* =======================================
+GET SOAL UNTUK ASESI
+======================================= */
 
-    if (sudah) {
-      return res.status(400).json({
-        message: "Anda sudah mengerjakan ujian ini"
-      });
-    }
+exports.getSoal=
+async(req,res)=>{
 
-    const data = await FrIa05.findByPk(id_fr_ia_05, {
-      include: [
-        {
-          model: Soal,
-          as: "soal",
-          include: [
-            {
-              model: Opsi,
-              as: "opsi",
-              attributes: ["id_opsi", "kode_opsi", "jawaban"] // ❗ tanpa is_benar
-            }
-          ]
-        }
-      ]
-    });
+try{
 
-    res.json(data);
+const{
 
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+id_fr_ia_05,
+id_peserta
+
+}=req.params;
+
+
+
+const submitted=
+await Penilaian.findOne({
+
+where:{
+
+id_peserta,
+id_fr_ia_05
+
+}
+
+});
+
+
+if(submitted){
+
+return res.status(400).json({
+
+message:
+"Anda sudah mengerjakan ujian ini"
+
+});
+
+}
+
+
+
+const paket=
+await FrIa05.findByPk(
+
+id_fr_ia_05,
+
+{
+
+include:[
+
+{
+
+model:Soal,
+as:"soal",
+
+include:[
+
+{
+
+model:Opsi,
+as:"opsi",
+
+attributes:[
+
+"id_opsi",
+"kode_opsi",
+"jawaban"
+
+]
+
+}
+
+]
+
+}
+
+]
+
+}
+
+);
+
+
+if(!paket){
+
+return res.status(404).json({
+
+message:
+"Paket soal tidak ditemukan"
+
+});
+
+}
+
+
+
+paket.soal.sort(
+
+(a,b)=>
+
+(a.urutan||0)
+-
+(b.urutan||0)
+
+);
+
+
+
+res.json(paket);
+
+}catch(err){
+
+res.status(500).json({
+
+message:
+err.message
+
+});
+
+}
+
 };
 
 
-// ===============================
-// SUBMIT JAWABAN ASESI
-// ===============================
-exports.submit = async (req, res) => {
-  const t = await Jawaban.sequelize.transaction();
 
-  try {
-    const { id_peserta, id_fr_ia_05, jawaban } = req.body;
+/* =======================================
+SUBMIT JAWABAN ASESI
+======================================= */
 
-    // 🔒 cegah submit ulang
-    const sudah = await Penilaian.findOne({
-      where: { id_peserta, id_fr_ia_05 }
-    });
+exports.submit=
+async(req,res)=>{
 
-    if (sudah) {
-      return res.status(400).json({
-        message: "Jawaban sudah dikunci!"
-      });
-    }
+const transaction=
+await Jawaban.sequelize.transaction();
 
-    let benar = 0;
-    let salah = 0;
+try{
 
-    // 🔥 proses semua jawaban
-    for (const j of jawaban) {
-      const opsi = await Opsi.findByPk(j.id_opsi);
+const{
 
-      if (!opsi) {
-        await t.rollback();
-        return res.status(400).json({
-          message: `Opsi tidak ditemukan (id_opsi: ${j.id_opsi})`
-        });
-      }
+id_peserta,
+id_fr_ia_05,
+jawaban
 
-      const isBenar = opsi.is_benar;
+}=req.body;
 
-      if (isBenar) benar++;
-      else salah++;
 
-      await Jawaban.create({
-        id_peserta,
-        id_soal: j.id_soal,
-        id_opsi: j.id_opsi,
-        is_benar: isBenar,
-        created_at: new Date()
-      }, { transaction: t });
-    }
 
-    const total = jawaban.length;
-    const nilai = total > 0 ? (benar / total) * 100 : 0;
+const submitted=
+await Penilaian.findOne({
 
-    // 🔥 ambil passing grade
-    const paket = await FrIa05.findByPk(id_fr_ia_05);
+where:{
 
-    if (!paket) {
-      await t.rollback();
-      return res.status(404).json({ message: "Paket soal tidak ditemukan" });
-    }
+id_peserta,
+id_fr_ia_05
 
-    const hasil = nilai >= paket.passing_grade
-      ? "kompeten"
-      : "belum_kompeten";
+},
 
-    // 🔥 simpan penilaian
-    await Penilaian.create({
-      id_peserta,
-      id_fr_ia_05,
-      jumlah_benar: benar,
-      jumlah_salah: salah,
-      nilai,
-      hasil,
-      tanggal_penilaian: new Date()
-    }, { transaction: t });
+transaction
 
-    await t.commit();
+});
 
-    res.json({
-      message: "Submit berhasil",
-      hasil: {
-        total,
-        benar,
-        salah,
-        nilai,
-        status: hasil
-      }
-    });
 
-  } catch (err) {
-    await t.rollback();
-    res.status(500).json({ message: err.message });
-  }
+if(submitted){
+
+await transaction.rollback();
+
+return res.status(400).json({
+
+message:
+"Jawaban sudah dikunci"
+
+});
+
+}
+
+
+
+const paket=
+await FrIa05.findByPk(
+
+id_fr_ia_05,
+{transaction}
+
+);
+
+
+if(!paket){
+
+await transaction.rollback();
+
+return res.status(404).json({
+
+message:
+"Paket soal tidak ditemukan"
+
+});
+
+}
+
+
+
+let benar=0;
+let salah=0;
+
+
+
+for(const item of jawaban){
+
+const opsi=
+await Opsi.findByPk(
+
+item.id_opsi,
+
+{transaction}
+
+);
+
+
+if(!opsi){
+
+await transaction.rollback();
+
+return res.status(400).json({
+
+message:
+`Opsi ${item.id_opsi} tidak ditemukan`
+
+});
+
+}
+
+
+
+const isBenar=
+opsi.is_benar;
+
+
+
+if(isBenar){
+
+benar++;
+
+}else{
+
+salah++;
+
+}
+
+
+
+await Jawaban.create(
+
+{
+
+id_peserta,
+
+id_soal:
+item.id_soal,
+
+id_opsi:
+item.id_opsi,
+
+is_benar:
+isBenar,
+
+created_at:
+new Date()
+
+},
+
+{
+
+transaction
+
+}
+
+);
+
+}
+
+
+
+const total=
+jawaban.length;
+
+
+const nilai=
+
+total>0
+
+?
+
+Number(
+
+(
+
+(benar/total)
+*100
+
+).toFixed(2)
+
+)
+
+:
+
+0;
+
+
+
+const hasil=
+
+nilai>=
+paket.passing_grade
+
+?
+
+"kompeten"
+
+:
+
+"belum_kompeten";
+
+
+
+await Penilaian.create(
+
+{
+
+id_peserta,
+
+id_fr_ia_05,
+
+jumlah_benar:
+benar,
+
+jumlah_salah:
+salah,
+
+nilai,
+
+hasil,
+
+submitted:true,
+
+tanggal_penilaian:
+new Date()
+
+},
+
+{
+
+transaction
+
+}
+
+);
+
+
+
+await transaction.commit();
+
+
+
+res.json({
+
+message:
+"Submit berhasil",
+
+hasil:{
+
+total,
+
+benar,
+
+salah,
+
+nilai,
+
+status:
+hasil
+
+}
+
+});
+
+
+}catch(err){
+
+await transaction.rollback();
+
+res.status(500).json({
+
+message:
+err.message
+
+});
+
+}
+
 };
 
 
-// ===============================
-// GET HASIL AKHIR ASESI
-// ===============================
-exports.getHasil = async (req, res) => {
-  try {
-    const { id_peserta, id_fr_ia_05 } = req.params;
 
-    const data = await Penilaian.findOne({
-      where: { id_peserta, id_fr_ia_05 }
-    });
+/* =======================================
+GET HASIL ASESI
+======================================= */
 
-    if (!data) {
-      return res.status(404).json({
-        message: "Belum mengerjakan ujian"
-      });
-    }
+exports.getHasil=
+async(req,res)=>{
 
-    res.json(data);
+try{
 
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+const{
+
+id_peserta,
+id_fr_ia_05
+
+}=req.params;
+
+
+
+const data=
+await Penilaian.findOne({
+
+where:{
+
+id_peserta,
+
+id_fr_ia_05
+
+}
+
+});
+
+
+if(!data){
+
+return res.status(404).json({
+
+message:
+"Belum mengerjakan ujian"
+
+});
+
+}
+
+
+
+res.json(data);
+
+}catch(err){
+
+res.status(500).json({
+
+message:
+err.message
+
+});
+
+}
+
 };

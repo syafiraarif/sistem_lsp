@@ -1,293 +1,641 @@
 const {
-  sequelize,
-  FrMapa02,
-  FrMapa02Unit,
-  FrMapa02Muk,
-  FrMapa01,
-  SkemaUnit,
-  UnitKompetensi,
-  KelompokPekerjaan
-} = require("../../models");
+sequelize,
+FrMapa02,
+FrMapa02Unit,
+FrMapa02Muk,
+FrMapa01,
+SkemaUnit,
+UnitKompetensi,
+KelompokPekerjaan
 
-const PDFDocument = require("pdfkit");
+}=require("../../models");
 
-// ===============================
-// 🔥 MASTER MUK (DEFAULT)
-// ===============================
-const MASTER_MUK = [
-  { kode: "FR.IA.01", nama: "Ceklis Observasi", potensi: 1 },
-  { kode: "FR.IA.02", nama: "Tugas Praktik Demonstrasi", potensi: 1 },
-  { kode: "FR.IA.03", nama: "Pertanyaan Pendukung Observasi", potensi: 1 },
-  { kode: "FR.IA.04", nama: "Instruksi Terstruktur", potensi: 2 },
-  { kode: "FR.IA.05", nama: "Pertanyaan Tertulis PG", potensi: 1 },
-  { kode: "FR.IA.06", nama: "Pertanyaan Tertulis Esai", potensi: 1 },
-  { kode: "FR.IA.07", nama: "Pertanyaan Lisan", potensi: 4 },
-  { kode: "FR.IA.08", nama: "Verifikasi Portofolio", potensi: 3 },
-  { kode: "FR.IA.09", nama: "Wawancara", potensi: 3 },
-  { kode: "FR.IA.10", nama: "Verifikasi Pihak Ketiga", potensi: 3 },
-  { kode: "FR.IA.11", nama: "Ceklis Review Produk", potensi: 4 }
+const PDFDocument=
+require("pdfkit");
+
+
+
+/* =====================================
+MASTER MUK
+HANYA YANG DIPAKAI
+===================================== */
+
+const MASTER_MUK=[
+
+{
+
+kode:"FR.IA.01",
+nama:"Ceklis Observasi"
+
+},
+
+{
+
+kode:"FR.IA.02",
+nama:"Tugas Praktik Demonstrasi"
+
+},
+
+{
+
+kode:"FR.IA.03",
+nama:"Pertanyaan Pendukung Observasi"
+
+},
+
+{
+
+kode:"FR.IA.05",
+nama:"Pertanyaan Tertulis Pilihan Ganda"
+
+}
+
 ];
 
 
-// ===============================
-// 1. GENERATE MAPA02
-// ===============================
-const generateMapa02 = async (req, res) => {
-  const t = await sequelize.transaction();
 
-  try {
-    const id_user = req.user.id_user;
-    const { id_jadwal } = req.body;
+/* =====================================
+GENERATE MAPA02
+===================================== */
 
-    // ========================
-    // CEK MAPA01
-    // ========================
-    const mapa01 = await FrMapa01.findOne({
-      where: { id_jadwal, id_asesor: id_user }
-    });
+const generateMapa02=
+async(req,res)=>{
 
-    if (!mapa01) {
-      return res.status(404).json({
-        message: "FR.MAPA.01 belum diisi"
-      });
-    }
+const t=
+await sequelize.transaction();
 
-    // ========================
-    // CEK SUDAH ADA?
-    // ========================
-    const existing = await FrMapa02.findOne({
-      where: { id_jadwal, id_asesor: id_user }
-    });
+try{
 
-    if (existing) {
-      return res.status(400).json({
-        message: "FR.MAPA.02 sudah dibuat"
-      });
-    }
+const id_user=
+req.user.id_user;
 
-    // ========================
-    // INSERT HEADER
-    // ========================
-    const mapa02 = await FrMapa02.create({
-      id_jadwal,
-      id_skema: mapa01.id_skema,
-      id_asesor: id_user,
-      id_mapa01: mapa01.id_mapa01
-    }, { transaction: t });
+const{
+id_jadwal
 
-    // ========================
-    // AMBIL UNIT DARI SKEMA
-    // ========================
-    const units = await SkemaUnit.findAll({
-      where: { id_skema: mapa01.id_skema },
-      include: [
-        { model: UnitKompetensi, as: "unit" },
-        { model: KelompokPekerjaan, as: "kelompok" }
-      ]
-    });
+}=req.body;
 
-    for (const u of units) {
-      const unitRow = await FrMapa02Unit.create({
-        id_mapa02: mapa02.id_mapa02,
-        id_unit: u.id_unit,
-        id_kelompok: u.id_kelompok,
-        urutan: u.urutan
-      }, { transaction: t });
 
-      // ========================
-      // INSERT MUK DEFAULT
-      // ========================
-      const mukData = MASTER_MUK.map(m => ({
-        id_mapa02_unit: unitRow.id_mapa02_unit,
-        kode_muk: m.kode,
-        nama_muk: m.nama,
-        potensi_asesi: m.potensi,
 
-        // 🔥 AUTO CHECK SESUAI MAPA01
-        dipilih: m.potensi === mapa01.potensi_default
-      }));
+const mapa01=
+await FrMapa01.findOne({
 
-      await FrMapa02Muk.bulkCreate(mukData, { transaction: t });
-    }
+where:{
 
-    await t.commit();
+id_jadwal,
 
-    return res.status(201).json({
-      message: "FR.MAPA.02 berhasil digenerate",
-      data: mapa02
-    });
+id_asesor:
+id_user
 
-  } catch (err) {
-    await t.rollback();
-    console.error("❌ Generate MAPA02 Error:", err);
+},
 
-    return res.status(500).json({
-      message: "Server error",
-      error: err.message
-    });
-  }
+transaction:t
+
+});
+
+
+if(!mapa01){
+
+await t.rollback();
+
+return res.status(404).json({
+
+message:
+"FR MAPA01 belum dibuat"
+
+});
+
+}
+
+
+
+const existing=
+await FrMapa02.findOne({
+
+where:{
+
+id_jadwal,
+
+id_asesor:
+id_user
+
+},
+
+transaction:t
+
+});
+
+
+if(existing){
+
+await t.rollback();
+
+return res.status(400).json({
+
+message:
+"FR MAPA02 sudah ada"
+
+});
+
+}
+
+
+
+const mapa02=
+await FrMapa02.create({
+
+id_jadwal,
+
+id_skema:
+mapa01.id_skema,
+
+id_asesor:
+id_user,
+
+id_mapa01:
+mapa01.id_mapa01
+
+},
+
+{
+
+transaction:t
+
+});
+
+
+
+const units=
+await SkemaUnit.findAll({
+
+where:{
+
+id_skema:
+mapa01.id_skema
+
+},
+
+include:[
+
+{
+
+model:
+UnitKompetensi,
+
+as:"unit"
+
+},
+
+{
+
+model:
+KelompokPekerjaan,
+
+as:"kelompok"
+
+}
+
+],
+
+order:[
+
+["urutan","ASC"]
+
+],
+
+transaction:t
+
+});
+
+
+
+for(const u of units){
+
+const unit=
+await FrMapa02Unit.create({
+
+id_mapa02:
+mapa02.id_mapa02,
+
+id_unit:
+u.id_unit,
+
+id_kelompok:
+u.id_kelompok,
+
+urutan:
+u.urutan
+
+},
+
+{
+
+transaction:t
+
+});
+
+
+
+const muk=
+MASTER_MUK.map(
+
+m=>({
+
+id_mapa02_unit:
+unit.id_mapa02_unit,
+
+kode_muk:
+m.kode,
+
+nama_muk:
+m.nama,
+
+dipilih:true
+
+})
+
+);
+
+
+
+await FrMapa02Muk.bulkCreate(
+
+muk,
+
+{
+
+transaction:t
+
+}
+
+);
+
+}
+
+
+
+await t.commit();
+
+
+res.status(201).json({
+
+message:
+"FR MAPA02 berhasil dibuat",
+
+data:
+mapa02
+
+});
+
+
+}catch(err){
+
+await t.rollback();
+
+res.status(500).json({
+
+message:
+err.message
+
+});
+
+}
+
 };
 
 
-// ===============================
-// 2. GET DETAIL MAPA02
-// ===============================
-const getMapa02 = async (req, res) => {
-  try {
-    const { id_jadwal } = req.query;
-    const id_user = req.user.id_user;
 
-    const data = await FrMapa02.findOne({
-      where: { id_jadwal, id_asesor: id_user },
-      include: [
-        {
-          model: FrMapa02Unit,
-          as: "unit",
-          include: [
-            {
-              model: FrMapa02Muk,
-              as: "muk"
-            }
-          ]
-        }
-      ]
-    });
+/* =====================================
+GET MAPA02
+===================================== */
 
-    return res.json({ data });
+const getMapa02=
+async(req,res)=>{
 
-  } catch (err) {
-    console.error("❌ Get MAPA02 Error:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
+try{
+
+const id_user=
+req.user.id_user;
+
+const{
+id_jadwal
+
+}=req.query;
+
+
+
+const data=
+await FrMapa02.findOne({
+
+where:{
+
+id_jadwal,
+
+id_asesor:
+id_user
+
+},
+
+include:[
+
+{
+
+model:
+FrMapa02Unit,
+
+as:"unit",
+
+include:[
+
+{
+
+model:
+FrMapa02Muk,
+
+as:"muk"
+
+}
+
+]
+
+}
+
+]
+
+});
+
+
+res.json({
+
+data
+
+});
+
+
+}catch(err){
+
+res.status(500).json({
+
+message:
+err.message
+
+});
+
+}
+
 };
 
 
-// ===============================
-// 3. UPDATE (CENTANG MUK)
-// ===============================
-const updateMapa02 = async (req, res) => {
-  const t = await sequelize.transaction();
 
-  try {
-    const { id } = req.params;
-    const { muk } = req.body;
+/* =====================================
+UPDATE CHECKBOX
+===================================== */
 
-    // muk = [{ id_muk, dipilih }]
+const updateMapa02=
+async(req,res)=>{
 
-    for (const m of muk) {
-      await FrMapa02Muk.update(
-        { dipilih: m.dipilih },
-        {
-          where: { id_muk: m.id_muk },
-          transaction: t
-        }
-      );
-    }
+const t=
+await sequelize.transaction();
 
-    await t.commit();
+try{
 
-    return res.json({
-      message: "MAPA02 berhasil diupdate"
-    });
+const{
 
-  } catch (err) {
-    await t.rollback();
-    console.error("❌ Update MAPA02 Error:", err);
+muk
 
-    return res.status(500).json({
-      message: "Server error",
-      error: err.message
-    });
-  }
+}=req.body;
+
+
+
+for(const item of muk){
+
+await FrMapa02Muk.update(
+
+{
+
+dipilih:
+item.dipilih
+
+},
+
+{
+
+where:{
+
+id_muk:
+item.id_muk
+
+},
+
+transaction:t
+
+}
+
+);
+
+}
+
+
+
+await t.commit();
+
+res.json({
+
+message:
+"MAPA02 berhasil diupdate"
+
+});
+
+}catch(err){
+
+await t.rollback();
+
+res.status(500).json({
+
+message:
+err.message
+
+});
+
+}
+
 };
 
-const downloadPdfMapa02 = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const id_user = req.user.id_user;
 
-    const data = await FrMapa02.findByPk(id, {
-      include: [
-        {
-          model: FrMapa02Unit,
-          as: "unit",
-          include: [
-            {
-              model: FrMapa02Muk,
-              as: "muk"
-            }
-          ]
-        }
-      ]
-    });
 
-    if (!data) {
-      return res.status(404).json({ message: "Data tidak ditemukan" });
-    }
+/* =====================================
+PDF
+===================================== */
 
-    if (data.id_asesor !== id_user) {
-      return res.status(403).json({ message: "Tidak punya akses" });
-    }
+const downloadPdfMapa02=
+async(req,res)=>{
 
-    // ========================
-    // BUAT PDF
-    // ========================
-    const doc = new PDFDocument({ size: "A4", margin: 40 });
+try{
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename=FR_MAPA02_${id}.pdf`
-    );
+const data=
+await FrMapa02.findByPk(
 
-    doc.pipe(res);
+req.params.id,
 
-    // ========================
-    // HEADER
-    // ========================
-    doc.fontSize(14).text("FR.MAPA.02", { align: "center" });
-    doc.moveDown();
+{
 
-    doc.fontSize(10);
-    doc.text(`ID Jadwal : ${data.id_jadwal}`);
-    doc.text(`ID Asesor : ${data.id_asesor}`);
-    doc.moveDown();
+include:[
 
-    // ========================
-    // LOOP UNIT
-    // ========================
-    data.unit.forEach((u, index) => {
-      doc.fontSize(11).text(`Unit ${index + 1} (ID: ${u.id_unit})`);
-      doc.moveDown(0.5);
+{
 
-      // ========================
-      // LOOP MUK YANG DIPILIH
-      // ========================
-      u.muk
-        .filter(m => m.dipilih)
-        .forEach((m, i) => {
-          doc.fontSize(9).text(
-            `- ${m.kode_muk} (${m.nama_muk}) [Potensi ${m.potensi_asesi}]`
-          );
-        });
+model:
+FrMapa02Unit,
 
-      doc.moveDown();
-    });
+as:"unit",
 
-    doc.end();
+include:[
 
-  } catch (err) {
-    console.error("❌ PDF MAPA02 Error:", err);
-    return res.status(500).json({
-      message: "Gagal generate PDF",
-      error: err.message
-    });
-  }
+{
+
+model:
+FrMapa02Muk,
+
+as:"muk"
+
+}
+
+]
+
+}
+
+]
+
+}
+
+);
+
+
+if(!data){
+
+return res.status(404).json({
+
+message:
+"Data tidak ditemukan"
+
+});
+
+}
+
+
+
+res.setHeader(
+"Content-Type",
+"application/pdf"
+);
+
+res.setHeader(
+
+"Content-Disposition",
+
+`inline; filename=FRMAPA02-${data.id_mapa02}.pdf`
+
+);
+
+
+
+const doc=
+new PDFDocument({
+
+margin:40
+
+});
+
+doc.pipe(res);
+
+
+
+doc
+.fontSize(16)
+.text(
+"FR.MAPA.02",
+{
+align:"center"
+}
+);
+
+doc.moveDown();
+
+doc.text(
+`Jadwal : ${data.id_jadwal}`
+);
+
+doc.moveDown();
+
+
+
+data.unit.forEach(
+
+(unit,index)=>{
+
+doc
+.fontSize(12)
+.text(
+
+`${index+1}. Unit ${unit.id_unit}`
+
+);
+
+doc.moveDown(.3);
+
+
+
+unit.muk
+
+.filter(
+m=>m.dipilih
+)
+
+.forEach(
+
+m=>{
+
+doc.text(
+
+`• ${m.kode_muk} - ${m.nama_muk}`
+
+);
+
+}
+
+);
+
+doc.moveDown();
+
+}
+
+);
+
+
+
+doc.end();
+
+}catch(err){
+
+res.status(500).json({
+
+message:
+err.message
+
+});
+
+}
+
 };
 
-module.exports = {
-  generateMapa02,
-  getMapa02,
-  updateMapa02,
-  downloadPdfMapa02
+
+
+module.exports={
+
+generateMapa02,
+
+getMapa02,
+
+updateMapa02,
+
+downloadPdfMapa02
+
 };
