@@ -11,7 +11,8 @@ import EditJadwal from "../pages/tuk/EditJadwal";
 
 import AsesorPenguji from "../pages/tuk/AsesorPenguji";
 import VerifikasiTUK from "../pages/tuk/VerifikasiTUK";
-import ValidatorMKVA from "../pages/tuk/ValidatorMKVA"; // ✅ halaman baru
+import ValidatorMKVA from "../pages/tuk/ValidatorMKVA";
+import KomiteTeknis from "../pages/tuk/KomiteTeknis";
 
 import ProfileTUK from "../pages/tuk/ProfileTUK";
 import LupaPasswordTuk from "../pages/tuk/LupaPasswordTuk";
@@ -19,11 +20,8 @@ import LupaPasswordTuk from "../pages/tuk/LupaPasswordTuk";
 /* ========================================= */
 
 export default function TukRoutes() {
-
   return (
-
     <Routes>
-
       {/* ================= DASHBOARD ================= */}
       <Route path="/" element={<HomeTUK />} />
 
@@ -41,6 +39,9 @@ export default function TukRoutes() {
       {/* ================= VALIDATOR MKVA ================= */}
       <Route path="/jadwal/:id/validator" element={<ValidatorMKVA />} />
 
+      {/* ================= KOMITE TEKNIS ================= */}
+      <Route path="/jadwal/:id/komite-teknis" element={<KomiteTeknis />} />
+
       {/* ================= PROFILE ================= */}
       <Route path="/profile" element={<ProfileTUK />} />
 
@@ -49,9 +50,6 @@ export default function TukRoutes() {
 
       {/* ================= DEFAULT REDIRECT ================= */}
       <Route path="*" element={<Navigate to="/" replace />} />
-
     </Routes>
-
   );
-
 }
