@@ -13,6 +13,8 @@ import IsiMKVA from "../pages/Asesor/IsiMKVA";
 import UbahSandiAsesor from "../pages/Asesor/UbahSandiAsesor";
 import PesertaJadwalAsesor from "../pages/Asesor/PesertaJadwalAsesor";
 
+import FRIA02 from "../pages/Asesor/komiteTeknis/FRIA02";
+
 export default function AsesorRoutes() {
   return (
     <Routes>
@@ -29,6 +31,12 @@ export default function AsesorRoutes() {
 
       <Route path="verifikasi-tuk" element={<JadwalVerifikasiTuk />} />
       <Route path="komite-teknis" element={<JadwalKomiteTeknis />} />
+
+      {/* Route FR.IA.02 Komite Teknis */}
+      <Route
+        path="komite-teknis/:id_jadwal/fr-ia02"
+        element={<FRIA02 />}
+      />
 
       <Route path="mkva" element={<JadwalMkva />} />
 
