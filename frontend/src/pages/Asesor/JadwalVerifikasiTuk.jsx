@@ -4,24 +4,21 @@ import React, { useEffect, useMemo, useState } from "react";
 import SidebarAsesor from "../../components/sidebar/SidebarAsesor";
 import {
   BadgeCheck,
-  Building2,
   CalendarCheck,
   CalendarDays,
-  CheckCircle2,
-  ClipboardCheck,
-  FileCheck2,
   Filter,
-  Info,
   Loader2,
   MapPin,
   RefreshCcw,
   Save,
   Search,
   ShieldCheck,
-  Sparkles,
   XCircle,
 } from "lucide-react";
 import api from "../../services/api";
+
+const API_BASE = import.meta.env.VITE_API_BASE || api?.defaults?.baseURL || "";
+const FILE_BASE = String(API_BASE).replace(/\/api\/?$/, "");
 
 export default function JadwalVerifikasiTuk() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -31,8 +28,9 @@ export default function JadwalVerifikasiTuk() {
   const [selectedJadwal, setSelectedJadwal] = useState(null);
 
   const [detail, setDetail] = useState([]);
-  const [keputusan, setKeputusan] = useState("");
+  const [keputusan, setKeputusan] = useState("sesuai");
   const [existingVerifikasi, setExistingVerifikasi] = useState(null);
+  const [profileAsesor, setProfileAsesor] = useState(null);
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("semua");
@@ -43,7 +41,7 @@ export default function JadwalVerifikasiTuk() {
   const [pesan, setPesan] = useState("");
   const [error, setError] = useState("");
 
-  const displayName = getDisplayName();
+  const displayName = getDisplayName(profileAsesor);
 
   const loadPageData = async () => {
     try {
@@ -51,9 +49,10 @@ export default function JadwalVerifikasiTuk() {
       setError("");
       setPesan("");
 
-      const [jadwalRes, formRes] = await Promise.all([
+      const [jadwalRes, formRes, profileRes] = await Promise.all([
         api.get("/asesor/jadwal-verifikasi-tuk"),
         api.get("/asesor/verifikasi-tuk/form"),
+        api.get("/asesor/profile").catch(() => null),
       ]);
 
       const jadwalData = Array.isArray(jadwalRes.data?.data)
@@ -64,8 +63,11 @@ export default function JadwalVerifikasiTuk() {
         ? formRes.data.data
         : [];
 
+      const profileData = profileRes?.data?.data || profileRes?.data || null;
+
       setJadwalList(jadwalData);
       setPersyaratanList(formData);
+      setProfileAsesor(profileData);
 
       if (jadwalData.length > 0) {
         const firstJadwal = jadwalData[0];
@@ -75,12 +77,14 @@ export default function JadwalVerifikasiTuk() {
       } else {
         setSelectedJadwal(null);
         setExistingVerifikasi(null);
-        setKeputusan("");
+        setKeputusan("sesuai");
         setDetail(createEmptyDetail(formData));
       }
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Gagal memuat jadwal verifikasi TUK");
+      setError(
+        err.response?.data?.message || "Gagal memuat jadwal verifikasi TUK"
+      );
     } finally {
       setLoading(false);
     }
@@ -95,7 +99,7 @@ export default function JadwalVerifikasiTuk() {
 
       if (!idJadwal) {
         setExistingVerifikasi(null);
-        setKeputusan("");
+        setKeputusan("sesuai");
         setDetail(createEmptyDetail(formData));
         return;
       }
@@ -105,19 +109,24 @@ export default function JadwalVerifikasiTuk() {
 
       if (!data) {
         setExistingVerifikasi(null);
-        setKeputusan("");
+        setKeputusan("sesuai");
         setDetail(createEmptyDetail(formData));
         return;
       }
 
-      setExistingVerifikasi(data);
-      setKeputusan(data.keputusan || "");
+      setExistingVerifikasi(data?.id_verifikasi ? data : null);
+      setKeputusan(data.keputusan || "sesuai");
+
+      if (Array.isArray(data.detail)) {
+        setDetail(normalizeDetailFromController(data.detail));
+        return;
+      }
 
       const existingDetails = Array.isArray(data.details) ? data.details : [];
       setDetail(mergeDetailWithPersyaratan(formData, existingDetails));
     } catch (err) {
       setExistingVerifikasi(null);
-      setKeputusan("");
+      setKeputusan("sesuai");
       setDetail(createEmptyDetail(formData));
     }
   };
@@ -135,14 +144,20 @@ export default function JadwalVerifikasiTuk() {
       const text = [
         item.status,
         item.catatan,
+        item.nama_kegiatan,
+        getSkemaText(item.skema),
+        item.tempat,
+        item.nama_tuk,
         jadwal.kode_jadwal,
         jadwal.nama_kegiatan,
         jadwal.nama_skema,
-        jadwal.skema?.nama_skema,
-        jadwal.skema?.judul_skema,
+        jadwal.judul_skema,
+        getSkemaText(jadwal.skema),
         jadwal.nama_tuk,
         jadwal.tuk?.nama_tuk,
         jadwal.tuk?.nama,
+        jadwal.tuk?.kecamatan,
+        jadwal.tuk?.kecamatan_tuk,
         jadwal.tempat,
         jadwal.lokasi,
         jadwal.status,
@@ -171,7 +186,7 @@ export default function JadwalVerifikasiTuk() {
       Number(item.jumlah_total || 0) > 0 ||
       Number(item.jumlah_baik || 0) > 0 ||
       Number(item.jumlah_rusak || 0) > 0 ||
-      item.keterangan
+      item.catatan
     );
   }).length;
 
@@ -190,7 +205,7 @@ export default function JadwalVerifikasiTuk() {
 
         return {
           ...item,
-          [field]: field === "keterangan" ? value : onlyNumber(value),
+          [field]: field === "catatan" ? value : onlyNumber(value),
         };
       })
     );
@@ -203,7 +218,7 @@ export default function JadwalVerifikasiTuk() {
     }
 
     if (!keputusan) {
-      setError("Keputusan verifikasi wajib dipilih");
+      setError("Keputusan verifikasi wajib diisi");
       return;
     }
 
@@ -226,7 +241,7 @@ export default function JadwalVerifikasiTuk() {
           jumlah_total: Number(item.jumlah_total || 0),
           jumlah_baik: Number(item.jumlah_baik || 0),
           jumlah_rusak: Number(item.jumlah_rusak || 0),
-          keterangan: item.keterangan || "",
+          keterangan: item.catatan || "",
         })),
       };
 
@@ -258,8 +273,12 @@ export default function JadwalVerifikasiTuk() {
       return;
     }
 
-    setKeputusan("");
+    setKeputusan("sesuai");
     setDetail(createEmptyDetail(persyaratanList));
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
@@ -268,7 +287,7 @@ export default function JadwalVerifikasiTuk() {
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
         <div className="w-full max-w-[1500px] mx-auto space-y-6">
-          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
+          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm print:hidden">
             <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
             <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
 
@@ -323,17 +342,20 @@ export default function JadwalVerifikasiTuk() {
                       ? "Update Verifikasi"
                       : "Simpan Verifikasi"}
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePrint}
+                    disabled={!selectedJadwal}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-700 px-7 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-[#071E3D] disabled:bg-slate-300 disabled:cursor-not-allowed"
+                  >
+                    Cetak / PDF
+                  </button>
                 </div>
               </div>
 
               <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
-                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
-
                 <div className="relative z-10 flex h-full flex-col">
-                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                    <Sparkles size={28} />
-                  </div>
-
                   <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
                     Ringkasan Verifikasi
                   </p>
@@ -383,26 +405,26 @@ export default function JadwalVerifikasiTuk() {
             />
           )}
 
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-5 print:hidden">
             <MiniStat
               icon={<CalendarDays size={22} />}
               label="Jadwal Verifikasi"
               value={`${totalJadwal} Jadwal`}
             />
             <MiniStat
-              icon={<ClipboardCheck size={22} />}
+              icon={<ShieldCheck size={22} />}
               label="Persyaratan"
               value={`${totalPersyaratan} Item`}
             />
             <MiniStat
-              icon={<CheckCircle2 size={22} />}
+              icon={<BadgeCheck size={22} />}
               label="Terisi"
               value={`${totalTerisi} Item`}
             />
           </section>
 
-          <section className="grid grid-cols-1 xl:grid-cols-[410px_1fr] gap-6 items-start">
-            <aside className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
+          <section className="grid grid-cols-1 xl:grid-cols-[410px_1fr] gap-6 items-start print:block">
+            <aside className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden print:hidden">
               <div className="p-6 border-b border-slate-100">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <Filter size={15} className="text-orange-500" />
@@ -455,7 +477,7 @@ export default function JadwalVerifikasiTuk() {
                 ) : (
                   filteredJadwal.map((item, index) => (
                     <JadwalCard
-                      key={`${item.id_jadwal}-${item.id_user}-${item.jenis_tugas}-${index}`}
+                      key={`${getJadwalId(item)}-${index}`}
                       item={item}
                       active={isSameJadwal(item, selectedJadwal)}
                       onClick={() => handleSelectJadwal(item)}
@@ -465,18 +487,11 @@ export default function JadwalVerifikasiTuk() {
               </div>
             </aside>
 
-            <section className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <section className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden print:shadow-none print:border-none print:rounded-none">
+              <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 print:hidden">
                 <div>
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                    <FileCheck2 size={15} className="text-orange-500" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                      Form Verifikasi
-                    </span>
-                  </div>
-
                   <h2 className="text-2xl lg:text-3xl font-black text-[#071E3D]">
-                    Persyaratan TUK
+                    Form Ceklist Verifikasi TUK
                   </h2>
 
                   <p className="mt-2 text-sm font-medium text-slate-400">
@@ -489,103 +504,315 @@ export default function JadwalVerifikasiTuk() {
                 <StatusSubmitBadge existing={existingVerifikasi} />
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-6 print:p-0">
                 {!selectedJadwal ? (
                   <EmptyState
                     title="Belum Ada Jadwal Dipilih"
                     description="Pilih jadwal verifikasi TUK di sisi kiri untuk mulai mengisi form."
                   />
                 ) : (
-                  <>
-                    <JadwalSummary item={selectedJadwal} />
+                  <DocumentChecklist
+                    selectedJadwal={selectedJadwal}
+                    detail={detail}
+                    keputusan={keputusan}
+                    setKeputusan={setKeputusan}
+                    onDetailChange={handleDetailChange}
+                    profileAsesor={profileAsesor}
+                  />
+                )}
 
-                    <div className="rounded-[30px] border border-slate-100 bg-slate-50/60 p-5">
-                      <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Keputusan Verifikasi
-                      </label>
+                {selectedJadwal && (
+                  <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-[30px] border border-slate-100 bg-slate-50/60 p-5 print:hidden">
+                    <div>
+                      <p className="text-sm font-black text-[#071E3D]">
+                        {existingVerifikasi
+                          ? "Update data verifikasi TUK"
+                          : "Simpan data verifikasi TUK"}
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-slate-400">
+                        TTD asesor otomatis memakai tanda tangan yang tersimpan
+                        pada profile asesor.
+                      </p>
+                    </div>
 
-                      <select
-                        value={keputusan}
-                        onChange={(e) => setKeputusan(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-100 bg-white px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:ring-4 focus:ring-orange-500/10"
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        type="button"
+                        onClick={handleResetForm}
+                        disabled={saving}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-6 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:bg-slate-200 disabled:cursor-not-allowed"
                       >
-                        <option value="">Pilih keputusan</option>
-                        <option value="layak">Layak</option>
-                        <option value="tidak_layak">Tidak Layak</option>
-                        <option value="perlu_perbaikan">Perlu Perbaikan</option>
-                      </select>
+                        <RefreshCcw size={16} />
+                        Reset
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={saving || detail.length === 0}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:bg-slate-300 disabled:cursor-not-allowed"
+                      >
+                        {saving ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Save size={16} />
+                        )}
+                        {existingVerifikasi ? "Update" : "Simpan"}
+                      </button>
                     </div>
-
-                    {detail.length === 0 ? (
-                      <EmptyState
-                        title="Persyaratan Belum Tersedia"
-                        description="Data persyaratan TUK belum ditemukan dari endpoint form."
-                      />
-                    ) : (
-                      <div className="space-y-4">
-                        {detail.map((item, index) => (
-                          <PersyaratanCard
-                            key={`${item.id_persyaratan_tuk}-${index}`}
-                            item={item}
-                            index={index}
-                            onChange={handleDetailChange}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-[30px] border border-slate-100 bg-slate-50/60 p-5">
-                      <div>
-                        <p className="text-sm font-black text-[#071E3D]">
-                          {existingVerifikasi
-                            ? "Update data verifikasi TUK"
-                            : "Simpan data verifikasi TUK"}
-                        </p>
-                        <p className="mt-1 text-xs font-medium text-slate-400">
-                          TTD asesor akan otomatis memakai tanda tangan yang
-                          tersimpan pada profile asesor.
-                        </p>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button
-                          type="button"
-                          onClick={handleResetForm}
-                          disabled={saving}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-6 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:bg-slate-200 disabled:cursor-not-allowed"
-                        >
-                          <RefreshCcw size={16} />
-                          Reset
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={handleSubmit}
-                          disabled={saving || detail.length === 0}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:bg-slate-300 disabled:cursor-not-allowed"
-                        >
-                          {saving ? (
-                            <Loader2 size={16} className="animate-spin" />
-                          ) : (
-                            <Save size={16} />
-                          )}
-                          {existingVerifikasi ? "Update" : "Simpan"}
-                        </button>
-                      </div>
-                    </div>
-                  </>
+                  </div>
                 )}
               </div>
             </section>
           </section>
         </div>
       </main>
+
+      <style>{`
+        @media print {
+          body {
+            background: #ffffff !important;
+          }
+
+          .print\\:hidden {
+            display: none !important;
+          }
+
+          .print\\:block {
+            display: block !important;
+          }
+
+          .print\\:shadow-none {
+            box-shadow: none !important;
+          }
+
+          .print\\:border-none {
+            border: none !important;
+          }
+
+          .print\\:rounded-none {
+            border-radius: 0 !important;
+          }
+
+          .print\\:p-0 {
+            padding: 0 !important;
+          }
+
+          input,
+          textarea,
+          select {
+            outline: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
 
+function DocumentChecklist({
+  selectedJadwal,
+  detail,
+  keputusan,
+  setKeputusan,
+  onDetailChange,
+  profileAsesor,
+}) {
+  const jadwal = selectedJadwal?.jadwal || selectedJadwal || {};
+  const namaTuk = getJadwalTuk(jadwal);
+  const skema = getJadwalSkema(jadwal);
+  const namaAsesor = getDisplayName(profileAsesor);
+  const ttdUrl = getTtdUrl(profileAsesor);
+  const tempatTtd = getTempatTtd(jadwal);
+
+  const tanggalAwal =
+    jadwal?.tgl_awal ||
+    jadwal?.tanggal ||
+    jadwal?.tanggal_uji ||
+    selectedJadwal?.tanggal;
+
+  const tanggalAkhir =
+    jadwal?.tgl_akhir ||
+    jadwal?.tanggal_selesai ||
+    selectedJadwal?.tgl_akhir ||
+    tanggalAwal;
+
+  return (
+    <div className="w-full max-w-[900px] mx-auto text-black bg-white text-[14px] leading-tight">
+      <h1 className="text-center font-bold underline text-[17px] mb-6">
+        CEKLIST VERIFIKASI TEMPAT UJI KOMPETENSI (TUK)
+      </h1>
+
+      <table className="w-full mb-2">
+        <tbody>
+          <InfoRow label="Nama TUK" value={namaTuk} />
+          <InfoRow
+            label="Hari/Tanggal"
+            value={formatHariTanggal(tanggalAwal, tanggalAkhir)}
+          />
+          <InfoRow
+            label="Metode Asesmen"
+            value="Observasi/Demonstrasi/Praktek/Tes Tulis/Wawancara"
+          />
+          <InfoRow label="Skema" value={skema} />
+        </tbody>
+      </table>
+
+      <table className="w-full border-collapse border border-black">
+        <thead>
+          <tr className="bg-gray-300">
+            <th rowSpan="2" className="border border-black px-2 py-2 w-[45px]">
+              No.
+            </th>
+            <th rowSpan="2" className="border border-black px-2 py-2 w-[170px]">
+              Perlengkapan
+            </th>
+            <th rowSpan="2" className="border border-black px-2 py-2">
+              Spesifikasi
+            </th>
+            <th rowSpan="2" className="border border-black px-2 py-2 w-[65px]">
+              Jumlah
+            </th>
+            <th colSpan="2" className="border border-black px-2 py-1 w-[110px]">
+              Kondisi
+            </th>
+            <th rowSpan="2" className="border border-black px-2 py-2 w-[210px]">
+              Catatan
+            </th>
+          </tr>
+
+          <tr className="bg-gray-300">
+            <th className="border border-black px-2 py-1 w-[55px]">Baik</th>
+            <th className="border border-black px-2 py-1 w-[55px]">Rusak</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {detail.length > 0 ? (
+            detail.map((item, index) => (
+              <tr key={`${item.id_persyaratan_tuk}-${index}`}>
+                <td className="border border-black px-2 py-2 text-center align-top">
+                  {index + 1}.
+                </td>
+
+                <td className="border border-black px-2 py-2 align-top">
+                  {item.nama_perlengkapan || item.nama_persyaratan || "-"}
+                </td>
+
+                <td className="border border-black px-2 py-2 align-top">
+                  {item.spesifikasi || "-"}
+                </td>
+
+                <td className="border border-black px-2 py-2 text-center align-top">
+                  <input
+                    type="text"
+                    value={item.jumlah_total ?? ""}
+                    onChange={(e) =>
+                      onDetailChange(index, "jumlah_total", e.target.value)
+                    }
+                    className="w-full text-center bg-transparent outline-none"
+                  />
+                </td>
+
+                <td className="border border-black px-2 py-2 text-center align-top">
+                  <input
+                    type="text"
+                    value={item.jumlah_baik ?? ""}
+                    onChange={(e) =>
+                      onDetailChange(index, "jumlah_baik", e.target.value)
+                    }
+                    className="w-full text-center bg-transparent outline-none"
+                  />
+                </td>
+
+                <td className="border border-black px-2 py-2 text-center align-top">
+                  <input
+                    type="text"
+                    value={item.jumlah_rusak ?? ""}
+                    onChange={(e) =>
+                      onDetailChange(index, "jumlah_rusak", e.target.value)
+                    }
+                    className="w-full text-center bg-transparent outline-none"
+                  />
+                </td>
+
+                <td className="border border-black px-2 py-2 align-top">
+                  <textarea
+                    value={item.catatan || ""}
+                    onChange={(e) =>
+                      onDetailChange(index, "catatan", e.target.value)
+                    }
+                    placeholder="Catatan..."
+                    className="w-full min-h-[70px] bg-transparent outline-none resize-none"
+                  />
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="7" className="border border-black px-2 py-5 text-center">
+                Belum ada data persyaratan TUK.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      <div className="mt-2 font-bold flex items-center gap-2">
+        <span>Keputusan Verifikasi :</span>
+
+        <select
+          value={keputusan}
+          onChange={(e) => setKeputusan(e.target.value)}
+          className="font-bold bg-transparent outline-none border border-black px-2 py-1 print:border-none"
+        >
+          <option value="sesuai">
+            Sesuai persyaratan teknis Tempat Uji Kompetensi (TUK)
+          </option>
+          <option value="tidak_sesuai">
+            Tidak sesuai persyaratan teknis Tempat Uji Kompetensi (TUK)
+          </option>
+        </select>
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        <div className="w-[280px] text-center">
+          <p>
+            {tempatTtd}, {formatTanggal(new Date())}
+          </p>
+
+          <p className="mt-1">Verifikator TUK</p>
+
+          <div className="h-24 flex items-center justify-center">
+            {ttdUrl ? (
+              <img
+                src={ttdUrl}
+                alt="Tanda tangan asesor"
+                className="max-h-24 max-w-[220px] object-contain"
+              />
+            ) : (
+              <span className="text-xs text-slate-400">TTD belum tersedia</span>
+            )}
+          </div>
+
+          <p className="font-bold underline">{namaAsesor}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <tr>
+      <td className="w-[160px] py-1">{label}</td>
+      <td className="w-[20px] py-1">:</td>
+      <td className="py-1 font-semibold">{value || "-"}</td>
+    </tr>
+  );
+}
+
 function JadwalCard({ item, active, onClick }) {
-  const jadwal = item.jadwal || {};
+  const jadwal = item.jadwal || item;
   const title = getJadwalTitle(item);
   const tanggal = getJadwalDate(jadwal);
   const tuk = getJadwalTuk(jadwal);
@@ -617,7 +844,7 @@ function JadwalCard({ item, active, onClick }) {
 
         <span
           className={`shrink-0 rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
-            item.status === "aktif"
+            item.status === "aktif" || !item.status
               ? "bg-green-50 text-green-600"
               : "bg-red-50 text-red-500"
           }`}
@@ -637,116 +864,6 @@ function JadwalCard({ item, active, onClick }) {
   );
 }
 
-function JadwalSummary({ item }) {
-  const jadwal = item.jadwal || {};
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <SummaryBox
-        icon={<CalendarCheck size={18} />}
-        label="Tanggal"
-        value={formatRentangTanggal(
-          jadwal.tgl_awal || jadwal.tanggal || jadwal.tanggal_uji,
-          jadwal.tgl_akhir || jadwal.tanggal_selesai
-        )}
-      />
-      <SummaryBox
-        icon={<Building2 size={18} />}
-        label="TUK / Lokasi"
-        value={getJadwalTuk(jadwal)}
-      />
-      <SummaryBox
-        icon={<ShieldCheck size={18} />}
-        label="Status Tugas"
-        value={item.status || "aktif"}
-      />
-    </div>
-  );
-}
-
-function PersyaratanCard({ item, index, onChange }) {
-  return (
-    <article className="rounded-[28px] border border-slate-100 bg-slate-50/60 p-5">
-      <div className="mb-5 flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-500 font-black">
-          {index + 1}
-        </div>
-
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Persyaratan TUK
-          </p>
-
-          <h3 className="mt-1 text-lg font-black text-[#071E3D]">
-            {item.nama_persyaratan ||
-              item.nama ||
-              item.persyaratan ||
-              item.nama_item ||
-              "-"}
-          </h3>
-
-          {item.kategori && (
-            <p className="mt-1 text-xs font-semibold text-slate-400">
-              {item.kategori}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <NumberInput
-          label="Jumlah Total"
-          value={item.jumlah_total}
-          onChange={(value) => onChange(index, "jumlah_total", value)}
-        />
-        <NumberInput
-          label="Jumlah Baik"
-          value={item.jumlah_baik}
-          onChange={(value) => onChange(index, "jumlah_baik", value)}
-        />
-        <NumberInput
-          label="Jumlah Rusak"
-          value={item.jumlah_rusak}
-          onChange={(value) => onChange(index, "jumlah_rusak", value)}
-        />
-      </div>
-
-      <div className="mt-4">
-        <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-          Keterangan
-        </label>
-
-        <textarea
-          value={item.keterangan || ""}
-          onChange={(e) => onChange(index, "keterangan", e.target.value)}
-          rows="3"
-          placeholder="Masukkan keterangan jika ada..."
-          className="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:ring-4 focus:ring-orange-500/10"
-        />
-      </div>
-    </article>
-  );
-}
-
-function NumberInput({ label, value, onChange }) {
-  return (
-    <div>
-      <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-        {label}
-      </label>
-
-      <input
-        type="number"
-        min="0"
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-slate-100 bg-white px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:ring-4 focus:ring-orange-500/10"
-        placeholder="0"
-      />
-    </div>
-  );
-}
-
 function StatusSubmitBadge({ existing }) {
   return (
     <div
@@ -756,26 +873,7 @@ function StatusSubmitBadge({ existing }) {
           : "bg-orange-50 text-orange-500"
       }`}
     >
-      {existing ? <CheckCircle2 size={16} /> : <Info size={16} />}
       {existing ? "Sudah Mengisi" : "Belum Mengisi"}
-    </div>
-  );
-}
-
-function SummaryBox({ icon, label, value }) {
-  return (
-    <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-4">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
-        {icon}
-      </div>
-
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm font-black text-[#071E3D] line-clamp-2">
-        {value || "-"}
-      </p>
     </div>
   );
 }
@@ -818,7 +916,7 @@ function AlertBox({ type, icon, message }) {
 
   return (
     <div
-      className={`rounded-[24px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
+      className={`rounded-[24px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 print:hidden ${
         styles[type] || styles.loading
       }`}
     >
@@ -831,10 +929,6 @@ function AlertBox({ type, icon, message }) {
 function EmptyState({ title, description }) {
   return (
     <div className="rounded-[30px] border border-dashed border-slate-200 bg-slate-50/60 p-10 text-center">
-      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-        <ClipboardCheck size={34} />
-      </div>
-
       <h3 className="text-2xl font-black text-[#071E3D]">{title}</h3>
 
       <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
@@ -868,13 +962,36 @@ function SmallLine({ icon, text }) {
 function createEmptyDetail(persyaratanList) {
   return persyaratanList.map((item) => ({
     id_persyaratan_tuk: item.id_persyaratan_tuk || item.id,
-    nama_persyaratan:
-      item.nama_persyaratan || item.nama || item.persyaratan || item.nama_item,
-    kategori: item.kategori || "",
-    jumlah_total: "",
-    jumlah_baik: "",
-    jumlah_rusak: "",
-    keterangan: "",
+    nama_perlengkapan:
+      item.nama_perlengkapan ||
+      item.nama_persyaratan ||
+      item.nama ||
+      item.persyaratan ||
+      item.nama_item ||
+      "",
+    spesifikasi: item.spesifikasi || "",
+    jumlah_total: 1,
+    jumlah_baik: 1,
+    jumlah_rusak: 0,
+    catatan: "",
+  }));
+}
+
+function normalizeDetailFromController(detailData) {
+  return detailData.map((item) => ({
+    id_persyaratan_tuk: item.id_persyaratan_tuk || item.id,
+    nama_perlengkapan:
+      item.nama_perlengkapan ||
+      item.nama_persyaratan ||
+      item.nama ||
+      item.persyaratan ||
+      item.nama_item ||
+      "",
+    spesifikasi: item.spesifikasi || "",
+    jumlah_total: item.jumlah_total ?? 1,
+    jumlah_baik: item.jumlah_baik ?? 1,
+    jumlah_rusak: item.jumlah_rusak ?? 0,
+    catatan: parseCatatan(item.keterangan),
   }));
 }
 
@@ -888,44 +1005,90 @@ function mergeDetailWithPersyaratan(persyaratanList, existingDetails) {
 
     return {
       id_persyaratan_tuk: idPersyaratan,
-      nama_persyaratan:
+      nama_perlengkapan:
+        persyaratan.nama_perlengkapan ||
         persyaratan.nama_persyaratan ||
         persyaratan.nama ||
         persyaratan.persyaratan ||
-        persyaratan.nama_item,
-      kategori: persyaratan.kategori || "",
-      jumlah_total: found?.jumlah_total ?? "",
-      jumlah_baik: found?.jumlah_baik ?? "",
-      jumlah_rusak: found?.jumlah_rusak ?? "",
-      keterangan: found?.keterangan ?? "",
+        persyaratan.nama_item ||
+        "",
+      spesifikasi: persyaratan.spesifikasi || "",
+      jumlah_total: found?.jumlah_total ?? 1,
+      jumlah_baik: found?.jumlah_baik ?? 1,
+      jumlah_rusak: found?.jumlah_rusak ?? 0,
+      catatan: parseCatatan(found?.keterangan),
     };
   });
 }
 
+function parseCatatan(value) {
+  if (!value) return "";
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed.catatan || value || "";
+  } catch {
+    return value || "";
+  }
+}
+
 function isSameJadwal(a, b) {
   if (!a || !b) return false;
-
-  return (
-    Number(a.id_jadwal) === Number(b.id_jadwal) &&
-    Number(a.id_user) === Number(b.id_user) &&
-    a.jenis_tugas === b.jenis_tugas
-  );
+  return Number(getJadwalId(a)) === Number(getJadwalId(b));
 }
 
 function getJadwalId(item) {
   return item?.id_jadwal || item?.jadwal?.id_jadwal || item?.jadwal?.id;
 }
 
+function getSkemaText(skema) {
+  if (!skema) return "";
+
+  if (typeof skema === "string") {
+    return skema;
+  }
+
+  if (typeof skema === "object") {
+    return (
+      skema.judul_skema ||
+      skema.nama_skema ||
+      skema.kode_skema ||
+      skema.judul_skema_en ||
+      ""
+    );
+  }
+
+  return String(skema);
+}
+
 function getJadwalTitle(item) {
-  const jadwal = item?.jadwal || {};
+  const jadwal = item?.jadwal || item || {};
+
+  const itemSkema = getSkemaText(item?.skema);
+  const jadwalSkema = getSkemaText(jadwal?.skema);
 
   return (
+    item?.nama_kegiatan ||
     jadwal.nama_kegiatan ||
+    itemSkema ||
     jadwal.nama_skema ||
-    jadwal.skema?.nama_skema ||
-    jadwal.skema?.judul_skema ||
+    jadwal.judul_skema ||
+    jadwalSkema ||
     jadwal.kode_jadwal ||
     "Jadwal Verifikasi TUK"
+  );
+}
+
+function getJadwalSkema(jadwal) {
+  const skemaText = getSkemaText(jadwal?.skema);
+
+  return (
+    skemaText ||
+    jadwal?.skema_nama ||
+    jadwal?.nama_skema ||
+    jadwal?.judul_skema ||
+    jadwal?.kode_skema ||
+    "Skema belum tersedia"
   );
 }
 
@@ -943,15 +1106,41 @@ function getJadwalDate(jadwal) {
 function getJadwalTuk(jadwal) {
   return (
     jadwal?.nama_tuk ||
+    jadwal?.tempat ||
     jadwal?.tuk?.nama_tuk ||
     jadwal?.tuk?.nama ||
-    jadwal?.tempat ||
     jadwal?.lokasi ||
     "Lokasi / TUK belum tersedia"
   );
 }
 
-function getDisplayName() {
+function getTempatTtd(jadwal) {
+  return (
+    jadwal?.kecamatan_tuk ||
+    jadwal?.kecamatan ||
+    jadwal?.tuk?.kecamatan_tuk ||
+    jadwal?.tuk?.kecamatan ||
+    jadwal?.tuk?.nama_kecamatan ||
+    jadwal?.tuk?.kabupaten ||
+    jadwal?.tuk?.kota ||
+    jadwal?.tempat ||
+    "Tempat"
+  );
+}
+
+function getDisplayName(profile = null) {
+  if (profile) {
+    return (
+      profile.nama_lengkap ||
+      profile.nama ||
+      profile.name ||
+      profile.user?.nama ||
+      profile.user?.nama_lengkap ||
+      profile.user?.username ||
+      "Asesor"
+    );
+  }
+
   try {
     const storedUser = localStorage.getItem("user");
     const user = storedUser ? JSON.parse(storedUser) : null;
@@ -966,6 +1155,30 @@ function getDisplayName() {
   } catch (err) {
     return "Asesor";
   }
+}
+
+function getTtdUrl(profile) {
+  const raw =
+    profile?.ttd_path ||
+    profile?.ttd ||
+    profile?.tanda_tangan ||
+    profile?.signature ||
+    profile?.user?.ttd_path ||
+    "";
+
+  if (!raw) return "";
+
+  if (String(raw).startsWith("http://") || String(raw).startsWith("https://")) {
+    return raw;
+  }
+
+  const cleaned = String(raw).replace(/^\/+/, "");
+
+  if (!FILE_BASE) {
+    return `/${cleaned}`;
+  }
+
+  return `${FILE_BASE}/${cleaned}`;
 }
 
 function formatTanggal(value) {
@@ -984,16 +1197,26 @@ function formatTanggal(value) {
   });
 }
 
-function formatRentangTanggal(start, end) {
+function formatHariTanggal(start, end) {
   if (!start && !end) return "-";
-  if (start && !end) return formatTanggal(start);
-  if (!start && end) return formatTanggal(end);
 
-  if (String(start).slice(0, 10) === String(end).slice(0, 10)) {
-    return formatTanggal(start);
+  const awal = new Date(start);
+  const akhir = new Date(end || start);
+
+  if (Number.isNaN(awal.getTime())) return "-";
+
+  const hari = awal.toLocaleDateString("id-ID", {
+    weekday: "long",
+  });
+
+  const tanggalAwal = formatTanggal(awal);
+  const tanggalAkhir = formatTanggal(akhir);
+
+  if (!end || tanggalAwal === tanggalAkhir) {
+    return `${hari}/ ${tanggalAwal}`;
   }
 
-  return `${formatTanggal(start)} - ${formatTanggal(end)}`;
+  return `${hari}/ ${tanggalAwal} s.d ${tanggalAkhir}`;
 }
 
 function onlyNumber(value) {
