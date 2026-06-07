@@ -515,7 +515,6 @@ const Skkni = () => {
                         </div>
 
                         <div>
-                          <Label>Jenis Standar</Label>
                           <select name="jenis_standar" value={formData.jenis_standar} onChange={handleInputChange} className={inputClass}>
                             <option value="SKKNI">SKKNI</option>
                             <option value="SKK">Standar Khusus (SKK)</option>
@@ -664,7 +663,6 @@ const Skkni = () => {
                           {selectedItem.no_skkni}
                         </span>
                       </DetailItem>
-                      <DetailItem label="Jenis Standar" value={selectedItem.jenis_standar} />
                       <DetailItem label="Legalitas" value={selectedItem.legalitas || "-"} />
                       <DetailItem label="Sektor / Sub Sektor" value={`${selectedItem.sektor || "-"} / ${selectedItem.sub_sektor || "-"}`} />
                       <DetailItem label="Penerbit" value={selectedItem.penerbit || "-"} />

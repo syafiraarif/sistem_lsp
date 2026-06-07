@@ -781,7 +781,6 @@ const APL01 = () => {
                                 Judul Unit
                               </th>
                               <th className="p-4 text-left text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
-                                Jenis Standar
                               </th>
                             </tr>
                           </thead>
