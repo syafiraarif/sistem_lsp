@@ -6,230 +6,788 @@ const {
   Skema,
   Tuk,
   Persyaratan,
-  SkemaPersyaratan
+  SkemaPersyaratan,
+  ProfileAsesi
 } = require("../../models");
 
-exports.getFormApl01 = async (req, res) => {
-  try {
-    const { id_peserta } = req.params;
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const path = require("path");
 
-    const peserta = await PesertaJadwal.findByPk(id_peserta, {
-      include: [
-        {
-          model: Jadwal,
-          as: "jadwal",
-          include: [
-            { model: Skema, as: "skema" },
-            { model: Tuk, as: "tuk" }
-          ]
-        }
-      ]
-    });
 
-    if (!peserta) {
-      return res.status(404).json({
-        message: "Peserta tidak ditemukan"
-      });
-    }
+/*
+=====================================
+GET FORM
+=====================================
+*/
 
-    if (!peserta.jadwal) {
-      return res.status(404).json({
-        message: "Jadwal peserta tidak ditemukan"
-      });
-    }
+exports.getFormApl01 = async (req,res)=>{
 
-    const id_skema = peserta.jadwal.id_skema;
+try{
 
-    const persyaratan = await SkemaPersyaratan.findAll({
-  where: { id_skema },
-  include: [
-    {
-      model: Persyaratan,
-      as: "persyaratan"
-    }
-  ]
+const { id_peserta } = req.params;
+
+const peserta =
+await PesertaJadwal.findOne({
+
+where:{
+id_peserta,
+id_user:req.user.id_user
+},
+
+include:[
+
+{
+
+model:Jadwal,
+
+as:"jadwal",
+
+include:[
+
+{
+model:Skema,
+as:"skema"
+},
+
+{
+model:Tuk,
+as:"tuk"
+}
+
+]
+
+}
+
+]
+
 });
 
-    return res.json({
-      peserta,
-      persyaratan
-    });
-  } catch (error) {
-    console.error("GET FORM APL01 ERROR:", error);
-    return res.status(500).json({
-      message: "Gagal ambil form APL01",
-      error: error.message
-    });
-  }
+if(!peserta){
+
+return res.status(404).json({
+message:"Peserta tidak ditemukan"
+});
+
+}
+
+const persyaratan =
+await SkemaPersyaratan.findAll({
+
+where:{
+id_skema:
+peserta.jadwal.id_skema
+},
+
+include:[
+
+{
+
+model:Persyaratan,
+as:"persyaratan"
+
+}
+
+]
+
+});
+
+return res.json({
+
+peserta,
+persyaratan
+
+});
+
+}catch(err){
+
+console.error(err);
+
+return res.status(500).json({
+
+message:"Gagal ambil form",
+error:err.message
+
+});
+
+}
+
 };
 
-exports.createApl01 = async (req, res) => {
-  try {
-    const { id_peserta, tujuan_asesmen, tujuan_lainnya } = req.body;
 
-    const peserta = await PesertaJadwal.findByPk(id_peserta, {
-      include: [
-        {
-          model: Jadwal,
-          as: "jadwal"
-        }
-      ]
-    });
 
-    if (!peserta) {
-      return res.status(404).json({
-        message: "Peserta tidak ditemukan"
-      });
-    }
+/*
+=====================================
+CREATE APL01
+=====================================
+*/
 
-    if (!peserta.jadwal) {
-      return res.status(404).json({
-        message: "Jadwal peserta tidak ditemukan"
-      });
-    }
+exports.createApl01 = async(req,res)=>{
 
-    const existing = await Apl01Asesmen.findOne({
-      where: { id_peserta }
-    });
+try{
 
-    if (existing) {
-      return res.status(400).json({
-        message: "APL01 sudah dibuat"
-      });
-    }
+const {
+id_peserta,
+tujuan_asesmen,
+tujuan_lainnya
+}=req.body;
 
-    const apl01 = await Apl01Asesmen.create({
-      id_peserta,
-      id_jadwal: peserta.id_jadwal,
-      id_skema: peserta.jadwal.id_skema,
-      tujuan_asesmen,
-      tujuan_lainnya,
-      status: "draft"
-    });
+const peserta =
+await PesertaJadwal.findOne({
 
-    return res.json({
-      message: "APL01 berhasil dibuat",
-      data: apl01
-    });
-  } catch (error) {
-    console.error("CREATE APL01 ERROR:", error);
-    return res.status(500).json({
-      message: "Gagal membuat APL01",
-      error: error.message
-    });
-  }
+where:{
+id_peserta,
+id_user:req.user.id_user
+},
+
+include:[
+{
+model:Jadwal,
+as:"jadwal"
+}
+]
+
+});
+
+if(!peserta){
+
+return res.status(404).json({
+message:"Peserta tidak ditemukan"
+});
+
+}
+
+const existing =
+await Apl01Asesmen.findOne({
+where:{id_peserta}
+});
+
+if(existing){
+
+return res.json({
+
+message:"APL01 sudah ada",
+data:existing
+
+});
+
+}
+
+const apl01 =
+await Apl01Asesmen.create({
+
+id_peserta,
+
+id_jadwal:
+peserta.id_jadwal,
+
+id_skema:
+peserta.jadwal.id_skema,
+
+tujuan_asesmen,
+
+tujuan_lainnya,
+
+status:"draft"
+
+});
+
+return res.json({
+
+message:"APL01 berhasil dibuat",
+data:apl01
+
+});
+
+}catch(err){
+
+console.error(err);
+
+return res.status(500).json({
+
+message:"Gagal create",
+error:err.message
+
+});
+
+}
+
 };
 
-exports.uploadDokumenApl01 = async (req, res) => {
-  try {
-    const {
-      id_apl01,
-      id_persyaratan,
-      nomor_dokumen,
-      tanggal_dokumen
-    } = req.body;
 
-    if (!req.files || !req.files.file_dokumen) {
-      return res.status(400).json({
-        message: "File wajib diupload"
-      });
-    }
 
-    const filePath = req.files.file_dokumen[0].path;
+/*
+=====================================
+UPLOAD DOKUMEN
+=====================================
+*/
 
-    const dokumen = await Apl01Dokumen.create({
-      id_apl01,
-      id_persyaratan,
-      nomor_dokumen: nomor_dokumen || null,
-      tanggal_dokumen: tanggal_dokumen || null,
-      file_path: filePath
-    });
+exports.uploadDokumenApl01 =
+async(req,res)=>{
 
-    return res.json({
-      message: "Dokumen berhasil diupload",
-      data: dokumen
-    });
-  } catch (error) {
-    console.error("UPLOAD DOKUMEN APL01 ERROR:", error);
-    return res.status(500).json({
-      message: "Gagal upload dokumen",
-      error: error.message
-    });
-  }
+try{
+
+const {
+
+id_apl01,
+id_persyaratan,
+nomor_dokumen,
+tanggal_dokumen
+
+}=req.body;
+
+
+const file =
+req.files?.file_dokumen?.[0];
+
+if(!file){
+
+return res.status(400).json({
+message:"File wajib"
+});
+
+}
+
+const apl01 =
+await Apl01Asesmen.findByPk(
+id_apl01
+);
+
+if(!apl01){
+
+return res.status(404).json({
+message:"APL01 tidak ditemukan"
+});
+
+}
+
+if(apl01.status!=="draft"){
+
+return res.status(400).json({
+message:"APL01 sudah submit"
+});
+
+}
+
+const existing =
+await Apl01Dokumen.findOne({
+
+where:{
+id_apl01,
+id_persyaratan
+}
+
+});
+
+const payload={
+
+id_apl01,
+id_persyaratan,
+
+nomor_dokumen:
+nomor_dokumen || null,
+
+tanggal_dokumen:
+tanggal_dokumen || null,
+
+file_path:
+file.path.replace(/\\/g,"/")
+
 };
 
-exports.getApl01 = async (req, res) => {
-  try {
-    const { id_peserta } = req.params;
+let result;
 
-    const apl01 = await Apl01Asesmen.findOne({
-      where: { id_peserta },
-      include: [
-        {
-          model: Apl01Dokumen,
-          as: "dokumen",
-          include: [
-            {
-              model: Persyaratan,
-              as: "persyaratan"
-            }
-          ]
-        }
-      ]
-    });
+if(existing){
 
-    if (!apl01) {
-      return res.status(404).json({
-        message: "APL01 belum dibuat"
-      });
-    }
+if(
+existing.file_path &&
+fs.existsSync(
+path.join(
+process.cwd(),
+existing.file_path
+))
+){
 
-    return res.json({
-      data: apl01
-    });
-  } catch (error) {
-    console.error("GET APL01 ERROR:", error);
-    return res.status(500).json({
-      message: "Gagal ambil data APL01",
-      error: error.message
-    });
-  }
+fs.unlinkSync(
+path.join(
+process.cwd(),
+existing.file_path
+)
+);
+
+}
+
+await existing.update(
+payload
+);
+
+await existing.reload();
+
+result=existing;
+
+}else{
+
+result=
+await Apl01Dokumen.create(
+payload
+);
+
+}
+
+return res.json({
+
+message:
+"Dokumen berhasil disimpan",
+
+data:
+result
+
+});
+
+}catch(err){
+
+console.error(err);
+
+return res.status(500).json({
+
+message:"Upload gagal",
+error:err.message
+
+});
+
+}
+
 };
 
-exports.submitFinalApl01 = async (req, res) => {
-  try {
-    const { id_apl01 } = req.params;
 
-    const apl01 = await Apl01Asesmen.findByPk(id_apl01);
 
-    if (!apl01) {
-      return res.status(404).json({
-        message: "APL01 tidak ditemukan"
-      });
-    }
+/*
+=====================================
+GET APL01
+=====================================
+*/
 
-    const dokumen = await Apl01Dokumen.findAll({
-      where: { id_apl01 }
-    });
+exports.getApl01 =
+async(req,res)=>{
 
-    if (dokumen.length === 0) {
-      return res.status(400).json({
-        message: "Dokumen belum diupload"
-      });
-    }
+try{
 
-    await apl01.update({
-      status: "submit"
-    });
+const { id_peserta }=
+req.params;
 
-    return res.json({
-      message: "APL01 berhasil disubmit"
-    });
-  } catch (error) {
-    console.error("SUBMIT APL01 ERROR:", error);
-    return res.status(500).json({
-      message: "Gagal submit APL01",
-      error: error.message
-    });
-  }
+const apl01=
+await Apl01Asesmen.findOne({
+
+where:{
+id_peserta
+},
+
+include:[
+
+{
+
+model:Apl01Dokumen,
+
+as:"dokumen",
+
+include:[
+
+{
+
+model:Persyaratan,
+as:"persyaratan"
+
+}
+
+]
+
+}
+
+]
+
+});
+
+if(!apl01){
+
+return res.status(404).json({
+message:"APL01 belum ada"
+});
+
+}
+
+const data=
+apl01.toJSON();
+
+const baseUrl=
+`${req.protocol}://${req.get("host")}`;
+
+data.dokumen=
+data.dokumen.map(x=>({
+
+...x,
+
+file_url:
+`${baseUrl}/${x.file_path}`
+
+}));
+
+return res.json({
+data
+});
+
+}catch(err){
+
+console.error(err);
+
+return res.status(500).json({
+
+message:"Gagal",
+error:err.message
+
+});
+
+}
+
+};
+
+
+
+/*
+=====================================
+SUBMIT
+=====================================
+*/
+
+exports.submitFinalApl01 =
+async(req,res)=>{
+
+try{
+
+const { id_apl01 }=
+req.params;
+
+const apl01=
+await Apl01Asesmen.findByPk(
+id_apl01
+);
+
+if(!apl01){
+
+return res.status(404).json({
+message:"APL01 tidak ada"
+});
+
+}
+
+if(apl01.status==="submit"){
+
+return res.status(400).json({
+message:"APL01 sudah submit"
+});
+
+}
+
+const wajib=
+await SkemaPersyaratan.findAll({
+
+where:{
+
+id_skema:
+apl01.id_skema,
+
+wajib:true
+
+}
+
+});
+
+const uploaded=
+await Apl01Dokumen.findAll({
+
+where:{
+id_apl01
+}
+
+});
+
+const ids=
+uploaded.map(
+x=>x.id_persyaratan
+);
+
+const missing=
+wajib.filter(
+x=>
+!ids.includes(
+x.id_persyaratan
+)
+);
+
+if(missing.length){
+
+return res.status(400).json({
+
+message:
+"Persyaratan belum lengkap",
+
+missing
+
+});
+
+}
+
+const peserta=
+await PesertaJadwal.findByPk(
+apl01.id_peserta
+);
+
+const profile=
+await ProfileAsesi.findByPk(
+peserta.id_user
+);
+
+if(!profile?.ttd_path){
+
+return res.status(400).json({
+message:"TTD belum upload"
+});
+
+}
+
+await apl01.update({
+
+status:"submit",
+
+ttd_asesi_path:
+profile.ttd_path
+
+});
+
+return res.json({
+
+message:
+"APL01 berhasil submit"
+
+});
+
+}catch(err){
+
+console.error(err);
+
+return res.status(500).json({
+
+message:"Submit gagal",
+error:err.message
+
+});
+
+}
+
+};
+
+
+
+/*
+=====================================
+PDF
+=====================================
+*/
+
+exports.generatePdfApl01 =
+async(req,res)=>{
+
+try{
+
+const { id_peserta }=
+req.params;
+
+const apl01=
+await Apl01Asesmen.findOne({
+
+where:{
+id_peserta
+},
+
+include:[
+
+{
+
+model:PesertaJadwal,
+
+as:"peserta",
+
+include:[
+
+{
+model:ProfileAsesi,
+as:"profileAsesi"
+},
+
+{
+
+model:Jadwal,
+
+as:"jadwal",
+
+include:[
+
+{
+model:Skema,
+as:"skema"
+},
+
+{
+model:Tuk,
+as:"tuk"
+}
+
+]
+
+}
+
+]
+
+},
+
+{
+
+model:Apl01Dokumen,
+
+as:"dokumen",
+
+include:[
+
+{
+model:Persyaratan,
+as:"persyaratan"
+}
+
+]
+
+}
+
+]
+
+});
+
+if(!apl01){
+
+return res.status(404).json({
+message:"APL01 tidak ada"
+});
+
+}
+
+res.setHeader(
+"Content-Type",
+"application/pdf"
+);
+
+res.setHeader(
+"Content-Disposition",
+`attachment; filename=APL01_${id_peserta}.pdf`
+);
+
+const doc=
+new PDFDocument({
+margin:50
+});
+
+doc.pipe(res);
+
+doc.fontSize(18)
+.text(
+"FORMULIR APL 01",
+{
+align:"center"
+}
+);
+
+doc.moveDown();
+
+doc.fontSize(12);
+
+doc.text(
+`Nama : ${apl01.peserta.profileAsesi.nama_lengkap}`
+);
+
+doc.text(
+`Skema : ${apl01.peserta.jadwal.skema.judul_skema}`
+);
+
+doc.text(
+`TUK : ${apl01.peserta.jadwal.tuk.nama_tuk}`
+);
+
+doc.text(
+`Tujuan : ${apl01.tujuan_asesmen}`
+);
+
+doc.moveDown();
+
+doc.text(
+"Dokumen Persyaratan:"
+);
+
+apl01.dokumen.forEach((x,i)=>{
+
+if(doc.y>700){
+
+doc.addPage();
+
+}
+
+doc.text(
+`${i+1}. ${x.persyaratan.nama_persyaratan}`
+);
+
+});
+
+doc.moveDown(4);
+
+if(apl01.ttd_asesi_path){
+
+const ttd=
+path.join(
+process.cwd(),
+apl01.ttd_asesi_path
+);
+
+if(fs.existsSync(ttd)){
+
+doc.image(
+ttd,
+420,
+doc.y,
+{
+width:100
+}
+);
+
+}
+
+}
+
+doc.text(
+"Asesi",
+{
+align:"right"
+}
+);
+
+doc.end();
+
+}catch(err){
+
+console.error(err);
+
+return res.status(500).json({
+
+message:"PDF gagal",
+error:err.message
+
+});
+
+}
+
 };

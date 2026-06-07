@@ -134,9 +134,23 @@ Skema.hasMany(FrIa02, { foreignKey: "id_skema", as: "frIa02" });
 FrIa02.belongsTo(Tuk, { foreignKey: "id_tuk", as: "tuk" });
 Tuk.hasMany(FrIa02, { foreignKey: "id_tuk", as: "frIa02" });
 ProfileAsesor.hasMany(FrIa02, { foreignKey: "id_asesor", sourceKey: "id_user", as: "frIa02" });
-FrIa02.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", targetKey: "id_user", as: "asesor" });
-ProfileAsesi.hasMany(FrIa02, { foreignKey: "id_asesi", sourceKey: "id_user", as: "frIa02" });
-FrIa02.belongsTo(ProfileAsesi, { foreignKey: "id_asesi", targetKey: "id_user", as: "asesi" });
+FrIa02.belongsTo(
+ProfileAsesi,
+{
+ foreignKey:"id_asesi",
+ targetKey:"id_user",
+ as:"asesi"
+}
+);
+ProfileAsesi.hasMany(
+FrIa02,
+{
+ foreignKey:"id_asesi",
+ sourceKey:"id_user",
+ as:"frIa02List"
+}
+);
+
 FrIa02Detail.belongsTo(KelompokPekerjaan, { foreignKey: "id_kelompok", as: "kelompok" });
 KelompokPekerjaan.hasMany(FrIa02Detail, { foreignKey: "id_kelompok", as: "frIa02Detail" });
 FrIa02Validator.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", targetKey: "id_user", as: "asesor" });
@@ -160,7 +174,14 @@ Tuk.hasMany(FrIa03, { foreignKey: "id_tuk", as: "frIa03" });
 FrIa03.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", targetKey: "id_user", as: "asesor" });
 ProfileAsesor.hasMany(FrIa03, { foreignKey: "id_asesor", sourceKey: "id_user", as: "frIa03" });
 FrIa03.belongsTo(ProfileAsesi, { foreignKey: "id_asesi", targetKey: "id_user", as: "asesi" });
-ProfileAsesi.hasMany(FrIa03, { foreignKey: "id_asesi", sourceKey: "id_user", as: "frIa03" });
+ProfileAsesi.hasMany(
+FrIa03,
+{
+ foreignKey:"id_asesi",
+ sourceKey:"id_user",
+ as:"frIa03List"
+}
+);
 
 
 // ==========================
@@ -195,12 +216,20 @@ ProfileAsesor.hasMany(FrIa05, { foreignKey: "created_by", sourceKey: "id_user", 
 Role.hasMany(User, { foreignKey: "id_role" });
 User.belongsTo(Role, { foreignKey: "id_role" });
 
-User.hasOne(ProfileAsesi, { foreignKey: "id_user" });
+User.hasOne(ProfileAsesi, {
+ foreignKey: "id_user",
+ as: "profileAsesi",
+ onDelete: "CASCADE"
+});
 User.hasOne(ProfileAsesor, { foreignKey: "id_user" });
 User.hasOne(ProfileAdmin, { foreignKey: "id_user" });
 User.hasOne(ProfileTuk, { foreignKey: "id_user" });
 
-ProfileAsesi.belongsTo(User, { foreignKey: "id_user" });
+
+ProfileAsesi.belongsTo(User, {
+ foreignKey: "id_user",
+ as: "user"
+});
 ProfileAsesor.belongsTo(User, { foreignKey: "id_user", as: "user" });
 ProfileAdmin.belongsTo(User, { foreignKey: "id_user" });
 ProfileTuk.belongsTo(User, { foreignKey: "id_user" });
@@ -250,6 +279,23 @@ ProfileAsesor.hasMany(JadwalAsesor, { foreignKey: "id_user" });
 JadwalAsesor.belongsTo(ProfileAsesor, { foreignKey: "id_user", as: "profileAsesor" });
 
 User.hasMany(PesertaJadwal, { foreignKey: "id_user" });
+ProfileAsesi.hasMany(
+PesertaJadwal,
+{
+ foreignKey:"id_user",
+ sourceKey:"id_user",
+ as:"pesertaJadwal"
+}
+);
+
+PesertaJadwal.belongsTo(
+ProfileAsesi,
+{
+ foreignKey:"id_user",
+ targetKey:"id_user",
+ as:"profileAsesi"
+}
+);
 PesertaJadwal.belongsTo(User, {foreignKey: "id_user", as: "user"});
 Jadwal.hasMany(PesertaJadwal, { foreignKey: "id_jadwal" });
 PesertaJadwal.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal"});
@@ -391,7 +437,7 @@ FrAk05.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
 PesertaJadwal.hasMany(FrAk05, { foreignKey: "id_peserta", as: "frAk05" });
 FrAk05.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", as: "asesor" });
 ProfileAsesor.hasMany(FrAk05, { foreignKey: "id_asesor", as: "frAk05" });
-PesertaJadwal.belongsTo(ProfileAsesi, { foreignKey: "id_user", as: "asesi" });
+
 
 Skema.hasMany(FrAk06, { foreignKey: "id_skema", as: "frAk06" });
 FrAk06.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });

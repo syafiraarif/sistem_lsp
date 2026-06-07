@@ -2,139 +2,441 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
+
 /*
 =====================================
-CREATE FOLDER IF NOT EXISTS
+CREATE DIRECTORY
 =====================================
 */
+
 const ensureDir = (dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+
+if(!fs.existsSync(dir)){
+
+fs.mkdirSync(
+dir,
+{
+recursive:true
+}
+);
+
+}
+
 };
 
+
+
 /*
 =====================================
-STORAGE CONFIG (FIXED)
+STORAGE CONFIG
 =====================================
 */
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const field = file.fieldname;
 
-    let folder = "uploads";
+const storage =
+multer.diskStorage({
 
-    const dokumenFields = [
-      "pas_foto",
-      "ktp",
-      "ijazah",
-      "transkrip",
-      "kk",
-      "surat_kerja",
-    ];
+destination:
+(req,file,cb)=>{
 
-    if (dokumenFields.includes(field)) {
-      folder = path.join("uploads", "asesi", "dokumen", field);
-    }
-    else if (field === "ttd") {
-      if (req.user && req.user.role === "asesor") {
-        folder = path.join("uploads", "asesor", "ttd");
-      } else {
-        folder = path.join("uploads", "asesi", "ttd");
-      }
-    }
-    else if (field === "foto_profil") {
-      folder = path.join("uploads", "asesor", "foto_profil");
-    }
-    else if (field === "file_dokumen_apl01") {
-      const id = req.body.id_apl01 || "umum";
-      folder = path.join("uploads", "asesi", "apl01", "dokumen", `apl01_${id}`);
-    }
-    else if (field === "file_bukti") {
-      const id = req.body.id_detail || "umum";
-      folder = path.join("uploads", "asesi", "apl02", "bukti", `detail_${id}`);
-    }
-    else if (field === "foto") {
-      folder = path.join("uploads", "tuk", "foto_profile");
-    }
-    // TAMBAHAN UNTUK SURAT KEPUTUSAN / PENUGASAN TUK
-    else if (field === "surat_keputusan") {
-      folder = path.join("uploads", "tuk", "dokumen");
-    }
+const field =
+file.fieldname;
 
-    ensureDir(folder);
-    cb(null, folder);
-  },
+let folder =
+"uploads";
 
-  filename: (req, file, cb) => {
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    const cleanName = file.originalname.replace(/\s/g, "_");
+switch(field){
 
-    let filename = `${timestamp}-${cleanName}`;
+/*
+=====================
+TTD
+=====================
+*/
 
-    if (file.fieldname === "file_dokumen_apl01") {
-      filename = `apl01_${req.body.id_apl01 || "x"}_${timestamp}${ext}`;
-    }
+case "ttd":
 
-    if (file.fieldname === "file_bukti") {
-      filename = `apl02_${req.body.id_detail || "x"}_${timestamp}${ext}`;
-    }
+case "ttd_presensi":
 
-    cb(null, filename);
-  },
+folder=
+
+req.user?.role==="asesor"
+
+? path.join(
+"uploads",
+"asesor",
+"ttd"
+)
+
+: path.join(
+"uploads",
+"asesi",
+"ttd"
+);
+
+break;
+
+
+/*
+=====================
+FOTO PROFIL
+=====================
+*/
+
+case "foto_profil":
+
+folder=
+
+req.user?.role==="asesor"
+
+? path.join(
+"uploads",
+"asesor",
+"foto_profil"
+)
+
+: path.join(
+"uploads",
+"asesi",
+"dokumen",
+"foto_profil"
+);
+
+break;
+
+
+/*
+=====================
+APL01
+=====================
+*/
+
+case "file_dokumen_apl01":
+
+folder=
+
+path.join(
+
+"uploads",
+
+"asesi",
+
+"apl01",
+
+"dokumen",
+
+`apl01_${
+req.body.id_apl01
+|| "umum"
+}`
+
+);
+
+break;
+
+
+/*
+=====================
+APL02
+=====================
+*/
+
+case "file_bukti":
+
+folder=
+
+path.join(
+
+"uploads",
+
+"asesi",
+
+"apl02",
+
+"bukti",
+
+`detail_${
+req.body.id_detail
+|| "umum"
+}`
+
+);
+
+break;
+
+
+/*
+=====================
+TUK
+=====================
+*/
+
+case "foto":
+
+folder=
+path.join(
+"uploads",
+"tuk",
+"foto_profile"
+);
+
+break;
+
+case "surat_keputusan":
+
+folder=
+path.join(
+"uploads",
+"tuk",
+"dokumen"
+);
+
+break;
+
+default:
+
+folder=
+"uploads";
+
+}
+
+ensureDir(
+folder
+);
+
+cb(
+null,
+folder
+);
+
+},
+
+
+
+filename:
+(req,file,cb)=>{
+
+const ext=
+
+path.extname(
+file.originalname
+);
+
+const timestamp=
+Date.now();
+
+let filename=
+
+`${timestamp}_${file.originalname.replace(/\s+/g,"_")}`;
+
+
+/*
+APL01 custom name
+*/
+
+if(
+file.fieldname===
+"file_dokumen_apl01"
+){
+
+filename=
+
+`apl01_${
+req.body.id_apl01
+|| "x"
+}_${timestamp}${ext}`;
+
+}
+
+
+/*
+APL02 custom name
+*/
+
+if(
+file.fieldname===
+"file_bukti"
+){
+
+filename=
+
+`apl02_${
+req.body.id_detail
+|| "x"
+}_${timestamp}${ext}`;
+
+}
+
+cb(
+null,
+filename
+);
+
+}
+
 });
+
+
 
 /*
 =====================================
 UPLOAD CONFIG
 =====================================
 */
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024,
-    files: 12,
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /pdf|jpeg|jpg|png/;
 
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase()
-    );
-    const mimetype = allowedTypes.test(file.mimetype);
+const upload =
+multer({
 
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(new Error("File type not allowed. Only PDF, JPG, JPEG, PNG are permitted."));
-  },
+storage,
+
+limits:{
+
+fileSize:
+10 * 1024 * 1024,
+
+files:
+10
+
+},
+
+fileFilter:
+(req,file,cb)=>{
+
+const allowedMime=[
+
+"application/pdf",
+
+"image/jpeg",
+
+"image/jpg",
+
+"image/png"
+
+];
+
+const allowedExt=[
+
+".pdf",
+
+".jpg",
+
+".jpeg",
+
+".png"
+
+];
+
+const ext=
+path.extname(
+file.originalname
+).toLowerCase();
+
+if(
+
+allowedMime.includes(
+file.mimetype
+)
+
+&&
+
+allowedExt.includes(
+ext
+)
+
+){
+
+return cb(
+null,
+true
+);
+
+}
+
+return cb(
+
+new Error(
+
+"Hanya PDF, JPG, JPEG, PNG yang diperbolehkan"
+
+)
+
+);
+
+}
+
 });
+
+
 
 /*
 =====================================
 FIELDS CONFIG
 =====================================
 */
-const uploadMiddleware = upload.fields([
-  { name: "file_dokumen", maxCount: 1 },
-  { name: "file_dokumen_apl01", maxCount: 1 },
-  { name: "file_bukti", maxCount: 1 },
-  { name: "file_pendukung", maxCount: 1 },
-  { name: "dokumen_tambahan", maxCount: 10 },
-  { name: "tanda_tangan", maxCount: 1 },
-  { name: "bukti_bayar", maxCount: 1 },
-  { name: "ttd", maxCount: 1 },
-  { name: "pas_foto", maxCount: 1 },
-  { name: "ktp", maxCount: 1 },
-  { name: "ijazah", maxCount: 1 },
-  { name: "transkrip", maxCount: 1 },
-  { name: "kk", maxCount: 1 },
-  { name: "surat_kerja", maxCount: 1 },
-  { name: "foto_profil", maxCount: 1 },
-  { name: "portofolio", maxCount: 1 },
-  { name: "foto", maxCount: 1 },
-  { name: "surat_keputusan", maxCount: 1 }, // TAMBAHAN
+
+const uploadMiddleware =
+upload.fields([
+
+{
+name:"file_dokumen",
+maxCount:1
+},
+
+{
+name:"file_dokumen_apl01",
+maxCount:1
+},
+
+{
+name:"file_bukti",
+maxCount:1
+},
+
+{
+name:"file_pendukung",
+maxCount:1
+},
+
+{
+name:"dokumen_tambahan",
+maxCount:10
+},
+
+{
+name:"tanda_tangan",
+maxCount:1
+},
+
+{
+name:"bukti_bayar",
+maxCount:1
+},
+
+{
+name:"ttd",
+maxCount:1
+},
+
+{
+name:"ttd_presensi",
+maxCount:1
+},
+
+{
+name:"foto_profil",
+maxCount:1
+},
+
+{
+name:"foto",
+maxCount:1
+},
+
+{
+name:"surat_keputusan",
+maxCount:1
+}
+
 ]);
 
-module.exports = uploadMiddleware;
+
+module.exports =
+uploadMiddleware;
