@@ -3,200 +3,66 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  Award,
-  Calendar,
-  CheckCircle,
-  ClipboardCheck,
-  ClipboardList,
-  Download,
-  FileCheck,
-  Hash,
-  Info,
-  Loader2,
-  MapPin,
-  Plus,
-  Save,
-  ShieldCheck,
-  Trash2,
-  UserCheck,
-  Users,
-} from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
-const TUJUAN_OPTIONS = [
-  {
-    value: "bagian_penjaminan_mutu",
-    label: "Bagian dari proses penjaminan mutu organisasi",
-  },
-  {
-    value: "mengantisipasi_risiko",
-    label: "Mengantisipasi risiko",
-  },
-  {
-    value: "memenuhi_persyaratan_bnsp",
-    label: "Memenuhi persyaratan BNSP",
-  },
-  {
-    value: "memastikan_kesesuaian_bukti",
-    label: "Memastikan kesesuaian bukti-bukti",
-  },
-  {
-    value: "meningkatkan_kualitas_asesmen",
-    label: "Meningkatkan kualitas asesmen",
-  },
-  {
-    value: "mengevaluasi_kualitas_perangkat_asesmen",
-    label: "Mengevaluasi kualitas perangkat asesmen",
-  },
+const MANUAL_PREFIX = "manual:";
+
+const tujuanOptions = [
+  ["bagian_penjaminan_mutu", "Bagian dari proses penjaminan mutu organisasi"],
+  ["mengantisipasi_risiko", "Mengantisipasi risiko"],
+  ["memenuhi_persyaratan_bnsp", "Memenuhi persyaratan BNSP"],
+  ["memastikan_kesesuaian_bukti", "Memastikan kesesuaian bukti-bukti"],
+  ["meningkatkan_kualitas_asesmen", "Meningkatkan kualitas asesmen"],
+  ["mengevaluasi_kualitas_perangkat_asesmen", "Mengevaluasi kualitas perangkat asesmen"],
+  ["manual_tujuan", ""],
 ];
 
-const KONTEKS_OPTIONS = [
-  {
-    value: "internal_organisasi",
-    label: "Internal organisasi",
-  },
-  {
-    value: "eksternal_organisasi",
-    label: "Eksternal organisasi",
-  },
-  {
-    value: "proses_lisensi_relisensi",
-    label: "Proses lisensi/re lisensi",
-  },
-  {
-    value: "dengan_kolega_asesor",
-    label: "Dengan kolega asesor",
-  },
-  {
-    value: "kolega_organisasi_pelatihan_atau_asesmen",
-    label: "Kolega dari organisasi pelatihan atau asesmen",
-  },
+const konteksOptions = [
+  ["internal_organisasi", "Internal organisasi"],
+  ["eksternal_organisasi", "Eksternal organisasi"],
+  ["proses_lisensi_relisensi", "Proses lisensi/re lisensi"],
+  ["dengan_kolega_asesor", "Dengan kolega asesor"],
+  ["kolega_organisasi_pelatihan_atau_asesmen", "Kolega dari organisasi pelatihan atau asesmen"],
+  ["manual_konteks", ""],
 ];
 
-const PENDEKATAN_OPTIONS = [
-  {
-    value: "panel_asesmen",
-    label: "Panel asesmen",
-  },
-  {
-    value: "pertemuan_moderasi",
-    label: "Pertemuan moderasi",
-  },
-  {
-    value: "mengkaji_perangkat_asesmen",
-    label: "Mengkaji perangkat asesmen",
-  },
-  {
-    value: "acuan_pembanding",
-    label: "Acuan pembanding",
-  },
-  {
-    value: "pengujian_lapangan_uji_coba_perangkat_asesmen",
-    label: "Pengujian lapangan dan uji coba perangkat asesmen",
-  },
-  {
-    value: "umpan_balik_klien",
-    label: "Umpan balik dari klien",
-  },
+const pendekatanOptions = [
+  ["panel_asesmen", "Panel asesmen"],
+  ["pertemuan_moderasi", "Pertemuan moderasi"],
+  ["mengkaji_perangkat_asesmen", "Mengkaji perangkat asesmen"],
+  ["acuan_pembanding", "Acuan pembanding"],
+  ["pengujian_lapangan_uji_coba_perangkat_asesmen", "Pengujian lapangan dan uji coba perangkat asesmen"],
+  ["umpan_balik_klien", "Umpan balik dari klien"],
+  ["manual_pendekatan", ""],
 ];
 
-const ORANG_RELEVAN_OPTIONS = [
-  {
-    value: "asesor_kompetensi",
-    label: "Asesor kompetensi (wajib)",
-  },
-  {
-    value: "lead_asesor",
-    label: "Lead Asesor",
-  },
-  {
-    value: "manager_supervisor",
-    label: "Manager, supervisor",
-  },
-  {
-    value: "tenaga_ahli",
-    label: "Tenaga ahli di bidangnya",
-  },
-  {
-    value: "koord_pelatihan",
-    label: "Koord. Pelatihan",
-  },
-  {
-    value: "anggota_asosiasi",
-    label: "Anggota asosiasi industry/profesi",
-  },
+const acuanOptions = [
+  ["standar_kompetensi", "Standar kompetensi"],
+  ["sop_ik", "SOP/IK"],
+  ["manual_instruction_book", "Manual Instruction/book"],
+  ["standar_kinerja", "Standar Kinerja"],
+  ["manual_acuan", ""],
 ];
 
-const ACUAN_OPTIONS = [
-  {
-    value: "standar_kompetensi",
-    label: "Standar kompetensi",
-  },
-  {
-    value: "sop_ik",
-    label: "SOP/IK",
-  },
-  {
-    value: "manual_instruction_book",
-    label: "Manual Instruction/book",
-  },
-  {
-    value: "standar_kinerja",
-    label: "Standar Kinerja",
-  },
+const dokumenOptions = [
+  ["skema_sertifikasi", "Skema sertifikasi"],
+  ["skkni_sk3_ski", "SKKNI/SK3/SKI"],
+  ["perangkat_asesmen", "Perangkat asesmen"],
+  ["peraturan_pedoman", "Peraturan/Pedoman"],
+  ["manual_dokumen", ""],
 ];
 
-const DOKUMEN_OPTIONS = [
-  {
-    value: "skema_sertifikasi",
-    label: "Skema sertifikasi",
-  },
-  {
-    value: "skkni_sk3_ski",
-    label: "SKKNI/SK3/SKI",
-  },
-  {
-    value: "perangkat_asesmen",
-    label: "Perangkat asesmen",
-  },
-  {
-    value: "peraturan_pedoman",
-    label: "Peraturan/Pedoman",
-  },
+const komunikasiOptions = [
+  ["pro_aktif", "PRO AKTIF"],
+  ["active_listening", "ACTIVE LISTENING"],
+  ["komunikasi_lisan_tertulis_visual", "Komunikasi lisan, tertulis dan Visual"],
+  ["manual_komunikasi", ""],
 ];
 
-const KOMUNIKASI_OPTIONS = [
+const defaultDetail = [
   {
-    value: "pro_aktif",
-    label: "PRO AKTIF",
-  },
-  {
-    value: "active_listening",
-    label: "ACTIVE LISTENING",
-  },
-  {
-    value: "komunikasi_lisan_tertulis_visual",
-    label: "Komunikasi lisan, tertulis dan Visual",
-  },
-];
-
-const DEFAULT_ASPEK = [
-  "Proses asesmen",
-  "Rencana asesmen",
-  "Interpretasi standar kompetensi",
-  "Interpretasi acuan pembanding lainnya",
-  "Penyeleksian dan penerapan metode asesmen",
-  "Penyeleksian dan penerapan perangkat asesmen",
-  "Bukti-bukti yang dikumpulkan",
-  "Proses pengambilan keputusan",
-];
-
-const createDefaultDetail = () =>
-  DEFAULT_ASPEK.map((aspek) => ({
-    aspek,
+    aspek: "Proses asesmen",
     V: false,
     A: false,
     T: false,
@@ -205,46 +71,185 @@ const createDefaultDetail = () =>
     R: false,
     F: false,
     FL: false,
-  }));
+  },
+  {
+    aspek: "Rencana asesmen",
+    V: true,
+    A: false,
+    T: false,
+    M: true,
+    Vp: true,
+    R: true,
+    F: true,
+    FL: false,
+  },
+  {
+    aspek: "Interpretasi standar kompetensi",
+    V: true,
+    A: false,
+    T: false,
+    M: true,
+    Vp: true,
+    R: true,
+    F: true,
+    FL: false,
+  },
+  {
+    aspek: "Interpretasi acuan pembanding lainnya",
+    V: true,
+    A: false,
+    T: false,
+    M: true,
+    Vp: true,
+    R: true,
+    F: true,
+    FL: false,
+  },
+  {
+    aspek: "Penyeleksian dan penerapan metode asesmen",
+    V: true,
+    A: false,
+    T: false,
+    M: true,
+    Vp: true,
+    R: true,
+    F: true,
+    FL: false,
+  },
+  {
+    aspek: "Penyeleksian dan penerapan perangkat asesmen",
+    V: true,
+    A: false,
+    T: false,
+    M: true,
+    Vp: true,
+    R: true,
+    F: true,
+    FL: false,
+  },
+  {
+    aspek: "Bukti-bukti yang dikumpulkan",
+    V: false,
+    A: false,
+    T: false,
+    M: false,
+    Vp: false,
+    R: false,
+    F: false,
+    FL: false,
+  },
+  {
+    aspek: "Proses pengambilan keputusan",
+    V: false,
+    A: false,
+    T: false,
+    M: false,
+    Vp: false,
+    R: false,
+    F: false,
+    FL: false,
+  },
+];
 
-const createDefaultTemuan = () => [
+const defaultTemuan = [
+  {
+    temuan:
+      "Validitas perangkat asesmen belum dapat dipastikan terbukti pada FR.IA-01 tidak ada SOP Industri/lembaga tidak sesuai dengan SKKNI Unit P85ASM00.001.2",
+    rekomendasi:
+      "Dilakukan perbaikan pada FR.IA.01 pada Kolom SOP perlu dituliskan Industri",
+  },
+  {
+    temuan:
+      "Validitas perangkat asesmen belum dapat dipastikan terbukti FR.IA-06 belum memenuhi 5 dimensi kompetensi. Tidak sesuai dengan SKKNI Unit P85ASM00.001.2,",
+    rekomendasi:
+      "Dilakukan perbaikan pada FR.IA.06 untuk memenuhi dimensi CMS dan TRS",
+  },
+  {
+    temuan:
+      "Validitas perangkat Asesmen MAPA 1 belum dapat dipastikan terbukti belum divalidasi. Tidak sesuai dengan SKKNI unit P85ASM00.001.2,",
+    rekomendasi:
+      "Dilakukan perbaikan pada MAPA 01 dengan memvalidasi perangkat tersebut",
+  },
   {
     temuan: "",
     rekomendasi: "",
   },
 ];
 
-const createDefaultRencana = () => [
+const defaultRencana = [
+  {
+    rencana:
+      "Dilakukan perbaikan pada FR.IA.01 pada Kolom SOP harus dituliskan dan dilampirkan",
+    target_waktu: "60 menit",
+    penanggung_jawab: "Manajer sertifikasi\nDitulis Pemilik berkas",
+  },
+  {
+    rencana:
+      "Dilakukan perbaikan pada FR.IA.06 untuk memenuhi dimensi CMS dan TRS",
+    target_waktu: "60 menit",
+    penanggung_jawab: "",
+  },
+  {
+    rencana:
+      "Dilakukan perbaikan pada MAPA 01 dengan memvalidasi perangkat tersebut",
+    target_waktu: "60 menit",
+    penanggung_jawab: "",
+  },
   {
     rencana: "",
-    penanggung_jawab: "",
     target_waktu: "",
+    penanggung_jawab: "",
   },
 ];
 
 const defaultForm = {
   periode: "sebelum_asesmen",
-  tujuan_fokus_validasi: [],
-  konteks_validasi: [],
-  pendekatan_validasi: [],
-  orang_relevan: ["asesor_kompetensi"],
+
+  tujuan_fokus_validasi: ["mengevaluasi_kualitas_perangkat_asesmen"],
+  konteks_validasi: ["dengan_kolega_asesor"],
+  pendekatan_validasi: ["mengkaji_perangkat_asesmen"],
+
+  manual_tujuan: "",
+  manual_konteks: "",
+  manual_pendekatan: "",
+  manual_acuan: "",
+  manual_dokumen: "",
+  manual_komunikasi: "",
+
   asesor_kompetensi: [],
-  hasil_konfirmasi: "",
-  acuan_pembanding: [],
-  dokumen_terkait: [],
-  keterampilan_komunikasi: [],
-  temuan_rekomendasi: createDefaultTemuan(),
-  rencana_implementasi: createDefaultRencana(),
-  detail_penilaian: createDefaultDetail(),
+  lead_asesor: "",
+  manajer_supervisor: "",
+  tenaga_ahli: "",
+  koord_pelatihan: "",
+  anggota_asosiasi: "",
+
+  hasil_konfirmasi:
+    "Disetujui oleh Ketua LSP\nMengevaluasi kualitas perangkat asesmen\nDengan kolega asesor\nMengkaji perangkat asesmen",
+
+  acuan_pembanding: ["standar_kompetensi", "sop_ik", "manual_instruction_book"],
+  dokumen_terkait: [
+    "skema_sertifikasi",
+    "skkni_sk3_ski",
+    "perangkat_asesmen",
+    "peraturan_pedoman",
+  ],
+  keterampilan_komunikasi: [
+    "pro_aktif",
+    "active_listening",
+    "komunikasi_lisan_tertulis_visual",
+  ],
+
+  detail_penilaian: defaultDetail,
+  temuan_rekomendasi: defaultTemuan,
+  rencana_implementasi: defaultRencana,
 };
 
-const IsiMKVA = () => {
+export default function IsiMKVA() {
   const params = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
   const token = localStorage.getItem("token");
-
   const routeId =
     params.id_jadwal || params.idJadwal || params.id_mkva || params.id;
 
@@ -252,8 +257,8 @@ const IsiMKVA = () => {
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const [jadwal, setJadwal] = useState(location.state?.item || null);
   const [profile, setProfile] = useState(null);
+  const [jadwal, setJadwal] = useState(location.state?.item || null);
   const [idMkva, setIdMkva] = useState(location.state?.item?.id_mkva || null);
   const [form, setForm] = useState(defaultForm);
 
@@ -266,48 +271,91 @@ const IsiMKVA = () => {
     [token]
   );
 
-  const currentJadwalId = useMemo(() => {
-    return (
-      jadwal?.id_jadwal ||
-      location.state?.item?.id_jadwal ||
-      (!params.id_mkva ? routeId : null)
-    );
-  }, [jadwal, location.state, params.id_mkva, routeId]);
+  const currentJadwalId =
+    jadwal?.id_jadwal || location.state?.item?.id_jadwal || routeId;
 
-  const namaAsesor = useMemo(() => {
-    return (
-      profile?.nama_lengkap ||
-      profile?.profileAsesor?.nama_lengkap ||
-      profile?.user?.username ||
-      profile?.username ||
-      "-"
-    );
-  }, [profile]);
+  const namaAsesor =
+    profile?.nama_lengkap ||
+    profile?.profileAsesor?.nama_lengkap ||
+    profile?.user?.username ||
+    profile?.username ||
+    "Bambang";
 
-  const getDataPayload = (res) => res?.data?.data || res?.data || null;
+  const namaSkema =
+    jadwal?.skema?.judul_skema ||
+    jadwal?.judul_skema ||
+    jadwal?.skema ||
+    "OPERATOR FORKLIFT";
+
+  const kodeSkema =
+  jadwal?.kode_skema ||
+  jadwal?.skema?.kode_skema ||
+  "-";
+
+  const tempat =
+    jadwal?.tempat ||
+    jadwal?.lokasi ||
+    jadwal?.tuk?.nama_tuk ||
+    jadwal?.nama_tuk ||
+    "LSP – A3 I";
+
+  const tanggal = jadwal?.tanggal || jadwal?.tgl_awal || "2021-04-06";
+
+  const getPayload = (res) => res?.data?.data ?? res?.data ?? null;
 
   const safeArray = (value) => {
     if (Array.isArray(value)) return value;
+    if (!value) return [];
 
-    if (typeof value === "string") {
-      try {
-        const parsed = JSON.parse(value);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return value ? value.split("\n").filter(Boolean) : [];
-      }
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
-
-    return [];
   };
 
-  const normalizeDetail = (details = []) => {
-    if (!Array.isArray(details) || details.length === 0) {
-      return createDefaultDetail();
+  const splitRows = (text) => {
+    if (!text) return [];
+    return String(text)
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
+  const extractManual = (arrayValue) => {
+    const arr = safeArray(arrayValue);
+    const found = arr.find((item) => String(item).startsWith(MANUAL_PREFIX));
+    return found ? String(found).replace(MANUAL_PREFIX, "") : "";
+  };
+
+  const cleanOptionArray = (arrayValue) => {
+    return safeArray(arrayValue).filter(
+      (item) => !String(item).startsWith(MANUAL_PREFIX)
+    );
+  };
+
+  const combineManual = (arrayValue, manualValue) => {
+    const clean = (Array.isArray(arrayValue) ? arrayValue : []).filter(
+      (item) => !String(item).startsWith(MANUAL_PREFIX)
+    );
+
+    const manual = String(manualValue || "").trim();
+
+    if (manual) {
+      return [...clean, `${MANUAL_PREFIX}${manual}`];
     }
 
-    return details.map((item) => ({
-      aspek: item.aspek || "",
+    return clean;
+  };
+
+  const normalizeDetail = (details) => {
+    if (!Array.isArray(details) || details.length === 0) {
+      return defaultDetail;
+    }
+
+    const mapped = details.map((item, index) => ({
+      aspek: item.aspek || defaultDetail[index]?.aspek || "",
       V: Boolean(item.V ?? item.bukti_valid),
       A: Boolean(item.A ?? item.bukti_authentic),
       T: Boolean(item.T ?? item.bukti_terkini),
@@ -317,61 +365,110 @@ const IsiMKVA = () => {
       F: Boolean(item.F ?? item.prinsip_fair),
       FL: Boolean(item.FL ?? item.prinsip_flexible),
     }));
+
+    if (mapped.length < defaultDetail.length) {
+      return [
+        ...mapped,
+        ...defaultDetail.slice(mapped.length),
+      ];
+    }
+
+    return mapped;
   };
 
-  const splitLines = (text) => {
-    if (!text) return [];
-    return String(text)
-      .split("\n")
-      .map((item) => item.trim())
-      .filter(Boolean);
-  };
+  const normalizeTemuan = (temuanText, rekomendasiText) => {
+    const temuan = splitRows(temuanText);
+    const rekomendasi = splitRows(rekomendasiText);
+    const length = Math.max(temuan.length, rekomendasi.length);
 
-  const buildTemuanRows = (temuanText, rekomendasiText) => {
-    const temuan = splitLines(temuanText);
-    const rekomendasi = splitLines(rekomendasiText);
-    const max = Math.max(temuan.length, rekomendasi.length);
+    if (length === 0) return defaultTemuan;
 
-    if (max === 0) return createDefaultTemuan();
-
-    return Array.from({ length: max }).map((_, index) => ({
+    const rows = Array.from({ length }).map((_, index) => ({
       temuan: temuan[index] || "",
       rekomendasi: rekomendasi[index] || "",
     }));
+
+    while (rows.length < 4) {
+      rows.push({ temuan: "", rekomendasi: "" });
+    }
+
+    return rows;
   };
 
-  const fillFormFromMkva = (mkva) => {
+  const fillForm = (mkva) => {
     if (!mkva) return;
 
-    setIdMkva(mkva.id_mkva || null);
+    setIdMkva(mkva.id_mkva);
 
     setForm((prev) => ({
       ...prev,
-      periode: mkva.periode || "sebelum_asesmen",
-      tujuan_fokus_validasi: safeArray(mkva.tujuan_fokus_validasi),
-      konteks_validasi: safeArray(mkva.konteks_validasi),
-      pendekatan_validasi: safeArray(mkva.pendekatan_validasi),
-      asesor_kompetensi: safeArray(mkva.asesor_kompetensi),
-      hasil_konfirmasi: mkva.hasil_konfirmasi || "",
-      acuan_pembanding: safeArray(mkva.acuan_pembanding),
-      dokumen_terkait: safeArray(mkva.dokumen_terkait),
-      keterampilan_komunikasi: safeArray(mkva.keterampilan_komunikasi),
-      temuan_rekomendasi: buildTemuanRows(
+
+      periode: mkva.periode || prev.periode,
+
+      tujuan_fokus_validasi:
+        cleanOptionArray(mkva.tujuan_fokus_validasi).length > 0
+          ? cleanOptionArray(mkva.tujuan_fokus_validasi)
+          : prev.tujuan_fokus_validasi,
+      konteks_validasi:
+        cleanOptionArray(mkva.konteks_validasi).length > 0
+          ? cleanOptionArray(mkva.konteks_validasi)
+          : prev.konteks_validasi,
+      pendekatan_validasi:
+        cleanOptionArray(mkva.pendekatan_validasi).length > 0
+          ? cleanOptionArray(mkva.pendekatan_validasi)
+          : prev.pendekatan_validasi,
+
+      manual_tujuan: extractManual(mkva.tujuan_fokus_validasi),
+      manual_konteks: extractManual(mkva.konteks_validasi),
+      manual_pendekatan: extractManual(mkva.pendekatan_validasi),
+      manual_acuan: extractManual(mkva.acuan_pembanding),
+      manual_dokumen: extractManual(mkva.dokumen_terkait),
+      manual_komunikasi: extractManual(mkva.keterampilan_komunikasi),
+
+      asesor_kompetensi:
+        safeArray(mkva.asesor_kompetensi).length > 0
+          ? safeArray(mkva.asesor_kompetensi)
+          : prev.asesor_kompetensi,
+
+      lead_asesor: mkva.lead_asesor || "",
+      manajer_supervisor: mkva.manajer_supervisor || "",
+      tenaga_ahli: mkva.tenaga_ahli || "",
+      koord_pelatihan: mkva.koord_pelatihan || "",
+      anggota_asosiasi: mkva.anggota_asosiasi || "",
+
+      hasil_konfirmasi: mkva.hasil_konfirmasi || prev.hasil_konfirmasi,
+
+      acuan_pembanding:
+        cleanOptionArray(mkva.acuan_pembanding).length > 0
+          ? cleanOptionArray(mkva.acuan_pembanding)
+          : prev.acuan_pembanding,
+      dokumen_terkait:
+        cleanOptionArray(mkva.dokumen_terkait).length > 0
+          ? cleanOptionArray(mkva.dokumen_terkait)
+          : prev.dokumen_terkait,
+      keterampilan_komunikasi:
+        cleanOptionArray(mkva.keterampilan_komunikasi).length > 0
+          ? cleanOptionArray(mkva.keterampilan_komunikasi)
+          : prev.keterampilan_komunikasi,
+
+      detail_penilaian: normalizeDetail(mkva.details || mkva.detail_penilaian),
+
+      temuan_rekomendasi: normalizeTemuan(
         mkva.temuan_validasi,
         mkva.rekomendasi
       ),
+
       rencana_implementasi:
         safeArray(mkva.rencana_implementasi).length > 0
           ? safeArray(mkva.rencana_implementasi)
-          : createDefaultRencana(),
-      detail_penilaian: normalizeDetail(mkva.details || mkva.detail_penilaian),
+          : prev.rencana_implementasi,
     }));
   };
 
   useEffect(() => {
     let cancelled = false;
 
-    const fetchData = async () => {
+    const loadData = async () => {
       if (!token) {
         navigate("/login", { replace: true });
         return;
@@ -387,39 +484,40 @@ const IsiMKVA = () => {
 
         if (cancelled) return;
 
-        const profileData = getDataPayload(profileRes);
-        const jadwalList = getDataPayload(jadwalRes) || [];
+        const profileData = getPayload(profileRes);
+        const jadwalList = getPayload(jadwalRes) || [];
 
         setProfile(profileData);
 
-        const fromList =
+        const foundJadwal =
           Array.isArray(jadwalList) &&
-          jadwalList.find((item) => {
-            return (
+          jadwalList.find(
+            (item) =>
               String(item.id_jadwal) === String(routeId) ||
               String(item.id_mkva) === String(routeId)
-            );
-          });
+          );
 
         const mergedJadwal = {
           ...(location.state?.item || {}),
-          ...(fromList || {}),
+          ...(foundJadwal || {}),
         };
 
         setJadwal(mergedJadwal);
 
-        const possibleIdMkva =
-          location.state?.item?.id_mkva || fromList?.id_mkva || params.id_mkva;
+        const possibleMkvaId =
+          location.state?.item?.id_mkva ||
+          foundJadwal?.id_mkva ||
+          params.id_mkva;
 
         let mkvaDetail = null;
 
-        if (possibleIdMkva) {
+        if (possibleMkvaId) {
           try {
             const detailRes = await axios.get(
-              `${API_BASE}/asesor/mkva/${possibleIdMkva}`,
+              `${API_BASE}/asesor/mkva/${possibleMkvaId}`,
               authHeader
             );
-            mkvaDetail = getDataPayload(detailRes);
+            mkvaDetail = getPayload(detailRes);
           } catch {
             mkvaDetail = null;
           }
@@ -431,68 +529,58 @@ const IsiMKVA = () => {
               `${API_BASE}/asesor/mkva/jadwal/${mergedJadwal.id_jadwal}`,
               authHeader
             );
-            mkvaDetail = getDataPayload(byJadwalRes);
+            mkvaDetail = getPayload(byJadwalRes);
           } catch {
             mkvaDetail = null;
           }
         }
 
-        if (cancelled) return;
-
         if (mkvaDetail?.id_mkva) {
-          fillFormFromMkva(mkvaDetail);
+          fillForm(mkvaDetail);
         } else {
-          const defaultAsesor =
+          const asesorName =
             profileData?.nama_lengkap ||
             profileData?.profileAsesor?.nama_lengkap ||
             profileData?.user?.username ||
-            "";
+            "Bambang";
 
           setForm((prev) => ({
             ...prev,
             asesor_kompetensi:
               prev.asesor_kompetensi.length > 0
                 ? prev.asesor_kompetensi
-                : [defaultAsesor].filter(Boolean),
-            hasil_konfirmasi:
-              prev.hasil_konfirmasi ||
-              "Disetujui oleh Ketua LSP\nMengevaluasi kualitas perangkat asesmen\nDengan kolega asesor\nMengkaji perangkat asesmen",
+                : [asesorName],
           }));
         }
       } catch (err) {
-        console.error("Gagal memuat data MKVA:", err);
-
-        if (err.response?.status === 401) {
-          alert("Session habis, silakan login kembali");
-          localStorage.clear();
-          navigate("/login", { replace: true });
-          return;
-        }
-
+        console.error(err);
         alert(err.response?.data?.message || "Gagal memuat data MKVA");
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
-    fetchData();
+    loadData();
 
     return () => {
       cancelled = true;
     };
   }, [token, routeId]);
 
-  const formatDate = (date) => {
-    if (!date) return "-";
+  const formatTanggal = (value) => {
+    if (!value) return "-";
 
-    return new Date(date).toLocaleDateString("id-ID", {
-      day: "2-digit",
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
       month: "long",
       year: "numeric",
     });
   };
 
-  const toggleArrayValue = (field, value) => {
+  const toggleArray = (field, value) => {
     setForm((prev) => {
       const current = Array.isArray(prev[field]) ? prev[field] : [];
 
@@ -505,14 +593,14 @@ const IsiMKVA = () => {
     });
   };
 
-  const handleTextChange = (field, value) => {
+  const updateField = (field, value) => {
     setForm((prev) => ({
       ...prev,
       [field]: value,
     }));
   };
 
-  const handleDetailChange = (index, field) => {
+  const updateDetailCheck = (index, field) => {
     setForm((prev) => ({
       ...prev,
       detail_penilaian: prev.detail_penilaian.map((item, itemIndex) =>
@@ -526,7 +614,7 @@ const IsiMKVA = () => {
     }));
   };
 
-  const handleAspekChange = (index, value) => {
+  const updateDetailAspek = (index, value) => {
     setForm((prev) => ({
       ...prev,
       detail_penilaian: prev.detail_penilaian.map((item, itemIndex) =>
@@ -540,36 +628,7 @@ const IsiMKVA = () => {
     }));
   };
 
-  const addDetailRow = () => {
-    setForm((prev) => ({
-      ...prev,
-      detail_penilaian: [
-        ...prev.detail_penilaian,
-        {
-          aspek: "",
-          V: false,
-          A: false,
-          T: false,
-          M: false,
-          Vp: false,
-          R: false,
-          F: false,
-          FL: false,
-        },
-      ],
-    }));
-  };
-
-  const removeDetailRow = (index) => {
-    setForm((prev) => ({
-      ...prev,
-      detail_penilaian: prev.detail_penilaian.filter(
-        (_, itemIndex) => itemIndex !== index
-      ),
-    }));
-  };
-
-  const handleTemuanChange = (index, field, value) => {
+  const updateTemuan = (index, field, value) => {
     setForm((prev) => ({
       ...prev,
       temuan_rekomendasi: prev.temuan_rekomendasi.map((item, itemIndex) =>
@@ -583,29 +642,7 @@ const IsiMKVA = () => {
     }));
   };
 
-  const addTemuan = () => {
-    setForm((prev) => ({
-      ...prev,
-      temuan_rekomendasi: [
-        ...prev.temuan_rekomendasi,
-        {
-          temuan: "",
-          rekomendasi: "",
-        },
-      ],
-    }));
-  };
-
-  const removeTemuan = (index) => {
-    setForm((prev) => ({
-      ...prev,
-      temuan_rekomendasi: prev.temuan_rekomendasi.filter(
-        (_, itemIndex) => itemIndex !== index
-      ),
-    }));
-  };
-
-  const handleRencanaChange = (index, field, value) => {
+  const updateRencana = (index, field, value) => {
     setForm((prev) => ({
       ...prev,
       rencana_implementasi: prev.rencana_implementasi.map((item, itemIndex) =>
@@ -619,100 +656,62 @@ const IsiMKVA = () => {
     }));
   };
 
-  const addRencana = () => {
-    setForm((prev) => ({
-      ...prev,
-      rencana_implementasi: [
-        ...prev.rencana_implementasi,
-        {
-          rencana: "",
-          penanggung_jawab: "",
-          target_waktu: "",
-        },
-      ],
-    }));
-  };
+  const buildPayload = () => ({
+    periode: form.periode,
 
-  const removeRencana = (index) => {
-    setForm((prev) => ({
-      ...prev,
-      rencana_implementasi: prev.rencana_implementasi.filter(
-        (_, itemIndex) => itemIndex !== index
-      ),
-    }));
-  };
+    tujuan_fokus_validasi: combineManual(
+      form.tujuan_fokus_validasi,
+      form.manual_tujuan
+    ),
+    konteks_validasi: combineManual(
+      form.konteks_validasi,
+      form.manual_konteks
+    ),
+    pendekatan_validasi: combineManual(
+      form.pendekatan_validasi,
+      form.manual_pendekatan
+    ),
 
-  const buildPayload = () => {
-    const temuanValidasi = form.temuan_rekomendasi
+    asesor_kompetensi:
+  form.asesor_kompetensi.filter((item) => String(item || "").trim()).length > 0
+    ? form.asesor_kompetensi.filter((item) => String(item || "").trim())
+    : [namaAsesor],
+    lead_asesor: form.lead_asesor,
+    manajer_supervisor: form.manajer_supervisor,
+    tenaga_ahli: form.tenaga_ahli,
+    koord_pelatihan: form.koord_pelatihan,
+    anggota_asosiasi: form.anggota_asosiasi,
+
+    hasil_konfirmasi: form.hasil_konfirmasi,
+
+    acuan_pembanding: combineManual(form.acuan_pembanding, form.manual_acuan),
+    dokumen_terkait: combineManual(form.dokumen_terkait, form.manual_dokumen),
+    keterampilan_komunikasi: combineManual(
+      form.keterampilan_komunikasi,
+      form.manual_komunikasi
+    ),
+
+    detail_penilaian: form.detail_penilaian,
+
+    temuan_validasi: form.temuan_rekomendasi
       .map((item) => item.temuan?.trim())
       .filter(Boolean)
-      .join("\n");
-
-    const rekomendasi = form.temuan_rekomendasi
+      .join("\n"),
+    rekomendasi: form.temuan_rekomendasi
       .map((item) => item.rekomendasi?.trim())
       .filter(Boolean)
-      .join("\n");
+      .join("\n"),
 
-    return {
-      periode: form.periode,
-      tujuan_fokus_validasi: form.tujuan_fokus_validasi,
-      konteks_validasi: form.konteks_validasi,
-      pendekatan_validasi: form.pendekatan_validasi,
-      asesor_kompetensi:
-        form.asesor_kompetensi.length > 0
-          ? form.asesor_kompetensi
-          : [namaAsesor].filter((item) => item && item !== "-"),
-      hasil_konfirmasi: form.hasil_konfirmasi,
-      acuan_pembanding: form.acuan_pembanding,
-      dokumen_terkait: form.dokumen_terkait,
-      keterampilan_komunikasi: form.keterampilan_komunikasi,
-      temuan_validasi: temuanValidasi,
-      rekomendasi,
-      rencana_implementasi: form.rencana_implementasi.filter((item) => {
-        return item.rencana || item.penanggung_jawab || item.target_waktu;
-      }),
-      detail_penilaian: form.detail_penilaian.filter((item) => item.aspek),
-    };
-  };
+    rencana_implementasi: form.rencana_implementasi.filter(
+      (item) => item.rencana || item.target_waktu || item.penanggung_jawab
+    ),
+  });
 
-  const validateForm = () => {
-    if (!form.periode) {
-      alert("Periode wajib dipilih");
-      return false;
-    }
-
-    if (form.tujuan_fokus_validasi.length === 0) {
-      alert("Pilih minimal 1 tujuan dan fokus validasi");
-      return false;
-    }
-
-    if (form.konteks_validasi.length === 0) {
-      alert("Pilih minimal 1 konteks validasi");
-      return false;
-    }
-
-    if (form.pendekatan_validasi.length === 0) {
-      alert("Pilih minimal 1 pendekatan validasi");
-      return false;
-    }
-
-    if (!form.hasil_konfirmasi.trim()) {
-      alert("Hasil konfirmasi/diskusi wajib diisi");
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSave = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
-
-    const idJadwal = currentJadwalId || routeId;
-
-    if (!idJadwal && !idMkva) {
-      alert("ID jadwal / ID MKVA tidak ditemukan");
+    if (!form.periode) {
+      alert("Periode wajib dipilih");
       return;
     }
 
@@ -730,7 +729,7 @@ const IsiMKVA = () => {
         alert("MKVA berhasil diperbarui");
       } else {
         await axios.post(
-          `${API_BASE}/asesor/mkva/${idJadwal}/submit`,
+          `${API_BASE}/asesor/mkva/${currentJadwalId}/submit`,
           payload,
           authHeader
         );
@@ -739,7 +738,7 @@ const IsiMKVA = () => {
 
       window.location.reload();
     } catch (err) {
-      console.error("Gagal menyimpan MKVA:", err);
+      console.error(err);
       alert(err.response?.data?.message || "Gagal menyimpan MKVA");
     } finally {
       setSaving(false);
@@ -748,7 +747,7 @@ const IsiMKVA = () => {
 
   const handleDownloadPdf = async () => {
     if (!idMkva) {
-      alert("PDF belum bisa diunduh karena MKVA belum disimpan");
+      alert("Simpan MKVA dulu sebelum download PDF");
       return;
     }
 
@@ -775,729 +774,709 @@ const IsiMKVA = () => {
 
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("Gagal download PDF:", err);
-      alert(err.response?.data?.message || "Gagal download PDF MKVA");
+      console.error(err);
+      alert("Gagal download PDF MKVA");
     } finally {
       setDownloading(false);
     }
   };
 
-  const displaySkema = jadwal?.skema?.judul_skema || jadwal?.skema || "-";
-
-  const displayNomorSkema =
-    jadwal?.skema?.kode_skema ||
-    jadwal?.kode_skema ||
-    jadwal?.nomor_skema ||
-    jadwal?.skema?.nomor_skema ||
-    "-";
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
-        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center">
-          <Loader2
-            size={44}
-            className="animate-spin text-orange-500 mx-auto mb-5"
-          />
-          <h2 className="text-xl font-black text-[#071E3D]">
-            Memuat Form MKVA
-          </h2>
-          <p className="text-slate-400 font-bold text-sm mt-1">
-            Mohon tunggu sebentar...
-          </p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="font-bold text-gray-700">Memuat form MKVA...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 lg:p-8">
-      <main className="max-w-7xl mx-auto">
-        <section className="bg-white rounded-[34px] border border-slate-100 shadow-sm p-6 lg:p-8 mb-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-white py-8 overflow-x-auto">
+      <form
+        onSubmit={handleSubmit}
+        className="w-[820px] mx-auto text-[14px] text-black"
+      >
+        <div className="flex justify-between mb-4 print:hidden">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-gray-200 rounded font-bold"
+          >
+            Kembali
+          </button>
 
-          <div className="relative z-10 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div>
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="mb-5 inline-flex items-center gap-2 text-slate-400 hover:text-orange-500 font-black text-xs uppercase tracking-widest transition-colors"
-              >
-                <ArrowLeft size={17} />
-                Kembali
-              </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              disabled={!idMkva || downloading}
+              className="px-4 py-2 bg-blue-700 text-white rounded font-bold disabled:opacity-50"
+            >
+              {downloading ? "Mengunduh..." : "Download PDF"}
+            </button>
 
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 mb-4">
-                <FileCheck size={15} className="text-orange-500" />
-                <span className="text-orange-500 text-[10px] font-black uppercase tracking-widest">
-                  FR.VA
-                </span>
-              </div>
-
-              <h1 className="text-3xl lg:text-4xl font-black text-[#071E3D] leading-tight">
-                Memberikan Kontribusi dalam Validasi Asesmen
-              </h1>
-
-              <p className="text-slate-500 mt-3 max-w-3xl font-medium leading-relaxed">
-                Data tim validasi, tanggal, tempat, nama skema, dan nomor skema
-                diambil otomatis dari jadwal. Kamu tinggal mengisi periode dan
-                bagian validasinya.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full xl:w-auto xl:min-w-[420px]">
-              <HeaderStat
-                label="Status"
-                value={idMkva ? "Sudah MKVA" : "Belum MKVA"}
-                icon={<ShieldCheck size={20} />}
-                active={Boolean(idMkva)}
-              />
-
-              <HeaderStat
-                label="ID Jadwal"
-                value={currentJadwalId || routeId || "-"}
-                icon={<Hash size={20} />}
-              />
-            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-red-700 text-white rounded font-bold disabled:opacity-50"
+            >
+              {saving ? "Menyimpan..." : idMkva ? "Update MKVA" : "Simpan MKVA"}
+            </button>
           </div>
-        </section>
+        </div>
 
-        <form onSubmit={handleSave} className="space-y-6">
-          <section className="bg-white rounded-[34px] border border-slate-100 shadow-sm overflow-hidden">
-            <SectionHeader
-              icon={<ClipboardList size={22} />}
-              title="Data Utama"
-              subtitle="Terisi otomatis dari jadwal"
-            />
+        <h1 className="font-bold mb-3">
+          FR.VA. MEMBERIKAN KONTRIBUSI DALAM VALIDASI ASESMEN
+        </h1>
 
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <InfoBox label="Tim Validasi">
-                  <div className="flex items-center gap-2">
-                    <UserCheck size={17} className="text-orange-500" />
-                    <span>{namaAsesor}</span>
-                  </div>
-                </InfoBox>
+        <table className="w-full border-collapse border-2 border-black">
+          <tbody>
+            <tr>
+              <td rowSpan="2" className="border border-black px-2 py-1 w-[150px]">
+                Tim Validasi
+              </td>
 
-                <InfoBox label="Hari / Tanggal">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={17} className="text-orange-500" />
-                    <span>{formatDate(jadwal?.tanggal || jadwal?.tgl_awal)}</span>
-                  </div>
-                </InfoBox>
+              <td className="border border-black px-2 py-1 red">
+                1. {namaAsesor}
+              </td>
 
-                <InfoBox label="Tempat">
-                  <div className="flex items-center gap-2">
-                    <MapPin size={17} className="text-orange-500" />
-                    <span>
-                      {jadwal?.tempat ||
-                        jadwal?.lokasi ||
-                        jadwal?.tuk?.nama_tuk ||
-                        jadwal?.nama_tuk ||
-                        "-"}
-                    </span>
-                  </div>
-                </InfoBox>
+              <td className="border border-black px-2 py-1 w-[110px]">
+                Hari/Tanggal
+              </td>
 
-                <InfoBox label="Total Asesi">
-                  <div className="flex items-center gap-2">
-                    <Users size={17} className="text-orange-500" />
-                    <span>{jadwal?.total_asesi ?? "-"} Asesi</span>
-                  </div>
-                </InfoBox>
+              <td className="border border-black px-2 py-1 red">
+                : {formatTanggal(tanggal)}
+              </td>
+            </tr>
 
-                <InfoBox label="Nama Skema">
-                  <div className="flex items-center gap-2">
-                    <Award size={17} className="text-orange-500" />
-                    <span>{displaySkema}</span>
-                  </div>
-                </InfoBox>
+            <tr>
+              <td className="border border-black px-2 py-1 red"></td>
+              <td className="border border-black px-2 py-1">Tempat</td>
+              <td className="border border-black px-2 py-1 red">: {tempat}</td>
+            </tr>
 
-                <InfoBox label="Nomor Skema">
-                  <div className="flex items-center gap-2">
-                    <Hash size={17} className="text-orange-500" />
-                    <span>{displayNomorSkema}</span>
-                  </div>
-                </InfoBox>
-              </div>
+            <tr>
+              <td className="border border-black px-2 py-1">Periode</td>
 
-              <div className="rounded-[24px] bg-slate-50 border border-slate-100 p-5">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                  Periode <span className="text-red-500">*</span>
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <RadioBox
-                    label="Sebelum Asesmen"
-                    checked={form.periode === "sebelum_asesmen"}
-                    onChange={() =>
-                      handleTextChange("periode", "sebelum_asesmen")
-                    }
-                  />
-                  <RadioBox
-                    label="Pada Saat Asesmen"
-                    checked={form.periode === "pada_saat_asesmen"}
-                    onChange={() =>
-                      handleTextChange("periode", "pada_saat_asesmen")
-                    }
-                  />
-                  <RadioBox
-                    label="Setelah Asesmen"
-                    checked={form.periode === "setelah_asesmen"}
-                    onChange={() =>
-                      handleTextChange("periode", "setelah_asesmen")
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-white rounded-[34px] border border-slate-100 shadow-sm overflow-hidden">
-            <SectionHeader
-              icon={<ClipboardCheck size={22} />}
-              title="1. Menyiapkan Proses Validasi"
-              subtitle="Tujuan, konteks, pendekatan, dan orang yang relevan"
-            />
-
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                <CheckboxPanel
-                  title="Tujuan dan Fokus Validasi"
-                  options={TUJUAN_OPTIONS}
-                  values={form.tujuan_fokus_validasi}
-                  onToggle={(value) =>
-                    toggleArrayValue("tujuan_fokus_validasi", value)
-                  }
+              <td colSpan="3" className="border border-black px-2 py-1">
+                <Radio
+                  checked={form.periode === "sebelum_asesmen"}
+                  onChange={() => updateField("periode", "sebelum_asesmen")}
+                  label="Sebelum Asessmen"
                 />
 
-                <CheckboxPanel
-                  title="Konteks Validasi"
-                  options={KONTEKS_OPTIONS}
-                  values={form.konteks_validasi}
-                  onToggle={(value) =>
-                    toggleArrayValue("konteks_validasi", value)
-                  }
+                <Radio
+                  checked={form.periode === "pada_saat_asesmen"}
+                  onChange={() => updateField("periode", "pada_saat_asesmen")}
+                  label="Pada saat Asesmen"
                 />
 
-                <CheckboxPanel
-                  title="Pendekatan Validasi"
-                  options={PENDEKATAN_OPTIONS}
-                  values={form.pendekatan_validasi}
-                  onToggle={(value) =>
-                    toggleArrayValue("pendekatan_validasi", value)
-                  }
+                <Radio
+                  checked={form.periode === "setelah_asesmen"}
+                  onChange={() => updateField("periode", "setelah_asesmen")}
+                  label="Setelah Asessmen"
                 />
-              </div>
+              </td>
+            </tr>
 
-              <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
-                <CheckboxPanel
-                  title="Orang yang Relevan"
-                  options={ORANG_RELEVAN_OPTIONS}
-                  values={form.orang_relevan}
-                  onToggle={(value) => toggleArrayValue("orang_relevan", value)}
-                />
+            <tr>
+              <td className="border border-black px-2 py-1">Nama Skema</td>
+              <td colSpan="3" className="border border-black px-2 py-1 red">
+                : {namaSkema}
+              </td>
+            </tr>
 
-                <div className="rounded-[24px] bg-slate-50 border border-slate-100 p-5">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                    Hasil Konfirmasi / Diskusi Tujuan, Fokus & Konteks
-                  </p>
+            <tr>
+              <td className="border border-black px-2 py-1">Kode Skema</td>
+              <td colSpan="3" className="border border-black px-2 py-1 red">
+                : {kodeSkema}
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-                  <textarea
-                    value={form.hasil_konfirmasi}
-                    onChange={(e) =>
-                      handleTextChange("hasil_konfirmasi", e.target.value)
-                    }
-                    rows={9}
-                    placeholder="Contoh: Disetujui oleh Ketua LSP, Mengevaluasi kualitas perangkat asesmen, Dengan kolega asesor, Mengkaji perangkat asesmen..."
-                    className="w-full px-5 py-4 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 text-[#071E3D] font-semibold leading-relaxed resize-none"
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
+        <SectionTitle number="1" title="Menyiapkan proses validasi" />
 
-          <section className="bg-white rounded-[34px] border border-slate-100 shadow-sm overflow-hidden">
-            <SectionHeader
-              icon={<FileCheck size={22} />}
-              title="2. Mengkaji Acuan dan Dokumen"
-              subtitle="Acuan pembanding, dokumen terkait, dan komunikasi"
-            />
+        <table className="w-full border-collapse border-2 border-black">
+          <thead>
+            <tr>
+              <th className="border border-black px-2 py-2 text-left w-1/3">
+                Tujuan dan fokus validasi
+              </th>
+              <th className="border border-black px-2 py-2 text-left w-1/3">
+                Konteks validasi
+              </th>
+              <th className="border border-black px-2 py-2 text-left w-1/3">
+                Pendekatan validasi
+              </th>
+            </tr>
+          </thead>
 
-            <div className="p-6 grid grid-cols-1 xl:grid-cols-3 gap-4">
-              <CheckboxPanel
-                title="Acuan Pembanding"
-                options={ACUAN_OPTIONS}
-                values={form.acuan_pembanding}
-                onToggle={(value) =>
-                  toggleArrayValue("acuan_pembanding", value)
-                }
-              />
-
-              <CheckboxPanel
-                title="Dokumen Terkait dan Bahan-bahan"
-                options={DOKUMEN_OPTIONS}
-                values={form.dokumen_terkait}
-                onToggle={(value) => toggleArrayValue("dokumen_terkait", value)}
-              />
-
-              <CheckboxPanel
-                title="Keterampilan Komunikasi"
-                options={KOMUNIKASI_OPTIONS}
-                values={form.keterampilan_komunikasi}
-                onToggle={(value) =>
-                  toggleArrayValue("keterampilan_komunikasi", value)
-                }
-              />
-            </div>
-          </section>
-
-          <section className="bg-white rounded-[34px] border border-slate-100 shadow-sm overflow-hidden">
-            <SectionHeader
-              icon={<CheckCircle size={22} />}
-              title="3. Detail Penilaian Validasi"
-              subtitle="Aturan bukti dan prinsip asesmen"
-            />
-
-            <div className="p-6 overflow-x-auto">
-              <table className="w-full min-w-[940px] border border-slate-200 rounded-2xl overflow-hidden">
-                <thead>
-                  <tr className="bg-slate-50">
-                    <th
-                      rowSpan="2"
-                      className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500 w-[60px]"
-                    >
-                      No.
-                    </th>
-                    <th
-                      rowSpan="2"
-                      className="border border-slate-200 px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-slate-500"
-                    >
-                      Aspek-Aspek Dalam Kegiatan Validasi
-                    </th>
-                    <th
-                      colSpan="4"
-                      className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500"
-                    >
-                      Aturan Bukti
-                    </th>
-                    <th
-                      colSpan="4"
-                      className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500"
-                    >
-                      Prinsip Asesmen
-                    </th>
-                    <th
-                      rowSpan="2"
-                      className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500"
-                    >
-                      Aksi
-                    </th>
-                  </tr>
-
-                  <tr className="bg-slate-50">
-                    {["V", "A", "T", "M", "V", "R", "F", "F"].map(
-                      (label, index) => (
-                        <th
-                          key={`${label}-${index}`}
-                          className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500"
-                        >
-                          {label}
-                        </th>
-                      )
-                    )}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {form.detail_penilaian.map((item, index) => (
-                    <tr key={index} className="bg-white">
-                      <td className="border border-slate-200 px-3 py-3 text-center font-black text-[#071E3D]">
-                        {index + 1}.
-                      </td>
-
-                      <td className="border border-slate-200 px-3 py-3">
-                        <input
-                          type="text"
-                          value={item.aspek}
-                          onChange={(e) =>
-                            handleAspekChange(index, e.target.value)
-                          }
-                          placeholder="Nama aspek"
-                          className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-bold"
-                        />
-                      </td>
-
-                      {["V", "A", "T", "M", "Vp", "R", "F", "FL"].map(
-                        (field) => (
-                          <td
-                            key={field}
-                            className="border border-slate-200 px-3 py-3 text-center"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={Boolean(item[field])}
-                              onChange={() => handleDetailChange(index, field)}
-                              className="w-5 h-5 accent-orange-500"
-                            />
-                          </td>
+          <tbody>
+            {Array.from({ length: 7 }).map((_, index) => (
+              <tr key={index}>
+                <td className="border border-black px-2 py-2 align-top">
+                  {tujuanOptions[index] && (
+                    <Check
+                      checked={
+                        tujuanOptions[index][0] === "manual_tujuan"
+                          ? Boolean(form.manual_tujuan)
+                          : form.tujuan_fokus_validasi.includes(
+                              tujuanOptions[index][0]
+                            )
+                      }
+                      onChange={() => {
+                        if (tujuanOptions[index][0] !== "manual_tujuan") {
+                          toggleArray("tujuan_fokus_validasi", tujuanOptions[index][0]);
+                        }
+                      }}
+                      label={
+                        tujuanOptions[index][0] === "manual_tujuan" ? (
+                          <ManualInput
+                            value={form.manual_tujuan}
+                            onChange={(value) => updateField("manual_tujuan", value)}
+                            placeholder="...................................."
+                          />
+                        ) : (
+                          tujuanOptions[index][1]
                         )
-                      )}
+                      }
+                      bold={[
+                        "memenuhi_persyaratan_bnsp",
+                        "mengevaluasi_kualitas_perangkat_asesmen",
+                      ].includes(tujuanOptions[index][0])}
+                    />
+                  )}
+                </td>
 
-                      <td className="border border-slate-200 px-3 py-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => removeDetailRow(index)}
-                          className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all inline-flex items-center justify-center disabled:opacity-40"
-                          disabled={form.detail_penilaian.length === 1}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                <td className="border border-black px-2 py-2 align-top">
+                  {konteksOptions[index] && (
+                    <Check
+                      checked={
+                        konteksOptions[index][0] === "manual_konteks"
+                          ? Boolean(form.manual_konteks)
+                          : form.konteks_validasi.includes(konteksOptions[index][0])
+                      }
+                      onChange={() => {
+                        if (konteksOptions[index][0] !== "manual_konteks") {
+                          toggleArray("konteks_validasi", konteksOptions[index][0]);
+                        }
+                      }}
+                      label={
+                        konteksOptions[index][0] === "manual_konteks" ? (
+                          <ManualInput
+                            value={form.manual_konteks}
+                            onChange={(value) => updateField("manual_konteks", value)}
+                            placeholder="...................................."
+                          />
+                        ) : (
+                          konteksOptions[index][1]
+                        )
+                      }
+                      bold={[
+                        "internal_organisasi",
+                        "proses_lisensi_relisensi",
+                      ].includes(konteksOptions[index][0])}
+                    />
+                  )}
+                </td>
 
-              <button
-                type="button"
-                onClick={addDetailRow}
-                className="mt-4 px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-[#071E3D] font-black text-xs uppercase tracking-widest flex items-center gap-2"
+                <td className="border border-black px-2 py-2 align-top">
+                  {pendekatanOptions[index] && (
+                    <Check
+                      checked={
+                        pendekatanOptions[index][0] === "manual_pendekatan"
+                          ? Boolean(form.manual_pendekatan)
+                          : form.pendekatan_validasi.includes(
+                              pendekatanOptions[index][0]
+                            )
+                      }
+                      onChange={() => {
+                        if (pendekatanOptions[index][0] !== "manual_pendekatan") {
+                          toggleArray("pendekatan_validasi", pendekatanOptions[index][0]);
+                        }
+                      }}
+                      label={
+                        pendekatanOptions[index][0] === "manual_pendekatan" ? (
+                          <ManualInput
+                            value={form.manual_pendekatan}
+                            onChange={(value) =>
+                              updateField("manual_pendekatan", value)
+                            }
+                            placeholder="...................................."
+                          />
+                        ) : (
+                          pendekatanOptions[index][1]
+                        )
+                      }
+                      bold={[
+                        "mengkaji_perangkat_asesmen",
+                        "pengujian_lapangan_uji_coba_perangkat_asesmen",
+                      ].includes(pendekatanOptions[index][0])}
+                    />
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <table className="w-full border-collapse border-2 border-black border-t-0">
+          <tbody>
+            <tr>
+              <th className="border border-black px-2 py-2 w-[190px]">
+                Orang yang relevan
+              </th>
+              <th className="border border-black px-2 py-2 w-[200px] text-left">
+                Nama
+              </th>
+              <th className="border border-black px-2 py-2 text-left">
+                Hasil konfirmasi/diskusi tujuan, fokus & konteks
+              </th>
+            </tr>
+
+            <tr>
+              <td className="border border-black px-2 py-2 align-top">
+                <Check
+                  checked={true}
+                  readOnly
+                  label="Asesor kompetensi (wajib)"
+                  bold
+                />
+              </td>
+
+              <td className="border border-black px-2 py-2 align-top">
+                <input
+                  value={form.asesor_kompetensi[0] || namaAsesor}
+                  onChange={(e) => updateField("asesor_kompetensi", [e.target.value])}
+                  className="w-full red outline-none bg-transparent"
+                />
+              </td>
+
+              <td rowSpan="6" className="border border-black px-2 py-2 align-top">
+                <textarea
+                  value={form.hasil_konfirmasi}
+                  onChange={(e) => updateField("hasil_konfirmasi", e.target.value)}
+                  className="w-full h-[175px] red italic outline-none resize-none bg-transparent"
+                />
+              </td>
+            </tr>
+
+            {[
+              ["lead_asesor", "Lead Asesor"],
+              ["manajer_supervisor", "Manager, supervisor"],
+              ["tenaga_ahli", "Tenaga ahli di bidangnya"],
+              ["koord_pelatihan", "Koord. Pelatihan"],
+              ["anggota_asosiasi", "Anggota asosiasi industry/profesi"],
+            ].map(([field, label]) => (
+              <tr key={field}>
+                <td className="border border-black px-2 py-2">
+                  <Check checked={Boolean(form[field])} readOnly label={label} />
+                </td>
+
+                <td className="border border-black px-2 py-2">
+                  <input
+                    value={form[field]}
+                    onChange={(e) => updateField(field, e.target.value)}
+                    className="w-full red outline-none bg-transparent"
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <table className="w-full border-collapse border-2 border-black mt-10">
+          <tbody>
+            <tr>
+              <th className="border border-black px-2 py-2 text-left w-1/2">
+                Acuan Pembanding :
+              </th>
+
+              <th className="border border-black px-2 py-2 text-left w-1/2">
+                Dokumen terkait dan bahan-bahan :
+              </th>
+            </tr>
+
+            {Array.from({ length: 5 }).map((_, index) => (
+              <tr key={index}>
+                <td className="border border-black px-2 py-2">
+                  {acuanOptions[index] && (
+                    <Check
+                      checked={
+                        acuanOptions[index][0] === "manual_acuan"
+                          ? Boolean(form.manual_acuan)
+                          : form.acuan_pembanding.includes(acuanOptions[index][0])
+                      }
+                      onChange={() => {
+                        if (acuanOptions[index][0] !== "manual_acuan") {
+                          toggleArray("acuan_pembanding", acuanOptions[index][0]);
+                        }
+                      }}
+                      label={
+                        acuanOptions[index][0] === "manual_acuan" ? (
+                          <ManualInput
+                            value={form.manual_acuan}
+                            onChange={(value) => updateField("manual_acuan", value)}
+                            placeholder="................................"
+                          />
+                        ) : (
+                          acuanOptions[index][1]
+                        )
+                      }
+                      bold={index < 3}
+                    />
+                  )}
+                </td>
+
+                <td className="border border-black px-2 py-2">
+                  {dokumenOptions[index] && (
+                    <Check
+                      checked={
+                        dokumenOptions[index][0] === "manual_dokumen"
+                          ? Boolean(form.manual_dokumen)
+                          : form.dokumen_terkait.includes(dokumenOptions[index][0])
+                      }
+                      onChange={() => {
+                        if (dokumenOptions[index][0] !== "manual_dokumen") {
+                          toggleArray("dokumen_terkait", dokumenOptions[index][0]);
+                        }
+                      }}
+                      label={
+                        dokumenOptions[index][0] === "manual_dokumen" ? (
+                          <ManualInput
+                            value={form.manual_dokumen}
+                            onChange={(value) => updateField("manual_dokumen", value)}
+                            placeholder="................................"
+                          />
+                        ) : (
+                          dokumenOptions[index][1]
+                        )
+                      }
+                      bold={index < 4}
+                    />
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <SectionTitle number="2" title="Memberikan kontribusi dalam proses validasi" />
+
+        <table className="w-full border-collapse border-2 border-black">
+          <tbody>
+            <tr>
+              <td
+                rowSpan="4"
+                className="border border-black px-2 py-2 w-[380px] align-top"
               >
-                <Plus size={16} />
-                Tambah Aspek
-              </button>
+                Keterampilan komunikasi yang <br />
+                digunakan dalam kegiatan validasi :
+              </td>
 
-              <p className="mt-4 text-sm text-slate-400 font-semibold">
-                Keterangan aturan bukti: V = Valid, A = Authentic, T = Terkini,
-                M = Memadai. Prinsip asesmen: V = Valid, R = Reliable, F = Fair,
-                F = Flexible.
-              </p>
-            </div>
-          </section>
+              <td className="border border-black px-2 py-2">
+                <Check
+                  checked={form.keterampilan_komunikasi.includes("pro_aktif")}
+                  onChange={() => toggleArray("keterampilan_komunikasi", "pro_aktif")}
+                  label="PRO AKTIF"
+                />
+              </td>
+            </tr>
 
-          <section className="bg-white rounded-[34px] border border-slate-100 shadow-sm overflow-hidden">
-            <SectionHeader
-              icon={<Info size={22} />}
-              title="4. Temuan, Rekomendasi, dan Rencana Implementasi"
-              subtitle="Hasil akhir validasi"
-            />
+            {komunikasiOptions.slice(1).map(([value, label]) => (
+              <tr key={value}>
+                <td className="border border-black px-2 py-2">
+                  <Check
+                    checked={
+                      value === "manual_komunikasi"
+                        ? Boolean(form.manual_komunikasi)
+                        : form.keterampilan_komunikasi.includes(value)
+                    }
+                    onChange={() => {
+                      if (value !== "manual_komunikasi") {
+                        toggleArray("keterampilan_komunikasi", value);
+                      }
+                    }}
+                    label={
+                      value === "manual_komunikasi" ? (
+                        <ManualInput
+                          value={form.manual_komunikasi}
+                          onChange={(val) => updateField("manual_komunikasi", val)}
+                          placeholder=""
+                        />
+                      ) : (
+                        label
+                      )
+                    }
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-            <div className="p-6 space-y-6">
-              <div className="rounded-[24px] bg-slate-50 border border-slate-100 p-5">
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Temuan dan Rekomendasi
-                    </p>
-                    <p className="text-sm text-slate-500 font-semibold mt-1">
-                      Isi temuan validasi dan rekomendasi perbaikan sesuai
-                      contoh dokumen.
-                    </p>
+        <table className="w-full border-collapse border-2 border-black mt-10">
+          <thead>
+            <tr>
+              <th rowSpan="3" className="border border-black px-2 py-2 w-[40px]">
+                No.
+              </th>
+
+              <th rowSpan="3" className="border border-black px-2 py-2 w-[360px]">
+                Aspek-Aspek Dalam Kegiatan Validasi
+                <div className="font-normal mt-1">
+                  (Meninjau, Membandingkan, Mengevaluasi)
+                </div>
+              </th>
+
+              <th colSpan="8" className="border border-black px-2 py-2">
+                Pemenuhan Terhadap :
+              </th>
+            </tr>
+
+            <tr>
+              <th colSpan="4" className="border border-black px-2 py-1">
+                Aturan Bukti
+              </th>
+              <th colSpan="4" className="border border-black px-2 py-1">
+                Prinsip Asesmen
+              </th>
+            </tr>
+
+            <tr>
+              {["V", "A", "T", "M", "V", "R", "F", "F"].map((head, index) => (
+                <th key={index} className="border border-black px-2 py-1 w-[35px]">
+                  {head}
+                </th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody>
+            {form.detail_penilaian.map((item, index) => (
+              <tr key={index}>
+                <td className="border border-black text-center py-2">
+                  {index + 1}.
+                </td>
+
+                <td className="border border-black px-2 py-2">
+                  <input
+                    value={item.aspek}
+                    onChange={(e) => updateDetailAspek(index, e.target.value)}
+                    className="w-full text-black outline-none bg-transparent"
+                  />
+                </td>
+
+                {["V", "A", "T", "M", "Vp", "R", "F", "FL"].map((field) => (
+                  <td key={field} className="border border-black text-center">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(item[field])}
+                      onChange={() => updateDetailCheck(index, field)}
+                      className="w-4 h-4 accent-red-600"
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <SectionTitle number="3" title="Memberikan kontribusi untuk hasil asesmen" />
+
+        <table className="w-full border-collapse border-2 border-black">
+          <tbody>
+            <tr>
+              <td className="border border-black px-2 py-2 w-[360px]">
+                Temuan-temuan validasi :
+              </td>
+
+              <td className="border border-black px-2 py-2">
+                Rekomendasi-rekomendasi untuk <br />
+                meningkatkan praktek asesmen
+              </td>
+            </tr>
+
+            {form.temuan_rekomendasi.map((item, index) => (
+              <tr key={index}>
+                <td className="border border-black px-2 py-2 align-top">
+                  <div className="flex gap-2">
+                    <span>{index + 1}.</span>
+
+                    <textarea
+                      value={item.temuan}
+                      onChange={(e) => updateTemuan(index, "temuan", e.target.value)}
+                      className="w-full min-h-[90px] red font-bold outline-none resize-none bg-transparent"
+                    />
                   </div>
+                </td>
 
-                  <button
-                    type="button"
-                    onClick={addTemuan}
-                    className="px-4 py-3 rounded-2xl bg-[#071E3D] hover:bg-orange-500 text-white font-black text-xs uppercase tracking-widest flex items-center gap-2"
-                  >
-                    <Plus size={15} />
-                    Tambah
-                  </button>
-                </div>
+                <td className="border border-black px-2 py-2 align-top">
+                  <textarea
+                    value={item.rekomendasi}
+                    onChange={(e) =>
+                      updateTemuan(index, "rekomendasi", e.target.value)
+                    }
+                    className="w-full min-h-[90px] red font-bold outline-none resize-none bg-transparent"
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-                <div className="space-y-3">
-                  {form.temuan_rekomendasi.map((item, index) => (
-                    <div
-                      key={index}
-                      className="grid grid-cols-1 lg:grid-cols-[52px_1fr_1fr_48px] gap-3 items-start"
-                    >
-                      <div className="h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-[#071E3D] font-black">
-                        {index + 1}.
-                      </div>
+        <table className="w-full border-collapse border-2 border-black border-t-0">
+          <tbody>
+            <tr>
+              <td colSpan="4" className="border border-black px-2 py-3 font-bold">
+                Rencana Implementasi perubahan/perbaikan pelaksanaan asesmen :
+              </td>
+            </tr>
 
-                      <textarea
-                        value={item.temuan}
-                        onChange={(e) =>
-                          handleTemuanChange(index, "temuan", e.target.value)
-                        }
-                        rows={4}
-                        placeholder="Temuan-temuan validasi"
-                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold resize-none leading-relaxed"
-                      />
+            <tr>
+              <th className="border border-black px-2 py-2 w-[50px]">No.</th>
 
-                      <textarea
-                        value={item.rekomendasi}
-                        onChange={(e) =>
-                          handleTemuanChange(
-                            index,
-                            "rekomendasi",
-                            e.target.value
-                          )
-                        }
-                        rows={4}
-                        placeholder="Rekomendasi untuk meningkatkan praktek asesmen"
-                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold resize-none leading-relaxed"
-                      />
+              <th className="border border-black px-2 py-2">
+                Kegiatan Perbaikan sesuai <br />
+                Rekomendasi
+              </th>
 
-                      <button
-                        type="button"
-                        onClick={() => removeTemuan(index)}
-                        className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-40"
-                        disabled={form.temuan_rekomendasi.length === 1}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <th className="border border-black px-2 py-2 w-[150px]">
+                Waktu <br />
+                Penyelesaian
+              </th>
 
-              <div className="rounded-[24px] bg-slate-50 border border-slate-100 p-5">
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Rencana Implementasi Perubahan / Perbaikan Pelaksanaan
-                      Asesmen
-                    </p>
-                    <p className="text-sm text-slate-500 font-semibold mt-1">
-                      Isi kegiatan perbaikan, waktu penyelesaian, dan
-                      penanggung jawab.
-                    </p>
-                  </div>
+              <th className="border border-black px-2 py-2 w-[180px]">
+                Penanggungjawab
+              </th>
+            </tr>
 
-                  <button
-                    type="button"
-                    onClick={addRencana}
-                    className="px-4 py-3 rounded-2xl bg-[#071E3D] hover:bg-orange-500 text-white font-black text-xs uppercase tracking-widest flex items-center gap-2"
-                  >
-                    <Plus size={15} />
-                    Tambah
-                  </button>
-                </div>
+            {form.rencana_implementasi.map((item, index) => (
+              <tr key={index}>
+                <td className="border border-black px-2 py-2 align-top">
+                  {index + 1}.
+                </td>
 
-                <div className="space-y-3">
-                  {form.rencana_implementasi.map((item, index) => (
-                    <div
-                      key={index}
-                      className="grid grid-cols-1 lg:grid-cols-[52px_1fr_220px_260px_48px] gap-3"
-                    >
-                      <div className="h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-[#071E3D] font-black">
-                        {index + 1}.
-                      </div>
+                <td className="border border-black px-2 py-2 align-top">
+                  <textarea
+                    value={item.rencana}
+                    onChange={(e) => updateRencana(index, "rencana", e.target.value)}
+                    className="w-full min-h-[70px] red font-bold outline-none resize-none bg-transparent"
+                  />
+                </td>
 
-                      <textarea
-                        value={item.rencana}
-                        onChange={(e) =>
-                          handleRencanaChange(index, "rencana", e.target.value)
-                        }
-                        rows={3}
-                        placeholder="Kegiatan perbaikan sesuai rekomendasi"
-                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold resize-none"
-                      />
+                <td className="border border-black px-2 py-2 align-top">
+                  <input
+                    value={item.target_waktu}
+                    onChange={(e) =>
+                      updateRencana(index, "target_waktu", e.target.value)
+                    }
+                    className="w-full red outline-none bg-transparent"
+                  />
+                </td>
 
-                      <input
-                        type="text"
-                        value={item.target_waktu}
-                        onChange={(e) =>
-                          handleRencanaChange(
-                            index,
-                            "target_waktu",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Waktu penyelesaian, contoh: 60 menit"
-                        className="h-12 px-4 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold"
-                      />
+                <td className="border border-black px-2 py-2 align-top">
+                  <textarea
+                    value={item.penanggung_jawab}
+                    onChange={(e) =>
+                      updateRencana(index, "penanggung_jawab", e.target.value)
+                    }
+                    className="w-full min-h-[70px] red outline-none resize-none bg-transparent"
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-                      <textarea
-                        value={item.penanggung_jawab}
-                        onChange={(e) =>
-                          handleRencanaChange(
-                            index,
-                            "penanggung_jawab",
-                            e.target.value
-                          )
-                        }
-                        rows={3}
-                        placeholder="Penanggung jawab"
-                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold resize-none"
-                      />
+        <style>{`
+          .red {
+            color: #c1272d;
+          }
 
-                      <button
-                        type="button"
-                        onClick={() => removeRencana(index)}
-                        className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-40"
-                        disabled={form.rencana_implementasi.length === 1}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
+          textarea,
+          input {
+            background: transparent;
+          }
 
-          <section className="sticky bottom-4 bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/80 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 z-20">
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Aksi Dokumen
-              </p>
-              <h3 className="text-xl font-black text-[#071E3D] mt-1">
-                {idMkva ? "Update Data MKVA" : "Simpan Data MKVA"}
-              </h3>
-            </div>
+          textarea:focus,
+          input:focus {
+            outline: none;
+          }
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={downloading || !idMkva}
-                className="px-6 py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-[#071E3D] disabled:opacity-50 disabled:cursor-not-allowed font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-              >
-                {downloading ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <Download size={18} />
-                )}
-                Download PDF
-              </button>
+          th {
+            font-weight: 700;
+          }
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-6 py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white disabled:opacity-60 disabled:cursor-not-allowed font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-              >
-                {saving ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <Save size={18} />
-                )}
-                {saving
-                  ? "Menyimpan..."
-                  : idMkva
-                  ? "Update MKVA"
-                  : "Simpan MKVA"}
-              </button>
-            </div>
-          </section>
-        </form>
-      </main>
+          @media print {
+            body {
+              background: white;
+            }
+          }
+        `}</style>
+      </form>
     </div>
   );
-};
+}
 
-const SectionHeader = ({ icon, title, subtitle }) => {
+function SectionTitle({ number, title }) {
   return (
-    <div className="p-6 border-b border-slate-100 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
-        {icon}
-      </div>
+    <table className="w-full border-collapse border-2 border-black mt-6">
+      <tbody>
+        <tr className="bg-[#f4b183]">
+          <td className="border border-black px-2 py-2 w-[35px] font-bold text-center">
+            {number}
+          </td>
 
-      <div>
-        <h2 className="text-xl font-black text-[#071E3D]">{title}</h2>
-        <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-          {subtitle}
-        </p>
-      </div>
-    </div>
+          <td className="border border-black px-2 py-2 font-bold">
+            {title}
+          </td>
+        </tr>
+      </tbody>
+    </table>
   );
-};
+}
 
-const InfoBox = ({ label, children }) => {
+function Check({ checked, onChange, label, bold = false, readOnly = false }) {
   return (
-    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-        {label}
-      </p>
-      <div className="text-[#071E3D] font-black text-sm leading-relaxed">
-        {children}
-      </div>
-    </div>
-  );
-};
-
-const HeaderStat = ({ label, value, icon, active = false }) => {
-  return (
-    <div
-      className={`rounded-[24px] border p-4 ${
-        active
-          ? "bg-orange-50 border-orange-100 text-orange-500"
-          : "bg-white border-slate-100 text-[#071E3D]"
-      }`}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            {label}
-          </p>
-          <h3 className="text-lg font-black mt-1">{value}</h3>
-        </div>
-
-        <div className="w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0">
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const RadioBox = ({ label, checked, onChange }) => {
-  return (
-    <label
-      className={`rounded-2xl border px-4 py-4 cursor-pointer transition-all flex items-center gap-3 ${
-        checked
-          ? "bg-orange-50 border-orange-200 text-orange-600"
-          : "bg-white border-slate-100 text-[#071E3D] hover:border-orange-200"
-      }`}
-    >
+    <label className="inline-flex items-start gap-2 leading-snug w-full">
       <input
-        type="radio"
-        checked={checked}
-        onChange={onChange}
-        className="w-5 h-5 accent-orange-500"
+        type="checkbox"
+        checked={Boolean(checked)}
+        onChange={readOnly ? undefined : onChange}
+        readOnly={readOnly}
+        className="w-4 h-4 accent-red-600 mt-[2px] shrink-0"
       />
-      <span className="text-sm font-black">{label}</span>
+
+      <span className={`${bold ? "font-bold" : ""} w-full`}>
+        {label}
+      </span>
     </label>
   );
-};
+}
 
-const CheckboxPanel = ({ title, options, values, onToggle }) => {
+function Radio({ checked, onChange, label }) {
   return (
-    <div className="rounded-[24px] bg-slate-50 border border-slate-100 p-5 h-full">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-        {title}
-      </p>
+    <label className="inline-flex items-center gap-2 mr-5">
+      <input
+        type="radio"
+        checked={Boolean(checked)}
+        onChange={onChange}
+        className="w-4 h-4 accent-red-600"
+      />
 
-      <div className="space-y-3">
-        {options.map((option) => {
-          const checked = values.includes(option.value);
-
-          return (
-            <label
-              key={option.value}
-              className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
-                checked
-                  ? "bg-orange-50 border-orange-200"
-                  : "bg-white border-slate-100 hover:border-orange-200"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => onToggle(option.value)}
-                className="w-5 h-5 accent-orange-500 mt-0.5 shrink-0"
-              />
-              <span className="text-sm font-bold text-[#071E3D] leading-relaxed">
-                {option.label}
-              </span>
-            </label>
-          );
-        })}
-      </div>
-    </div>
+      <span>{label}</span>
+    </label>
   );
-};
+}
 
-export default IsiMKVA;
+function ManualInput({ value, onChange, placeholder }) {
+  return (
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full red outline-none bg-transparent"
+    />
+  );
+}
