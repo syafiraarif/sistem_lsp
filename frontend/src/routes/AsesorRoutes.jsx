@@ -16,7 +16,7 @@ import PesertaJadwalAsesor from "../pages/Asesor/PesertaJadwalAsesor";
 export default function AsesorRoutes() {
   return (
     <Routes>
-      <Route index element={<Navigate to="dashboard" replace />} />
+      <Route index element={<Navigate to="/asesor/dashboard" replace />} />
 
       <Route path="dashboard" element={<DashboardAsesor />} />
       <Route path="profile" element={<ProfileAsesor />} />
@@ -31,11 +31,19 @@ export default function AsesorRoutes() {
       <Route path="komite-teknis" element={<JadwalKomiteTeknis />} />
 
       <Route path="mkva" element={<JadwalMkva />} />
+
+      {/* Route untuk tombol Isi MKVA */}
       <Route path="mkva/:id_jadwal/isi" element={<IsiMKVA />} />
+
+      {/* Route cadangan kalau tombol sekarang mengarah ke /asesor/mkva/jadwal/:id_jadwal */}
+      <Route path="mkva/jadwal/:id_jadwal" element={<IsiMKVA />} />
+
+      {/* Route cadangan kalau ada URL /asesor/mkva/jadwal/:id_jadwal/isi */}
+      <Route path="mkva/jadwal/:id_jadwal/isi" element={<IsiMKVA />} />
 
       <Route path="ubah-password" element={<UbahSandiAsesor />} />
 
-      <Route path="*" element={<Navigate to="dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/asesor/dashboard" replace />} />
     </Routes>
   );
 }

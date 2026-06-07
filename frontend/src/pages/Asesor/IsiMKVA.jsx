@@ -1,6 +1,6 @@
-// frontend/src/pages/asesor/IsiMKVA.jsx
+// frontend/src/pages/Asesor/IsiMKVA.jsx
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
@@ -136,63 +136,62 @@ const ACUAN_OPTIONS = [
     label: "Standar kompetensi",
   },
   {
-    value: "skema_sertifikasi",
-    label: "Skema sertifikasi",
+    value: "sop_ik",
+    label: "SOP/IK",
   },
   {
-    value: "sop_asesmen",
-    label: "SOP asesmen",
+    value: "manual_instruction_book",
+    label: "Manual Instruction/book",
   },
   {
-    value: "persyaratan_bnsp",
-    label: "Persyaratan BNSP",
+    value: "standar_kinerja",
+    label: "Standar Kinerja",
   },
 ];
 
 const DOKUMEN_OPTIONS = [
   {
+    value: "skema_sertifikasi",
+    label: "Skema sertifikasi",
+  },
+  {
+    value: "skkni_sk3_ski",
+    label: "SKKNI/SK3/SKI",
+  },
+  {
     value: "perangkat_asesmen",
     label: "Perangkat asesmen",
   },
   {
-    value: "rekaman_hasil_asesmen",
-    label: "Rekaman hasil asesmen",
-  },
-  {
-    value: "laporan_asesmen",
-    label: "Laporan asesmen",
-  },
-  {
-    value: "umpan_balik_asesi",
-    label: "Umpan balik asesi",
+    value: "peraturan_pedoman",
+    label: "Peraturan/Pedoman",
   },
 ];
 
 const KOMUNIKASI_OPTIONS = [
   {
-    value: "komunikasi_lisan",
-    label: "Komunikasi lisan",
+    value: "pro_aktif",
+    label: "PRO AKTIF",
   },
   {
-    value: "komunikasi_tertulis",
-    label: "Komunikasi tertulis",
+    value: "active_listening",
+    label: "ACTIVE LISTENING",
   },
   {
-    value: "diskusi_validasi",
-    label: "Diskusi validasi",
-  },
-  {
-    value: "klarifikasi_dengan_pihak_terkait",
-    label: "Klarifikasi dengan pihak terkait",
+    value: "komunikasi_lisan_tertulis_visual",
+    label: "Komunikasi lisan, tertulis dan Visual",
   },
 ];
 
 const DEFAULT_ASPEK = [
-  "Perencanaan asesmen",
-  "Perangkat asesmen",
-  "Pelaksanaan asesmen",
-  "Pengambilan keputusan asesmen",
-  "Rekaman dan pelaporan asesmen",
+  "Proses asesmen",
+  "Rencana asesmen",
+  "Interpretasi standar kompetensi",
+  "Interpretasi acuan pembanding lainnya",
+  "Penyeleksian dan penerapan metode asesmen",
+  "Penyeleksian dan penerapan perangkat asesmen",
+  "Bukti-bukti yang dikumpulkan",
+  "Proses pengambilan keputusan",
 ];
 
 const createDefaultDetail = () =>
@@ -208,6 +207,21 @@ const createDefaultDetail = () =>
     FL: false,
   }));
 
+const createDefaultTemuan = () => [
+  {
+    temuan: "",
+    rekomendasi: "",
+  },
+];
+
+const createDefaultRencana = () => [
+  {
+    rencana: "",
+    penanggung_jawab: "",
+    target_waktu: "",
+  },
+];
+
 const defaultForm = {
   periode: "sebelum_asesmen",
   tujuan_fokus_validasi: [],
@@ -219,15 +233,8 @@ const defaultForm = {
   acuan_pembanding: [],
   dokumen_terkait: [],
   keterampilan_komunikasi: [],
-  temuan_validasi: "",
-  rekomendasi: "",
-  rencana_implementasi: [
-    {
-      rencana: "",
-      penanggung_jawab: "",
-      target_waktu: "",
-    },
-  ],
+  temuan_rekomendasi: createDefaultTemuan(),
+  rencana_implementasi: createDefaultRencana(),
   detail_penilaian: createDefaultDetail(),
 };
 
@@ -237,6 +244,7 @@ const IsiMKVA = () => {
   const location = useLocation();
 
   const token = localStorage.getItem("token");
+
   const routeId =
     params.id_jadwal || params.idJadwal || params.id_mkva || params.id;
 
@@ -286,7 +294,7 @@ const IsiMKVA = () => {
         const parsed = JSON.parse(value);
         return Array.isArray(parsed) ? parsed : [];
       } catch {
-        return value ? [value] : [];
+        return value ? value.split("\n").filter(Boolean) : [];
       }
     }
 
@@ -311,6 +319,27 @@ const IsiMKVA = () => {
     }));
   };
 
+  const splitLines = (text) => {
+    if (!text) return [];
+    return String(text)
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
+  const buildTemuanRows = (temuanText, rekomendasiText) => {
+    const temuan = splitLines(temuanText);
+    const rekomendasi = splitLines(rekomendasiText);
+    const max = Math.max(temuan.length, rekomendasi.length);
+
+    if (max === 0) return createDefaultTemuan();
+
+    return Array.from({ length: max }).map((_, index) => ({
+      temuan: temuan[index] || "",
+      rekomendasi: rekomendasi[index] || "",
+    }));
+  };
+
   const fillFormFromMkva = (mkva) => {
     if (!mkva) return;
 
@@ -327,144 +356,131 @@ const IsiMKVA = () => {
       acuan_pembanding: safeArray(mkva.acuan_pembanding),
       dokumen_terkait: safeArray(mkva.dokumen_terkait),
       keterampilan_komunikasi: safeArray(mkva.keterampilan_komunikasi),
-      temuan_validasi: mkva.temuan_validasi || "",
-      rekomendasi: mkva.rekomendasi || "",
+      temuan_rekomendasi: buildTemuanRows(
+        mkva.temuan_validasi,
+        mkva.rekomendasi
+      ),
       rencana_implementasi:
         safeArray(mkva.rencana_implementasi).length > 0
           ? safeArray(mkva.rencana_implementasi)
-          : prev.rencana_implementasi,
+          : createDefaultRencana(),
       detail_penilaian: normalizeDetail(mkva.details || mkva.detail_penilaian),
     }));
   };
 
-  const fetchExistingMkvaByJadwal = useCallback(
-    async (idJadwal) => {
-      if (!idJadwal) return null;
+  useEffect(() => {
+    let cancelled = false;
 
-      const tryUrls = [
-        `${API_BASE}/asesor/mkva/jadwal/${idJadwal}`,
-        `${API_BASE}/asesor/mkva-by-jadwal/${idJadwal}`,
-      ];
-
-      for (const url of tryUrls) {
-        try {
-          const res = await axios.get(url, authHeader);
-          return getDataPayload(res);
-        } catch {
-          // endpoint ini optional, lanjut coba URL berikutnya
-        }
-      }
-
-      return null;
-    },
-    [authHeader]
-  );
-
-  const fetchDetailByIdMkva = useCallback(
-    async (mkvaId) => {
-      if (!mkvaId) return null;
-
-      try {
-        const res = await axios.get(`${API_BASE}/asesor/mkva/${mkvaId}`, authHeader);
-        return getDataPayload(res);
-      } catch {
-        return null;
-      }
-    },
-    [authHeader]
-  );
-
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      const [profileRes, jadwalRes] = await Promise.all([
-        axios.get(`${API_BASE}/asesor/profile`, authHeader).catch(() => null),
-        axios.get(`${API_BASE}/asesor/mkva/jadwal`, authHeader),
-      ]);
-
-      const profileData = getDataPayload(profileRes);
-      const jadwalList = getDataPayload(jadwalRes) || [];
-
-      setProfile(profileData);
-
-      const fromList =
-        Array.isArray(jadwalList) &&
-        jadwalList.find((item) => {
-          return (
-            String(item.id_jadwal) === String(routeId) ||
-            String(item.id_mkva) === String(routeId)
-          );
-        });
-
-      const mergedJadwal = {
-        ...(location.state?.item || {}),
-        ...(fromList || {}),
-      };
-
-      setJadwal(mergedJadwal);
-
-      const possibleIdMkva =
-        location.state?.item?.id_mkva || fromList?.id_mkva || params.id_mkva;
-
-      let mkvaDetail = null;
-
-      if (possibleIdMkva) {
-        mkvaDetail = await fetchDetailByIdMkva(possibleIdMkva);
-      }
-
-      if (!mkvaDetail && mergedJadwal?.id_jadwal) {
-        mkvaDetail = await fetchExistingMkvaByJadwal(mergedJadwal.id_jadwal);
-      }
-
-      if (mkvaDetail?.id_mkva) {
-        fillFormFromMkva(mkvaDetail);
-      } else {
-        setForm((prev) => ({
-          ...prev,
-          asesor_kompetensi:
-            prev.asesor_kompetensi.length > 0
-              ? prev.asesor_kompetensi
-              : [profileData?.nama_lengkap || profileData?.user?.username || ""].filter(
-                  Boolean
-                ),
-          hasil_konfirmasi:
-            prev.hasil_konfirmasi ||
-            "Disetujui oleh Ketua LSP\nMengevaluasi kualitas perangkat asesmen\nDengan kolega asesor\nMengkaji perangkat asesmen",
-        }));
-      }
-    } catch (err) {
-      console.error("Gagal memuat data MKVA:", err);
-
-      if (err.response?.status === 401) {
-        alert("Session habis, silakan login kembali");
-        localStorage.clear();
-        navigate("/login");
+    const fetchData = async () => {
+      if (!token) {
+        navigate("/login", { replace: true });
         return;
       }
 
-      alert(err.response?.data?.message || "Gagal memuat data MKVA");
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    authHeader,
-    routeId,
-    location.state,
-    params.id_mkva,
-    navigate,
-    fetchDetailByIdMkva,
-    fetchExistingMkvaByJadwal,
-  ]);
+      try {
+        setLoading(true);
 
-  useEffect(() => {
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+        const [profileRes, jadwalRes] = await Promise.all([
+          axios.get(`${API_BASE}/asesor/profile`, authHeader).catch(() => null),
+          axios.get(`${API_BASE}/asesor/mkva/jadwal`, authHeader),
+        ]);
+
+        if (cancelled) return;
+
+        const profileData = getDataPayload(profileRes);
+        const jadwalList = getDataPayload(jadwalRes) || [];
+
+        setProfile(profileData);
+
+        const fromList =
+          Array.isArray(jadwalList) &&
+          jadwalList.find((item) => {
+            return (
+              String(item.id_jadwal) === String(routeId) ||
+              String(item.id_mkva) === String(routeId)
+            );
+          });
+
+        const mergedJadwal = {
+          ...(location.state?.item || {}),
+          ...(fromList || {}),
+        };
+
+        setJadwal(mergedJadwal);
+
+        const possibleIdMkva =
+          location.state?.item?.id_mkva || fromList?.id_mkva || params.id_mkva;
+
+        let mkvaDetail = null;
+
+        if (possibleIdMkva) {
+          try {
+            const detailRes = await axios.get(
+              `${API_BASE}/asesor/mkva/${possibleIdMkva}`,
+              authHeader
+            );
+            mkvaDetail = getDataPayload(detailRes);
+          } catch {
+            mkvaDetail = null;
+          }
+        }
+
+        if (!mkvaDetail && mergedJadwal?.id_jadwal) {
+          try {
+            const byJadwalRes = await axios.get(
+              `${API_BASE}/asesor/mkva/jadwal/${mergedJadwal.id_jadwal}`,
+              authHeader
+            );
+            mkvaDetail = getDataPayload(byJadwalRes);
+          } catch {
+            mkvaDetail = null;
+          }
+        }
+
+        if (cancelled) return;
+
+        if (mkvaDetail?.id_mkva) {
+          fillFormFromMkva(mkvaDetail);
+        } else {
+          const defaultAsesor =
+            profileData?.nama_lengkap ||
+            profileData?.profileAsesor?.nama_lengkap ||
+            profileData?.user?.username ||
+            "";
+
+          setForm((prev) => ({
+            ...prev,
+            asesor_kompetensi:
+              prev.asesor_kompetensi.length > 0
+                ? prev.asesor_kompetensi
+                : [defaultAsesor].filter(Boolean),
+            hasil_konfirmasi:
+              prev.hasil_konfirmasi ||
+              "Disetujui oleh Ketua LSP\nMengevaluasi kualitas perangkat asesmen\nDengan kolega asesor\nMengkaji perangkat asesmen",
+          }));
+        }
+      } catch (err) {
+        console.error("Gagal memuat data MKVA:", err);
+
+        if (err.response?.status === 401) {
+          alert("Session habis, silakan login kembali");
+          localStorage.clear();
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        alert(err.response?.data?.message || "Gagal memuat data MKVA");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
 
     fetchData();
-  }, [token, navigate, fetchData]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, routeId]);
 
   const formatDate = (date) => {
     if (!date) return "-";
@@ -547,9 +563,45 @@ const IsiMKVA = () => {
   const removeDetailRow = (index) => {
     setForm((prev) => ({
       ...prev,
-      detail_penilaian: prev.detail_penilaian.filter((_, itemIndex) => {
-        return itemIndex !== index;
-      }),
+      detail_penilaian: prev.detail_penilaian.filter(
+        (_, itemIndex) => itemIndex !== index
+      ),
+    }));
+  };
+
+  const handleTemuanChange = (index, field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      temuan_rekomendasi: prev.temuan_rekomendasi.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]: value,
+            }
+          : item
+      ),
+    }));
+  };
+
+  const addTemuan = () => {
+    setForm((prev) => ({
+      ...prev,
+      temuan_rekomendasi: [
+        ...prev.temuan_rekomendasi,
+        {
+          temuan: "",
+          rekomendasi: "",
+        },
+      ],
+    }));
+  };
+
+  const removeTemuan = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      temuan_rekomendasi: prev.temuan_rekomendasi.filter(
+        (_, itemIndex) => itemIndex !== index
+      ),
     }));
   };
 
@@ -591,6 +643,16 @@ const IsiMKVA = () => {
   };
 
   const buildPayload = () => {
+    const temuanValidasi = form.temuan_rekomendasi
+      .map((item) => item.temuan?.trim())
+      .filter(Boolean)
+      .join("\n");
+
+    const rekomendasi = form.temuan_rekomendasi
+      .map((item) => item.rekomendasi?.trim())
+      .filter(Boolean)
+      .join("\n");
+
     return {
       periode: form.periode,
       tujuan_fokus_validasi: form.tujuan_fokus_validasi,
@@ -604,8 +666,8 @@ const IsiMKVA = () => {
       acuan_pembanding: form.acuan_pembanding,
       dokumen_terkait: form.dokumen_terkait,
       keterampilan_komunikasi: form.keterampilan_komunikasi,
-      temuan_validasi: form.temuan_validasi,
-      rekomendasi: form.rekomendasi,
+      temuan_validasi: temuanValidasi,
+      rekomendasi,
       rencana_implementasi: form.rencana_implementasi.filter((item) => {
         return item.rencana || item.penanggung_jawab || item.target_waktu;
       }),
@@ -660,7 +722,11 @@ const IsiMKVA = () => {
       const payload = buildPayload();
 
       if (idMkva) {
-        await axios.put(`${API_BASE}/asesor/mkva/${idMkva}/update`, payload, authHeader);
+        await axios.put(
+          `${API_BASE}/asesor/mkva/${idMkva}/update`,
+          payload,
+          authHeader
+        );
         alert("MKVA berhasil diperbarui");
       } else {
         await axios.post(
@@ -671,7 +737,7 @@ const IsiMKVA = () => {
         alert("MKVA berhasil disimpan");
       }
 
-      await fetchData();
+      window.location.reload();
     } catch (err) {
       console.error("Gagal menyimpan MKVA:", err);
       alert(err.response?.data?.message || "Gagal menyimpan MKVA");
@@ -717,6 +783,7 @@ const IsiMKVA = () => {
   };
 
   const displaySkema = jadwal?.skema?.judul_skema || jadwal?.skema || "-";
+
   const displayNomorSkema =
     jadwal?.skema?.kode_skema ||
     jadwal?.kode_skema ||
@@ -863,7 +930,9 @@ const IsiMKVA = () => {
                   <RadioBox
                     label="Sebelum Asesmen"
                     checked={form.periode === "sebelum_asesmen"}
-                    onChange={() => handleTextChange("periode", "sebelum_asesmen")}
+                    onChange={() =>
+                      handleTextChange("periode", "sebelum_asesmen")
+                    }
                   />
                   <RadioBox
                     label="Pada Saat Asesmen"
@@ -875,7 +944,9 @@ const IsiMKVA = () => {
                   <RadioBox
                     label="Setelah Asesmen"
                     checked={form.periode === "setelah_asesmen"}
-                    onChange={() => handleTextChange("periode", "setelah_asesmen")}
+                    onChange={() =>
+                      handleTextChange("periode", "setelah_asesmen")
+                    }
                   />
                 </div>
               </div>
@@ -904,7 +975,9 @@ const IsiMKVA = () => {
                   title="Konteks Validasi"
                   options={KONTEKS_OPTIONS}
                   values={form.konteks_validasi}
-                  onToggle={(value) => toggleArrayValue("konteks_validasi", value)}
+                  onToggle={(value) =>
+                    toggleArrayValue("konteks_validasi", value)
+                  }
                 />
 
                 <CheckboxPanel
@@ -956,11 +1029,13 @@ const IsiMKVA = () => {
                 title="Acuan Pembanding"
                 options={ACUAN_OPTIONS}
                 values={form.acuan_pembanding}
-                onToggle={(value) => toggleArrayValue("acuan_pembanding", value)}
+                onToggle={(value) =>
+                  toggleArrayValue("acuan_pembanding", value)
+                }
               />
 
               <CheckboxPanel
-                title="Dokumen Terkait"
+                title="Dokumen Terkait dan Bahan-bahan"
                 options={DOKUMEN_OPTIONS}
                 values={form.dokumen_terkait}
                 onToggle={(value) => toggleArrayValue("dokumen_terkait", value)}
@@ -985,74 +1060,95 @@ const IsiMKVA = () => {
             />
 
             <div className="p-6 overflow-x-auto">
-              <table className="w-full min-w-[900px] border border-slate-200 rounded-2xl overflow-hidden">
+              <table className="w-full min-w-[940px] border border-slate-200 rounded-2xl overflow-hidden">
                 <thead>
                   <tr className="bg-slate-50">
-                    <th className="border border-slate-200 px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-slate-500">
-                      Aspek
+                    <th
+                      rowSpan="2"
+                      className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500 w-[60px]"
+                    >
+                      No.
                     </th>
-                    <th className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500">
-                      V
+                    <th
+                      rowSpan="2"
+                      className="border border-slate-200 px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-slate-500"
+                    >
+                      Aspek-Aspek Dalam Kegiatan Validasi
                     </th>
-                    <th className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500">
-                      A
+                    <th
+                      colSpan="4"
+                      className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500"
+                    >
+                      Aturan Bukti
                     </th>
-                    <th className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500">
-                      T
+                    <th
+                      colSpan="4"
+                      className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500"
+                    >
+                      Prinsip Asesmen
                     </th>
-                    <th className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500">
-                      M
-                    </th>
-                    <th className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500">
-                      Valid
-                    </th>
-                    <th className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500">
-                      Reliable
-                    </th>
-                    <th className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500">
-                      Fair
-                    </th>
-                    <th className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500">
-                      Flexible
-                    </th>
-                    <th className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500">
+                    <th
+                      rowSpan="2"
+                      className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500"
+                    >
                       Aksi
                     </th>
+                  </tr>
+
+                  <tr className="bg-slate-50">
+                    {["V", "A", "T", "M", "V", "R", "F", "F"].map(
+                      (label, index) => (
+                        <th
+                          key={`${label}-${index}`}
+                          className="border border-slate-200 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-slate-500"
+                        >
+                          {label}
+                        </th>
+                      )
+                    )}
                   </tr>
                 </thead>
 
                 <tbody>
                   {form.detail_penilaian.map((item, index) => (
                     <tr key={index} className="bg-white">
+                      <td className="border border-slate-200 px-3 py-3 text-center font-black text-[#071E3D]">
+                        {index + 1}.
+                      </td>
+
                       <td className="border border-slate-200 px-3 py-3">
                         <input
                           type="text"
                           value={item.aspek}
-                          onChange={(e) => handleAspekChange(index, e.target.value)}
+                          onChange={(e) =>
+                            handleAspekChange(index, e.target.value)
+                          }
                           placeholder="Nama aspek"
                           className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-bold"
                         />
                       </td>
 
-                      {["V", "A", "T", "M", "Vp", "R", "F", "FL"].map((field) => (
-                        <td
-                          key={field}
-                          className="border border-slate-200 px-3 py-3 text-center"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={Boolean(item[field])}
-                            onChange={() => handleDetailChange(index, field)}
-                            className="w-5 h-5 accent-orange-500"
-                          />
-                        </td>
-                      ))}
+                      {["V", "A", "T", "M", "Vp", "R", "F", "FL"].map(
+                        (field) => (
+                          <td
+                            key={field}
+                            className="border border-slate-200 px-3 py-3 text-center"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={Boolean(item[field])}
+                              onChange={() => handleDetailChange(index, field)}
+                              className="w-5 h-5 accent-orange-500"
+                            />
+                          </td>
+                        )
+                      )}
 
                       <td className="border border-slate-200 px-3 py-3 text-center">
                         <button
                           type="button"
                           onClick={() => removeDetailRow(index)}
-                          className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all inline-flex items-center justify-center"
+                          className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all inline-flex items-center justify-center disabled:opacity-40"
                           disabled={form.detail_penilaian.length === 1}
                         >
                           <Trash2 size={16} />
@@ -1074,7 +1170,8 @@ const IsiMKVA = () => {
 
               <p className="mt-4 text-sm text-slate-400 font-semibold">
                 Keterangan aturan bukti: V = Valid, A = Authentic, T = Terkini,
-                M = Memadai.
+                M = Memadai. Prinsip asesmen: V = Valid, R = Reliable, F = Fair,
+                F = Flexible.
               </p>
             </div>
           </section>
@@ -1086,29 +1183,86 @@ const IsiMKVA = () => {
               subtitle="Hasil akhir validasi"
             />
 
-            <div className="p-6 space-y-5">
-              <TextArea
-                label="Temuan Validasi"
-                value={form.temuan_validasi}
-                onChange={(value) => handleTextChange("temuan_validasi", value)}
-                placeholder="Tuliskan temuan validasi..."
-              />
+            <div className="p-6 space-y-6">
+              <div className="rounded-[24px] bg-slate-50 border border-slate-100 p-5">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Temuan dan Rekomendasi
+                    </p>
+                    <p className="text-sm text-slate-500 font-semibold mt-1">
+                      Isi temuan validasi dan rekomendasi perbaikan sesuai
+                      contoh dokumen.
+                    </p>
+                  </div>
 
-              <TextArea
-                label="Rekomendasi"
-                value={form.rekomendasi}
-                onChange={(value) => handleTextChange("rekomendasi", value)}
-                placeholder="Tuliskan rekomendasi tindak lanjut..."
-              />
+                  <button
+                    type="button"
+                    onClick={addTemuan}
+                    className="px-4 py-3 rounded-2xl bg-[#071E3D] hover:bg-orange-500 text-white font-black text-xs uppercase tracking-widest flex items-center gap-2"
+                  >
+                    <Plus size={15} />
+                    Tambah
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {form.temuan_rekomendasi.map((item, index) => (
+                    <div
+                      key={index}
+                      className="grid grid-cols-1 lg:grid-cols-[52px_1fr_1fr_48px] gap-3 items-start"
+                    >
+                      <div className="h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-[#071E3D] font-black">
+                        {index + 1}.
+                      </div>
+
+                      <textarea
+                        value={item.temuan}
+                        onChange={(e) =>
+                          handleTemuanChange(index, "temuan", e.target.value)
+                        }
+                        rows={4}
+                        placeholder="Temuan-temuan validasi"
+                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold resize-none leading-relaxed"
+                      />
+
+                      <textarea
+                        value={item.rekomendasi}
+                        onChange={(e) =>
+                          handleTemuanChange(
+                            index,
+                            "rekomendasi",
+                            e.target.value
+                          )
+                        }
+                        rows={4}
+                        placeholder="Rekomendasi untuk meningkatkan praktek asesmen"
+                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold resize-none leading-relaxed"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => removeTemuan(index)}
+                        className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-40"
+                        disabled={form.temuan_rekomendasi.length === 1}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               <div className="rounded-[24px] bg-slate-50 border border-slate-100 p-5">
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Rencana Implementasi
+                      Rencana Implementasi Perubahan / Perbaikan Pelaksanaan
+                      Asesmen
                     </p>
                     <p className="text-sm text-slate-500 font-semibold mt-1">
-                      Isi rencana tindak lanjut jika ada.
+                      Isi kegiatan perbaikan, waktu penyelesaian, dan
+                      penanggung jawab.
                     </p>
                   </div>
 
@@ -1126,34 +1280,24 @@ const IsiMKVA = () => {
                   {form.rencana_implementasi.map((item, index) => (
                     <div
                       key={index}
-                      className="grid grid-cols-1 lg:grid-cols-[1fr_220px_180px_48px] gap-3"
+                      className="grid grid-cols-1 lg:grid-cols-[52px_1fr_220px_260px_48px] gap-3"
                     >
-                      <input
-                        type="text"
+                      <div className="h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-[#071E3D] font-black">
+                        {index + 1}.
+                      </div>
+
+                      <textarea
                         value={item.rencana}
                         onChange={(e) =>
                           handleRencanaChange(index, "rencana", e.target.value)
                         }
-                        placeholder="Rencana tindak lanjut"
-                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold"
+                        rows={3}
+                        placeholder="Kegiatan perbaikan sesuai rekomendasi"
+                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold resize-none"
                       />
 
                       <input
                         type="text"
-                        value={item.penanggung_jawab}
-                        onChange={(e) =>
-                          handleRencanaChange(
-                            index,
-                            "penanggung_jawab",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Penanggung jawab"
-                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold"
-                      />
-
-                      <input
-                        type="date"
                         value={item.target_waktu}
                         onChange={(e) =>
                           handleRencanaChange(
@@ -1162,13 +1306,28 @@ const IsiMKVA = () => {
                             e.target.value
                           )
                         }
-                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold"
+                        placeholder="Waktu penyelesaian, contoh: 60 menit"
+                        className="h-12 px-4 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold"
+                      />
+
+                      <textarea
+                        value={item.penanggung_jawab}
+                        onChange={(e) =>
+                          handleRencanaChange(
+                            index,
+                            "penanggung_jawab",
+                            e.target.value
+                          )
+                        }
+                        rows={3}
+                        placeholder="Penanggung jawab"
+                        className="px-4 py-3 rounded-2xl bg-white border border-slate-100 focus:outline-none focus:border-orange-500 text-[#071E3D] font-semibold resize-none"
                       />
 
                       <button
                         type="button"
                         onClick={() => removeRencana(index)}
-                        className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+                        className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-40"
                         disabled={form.rencana_implementasi.length === 1}
                       >
                         <Trash2 size={16} />
@@ -1215,7 +1374,11 @@ const IsiMKVA = () => {
                 ) : (
                   <Save size={18} />
                 )}
-                {saving ? "Menyimpan..." : idMkva ? "Update MKVA" : "Simpan MKVA"}
+                {saving
+                  ? "Menyimpan..."
+                  : idMkva
+                  ? "Update MKVA"
+                  : "Simpan MKVA"}
               </button>
             </div>
           </section>
@@ -1333,24 +1496,6 @@ const CheckboxPanel = ({ title, options, values, onToggle }) => {
           );
         })}
       </div>
-    </div>
-  );
-};
-
-const TextArea = ({ label, value, onChange, placeholder }) => {
-  return (
-    <div>
-      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-        {label}
-      </label>
-
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={5}
-        className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 text-[#071E3D] font-semibold transition-all resize-none leading-relaxed"
-      />
     </div>
   );
 };
