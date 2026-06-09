@@ -1,6 +1,69 @@
-const { PesertaJadwal, User, Jadwal, ProfileAsesi, ProfileAsesor, Skema } = require("../../models");
+const {
+  PesertaJadwal,
+  User,
+  Jadwal,
+  ProfileAsesi,
+  ProfileAsesor,
+  Skema,
+} = require("../../models");
+
 const response = require("../../utils/response.util");
 const { Op } = require("sequelize");
+
+const pesertaJadwalInclude = [
+  {
+    model: User,
+    as: "user",
+    attributes: ["id_user", "username", "email", "no_hp", "status_user"],
+    include: [
+      {
+        model: ProfileAsesi,
+        as: "profileAsesi",
+        required: false,
+      },
+    ],
+  },
+  {
+    model: Jadwal,
+    as: "jadwal",
+    attributes: [
+      "id_jadwal",
+      "id_skema",
+      "id_tuk",
+      "nama_kegiatan",
+      "tgl_pra_asesmen",
+      "tahun",
+      "periode_bulan",
+      "gelombang",
+      "tgl_awal",
+      "tgl_akhir",
+      "jam",
+      "pelaksanaan_uji",
+      "url_agenda",
+      "status",
+    ],
+    include: [
+      {
+        model: Skema,
+        as: "skema",
+        attributes: ["id_skema", "kode_skema", "judul_skema"],
+        required: false,
+      },
+    ],
+  },
+  {
+    model: User,
+    as: "asesor_penguji",
+    attributes: ["id_user", "username", "email", "no_hp", "status_user"],
+    required: false,
+    include: [
+      {
+        model: ProfileAsesor,
+        required: false,
+      },
+    ],
+  },
+];
 
 exports.getPesertaByJadwal = async (req, res) => {
   try {
@@ -8,27 +71,8 @@ exports.getPesertaByJadwal = async (req, res) => {
 
     const data = await PesertaJadwal.findAll({
       where: { id_jadwal },
-      include: [
-        { 
-          model: User, 
-          as: "user",
-          include: [{ model: ProfileAsesi, as: "profile_asesi" }] 
-        },
-        { 
-          model: Skema,
-          as: "skema",
-          attributes: ["id_skema", "kode_skema", "judul_skema"],
-          model: Jadwal, 
-          as: "jadwal",
-          include: [{ model: Skema, as: "skema" }] 
-        },
-        {
-          model: User,
-          as: "asesor_penguji", 
-          include: [{ model: ProfileAsesor }]
-        }
-      ],
-      distinct: true
+      include: pesertaJadwalInclude,
+      distinct: true,
     });
 
     return response.success(res, "List peserta jadwal", data);
@@ -40,38 +84,22 @@ exports.getPesertaByJadwal = async (req, res) => {
 
 exports.getAllPesertaGlobal = async (req, res) => {
   try {
-    const { status } = req.query; 
+    const { status } = req.query;
+
     let whereCondition = {};
 
-    if (status === 'terjadwal') {
-      whereCondition.status_asesmen = { [Op.in]: ['terdaftar', 'pra_asesmen', 'asesmen'] };
+    if (status === "terjadwal") {
+      whereCondition.status_asesmen = {
+        [Op.in]: ["terdaftar", "pra_asesmen", "asesmen"],
+      };
     } else if (status) {
       whereCondition.status_asesmen = status;
     }
 
     const data = await PesertaJadwal.findAll({
       where: whereCondition,
-      include: [
-        {
-          model: User,
-          as: "user",
-          include: [{ model: ProfileAsesor, as: "profile_asesor" }]
-        },
-        {
-              model: Skema,
-          as: "skema",
-          attributes: ["id_skema", "kode_skema", "judul_skema"],
-          model: Jadwal,
-          as: "jadwal",
-          include: [{ model: Skema, as: "skema" }] 
-        },
-        {
-          model: User,
-          as: "asesor_penguji",
-          include: [{ model: ProfileAsesor }]
-        }
-      ],
-      distinct: true 
+      include: pesertaJadwalInclude,
+      distinct: true,
     });
 
     return response.success(res, "List peserta jadwal global", data);
@@ -87,6 +115,7 @@ exports.assignAsesorToPeserta = async (req, res) => {
     const { id_asesor } = req.body;
 
     const peserta = await PesertaJadwal.findByPk(id_peserta);
+
     if (!peserta) {
       return response.error(res, "Peserta tidak ditemukan", 404);
     }

@@ -537,9 +537,16 @@ const Skkni = () => {
 
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                          <Label>Tahun Terbit</Label>
-                          <input type="text" name="" value={formData.legalitas} onChange={handleInputChange} className={inputClass}/>
-                        </div>
+                              <Label>Tahun Terbit</Label>
+                              <input
+                                type="text"
+                                name="legalitas"
+                                value={formData.legalitas}
+                                onChange={handleInputChange}
+                                className={inputClass}
+                                placeholder="Contoh: 2026"
+                              />
+                            </div>
 
                         <div>
                           <Label>Lembaga Penerbit</Label>
@@ -560,8 +567,9 @@ const Skkni = () => {
                         </Label>
 
                         <input 
-                          type="file" 
-                          accept=".pdf"
+                          type="file"
+                          name="file_dokumen"
+                          accept="application/pdf,.pdf"
                           onChange={handleFileChange}
                           className="block w-full cursor-pointer rounded-2xl border border-slate-100 bg-white p-2 text-sm font-semibold text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-[#071E3D] file:px-4 file:py-2 file:text-xs file:font-black file:uppercase file:tracking-widest file:text-white hover:file:bg-orange-500"
                         />
