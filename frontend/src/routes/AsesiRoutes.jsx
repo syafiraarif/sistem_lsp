@@ -17,6 +17,7 @@ import APL01 from "../pages/asesi/APL01";
 import APL02 from "../pages/asesi/APL02";
 import PraAsesmenAsesi from "../pages/asesi/PraAsesmenAsesi";
 import FRIA05Asesi from "../pages/asesi/FRIA05Asesi";
+import HasilAkhirAsesi from "../pages/asesi/HasilAkhirAsesi";
 import Banding from "../pages/asesi/Banding";
 
 /* Lupa Password */
@@ -53,6 +54,14 @@ export default function AsesiRoutes() {
         path="fr-ia05/:id_fr_ia_05/:id_peserta"
         element={<FRIA05Asesi />}
       />
+
+      {/* HASIL AKHIR */}
+      <Route path="hasil-akhir" element={<HasilAkhirAsesi />} />
+      <Route path="hasil-akhir/:id_peserta" element={<HasilAkhirAsesi />} />
+
+      {/* FR.AK.03 & FR.AK.04 */}
+      <Route path="fr-ak03/:id_peserta" element={<Banding />} />
+      <Route path="fr-ak04/:id_peserta" element={<Banding />} />
 
       {/* BANDING */}
       <Route path="banding" element={<Banding />} />

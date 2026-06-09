@@ -451,7 +451,8 @@ export default function JadwalSaya() {
 
   const pergiFRIA05 = (item) => {
     const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
-    const idJadwal = item.id_jadwal || item.jadwal?.id_jadwal || item.Jadwal?.id_jadwal;
+    const idJadwal =
+      item.id_jadwal || item.jadwal?.id_jadwal || item.Jadwal?.id_jadwal;
 
     if (!isAPL01Done(item)) {
       alert("Silakan submit APL01 terlebih dahulu sebelum mengerjakan FR.IA.05.");
@@ -469,6 +470,17 @@ export default function JadwalSaya() {
     }
 
     navigate(`/asesi/fr-ia05/jadwal/${idJadwal}/${idPeserta}`);
+  };
+
+  const pergiHasilAkhir = (item) => {
+    const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
+
+    if (!idPeserta) {
+      alert("ID peserta tidak ditemukan. Silakan klik Refresh lalu coba lagi.");
+      return;
+    }
+
+    navigate(`/asesi/hasil-akhir/${idPeserta}`);
   };
 
   const handleRefresh = async () => {
@@ -560,7 +572,7 @@ export default function JadwalSaya() {
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
                   Pilih jadwal uji kompetensi, lanjutkan pembayaran, dan akses
-                  formulir APL01, APL02, presensi, serta FR.IA.05 setelah
+                  APL01, APL02, presensi, FR.IA.05, serta hasil akhir setelah
                   pembayaran dikonfirmasi.
                 </p>
 
@@ -749,6 +761,7 @@ export default function JadwalSaya() {
                     pergiAPL02={pergiAPL02}
                     pergiPresensi={pergiPresensi}
                     pergiFRIA05={pergiFRIA05}
+                    pergiHasilAkhir={pergiHasilAkhir}
                   />
                 );
               })
@@ -780,6 +793,7 @@ function ScheduleCard({
   pergiAPL02,
   pergiPresensi,
   pergiFRIA05,
+  pergiHasilAkhir,
 }) {
   const title = skema.judul_skema || "Skema tidak tersedia";
   const kodeSkema = skema.kode_skema || "SKEMA";
@@ -962,6 +976,15 @@ function ScheduleCard({
                 />
               ) : (
                 <LockedMessage text="FR.IA.05 akan tersedia setelah APL01 selesai disubmit." />
+              )}
+
+              {apl01Done ? (
+                <ActionButton
+                  title="Hasil Akhir"
+                  onClick={() => pergiHasilAkhir(item)}
+                />
+              ) : (
+                <LockedMessage text="Hasil akhir akan tersedia setelah proses asesmen berjalan." />
               )}
             </div>
           ) : (
