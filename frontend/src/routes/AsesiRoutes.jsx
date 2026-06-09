@@ -19,6 +19,7 @@ import PraAsesmenAsesi from "../pages/asesi/PraAsesmenAsesi";
 import FRIA05Asesi from "../pages/asesi/FRIA05Asesi";
 import HasilAkhirAsesi from "../pages/asesi/HasilAkhirAsesi";
 import FRAK03Asesi from "../pages/asesi/FRAK03Asesi";
+import FRAK04Asesi from "../pages/asesi/FRAK04Asesi";
 import Banding from "../pages/asesi/Banding";
 
 /* Lupa Password */
@@ -63,10 +64,10 @@ export default function AsesiRoutes() {
       {/* FR.AK.03 */}
       <Route path="fr-ak03/:id_peserta" element={<FRAK03Asesi />} />
 
-      {/* FR.AK.04 SEMENTARA MASIH KE BANDING, NANTI NO. 7 DIGANTI */}
-      <Route path="fr-ak04/:id_peserta" element={<Banding />} />
+      {/* FR.AK.04 */}
+      <Route path="fr-ak04/:id_peserta" element={<FRAK04Asesi />} />
 
-      {/* BANDING */}
+      {/* BANDING LAMA */}
       <Route path="banding" element={<Banding />} />
 
       {/* PASSWORD */}
