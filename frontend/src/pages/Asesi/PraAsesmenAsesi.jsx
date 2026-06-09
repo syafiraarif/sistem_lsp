@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import {
   AlertCircle,
@@ -16,14 +16,13 @@ import {
   Inbox,
   Loader2,
   MapPin,
-  PenLine,
+  Pencil,
   RefreshCcw,
   ShieldCheck,
   Sparkles,
   UserCheck,
   Users,
   XCircle,
-  Pencil,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
@@ -44,6 +43,7 @@ api.interceptors.request.use((config) => {
 
 export default function PraAsesmenAsesi() {
   const navigate = useNavigate();
+  const { id_skema } = useParams();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [formData, setFormData] = useState(null);
@@ -54,25 +54,21 @@ export default function PraAsesmenAsesi() {
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [catatan, setCatatan] = useState("");
   const [error, setError] = useState("");
 
   const imageBase = API_BASE.replace("/api", "");
 
-  const getImageSrc = (path) => {
-    if (!path) return "";
-    if (String(path).startsWith("http")) return path;
-    return `${imageBase}/${path}`;
-  };
+  const getImageSrc = (filePath) => {
+    if (!filePath) return "";
+    if (String(filePath).startsWith("http")) return filePath;
 
-  const resolveFileUrl = (path) => {
-    if (!path) return "";
-    if (String(path).startsWith("http")) return path;
-    return getImageSrc(path);
+    return `${imageBase}/${String(filePath).replace(/^\/+/, "")}`;
   };
 
   const fetchFormData = async () => {
-    const res = await api.get("/asesi/pra-asesmen/form");
+    const query = id_skema ? `?id_skema=${id_skema}` : "";
+    const res = await api.get(`/asesi/pra-asesmen/form${query}`);
+
     const data = res.data?.data || null;
 
     if (!data) {
@@ -156,7 +152,7 @@ export default function PraAsesmenAsesi() {
   useEffect(() => {
     loadPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [id_skema]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -165,14 +161,16 @@ export default function PraAsesmenAsesi() {
 
   const ttdUrl = useMemo(() => {
     return (
-      resolveFileUrl(files?.ttd) ||
-      resolveFileUrl(files?.tanda_tangan) ||
+      formData?.ttd_asesi_url ||
+      getImageSrc(formData?.ttd_asesi_path) ||
+      getImageSrc(files?.ttd) ||
+      getImageSrc(files?.tanda_tangan) ||
       getImageSrc(profile?.ttd_path) ||
       getImageSrc(profile?.ttd) ||
       ""
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files, profile]);
+  }, [formData, files, profile]);
 
   const statusSubmit = Boolean(formData?.is_submitted);
 
@@ -180,7 +178,41 @@ export default function PraAsesmenAsesi() {
     return Boolean(formData?.ttd_asesi_ready || ttdUrl);
   }, [formData, ttdUrl]);
 
-  const canSubmit = statusTtd && !statusSubmit && !submitting;
+  const canSubmit = Boolean(formData?.can_submit) && statusTtd && !statusSubmit && !submitting;
+
+  const downloadLink = useMemo(() => {
+    const query = id_skema ? `?id_skema=${id_skema}` : "";
+    return `${API_BASE}/asesi/pra-asesmen/download${query}`;
+  }, [id_skema]);
+
+  const skemaLabel = useMemo(() => {
+    const jenis = formData?.skema_sertifikasi?.jenis;
+    const judul = formData?.skema_sertifikasi?.judul;
+
+    if (jenis && judul && jenis !== "-") return `${jenis} - ${judul}`;
+    return judul || "-";
+  }, [formData]);
+
+  const tukLabel = useMemo(() => {
+    const jenis = formData?.tuk?.jenis;
+    const nama = formData?.tuk?.nama;
+
+    if (jenis && nama && jenis !== "-") return `${jenis} - ${nama}`;
+    return nama || "-";
+  }, [formData]);
+
+  const jadwalLabel = useMemo(() => {
+    const tanggal =
+      formData?.jadwal_pelaksanaan?.tanggal_pra_asesmen ||
+      formData?.jadwal_pelaksanaan?.hari_tanggal;
+
+    const jam = formData?.jadwal_pelaksanaan?.jam;
+    const tempat = formData?.jadwal_pelaksanaan?.tempat;
+
+    const bagian = [tanggal, jam, tempat].filter(Boolean).filter((x) => x !== "-");
+
+    return bagian.length ? bagian.join(" - ") : "-";
+  }, [formData]);
 
   const handleSubmit = async () => {
     if (!formData?.id_peserta) {
@@ -194,8 +226,13 @@ export default function PraAsesmenAsesi() {
       return;
     }
 
-    if (formData.is_submitted) {
+    if (statusSubmit) {
       alert("Pra asesmen sudah disubmit.");
+      return;
+    }
+
+    if (!formData?.can_submit) {
+      alert(formData?.message || "Presensi belum bisa dilakukan.");
       return;
     }
 
@@ -207,12 +244,10 @@ export default function PraAsesmenAsesi() {
 
       const res = await api.post("/asesi/pra-asesmen/submit", {
         id_peserta: formData.id_peserta,
-        catatan: catatan?.trim() || "Hadir",
       });
 
       alert(res.data?.message || "Pra asesmen berhasil disubmit.");
 
-      setCatatan("");
       await loadPage();
     } catch (err) {
       console.error(err);
@@ -226,32 +261,6 @@ export default function PraAsesmenAsesi() {
       setSubmitting(false);
     }
   };
-
-  const downloadLink = `${API_BASE}/asesi/pra-asesmen/download`;
-
-  const skemaLabel = useMemo(() => {
-    const jenis = formData?.skema_sertifikasi?.jenis;
-    const judul = formData?.skema_sertifikasi?.judul;
-
-    if (jenis && judul) return `${jenis} - ${judul}`;
-    return judul || "-";
-  }, [formData]);
-
-  const tukLabel = useMemo(() => {
-    const jenis = formData?.tuk?.jenis;
-    const nama = formData?.tuk?.nama;
-
-    if (jenis && nama) return `${jenis} - ${nama}`;
-    return nama || "-";
-  }, [formData]);
-
-  const jadwalLabel = useMemo(() => {
-    const tanggal = formData?.jadwal_pelaksanaan?.hari_tanggal;
-    const tempat = formData?.jadwal_pelaksanaan?.tempat;
-
-    if (tanggal && tempat) return `${tanggal} - ${tempat}`;
-    return tanggal || tempat || "-";
-  }, [formData]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -283,8 +292,9 @@ export default function PraAsesmenAsesi() {
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Konfirmasi kehadiran sebelum mengikuti asesmen. Pastikan data
-                  skema, TUK, asesor, dan tanda tangan sudah sesuai.
+                  Konfirmasi kehadiran sebelum mengikuti asesmen. Presensi hanya
+                  bisa dilakukan saat tanggal pra asesmen atau jadwal sudah
+                  dimulai.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -302,15 +312,26 @@ export default function PraAsesmenAsesi() {
                     Refresh Data
                   </button>
 
-                  <a
-                    href={downloadLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => navigate("/asesi/jadwal-saya")}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
                   >
-                    Download PDF
-                    <Download size={17} />
-                  </a>
+                    Jadwal Saya
+                    <ChevronRight size={17} />
+                  </button>
+
+                  {statusSubmit && (
+                    <a
+                      href={downloadLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+                    >
+                      Download PDF
+                      <Download size={17} />
+                    </a>
+                  )}
 
                   {!statusTtd && (
                     <button
@@ -338,15 +359,15 @@ export default function PraAsesmenAsesi() {
                   </p>
 
                   <h2 className="text-2xl font-black leading-tight">
-                    {statusSubmit ? "Sudah Submit" : "Belum Submit"}
+                    {statusSubmit
+                      ? "Sudah Submit"
+                      : canSubmit
+                      ? "Presensi Dibuka"
+                      : "Belum Bisa Submit"}
                   </h2>
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    {statusSubmit
-                      ? "Presensi pra asesmen sudah tercatat di sistem."
-                      : statusTtd
-                      ? "TTD sudah tersedia. Lengkapi catatan jika diperlukan, lalu submit presensi."
-                      : "TTD belum tersedia. Silakan isi tanda tangan digital di halaman profile terlebih dahulu."}
+                    {formData?.message || "-"}
                   </p>
 
                   <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
@@ -389,6 +410,15 @@ export default function PraAsesmenAsesi() {
                   value={statusSubmit ? "Sudah Submit" : "Belum Submit"}
                 />
               </section>
+
+              {!canSubmit && !statusSubmit && (
+                <InfoAlert
+                  message={formData?.message || "Presensi belum bisa dilakukan."}
+                  subMessage={`Waktu buka: ${
+                    formData?.waktu_buka_presensi || "-"
+                  }`}
+                />
+              )}
 
               {!statusTtd && (
                 <div className="rounded-[24px] border border-orange-100 bg-orange-50 px-5 py-5 text-orange-700 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -435,8 +465,14 @@ export default function PraAsesmenAsesi() {
                     </div>
 
                     <StatusBadge
-                      type={statusSubmit ? "success" : "warning"}
-                      label={statusSubmit ? "Sudah Submit" : "Belum Submit"}
+                      type={statusSubmit ? "success" : canSubmit ? "success" : "warning"}
+                      label={
+                        statusSubmit
+                          ? "Sudah Submit"
+                          : canSubmit
+                          ? "Bisa Submit"
+                          : "Belum Dibuka"
+                      }
                     />
                   </div>
 
@@ -446,14 +482,12 @@ export default function PraAsesmenAsesi() {
                         icon={<FileText size={20} />}
                         label="Skema Sertifikasi"
                         value={skemaLabel}
-                        wide
                       />
 
                       <InfoCard
                         icon={<MapPin size={20} />}
                         label="TUK"
                         value={tukLabel}
-                        wide
                       />
 
                       <InfoCard
@@ -474,7 +508,6 @@ export default function PraAsesmenAsesi() {
                         icon={<CalendarCheck size={20} />}
                         label="Jadwal Pelaksanaan"
                         value={jadwalLabel}
-                        wide
                       />
 
                       <InfoCard
@@ -484,193 +517,106 @@ export default function PraAsesmenAsesi() {
                           formData.jadwal_pelaksanaan?.pelaksanaan_uji || "-"
                         }
                       />
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <StatusCard
-                        label="Tanda Tangan Asesi"
-                        desc={
-                          statusTtd
-                            ? "TTD sudah tersedia dan siap digunakan."
-                            : "TTD belum tersedia. Lengkapi dulu di profil."
-                        }
-                        status={statusTtd}
+                      <InfoCard
+                        icon={<CalendarCheck size={20} />}
+                        label="Waktu Buka Presensi"
+                        value={String(formData.waktu_buka_presensi || "-")}
                       />
 
-                      <StatusCard
-                        label="Status Presensi"
-                        desc={
-                          statusSubmit
-                            ? "Pra asesmen sudah disubmit."
-                            : "Pra asesmen belum disubmit."
-                        }
-                        status={statusSubmit}
+                      <InfoCard
+                        icon={<CalendarCheck size={20} />}
+                        label="Waktu Presensi"
+                        value={String(
+                          formData.presensi?.waktu_presensi || "-"
+                        )}
                       />
                     </div>
 
                     {statusTtd && ttdUrl && (
-                      <div className="rounded-[24px] border border-emerald-100 bg-emerald-50 p-5">
-                        <div className="flex items-center justify-between gap-4 mb-4">
-                          <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
-                              TTD Profile
-                            </p>
-                            <p className="mt-1 text-sm font-black text-emerald-700">
-                              Tanda tangan digital sudah terdeteksi dari profile.
-                            </p>
-                          </div>
+                      <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-5">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
+                          Tanda Tangan Asesi dari Profile
+                        </p>
 
-                          <BadgeCheck size={24} className="text-emerald-600" />
-                        </div>
-
-                        <div className="rounded-2xl bg-white border border-emerald-100 p-4 flex items-center justify-center min-h-[130px]">
+                        <div className="rounded-2xl bg-white border border-slate-100 p-5">
                           <img
                             src={ttdUrl}
-                            alt="Tanda Tangan Asesi"
-                            className="max-h-[110px] object-contain"
+                            alt="TTD Asesi"
+                            className="max-h-28 object-contain"
                           />
                         </div>
                       </div>
                     )}
-
-                    <div>
-                      <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Catatan / Keterangan
-                      </label>
-
-                      <textarea
-                        value={catatan}
-                        onChange={(e) => setCatatan(e.target.value)}
-                        disabled={statusSubmit}
-                        rows={4}
-                        placeholder="Contoh: Hadir / catatan lainnya"
-                        className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10 disabled:cursor-not-allowed disabled:opacity-70"
-                      />
-
-                      {statusSubmit && (
-                        <p className="mt-2 text-xs font-semibold text-slate-400">
-                          Catatan tidak dapat diubah karena pra asesmen sudah
-                          disubmit.
-                        </p>
-                      )}
-
-                      {!statusSubmit && !statusTtd && (
-                        <p className="mt-2 text-xs font-semibold text-orange-600">
-                          Submit belum bisa dilakukan karena TTD asesi belum
-                          tersedia.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/50 p-6 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm font-medium text-slate-500">
-                      Pastikan seluruh data sudah benar sebelum submit presensi.
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={!canSubmit}
-                      className={`flex items-center justify-center gap-2 rounded-2xl px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg transition-all ${
-                        canSubmit
-                          ? "bg-orange-500 hover:bg-[#071E3D] shadow-orange-500/20"
-                          : "bg-slate-300 cursor-not-allowed"
-                      }`}
-                    >
-                      {submitting ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : statusSubmit ? (
-                        <CheckCircle size={16} />
-                      ) : (
-                        <ClipboardCheck size={16} />
-                      )}
-
-                      {statusSubmit
-                        ? "Sudah Submit"
-                        : submitting
-                        ? "Menyimpan..."
-                        : !statusTtd
-                        ? "TTD Belum Ada"
-                        : "Submit Presensi"}
-
-                      {!submitting && !statusSubmit && statusTtd && (
-                        <ChevronRight size={16} />
-                      )}
-                    </button>
                   </div>
                 </div>
 
-                <aside className="space-y-5">
-                  <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
-                    <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-                      <PenLine size={22} />
-                    </div>
+                <aside>
+                  <div className="sticky top-6 space-y-6">
+                    <div className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
+                      <div className="p-6 border-b border-slate-100">
+                        <h3 className="text-xl font-black text-[#071E3D]">
+                          Konfirmasi Presensi
+                        </h3>
+                        <p className="mt-1 text-sm font-medium text-slate-400">
+                          Sistem otomatis memakai TTD dari profile asesi.
+                        </p>
+                      </div>
 
-                    <h3 className="text-2xl font-black text-[#071E3D]">
-                      Ringkasan
-                    </h3>
+                      <div className="p-6 space-y-4">
+                        <StatusCard
+                          label="TTD Asesi"
+                          desc={
+                            statusTtd
+                              ? "TTD sudah tersedia di profile."
+                              : "TTD belum tersedia."
+                          }
+                          status={statusTtd}
+                        />
 
-                    <div className="mt-5 space-y-4">
-                      <SummaryRow
-                        label="ID Peserta"
-                        value={formData.id_peserta || "-"}
-                      />
-                      <SummaryRow
-                        label="ID Jadwal"
-                        value={formData.id_jadwal || "-"}
-                      />
-                      <SummaryRow
-                        label="ID Skema"
-                        value={formData.id_skema || "-"}
-                      />
-                      <SummaryRow
-                        label="TTD Asesi"
-                        value={statusTtd ? "Tersedia" : "Belum Ada"}
-                      />
-                      <SummaryRow
-                        label="Status"
-                        value={statusSubmit ? "Sudah Submit" : "Belum Submit"}
-                      />
+                        <StatusCard
+                          label="Waktu Presensi"
+                          desc={formData.message || "-"}
+                          status={Boolean(formData.can_submit || statusSubmit)}
+                        />
+
+                        <StatusCard
+                          label="Status Presensi"
+                          desc={
+                            statusSubmit
+                              ? "Presensi sudah tercatat."
+                              : "Belum presensi."
+                          }
+                          status={statusSubmit}
+                        />
+
+                        <button
+                          type="button"
+                          onClick={handleSubmit}
+                          disabled={!canSubmit}
+                          className={`w-full px-7 py-5 rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 ${
+                            canSubmit
+                              ? "bg-orange-500 hover:bg-[#071E3D] shadow-orange-500/20"
+                              : "bg-slate-300 cursor-not-allowed"
+                          }`}
+                        >
+                          {submitting ? (
+                            <Loader2 size={18} className="animate-spin" />
+                          ) : statusSubmit ? (
+                            <CheckCircle size={18} />
+                          ) : (
+                            <ClipboardCheck size={18} />
+                          )}
+
+                          {statusSubmit
+                            ? "Sudah Presensi"
+                            : submitting
+                            ? "Menyimpan..."
+                            : "Submit Presensi"}
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
-                    <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-                      <ShieldCheck size={22} />
-                    </div>
-
-                    <h3 className="text-2xl font-black text-[#071E3D]">
-                      Ketentuan
-                    </h3>
-
-                    <div className="mt-5 space-y-3">
-                      <TipItem text="Pastikan tanda tangan asesi sudah tersedia di profile." />
-                      <TipItem text="Submit presensi hanya bisa dilakukan satu kali." />
-                      <TipItem text="Catatan dapat diisi dengan keterangan hadir." />
-                    </div>
-                  </div>
-
-                  {!statusTtd && (
-                    <button
-                      type="button"
-                      onClick={() => navigate("/asesi/profile")}
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-sm transition-all hover:bg-[#071E3D]"
-                    >
-                      <Pencil size={16} />
-                      Lengkapi TTD Profile
-                    </button>
-                  )}
-
-                  <a
-                    href={downloadLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D] hover:text-white"
-                  >
-                    <Download size={16} />
-                    Download PDF
-                  </a>
                 </aside>
               </section>
             </>
@@ -682,7 +628,7 @@ export default function PraAsesmenAsesi() {
 }
 
 /* =========================
-   COMPONENTS
+COMPONENTS
 ========================= */
 
 function LoadingScreen() {
@@ -698,48 +644,9 @@ function LoadingScreen() {
         </h2>
 
         <p className="text-slate-500 text-sm mt-2 font-medium">
-          Mengambil data presensi, profile, tanda tangan, dan jadwal asesmen.
+          Mengambil data presensi pra asesmen.
         </p>
       </div>
-    </div>
-  );
-}
-
-function ErrorAlert({ message, onRetry }) {
-  return (
-    <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-4 text-sm font-semibold flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-red-600">
-      <div className="flex items-center gap-3">
-        <AlertCircle size={20} className="shrink-0" />
-        <span>{message}</span>
-      </div>
-
-      <button
-        type="button"
-        onClick={onRetry}
-        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-red-600 border border-red-100 hover:bg-red-100"
-      >
-        <RefreshCcw size={14} />
-        Coba Lagi
-      </button>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="rounded-[32px] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
-      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-        <Inbox size={30} />
-      </div>
-
-      <h3 className="text-2xl font-black text-[#071E3D]">
-        Data Pra Asesmen Tidak Tersedia
-      </h3>
-
-      <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
-        Pastikan Anda sudah memilih jadwal dan data peserta sudah tersedia di
-        sistem.
-      </p>
     </div>
   );
 }
@@ -767,28 +674,21 @@ function HeroPill({ label, value }) {
       <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
         {label}
       </p>
-
       <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );
 }
 
-function InfoCard({ icon, label, value, wide }) {
+function InfoCard({ icon, label, value }) {
   return (
-    <div
-      className={`rounded-[24px] border border-slate-100 bg-slate-50/70 p-5 ${
-        wide ? "md:col-span-2" : ""
-      }`}
-    >
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
+    <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-5">
+      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-orange-500">
         {icon}
       </div>
-
       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
         {label}
       </p>
-
-      <p className="mt-2 text-sm font-black text-[#071E3D] leading-relaxed break-words">
+      <p className="mt-2 text-sm font-black text-[#071E3D] break-words">
         {value || "-"}
       </p>
     </div>
@@ -798,60 +698,94 @@ function InfoCard({ icon, label, value, wide }) {
 function StatusCard({ label, desc, status }) {
   return (
     <div
-      className={`rounded-[24px] border p-5 flex items-start gap-4 ${
+      className={`rounded-2xl border p-4 ${
         status
-          ? "border-green-100 bg-green-50 text-green-700"
-          : "border-red-100 bg-red-50 text-red-600"
+          ? "bg-emerald-50 border-emerald-100 text-emerald-700"
+          : "bg-slate-50 border-slate-100 text-slate-500"
       }`}
     >
-      <div className="mt-0.5 shrink-0">
-        {status ? <CheckCircle size={22} /> : <XCircle size={22} />}
-      </div>
+      <div className="flex items-start gap-3">
+        {status ? (
+          <CheckCircle size={20} className="shrink-0 mt-0.5" />
+        ) : (
+          <XCircle size={20} className="shrink-0 mt-0.5" />
+        )}
 
-      <div>
-        <h3 className="font-black">{label}</h3>
-        <p className="text-sm font-medium mt-1 opacity-80">{desc}</p>
+        <div>
+          <p className="font-black">{label}</p>
+          <p className="text-xs font-semibold mt-1 leading-relaxed">{desc}</p>
+        </div>
       </div>
     </div>
   );
 }
 
-function StatusBadge({ type = "light", label }) {
-  const styles = {
-    success: "bg-green-50 text-green-600",
-    warning: "bg-amber-50 text-amber-600",
-    light: "bg-slate-50 text-slate-500",
-  };
+function StatusBadge({ type, label }) {
+  const style =
+    type === "success"
+      ? "bg-emerald-50 text-emerald-600"
+      : "bg-amber-50 text-amber-600";
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
-        styles[type] || styles.light
-      }`}
+      className={`inline-flex items-center rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${style}`}
     >
       {label}
     </span>
   );
 }
 
-function SummaryRow({ label, value }) {
+function InfoAlert({ message, subMessage }) {
   return (
-    <div className="flex justify-between gap-4 text-sm">
-      <span className="text-slate-500 font-semibold">{label}</span>
-      <span className="text-[#071E3D] font-black text-right">{value}</span>
+    <div className="rounded-[24px] border border-amber-100 bg-amber-50 px-5 py-5 text-amber-700 flex items-start gap-3">
+      <AlertCircle size={22} className="shrink-0 mt-0.5" />
+      <div>
+        <p className="font-black">{message}</p>
+        <p className="mt-1 text-sm font-semibold">{subMessage}</p>
+      </div>
     </div>
   );
 }
 
-function TipItem({ text }) {
+function ErrorAlert({ message, onRetry }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-500">
-        <CheckCircle size={13} />
+    <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-5 text-red-600 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex items-start gap-3">
+        <AlertCircle size={22} className="shrink-0 mt-0.5" />
+        <div>
+          <p className="font-black">Gagal Memuat Data</p>
+          <p className="mt-1 text-sm font-semibold leading-relaxed">
+            {message}
+          </p>
+        </div>
       </div>
 
-      <p className="text-sm font-medium leading-relaxed text-slate-500">
-        {text}
+      <button
+        type="button"
+        onClick={onRetry}
+        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-500 px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-red-600"
+      >
+        Coba Lagi
+        <RefreshCcw size={16} />
+      </button>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="rounded-[32px] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
+      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+        <Inbox size={30} />
+      </div>
+
+      <h3 className="text-2xl font-black text-[#071E3D]">
+        Data Pra Asesmen Tidak Ada
+      </h3>
+
+      <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
+        Sistem belum menemukan data jadwal atau peserta untuk presensi pra
+        asesmen ini.
       </p>
     </div>
   );
