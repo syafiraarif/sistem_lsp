@@ -9,6 +9,14 @@ const Pembayaran = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    id_user: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    id_peserta: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     id_skema: {
       type: DataTypes.INTEGER,
       allowNull: false,

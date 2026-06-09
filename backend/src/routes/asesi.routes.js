@@ -77,6 +77,11 @@ router.post(
 );
 
 router.get(
+  "/apl01/status/:id_peserta",
+  apl01Controller.getStatusApl01
+);
+
+router.get(
   "/apl01/:id_peserta",
   apl01Controller.getApl01
 );

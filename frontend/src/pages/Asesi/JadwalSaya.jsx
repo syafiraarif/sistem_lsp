@@ -1,5 +1,3 @@
-// frontend/src/pages/asesi/JadwalSaya.jsx
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import axios from "axios";
@@ -34,6 +32,7 @@ export default function JadwalSaya() {
   const [apl01Status, setApl01Status] = useState({});
   const [loading, setLoading] = useState(true);
   const [choosingId, setChoosingId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("semua");
   const [error, setError] = useState("");
@@ -58,7 +57,31 @@ export default function JadwalSaya() {
 
     hasLoadedRef.current = true;
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!loading && !requestRunningRef.current) {
+        loadData(false);
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        handleFocus();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const normalizePesertaJadwal = (item) => {
     const jadwalItem = item.jadwal || item.Jadwal || {};
@@ -86,6 +109,24 @@ export default function JadwalSaya() {
 
       raw: item,
     };
+  };
+
+  const normalizePaymentStatus = (status) => {
+    const value = String(status || "belum bayar")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "_");
+
+    if (value === "belum_bayar") return "belum bayar";
+    if (value === "menunggu_validasi_admin") return "menunggu_validasi";
+    if (value === "menunggu_validasi") return "menunggu_validasi";
+    if (value === "pending") return "pending";
+    if (value === "paid") return "paid";
+    if (value === "ditolak") return "ditolak";
+    if (value === "expired") return "expired";
+    if (value === "cancelled") return "cancelled";
+
+    return value || "belum bayar";
   };
 
   const getIdSkema = (item) => {
@@ -122,21 +163,35 @@ export default function JadwalSaya() {
     );
   };
 
-  const getStatusPembayaran = (item) => {
+  const getPembayaranData = (item) => {
     const idSkema = getIdSkema(item);
-    return pembayaran[idSkema] || "belum bayar";
+    return pembayaran[idSkema] || null;
+  };
+
+  const getStatusPembayaran = (item) => {
+    const data = getPembayaranData(item);
+
+    if (!data) return "belum bayar";
+
+    return normalizePaymentStatus(data.status);
   };
 
   const isAPL01Done = (item) => {
     const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
-    return Boolean(apl01Status[idPeserta]);
+    return Boolean(apl01Status[idPeserta]?.submitted);
   };
 
-  const loadData = async () => {
+  const loadData = async (showMainLoading = true) => {
     if (requestRunningRef.current) return;
 
     requestRunningRef.current = true;
-    setLoading(true);
+
+    if (showMainLoading) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
+
     setError("");
 
     try {
@@ -181,6 +236,7 @@ export default function JadwalSaya() {
     } finally {
       requestRunningRef.current = false;
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -197,12 +253,38 @@ export default function JadwalSaya() {
           { headers: getHeaders() }
         );
 
-        result[idSkema] = res.data?.data?.status || "belum bayar";
+        const data = res.data?.data || {};
+
+        result[idSkema] = {
+          id_pembayaran: data.id_pembayaran || null,
+          id_user: data.id_user || null,
+          id_peserta: data.id_peserta || null,
+          id_skema: data.id_skema || idSkema,
+          status: normalizePaymentStatus(data.status),
+          metode_pembayaran: data.metode_pembayaran || null,
+          jalur_pembayaran: data.jalur_pembayaran || null,
+          nominal: data.nominal || 0,
+          waktu_batas: data.waktu_batas || null,
+          waktu_pembayaran: data.waktu_pembayaran || null,
+          bukti_bayar: data.bukti_bayar || null,
+          catatan_admin: data.catatan_admin || null,
+        };
       } catch (err) {
-        result[idSkema] = "belum bayar";
+        result[idSkema] = {
+          id_pembayaran: null,
+          id_skema: idSkema,
+          status: "belum bayar",
+          metode_pembayaran: null,
+          jalur_pembayaran: null,
+          nominal: 0,
+          waktu_batas: null,
+          waktu_pembayaran: null,
+          bukti_bayar: null,
+          catatan_admin: null,
+        };
       }
 
-      await sleep(120);
+      await sleep(80);
     }
 
     setPembayaran(result);
@@ -222,22 +304,26 @@ export default function JadwalSaya() {
       if (!idPeserta) continue;
 
       try {
-        const res = await axios.get(`${API}/asesi/apl01/${idPeserta}`, {
+        const res = await axios.get(`${API}/asesi/apl01/status/${idPeserta}`, {
           headers: getHeaders(),
         });
 
-        const data = res.data?.data || null;
-
-        result[idPeserta] =
-          data?.status === "submit" ||
-          data?.status === "submitted" ||
-          data?.status === "valid" ||
-          data?.status === "selesai";
+        result[idPeserta] = {
+          exists: Boolean(res.data?.data?.exists),
+          submitted: Boolean(res.data?.data?.submitted),
+          status: res.data?.data?.status_apl01 || "belum_ada",
+          id_apl01: res.data?.data?.id_apl01 || null,
+        };
       } catch (err) {
-        result[idPeserta] = false;
+        result[idPeserta] = {
+          exists: false,
+          submitted: false,
+          status: "belum_ada",
+          id_apl01: null,
+        };
       }
 
-      await sleep(120);
+      await sleep(80);
     }
 
     setApl01Status(result);
@@ -276,13 +362,13 @@ export default function JadwalSaya() {
             ]
       );
 
-      await loadData();
+      await loadData(false);
     } catch (err) {
       const message = err.response?.data?.message;
 
       if (message?.toLowerCase().includes("sudah terdaftar")) {
         alert("Anda sudah memilih jadwal ini.");
-        await loadData();
+        await loadData(false);
       } else {
         alert(message || "Gagal memilih jadwal.");
       }
@@ -293,9 +379,20 @@ export default function JadwalSaya() {
 
   const pergiBayar = (item) => {
     const idSkema = getIdSkema(item);
+    const statusBayar = getStatusPembayaran(item);
 
     if (!idSkema) {
       alert("ID skema tidak ditemukan.");
+      return;
+    }
+
+    if (statusBayar === "pending" || statusBayar === "menunggu_validasi") {
+      alert("Pembayaran sedang menunggu validasi admin. Tidak bisa bayar ulang.");
+      return;
+    }
+
+    if (statusBayar === "paid") {
+      alert("Pembayaran sudah diterima admin.");
       return;
     }
 
@@ -337,12 +434,21 @@ export default function JadwalSaya() {
   const pergiPresensi = (item) => {
     const idSkema = getIdSkema(item);
 
+    if (!isAPL01Done(item)) {
+      alert("Silakan submit APL01 terlebih dahulu sebelum presensi.");
+      return;
+    }
+
     if (!idSkema) {
       alert("ID skema tidak ditemukan.");
       return;
     }
 
     navigate(`/asesi/pra-asesmen/${idSkema}`);
+  };
+
+  const handleRefresh = async () => {
+    await loadData(false);
   };
 
   const formatTanggal = (date) => {
@@ -383,7 +489,8 @@ export default function JadwalSaya() {
         (filter === "validasi" &&
           (statusBayar === "pending" ||
             statusBayar === "menunggu_validasi")) ||
-        (filter === "paid" && statusBayar === "paid");
+        (filter === "paid" && statusBayar === "paid") ||
+        (filter === "ditolak" && statusBayar === "ditolak");
 
       return matchSearch && matchFilter;
     });
@@ -392,6 +499,10 @@ export default function JadwalSaya() {
   const totalDipilih = myJadwal.length;
   const totalPaid = jadwal.filter((item) => getStatusPembayaran(item) === "paid")
     .length;
+  const totalMenunggu = jadwal.filter((item) => {
+    const status = getStatusPembayaran(item);
+    return status === "pending" || status === "menunggu_validasi";
+  }).length;
   const totalTersedia = jadwal.length;
 
   if (loading) {
@@ -432,11 +543,11 @@ export default function JadwalSaya() {
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
-                    onClick={loadData}
-                    disabled={loading}
+                    onClick={handleRefresh}
+                    disabled={refreshing}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
-                    {loading ? (
+                    {refreshing ? (
                       <Loader2 size={17} className="animate-spin" />
                     ) : (
                       <RefreshCcw size={17} />
@@ -476,9 +587,10 @@ export default function JadwalSaya() {
                     proses asesmen.
                   </p>
 
-                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
-                    <HeroPill label="Dipilih" value={`${totalDipilih} Jadwal`} />
-                    <HeroPill label="Paid" value={`${totalPaid} Jadwal`} />
+                  <div className="mt-auto pt-6 grid grid-cols-3 gap-3">
+                    <HeroPill label="Dipilih" value={`${totalDipilih}`} />
+                    <HeroPill label="Validasi" value={`${totalMenunggu}`} />
+                    <HeroPill label="Paid" value={`${totalPaid}`} />
                   </div>
                 </div>
               </div>
@@ -502,8 +614,8 @@ export default function JadwalSaya() {
 
             <MiniStat
               icon={<CheckCircle size={22} />}
-              label="Pembayaran Paid"
-              value={`${totalPaid} Paid`}
+              label="Menunggu Validasi"
+              value={`${totalMenunggu} Pembayaran`}
             />
           </section>
 
@@ -528,11 +640,11 @@ export default function JadwalSaya() {
 
               <button
                 type="button"
-                onClick={loadData}
-                disabled={loading}
+                onClick={handleRefresh}
+                disabled={refreshing}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                {loading ? (
+                {refreshing ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <RefreshCcw size={16} />
@@ -567,6 +679,7 @@ export default function JadwalSaya() {
                 <option value="belum">Belum Dipilih</option>
                 <option value="validasi">Menunggu Validasi</option>
                 <option value="paid">Paid</option>
+                <option value="ditolak">Ditolak</option>
               </select>
             </div>
           </section>
@@ -581,11 +694,13 @@ export default function JadwalSaya() {
                 const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
                 const sudahDipilih = isSudahDipilih(item.id_jadwal);
                 const sedangMemilih = choosingId === item.id_jadwal;
+                const pembayaranData = getPembayaranData(item);
                 const statusBayar = getStatusPembayaran(item);
                 const sudahPaid = statusBayar === "paid";
                 const menungguValidasi =
                   statusBayar === "pending" ||
                   statusBayar === "menunggu_validasi";
+                const pembayaranDitolak = statusBayar === "ditolak";
                 const apl01Done = isAPL01Done(item);
 
                 return (
@@ -597,9 +712,11 @@ export default function JadwalSaya() {
                     idPeserta={idPeserta}
                     sudahDipilih={sudahDipilih}
                     sedangMemilih={sedangMemilih}
+                    pembayaranData={pembayaranData}
                     statusBayar={statusBayar}
                     sudahPaid={sudahPaid}
                     menungguValidasi={menungguValidasi}
+                    pembayaranDitolak={pembayaranDitolak}
                     apl01Done={apl01Done}
                     formatTanggal={formatTanggal}
                     pilihJadwal={pilihJadwal}
@@ -625,9 +742,11 @@ function ScheduleCard({
   idPeserta,
   sudahDipilih,
   sedangMemilih,
+  pembayaranData,
   statusBayar,
   sudahPaid,
   menungguValidasi,
+  pembayaranDitolak,
   apl01Done,
   formatTanggal,
   pilihJadwal,
@@ -665,8 +784,10 @@ function ScheduleCard({
                   <StatusBadge type="warning" label="Menunggu Validasi" />
                 )}
 
-                {statusBayar === "paid" && (
-                  <StatusBadge type="success" label="Paid" />
+                {sudahPaid && <StatusBadge type="success" label="Paid" />}
+
+                {pembayaranDitolak && (
+                  <StatusBadge type="danger" label="Ditolak" />
                 )}
 
                 {apl01Done && (
@@ -718,6 +839,13 @@ function ScheduleCard({
                 ID Peserta: {idPeserta || "-"}
               </span>
             )}
+
+            {pembayaranData?.id_pembayaran && (
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2">
+                <Tag size={14} />
+                ID Pembayaran: {pembayaranData.id_pembayaran}
+              </span>
+            )}
           </div>
         </div>
 
@@ -755,6 +883,33 @@ function ScheduleCard({
                 </>
               )}
             </button>
+          ) : menungguValidasi ? (
+            <button
+              type="button"
+              disabled
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-xs font-black uppercase tracking-widest text-amber-700 cursor-not-allowed"
+            >
+              <Loader2 size={16} className="animate-spin" />
+              Menunggu Validasi Admin
+            </button>
+          ) : pembayaranDitolak ? (
+            <div className="grid grid-cols-1 gap-3">
+              <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-[11px] font-bold text-red-700 leading-relaxed">
+                Pembayaran ditolak admin.
+                {pembayaranData?.catatan_admin
+                  ? ` Catatan: ${pembayaranData.catatan_admin}`
+                  : " Silakan lakukan pembayaran ulang."}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => pergiBayar(item)}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+              >
+                <CreditCard size={16} />
+                Bayar Ulang
+              </button>
+            </div>
           ) : sudahPaid ? (
             <div className="grid grid-cols-1 gap-3">
               <ActionButton title="APL01" onClick={() => pergiAPL01(item)} />
@@ -762,25 +917,21 @@ function ScheduleCard({
               {apl01Done ? (
                 <ActionButton title="APL02" onClick={() => pergiAPL02(item)} />
               ) : (
-                <div className="rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-[11px] font-bold text-amber-700 leading-relaxed">
-                  APL02 akan tersedia setelah APL01 selesai dikerjakan.
-                </div>
+                <LockedMessage text="APL02 akan tersedia setelah APL01 selesai disubmit." />
               )}
 
               {apl01Done ? (
-                <ActionButton title="Presensi" onClick={() => pergiPresensi(item)} />
+                <ActionButton
+                  title="Presensi"
+                  onClick={() => pergiPresensi(item)}
+                />
               ) : (
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-[11px] font-bold text-slate-500 leading-relaxed">
-                  Presensi akan tersedia setelah alur asesmen dibuka.
-                </div>
+                <LockedMessage text="Presensi akan tersedia setelah APL01 selesai disubmit." />
               )}
-            </div>
-          ) : menungguValidasi ? (
-            <div className="rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-[11px] font-bold text-amber-700 leading-relaxed">
-              Pembayaran sedang menunggu validasi admin. APL01 akan muncul setelah pembayaran diterima.
             </div>
           ) : (
             <button
+              type="button"
               onClick={() => pergiBayar(item)}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
             >
@@ -835,6 +986,7 @@ function HeroPill({ label, value }) {
       <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
         {label}
       </p>
+
       <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );
@@ -844,6 +996,7 @@ function StatusBadge({ type = "light", label }) {
   const styles = {
     success: "bg-green-50 text-green-600",
     warning: "bg-amber-50 text-amber-600",
+    danger: "bg-red-50 text-red-600",
     light: "bg-slate-50 text-slate-500",
   };
 
@@ -879,12 +1032,21 @@ function DetailItem({ icon, label, value }) {
 function ActionButton({ title, onClick }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
     >
       <FileText size={16} />
       {title}
     </button>
+  );
+}
+
+function LockedMessage({ text }) {
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-[11px] font-bold text-slate-500 leading-relaxed">
+      {text}
+    </div>
   );
 }
 

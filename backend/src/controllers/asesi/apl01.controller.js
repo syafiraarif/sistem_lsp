@@ -207,6 +207,75 @@ exports.getFormApl01 = async (req, res) => {
   }
 };
 
+
+exports.getStatusApl01 = async (req, res) => {
+  try {
+    const { id_peserta } = req.params;
+
+    const peserta = await PesertaJadwal.findOne({
+      where: {
+        id_peserta,
+        id_user: req.user.id_user,
+      },
+    });
+
+    if (!peserta) {
+      return res.status(404).json({
+        status: "error",
+        message: "Peserta tidak ditemukan",
+        data: {
+          exists: false,
+          submitted: false,
+          status_apl01: "peserta_tidak_ditemukan",
+        },
+      });
+    }
+
+    const apl01 = await Apl01Asesmen.findOne({
+      where: {
+        id_peserta,
+      },
+    });
+
+    if (!apl01) {
+      return res.json({
+        status: "success",
+        message: "APL01 belum ada",
+        data: {
+          exists: false,
+          submitted: false,
+          status_apl01: "belum_ada",
+          id_apl01: null,
+        },
+      });
+    }
+
+    const submitted =
+      apl01.status === "submit" ||
+      apl01.status === "submitted" ||
+      apl01.status === "valid" ||
+      apl01.status === "selesai";
+
+    return res.json({
+      status: "success",
+      message: "Status APL01",
+      data: {
+        exists: true,
+        submitted,
+        status_apl01: apl01.status,
+        id_apl01: apl01.id_apl01,
+      },
+    });
+  } catch (err) {
+    console.error("GET STATUS APL01 ERROR:", err);
+
+    return res.status(500).json({
+      status: "error",
+      message: "Gagal mengambil status APL01",
+      error: err.message,
+    });
+  }
+};
 /*
 =====================================
 CREATE APL01

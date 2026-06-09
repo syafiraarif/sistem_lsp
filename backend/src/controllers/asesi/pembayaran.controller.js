@@ -4,6 +4,8 @@ const Skema = require("../../models/skema.model");
 const BiayaUji = require("../../models/biayaUji.model");
 const TujuanTransfer = require("../../models/tujuanPembayaran.model");
 const Pembayaran = require("../../models/pembayaran.model");
+const PesertaJadwal = require("../../models/pesertaJadwal.model");
+const Jadwal = require("../../models/jadwal.model");
 const response = require("../../utils/response.util");
 
 /* ===============================
@@ -37,6 +39,29 @@ const formatTujuanTransfer = (item) => {
     atas_nama: item.nama_tujuan || item.atas_nama || "-",
     status: item.status,
   };
+};
+
+const findPesertaByUserAndSkema = async ({ id_user, id_skema }) => {
+  return PesertaJadwal.findOne({
+    where: {
+      id_user,
+    },
+    include: [
+      {
+        model: Jadwal,
+        as: "jadwal",
+        where: {
+          id_skema,
+        },
+      },
+    ],
+    order: [["id_peserta", "DESC"]],
+  });
+};
+
+const getStatusLabel = (status) => {
+  if (!status) return "belum bayar";
+  return status;
 };
 
 /* ===============================
@@ -109,6 +134,7 @@ POST /api/asesi/pembayaran/submit
 
 exports.submitPembayaran = async (req, res) => {
   try {
+    const id_user = req.user.id_user;
     const id_skema = safeNumber(req.body.id_skema);
     const metode_pembayaran = normalizeMetode(req.body.metode_pembayaran);
     const jalur_pembayaran = normalizeJalur(
@@ -176,6 +202,19 @@ exports.submitPembayaran = async (req, res) => {
       return response.error(res, "Skema tidak ditemukan", 404);
     }
 
+    const peserta = await findPesertaByUserAndSkema({
+      id_user,
+      id_skema,
+    });
+
+    if (!peserta) {
+      return response.error(
+        res,
+        "Kamu belum memilih jadwal untuk skema ini",
+        400
+      );
+    }
+
     const biaya = await BiayaUji.findOne({
       where: {
         id_skema,
@@ -189,6 +228,8 @@ exports.submitPembayaran = async (req, res) => {
 
     const existing = await Pembayaran.findOne({
       where: {
+        id_user,
+        id_peserta: peserta.id_peserta,
         id_skema,
         status: {
           [Op.in]: ["pending", "menunggu_validasi", "paid"],
@@ -208,6 +249,8 @@ exports.submitPembayaran = async (req, res) => {
     }
 
     const pembayaran = await Pembayaran.create({
+      id_user,
+      id_peserta: peserta.id_peserta,
       id_skema,
 
       metode_pembayaran,
@@ -229,6 +272,8 @@ exports.submitPembayaran = async (req, res) => {
 
     return response.success(res, "Pembayaran berhasil dibuat", {
       id_pembayaran: pembayaran.id_pembayaran,
+      id_user: pembayaran.id_user,
+      id_peserta: pembayaran.id_peserta,
       id_skema: pembayaran.id_skema,
       status: pembayaran.status,
       metode_pembayaran: pembayaran.metode_pembayaran,
@@ -250,9 +295,15 @@ PUT /api/asesi/pembayaran/:id_pembayaran/upload-bukti
 
 exports.uploadBuktiBayar = async (req, res) => {
   try {
+    const id_user = req.user.id_user;
     const { id_pembayaran } = req.params;
 
-    const pembayaran = await Pembayaran.findByPk(id_pembayaran);
+    const pembayaran = await Pembayaran.findOne({
+      where: {
+        id_pembayaran,
+        id_user,
+      },
+    });
 
     if (!pembayaran) {
       return response.error(res, "Pembayaran tidak ditemukan", 404);
@@ -260,6 +311,14 @@ exports.uploadBuktiBayar = async (req, res) => {
 
     if (pembayaran.status === "paid") {
       return response.error(res, "Pembayaran sudah divalidasi admin", 400);
+    }
+
+    if (pembayaran.status === "menunggu_validasi") {
+      return response.error(
+        res,
+        "Bukti pembayaran sudah diupload dan sedang menunggu validasi admin",
+        400
+      );
     }
 
     const file = req.files?.bukti_bayar?.[0];
@@ -281,6 +340,8 @@ exports.uploadBuktiBayar = async (req, res) => {
       "Bukti bayar berhasil diupload. Menunggu validasi admin.",
       {
         id_pembayaran: pembayaran.id_pembayaran,
+        id_user: pembayaran.id_user,
+        id_peserta: pembayaran.id_peserta,
         id_skema: pembayaran.id_skema,
         status: pembayaran.status,
         metode_pembayaran: pembayaran.metode_pembayaran,
@@ -304,14 +365,39 @@ GET /api/asesi/pembayaran/:id_skema/status
 
 exports.getStatusPembayaran = async (req, res) => {
   try {
-    const { id_skema } = req.params;
+    const id_user = req.user.id_user;
+    const id_skema = safeNumber(req.params.id_skema);
 
     if (!id_skema) {
       return response.error(res, "ID skema wajib diisi", 400);
     }
 
+    const peserta = await findPesertaByUserAndSkema({
+      id_user,
+      id_skema,
+    });
+
+    if (!peserta) {
+      return response.success(res, "Belum memilih jadwal untuk skema ini", {
+        id_pembayaran: null,
+        id_user,
+        id_peserta: null,
+        id_skema,
+        status: "belum bayar",
+        metode_pembayaran: null,
+        jalur_pembayaran: null,
+        nominal: 0,
+        waktu_batas: null,
+        waktu_pembayaran: null,
+        bukti_bayar: null,
+        catatan_admin: null,
+      });
+    }
+
     const pembayaran = await Pembayaran.findOne({
       where: {
+        id_user,
+        id_peserta: peserta.id_peserta,
         id_skema,
       },
       order: [["id_pembayaran", "DESC"]],
@@ -320,7 +406,9 @@ exports.getStatusPembayaran = async (req, res) => {
     if (!pembayaran) {
       return response.success(res, "Belum ada pembayaran untuk skema ini", {
         id_pembayaran: null,
-        id_skema: safeNumber(id_skema),
+        id_user,
+        id_peserta: peserta.id_peserta,
+        id_skema,
         status: "belum bayar",
         metode_pembayaran: null,
         jalur_pembayaran: null,
@@ -328,13 +416,16 @@ exports.getStatusPembayaran = async (req, res) => {
         waktu_batas: null,
         waktu_pembayaran: null,
         bukti_bayar: null,
+        catatan_admin: null,
       });
     }
 
     return response.success(res, "Status pembayaran", {
       id_pembayaran: pembayaran.id_pembayaran,
+      id_user: pembayaran.id_user,
+      id_peserta: pembayaran.id_peserta,
       id_skema: pembayaran.id_skema,
-      status: pembayaran.status || "belum bayar",
+      status: getStatusLabel(pembayaran.status),
       metode_pembayaran: pembayaran.metode_pembayaran || null,
       jalur_pembayaran: pembayaran.jalur_pembayaran || null,
       nominal: pembayaran.nominal || 0,
@@ -355,6 +446,7 @@ exports.getStatusPembayaran = async (req, res) => {
       waktu_batas: null,
       waktu_pembayaran: null,
       bukti_bayar: null,
+      catatan_admin: null,
     });
   }
 };
