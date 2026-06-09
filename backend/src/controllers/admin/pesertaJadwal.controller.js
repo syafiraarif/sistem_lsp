@@ -12,7 +12,7 @@ exports.getPesertaByJadwal = async (req, res) => {
         { 
           model: User, 
           as: "user",
-          include: [{ model: ProfileAsesi }] 
+          include: [{ model: ProfileAsesi, as: "profile_asesi" }] 
         },
         { 
           model: Skema,
@@ -55,7 +55,7 @@ exports.getAllPesertaGlobal = async (req, res) => {
         {
           model: User,
           as: "user",
-          include: [{ model: ProfileAsesi }] 
+          include: [{ model: ProfileAsesor, as: "profile_asesor" }]
         },
         {
               model: Skema,

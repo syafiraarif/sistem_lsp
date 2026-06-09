@@ -9,963 +9,859 @@ const {
   PesertaJadwal,
   Jadwal,
   Skema,
+  Tuk,
   ProfileAsesi
 } = require("../../models");
 
-const PDFDocument=require("pdfkit");
-const fs=require("fs");
-const path=require("path");
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const path = require("path");
 
+/* =================================
+HELPER
+================================= */
 
-/*
-=================================
-GET FORM
-=================================
-*/
-
-exports.getFormApl02=
-async(req,res)=>{
-
-try{
-
-const { id_skema }=
-req.params;
-
-const data=
-await SkemaUnit.findAll({
-
-where:{
-id_skema
-},
-
-include:[
-
-{
-
-model:UnitKompetensi,
-
-as:"unit",
-
-include:[
-
-{
-
-model:UnitElemen,
-
-as:"elemen",
-
-include:[
-
-{
-
-model:UnitKuk,
-
-as:"kuk"
-
-}
-
-]
-
-}
-
-]
-
-}
-
-],
-
-order:[
-["urutan","ASC"]
-]
-
-});
-
-return res.json({
-
-success:true,
-
-data
-
-});
-
-}
-
-catch(err){
-
-console.error(err);
-
-return res.status(500).json({
-
-success:false,
-
-message:err.message
-
-});
-
-}
-
+const toPlain = (data) => {
+  if (!data) return null;
+  return typeof data.toJSON === "function" ? data.toJSON() : data;
 };
 
+const getUnitKode = (unit) => {
+  return (
+    unit?.kode_unit ||
+    unit?.kode ||
+    unit?.kode_kompetensi ||
+    unit?.kode_unit_kompetensi ||
+    "-"
+  );
+};
 
+const getUnitJudul = (unit) => {
+  return (
+    unit?.judul_unit ||
+    unit?.nama_unit ||
+    unit?.judul ||
+    unit?.nama_unit_kompetensi ||
+    "-"
+  );
+};
 
-/*
-=================================
+const getElemenText = (elemen) => {
+  return (
+    elemen?.nama_elemen ||
+    elemen?.elemen_kompetensi ||
+    elemen?.judul_elemen ||
+    elemen?.elemen ||
+    elemen?.deskripsi ||
+    "-"
+  );
+};
+
+const getKukText = (kuk) => {
+  return (
+    kuk?.uraian ||
+    kuk?.kriteria_unjuk_kerja ||
+    kuk?.kuk ||
+    kuk?.deskripsi ||
+    kuk?.pertanyaan ||
+    kuk?.nama_kuk ||
+    "-"
+  );
+};
+
+const safeDate = () => new Date();
+
+const getFormBySkema = async (id_skema) => {
+  const skemaUnitRows = await SkemaUnit.findAll({
+    where: {
+      id_skema
+    },
+    order: [["urutan", "ASC"]]
+  });
+
+  const result = [];
+
+  for (const row of skemaUnitRows) {
+    const plainRow = toPlain(row);
+
+    const unit = await UnitKompetensi.findByPk(plainRow.id_unit);
+
+    if (!unit) {
+      result.push({
+        ...plainRow,
+        unit: null
+      });
+      continue;
+    }
+
+    const plainUnit = toPlain(unit);
+
+    const elemenRows = await UnitElemen.findAll({
+      where: {
+        id_unit: plainUnit.id_unit
+      },
+      order: [["urutan", "ASC"]]
+    });
+
+    const elemen = [];
+
+    for (const elemenRow of elemenRows) {
+      const plainElemen = toPlain(elemenRow);
+
+      const kukRows = await UnitKuk.findAll({
+        where: {
+          id_elemen: plainElemen.id_elemen
+        },
+        order: [["urutan", "ASC"]]
+      });
+
+      elemen.push({
+        ...plainElemen,
+        kuk: kukRows.map((kuk) => toPlain(kuk))
+      });
+    }
+
+    result.push({
+      ...plainRow,
+      unit: {
+        ...plainUnit,
+        elemen
+      }
+    });
+  }
+
+  return result;
+};
+
+const getPesertaFull = async (id_peserta, id_user = null) => {
+  const where = {
+    id_peserta
+  };
+
+  if (id_user) {
+    where.id_user = id_user;
+  }
+
+  return await PesertaJadwal.findOne({
+    where,
+    include: [
+      {
+        model: Jadwal,
+        as: "jadwal",
+        required: false,
+        include: [
+          {
+            model: Skema,
+            as: "skema",
+            required: false
+          },
+          {
+            model: Tuk,
+            as: "tuk",
+            required: false
+          }
+        ]
+      }
+    ]
+  });
+};
+
+const buildApl02Detail = async (apl02, req) => {
+  const plainApl02 = toPlain(apl02);
+  const base = `${req.protocol}://${req.get("host")}`;
+
+  const detailRows = await Apl02Detail.findAll({
+    where: {
+      id_apl02: plainApl02.id_apl02
+    },
+    order: [["id_detail", "ASC"]]
+  });
+
+  const detail = [];
+
+  for (const detailRow of detailRows) {
+    const plainDetail = toPlain(detailRow);
+
+    const elemen = await UnitElemen.findByPk(plainDetail.id_elemen);
+
+    const buktiRows = await Apl02Bukti.findAll({
+      where: {
+        id_detail: plainDetail.id_detail
+      },
+      order: [["id_bukti", "ASC"]]
+    });
+
+    const buktiTambahan = buktiRows.map((bukti) => {
+      const plainBukti = toPlain(bukti);
+
+      return {
+        ...plainBukti,
+        file_url: plainBukti.file_path
+          ? `${base}/${plainBukti.file_path}`
+          : null
+      };
+    });
+
+    detail.push({
+      ...plainDetail,
+      elemen: elemen ? toPlain(elemen) : null,
+      buktiTambahan
+    });
+  }
+
+  return {
+    ...plainApl02,
+    detail
+  };
+};
+
+/* =================================
+GET FORM APL02
+GET /api/asesi/apl02/form/:id_skema
+================================= */
+
+exports.getFormApl02 = async (req, res) => {
+  try {
+    const { id_skema } = req.params;
+
+    const skema = await Skema.findByPk(id_skema);
+
+    if (!skema) {
+      return res.status(404).json({
+        success: false,
+        message: "Skema tidak ditemukan"
+      });
+    }
+
+    const data = await getFormBySkema(id_skema);
+
+    return res.json({
+      success: true,
+      message: "Form APL02 berhasil diambil",
+      skema: {
+        id_skema: skema.id_skema,
+        kode_skema: skema.kode_skema,
+        judul_skema: skema.judul_skema,
+        jenis_skema: skema.jenis_skema,
+        jenjang_kualifikasi: skema.jenjang_kualifikasi
+      },
+      data
+    });
+  } catch (err) {
+    console.error("GET FORM APL02 ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+/* =================================
 CREATE APL02
-=================================
-*/
+POST /api/asesi/apl02/create
+================================= */
 
-exports.createApl02=
-async(req,res)=>{
+exports.createApl02 = async (req, res) => {
+  try {
+    const { id_peserta } = req.body;
 
-try{
+    if (!id_peserta) {
+      return res.status(400).json({
+        success: false,
+        message: "ID peserta wajib diisi"
+      });
+    }
 
-const { id_peserta }=
-req.body;
+    const peserta = await PesertaJadwal.findOne({
+      where: {
+        id_peserta,
+        id_user: req.user.id_user
+      }
+    });
 
-const peserta=
-await PesertaJadwal.findOne({
+    if (!peserta) {
+      return res.status(404).json({
+        success: false,
+        message: "Peserta tidak ditemukan"
+      });
+    }
 
-where:{
+    const existing = await Apl02.findOne({
+      where: {
+        id_peserta
+      }
+    });
 
-id_peserta,
+    if (existing) {
+      return res.json({
+        success: true,
+        message: "APL02 sudah ada",
+        data: existing
+      });
+    }
 
-id_user:
-req.user.id_user
+    const apl02 = await Apl02.create({
+      id_peserta,
+      status: "draft",
+      rekomendasi_asesi: "",
+      pendekatan_rekomendasi: "",
+      created_at: safeDate(),
+      updated_at: safeDate()
+    });
 
-}
+    return res.json({
+      success: true,
+      message: "APL02 berhasil dibuat",
+      data: apl02
+    });
+  } catch (err) {
+    console.error("CREATE APL02 ERROR:", err);
 
-});
-
-if(!peserta){
-
-return res.status(404).json({
-
-success:false,
-
-message:
-"Peserta tidak ditemukan"
-
-});
-
-}
-
-const existing=
-await Apl02.findOne({
-
-where:{
-id_peserta
-}
-
-});
-
-if(existing){
-
-return res.json({
-
-success:true,
-
-data:existing
-
-});
-
-}
-
-const apl02=
-await Apl02.create({
-
-id_peserta,
-
-status:"draft"
-
-});
-
-return res.json({
-
-success:true,
-
-data:apl02
-
-});
-
-}
-
-catch(err){
-
-return res.status(500).json({
-
-success:false,
-
-message:err.message
-
-});
-
-}
-
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
 
-
-
-/*
-=================================
+/* =================================
 SAVE PENILAIAN
-=================================
-*/
+POST /api/asesi/apl02/penilaian
 
-exports.savePenilaian=
-async(req,res)=>{
+DB apl02_detail:
+id_detail, id_apl02, id_elemen, kompeten, catatan, created_at
+================================= */
 
-try{
+exports.savePenilaian = async (req, res) => {
+  try {
+    const { id_apl02, id_elemen, kompeten, catatan } = req.body;
 
-const {
+    if (!id_apl02 || !id_elemen || !kompeten) {
+      return res.status(400).json({
+        success: false,
+        message: "id_apl02, id_elemen, dan kompeten wajib diisi"
+      });
+    }
 
-id_apl02,
+    if (!["K", "BK"].includes(kompeten)) {
+      return res.status(400).json({
+        success: false,
+        message: "Kompeten harus bernilai K atau BK"
+      });
+    }
 
-id_unit,
+    const apl02 = await Apl02.findByPk(id_apl02);
 
-id_elemen,
+    if (!apl02) {
+      return res.status(404).json({
+        success: false,
+        message: "APL02 tidak ditemukan"
+      });
+    }
 
-kompeten,
+    if (apl02.status !== "draft") {
+      return res.status(400).json({
+        success: false,
+        message: "APL02 sudah submit dan tidak dapat diubah"
+      });
+    }
 
-catatan
+    const elemen = await UnitElemen.findByPk(id_elemen);
 
-}=req.body;
+    if (!elemen) {
+      return res.status(404).json({
+        success: false,
+        message: "Elemen tidak ditemukan"
+      });
+    }
 
+    let detail = await Apl02Detail.findOne({
+      where: {
+        id_apl02,
+        id_elemen
+      }
+    });
 
-const apl02=
-await Apl02.findByPk(
-id_apl02
-);
+    if (detail) {
+      await detail.update({
+        kompeten,
+        catatan: catatan || ""
+      });
 
-if(!apl02){
+      await detail.reload();
+    } else {
+      detail = await Apl02Detail.create({
+        id_apl02,
+        id_elemen,
+        kompeten,
+        catatan: catatan || "",
+        created_at: safeDate()
+      });
+    }
 
-return res.status(404).json({
+    await apl02.update({
+      updated_at: safeDate()
+    });
 
-success:false,
+    return res.json({
+      success: true,
+      message: "Penilaian berhasil disimpan",
+      data: detail
+    });
+  } catch (err) {
+    console.error("SAVE PENILAIAN APL02 ERROR:", err);
 
-message:
-"APL02 tidak ada"
-
-});
-
-}
-
-if(
-apl02.status!=="draft"
-){
-
-return res.status(400).json({
-
-success:false,
-
-message:
-"APL02 sudah submit"
-
-});
-
-}
-
-let detail=
-await Apl02Detail.findOne({
-
-where:{
-
-id_apl02,
-
-id_elemen
-
-}
-
-});
-
-
-const payload={
-
-id_unit,
-
-kompeten,
-
-catatan:
-catatan || ""
-
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
 
-if(detail){
+/* =================================
+SAVE REKOMENDASI
+POST /api/asesi/apl02/rekomendasi
+================================= */
 
-await detail.update(
-payload
-);
+exports.saveRekomendasi = async (req, res) => {
+  try {
+    const {
+      id_apl02,
+      rekomendasi_asesi,
+      pendekatan_rekomendasi
+    } = req.body;
 
-}else{
+    if (!id_apl02) {
+      return res.status(400).json({
+        success: false,
+        message: "ID APL02 wajib diisi"
+      });
+    }
 
-detail=
-await Apl02Detail.create({
+    const apl02 = await Apl02.findByPk(id_apl02);
 
-id_apl02,
+    if (!apl02) {
+      return res.status(404).json({
+        success: false,
+        message: "APL02 tidak ditemukan"
+      });
+    }
 
-id_unit,
+    if (apl02.status !== "draft") {
+      return res.status(400).json({
+        success: false,
+        message: "APL02 sudah submit dan tidak dapat diubah"
+      });
+    }
 
-id_elemen,
+    await apl02.update({
+      rekomendasi_asesi: rekomendasi_asesi || "",
+      pendekatan_rekomendasi: pendekatan_rekomendasi || "",
+      updated_at: safeDate()
+    });
 
-...payload
+    await apl02.reload();
 
-});
+    return res.json({
+      success: true,
+      message: "Rekomendasi berhasil disimpan",
+      data: apl02
+    });
+  } catch (err) {
+    console.error("SAVE REKOMENDASI APL02 ERROR:", err);
 
-}
-
-return res.json({
-
-success:true,
-
-data:detail
-
-});
-
-}
-
-catch(err){
-
-return res.status(500).json({
-
-success:false,
-
-message:err.message
-
-});
-
-}
-
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
 
-
-
-/*
-=================================
+/* =================================
 UPLOAD BUKTI
-=================================
-*/
+POST /api/asesi/apl02/upload
+================================= */
 
-exports.uploadBukti=
-async(req,res)=>{
+exports.uploadBukti = async (req, res) => {
+  try {
+    const {
+      id_detail,
+      jenis_portofolio,
+      nama_dokumen,
+      nomor_dokumen,
+      tanggal_dokumen
+    } = req.body;
 
-try{
+    const file = req.files?.file_dokumen?.[0];
 
-const {
+    if (!id_detail) {
+      return res.status(400).json({
+        success: false,
+        message: "ID detail wajib diisi"
+      });
+    }
 
-id_detail,
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: "File wajib"
+      });
+    }
 
-jenis_portofolio,
+    const detail = await Apl02Detail.findByPk(id_detail);
 
-nama_dokumen,
+    if (!detail) {
+      return res.status(404).json({
+        success: false,
+        message: "Detail APL02 tidak ditemukan"
+      });
+    }
 
-nomor_dokumen,
+    const bukti = await Apl02Bukti.create({
+      id_detail,
+      jenis_portofolio: jenis_portofolio || "",
+      nama_dokumen: nama_dokumen || "",
+      nomor_dokumen: nomor_dokumen || "",
+      tanggal_dokumen: tanggal_dokumen || null,
+      file_path: file.path.replace(/\\/g, "/"),
+      created_at: safeDate()
+    });
 
-tanggal_dokumen
+    return res.json({
+      success: true,
+      message: "Bukti berhasil diupload",
+      data: bukti
+    });
+  } catch (err) {
+    console.error("UPLOAD BUKTI APL02 ERROR:", err);
 
-}=req.body;
-
-const file=
-req.files?.file_dokumen?.[0];
-
-if(!file){
-
-return res.status(400).json({
-
-success:false,
-
-message:
-"File wajib"
-
-});
-
-}
-
-const detail=
-await Apl02Detail.findByPk(
-id_detail
-);
-
-if(!detail){
-
-return res.status(404).json({
-
-success:false,
-
-message:
-"Detail tidak ada"
-
-});
-
-}
-
-const bukti=
-await Apl02Bukti.create({
-
-id_detail,
-
-jenis_portofolio:
-jenis_portofolio || "",
-
-nama_dokumen:
-nama_dokumen || "",
-
-nomor_dokumen:
-nomor_dokumen || "",
-
-tanggal_dokumen:
-tanggal_dokumen || null,
-
-file_path:
-file.path.replace(/\\/g,"/")
-
-});
-
-return res.json({
-
-success:true,
-
-data:bukti
-
-});
-
-}
-
-catch(err){
-
-return res.status(500).json({
-
-success:false,
-
-message:err.message
-
-});
-
-}
-
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
 
-
-
-/*
-=================================
+/* =================================
 GET APL02
-=================================
-*/
+GET /api/asesi/apl02/:id_peserta
 
-exports.getApl02=
-async(req,res)=>{
+Versi aman:
+Tidak pakai include Apl02Detail supaya tidak error relasi id_unit lama.
+================================= */
 
-try{
+exports.getApl02 = async (req, res) => {
+  try {
+    const { id_peserta } = req.params;
 
-const { id_peserta }=
-req.params;
+    const apl02 = await Apl02.findOne({
+      where: {
+        id_peserta
+      }
+    });
 
-const data=
-await Apl02.findOne({
+    if (!apl02) {
+      return res.status(404).json({
+        success: false,
+        message: "APL02 belum ada"
+      });
+    }
 
-where:{
-id_peserta
-},
+    const data = await buildApl02Detail(apl02, req);
 
-include:[
+    return res.json({
+      success: true,
+      message: "Detail APL02 berhasil diambil",
+      data
+    });
+  } catch (err) {
+    console.error("GET APL02 ERROR:", err);
 
-{
-
-model:Apl02Detail,
-
-as:"detail",
-
-include:[
-
-{
-
-model:UnitKompetensi,
-
-as:"unit"
-
-},
-
-{
-
-model:UnitElemen,
-
-as:"elemen"
-
-},
-
-{
-
-model:Apl02Bukti,
-
-as:"buktiTambahan"
-
-}
-
-]
-
-}
-
-]
-
-});
-
-if(!data){
-
-return res.status(404).json({
-
-success:false,
-
-message:
-"APL02 belum ada"
-
-});
-
-}
-
-const base=
-`${req.protocol}://${req.get("host")}`;
-
-data.detail.forEach(
-
-d=>{
-
-d.buktiTambahan.forEach(
-
-b=>{
-
-b.file_url=
-`${base}/${b.file_path}`;
-
-}
-
-);
-
-}
-
-);
-
-return res.json({
-
-success:true,
-
-data
-
-});
-
-}
-
-catch(err){
-
-return res.status(500).json({
-
-success:false,
-
-message:err.message
-
-});
-
-}
-
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
 
-
-
-/*
-=================================
+/* =================================
 DELETE BUKTI
-=================================
-*/
+DELETE /api/asesi/apl02/bukti/:id_bukti
+================================= */
 
-exports.deleteBukti=
-async(req,res)=>{
+exports.deleteBukti = async (req, res) => {
+  try {
+    const bukti = await Apl02Bukti.findByPk(req.params.id_bukti);
 
-try{
+    if (!bukti) {
+      return res.status(404).json({
+        success: false,
+        message: "Bukti tidak ditemukan"
+      });
+    }
 
-const bukti=
-await Apl02Bukti.findByPk(
-req.params.id_bukti
-);
+    if (
+      bukti.file_path &&
+      fs.existsSync(path.join(process.cwd(), bukti.file_path))
+    ) {
+      fs.unlinkSync(path.join(process.cwd(), bukti.file_path));
+    }
 
-if(!bukti){
+    await bukti.destroy();
 
-return res.status(404).json({
+    return res.json({
+      success: true,
+      message: "Bukti berhasil dihapus"
+    });
+  } catch (err) {
+    console.error("DELETE BUKTI APL02 ERROR:", err);
 
-success:false,
-
-message:
-"Tidak ditemukan"
-
-});
-
-}
-
-if(
-
-bukti.file_path &&
-
-fs.existsSync(
-
-path.join(
-process.cwd(),
-bukti.file_path
-)
-
-)
-
-){
-
-fs.unlinkSync(
-
-path.join(
-process.cwd(),
-bukti.file_path
-)
-
-);
-
-}
-
-await bukti.destroy();
-
-return res.json({
-
-success:true,
-
-message:
-"Berhasil"
-
-});
-
-}
-
-catch(err){
-
-return res.status(500).json({
-
-success:false,
-
-message:err.message
-
-});
-
-}
-
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
 
+/* =================================
+SUBMIT APL02
+PUT /api/asesi/apl02/submit/:id_apl02
+================================= */
 
+exports.submitApl02 = async (req, res) => {
+  try {
+    const apl02 = await Apl02.findByPk(req.params.id_apl02);
 
-/*
-=================================
-SUBMIT
-=================================
-*/
+    if (!apl02) {
+      return res.status(404).json({
+        success: false,
+        message: "APL02 tidak ditemukan"
+      });
+    }
 
-exports.submitApl02=
-async(req,res)=>{
+    if (apl02.status === "submitted") {
+      return res.status(400).json({
+        success: false,
+        message: "APL02 sudah submit"
+      });
+    }
 
-try{
+    const total = await Apl02Detail.count({
+      where: {
+        id_apl02: apl02.id_apl02
+      }
+    });
 
-const apl02=
-await Apl02.findByPk(
-req.params.id_apl02
-);
+    if (total === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Isi penilaian dulu"
+      });
+    }
 
-if(!apl02){
+    await apl02.update({
+      status: "submitted",
+      updated_at: safeDate()
+    });
 
-return res.status(404).json({
+    return res.json({
+      success: true,
+      message: "Submit berhasil"
+    });
+  } catch (err) {
+    console.error("SUBMIT APL02 ERROR:", err);
 
-success:false,
-
-message:
-"APL02 tidak ada"
-
-});
-
-}
-
-const total=
-await Apl02Detail.count({
-
-where:{
-id_apl02:
-apl02.id_apl02
-}
-
-});
-
-if(total===0){
-
-return res.status(400).json({
-
-success:false,
-
-message:
-"Isi penilaian dulu"
-
-});
-
-}
-
-await apl02.update({
-
-status:"submitted",
-
-updated_at:
-new Date()
-
-});
-
-return res.json({
-
-success:true,
-
-message:
-"Submit berhasil"
-
-});
-
-}
-
-catch(err){
-
-return res.status(500).json({
-
-success:false,
-
-message:err.message
-
-});
-
-}
-
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
 
-
-
-/*
-=================================
+/* =================================
 GENERATE PDF
-=================================
-*/
+GET /api/asesi/apl02/pdf/:id_peserta
+================================= */
+
+exports.generatePdfApl02 = async (req, res) => {
+  try {
+    const { id_peserta } = req.params;
+
+    const apl02 = await Apl02.findOne({
+      where: {
+        id_peserta
+      }
+    });
+
+    if (!apl02) {
+      return res.status(404).json({
+        message: "APL02 tidak ada"
+      });
+    }
+
+    const peserta = await PesertaJadwal.findByPk(id_peserta, {
+      include: [
+        {
+          model: ProfileAsesi,
+          as: "profileAsesi",
+          required: false
+        },
+        {
+          model: Jadwal,
+          as: "jadwal",
+          required: false,
+          include: [
+            {
+              model: Skema,
+              as: "skema",
+              required: false
+            },
+            {
+              model: Tuk,
+              as: "tuk",
+              required: false
+            }
+          ]
+        }
+      ]
+    });
+
+    const skema = peserta?.jadwal?.skema || {};
+    const profile = peserta?.profileAsesi || {};
+    const idSkema = skema.id_skema || peserta?.jadwal?.id_skema;
+
+    const formUnits = idSkema ? await getFormBySkema(idSkema) : [];
+
+    const detailRows = await Apl02Detail.findAll({
+      where: {
+        id_apl02: apl02.id_apl02
+      }
+    });
+
+    const detailMap = {};
+
+    detailRows.forEach((detail) => {
+      detailMap[detail.id_elemen] = detail;
+    });
+
+    const doc = new PDFDocument({
+      margin: 35,
+      size: "A4"
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename=APL02-${id_peserta}.pdf`
+    );
+
+    doc.pipe(res);
+
+    doc.fontSize(13).font("Helvetica-Bold").text("FR.APL.02. ASESMEN MANDIRI");
+    doc.moveDown();
+
+    doc.fontSize(9).font("Helvetica");
+    doc.text("Skema Sertifikasi (KKNI/Okupasi/Klaster)");
+    doc.text(`Judul  : ${skema.judul_skema || "-"}`);
+    doc.text(`Nomor  : ${skema.kode_skema || "-"}`);
+    doc.moveDown();
+
+    doc.font("Helvetica-Bold").text("PANDUAN ASESMEN MANDIRI:");
+    doc.font("Helvetica").text("Instruksi:");
+    doc.text("• Baca setiap pertanyaan di kolom sebelah kiri");
+    doc.text("• Beri tanda centang pada kotak jika Anda yakin dapat melakukan tugas yang dijelaskan");
+    doc.text("• Isi kolom bukti yang relevan untuk menunjukkan bahwa Anda melakukan pekerjaan.");
+    doc.moveDown();
+
+    formUnits.forEach((row, unitIndex) => {
+      const plainRow = toPlain(row);
+      const unit = plainRow.unit || {};
+
+      if (doc.y > 690) {
+        doc.addPage();
+      }
+
+      doc.font("Helvetica-Bold").fontSize(9);
+      doc.text(`Unit Kompetensi ${unitIndex + 1}`);
+      doc.text(`Kode Unit : ${getUnitKode(unit)}`);
+      doc.text(`Judul Unit : ${getUnitJudul(unit)}`);
+      doc.moveDown(0.5);
 
-exports.generatePdfApl02=
-async(req,res)=>{
+      const elemenList = unit.elemen || [];
 
-try{
+      elemenList.forEach((elemen, elemenIndex) => {
+        if (doc.y > 670) {
+          doc.addPage();
+        }
 
-const { id_peserta }=
-req.params;
+        const detail = detailMap[elemen.id_elemen];
 
-const data=
-await Apl02.findOne({
+        doc.font("Helvetica-Bold").fontSize(9);
+        doc.text(`${elemenIndex + 1}. Elemen: ${getElemenText(elemen)}`);
 
-where:{
-id_peserta
-},
+        doc.font("Helvetica").fontSize(8);
+        doc.text(`K/BK: ${detail?.kompeten || "-"}`);
+        doc.text(`Bukti yang relevan: ${detail?.catatan || "-"}`);
 
-include:[
+        const kukList = elemen.kuk || [];
 
-{
+        if (kukList.length) {
+          doc.font("Helvetica-Bold").text("Kriteria Unjuk Kerja:");
+          doc.font("Helvetica");
 
-model:PesertaJadwal,
+          kukList.forEach((kuk, kukIndex) => {
+            doc.text(`${kukIndex + 1}. ${getKukText(kuk)}`);
+          });
+        }
 
-as:"peserta",
+        doc.moveDown(0.8);
+      });
+    });
 
-include:[
+    if (doc.y > 610) {
+      doc.addPage();
+    }
 
-{
+    doc.moveDown();
+    doc.font("Helvetica-Bold").text("Rekomendasi untuk Asesi:");
+    doc.font("Helvetica").text(apl02.rekomendasi_asesi || "-");
+    doc.text(
+      `Asesmen dapat / tidak dapat dilanjutkan melalui pendekatan ${
+        apl02.pendekatan_rekomendasi || "...................."
+      }`
+    );
 
-model:ProfileAsesi,
+    doc.moveDown(2);
 
-as:"profileAsesi"
+    const ttd = profile?.ttd_path;
 
-},
+    if (ttd) {
+      const ttdPath = path.join(process.cwd(), ttd);
 
-{
+      if (fs.existsSync(ttdPath)) {
+        doc.image(ttdPath, 400, doc.y, {
+          width: 100
+        });
+      }
+    }
 
-model:Jadwal,
+    doc.moveDown(4);
 
-as:"jadwal",
+    doc.text(`Asesi: ${profile?.nama_lengkap || "-"}`, {
+      align: "right"
+    });
 
-include:[
+    doc.text(`Tanggal: ${new Date().toLocaleDateString("id-ID")}`, {
+      align: "right"
+    });
 
-{
+    doc.end();
+  } catch (err) {
+    console.error("PDF APL02 ERROR:", err);
 
-model:Skema,
-
-as:"skema"
-
-}
-
-]
-
-}
-
-]
-
-},
-
-{
-
-model:Apl02Detail,
-
-as:"detail",
-
-include:[
-
-{
-
-model:UnitKompetensi,
-
-as:"unit"
-
-},
-
-{
-
-model:UnitElemen,
-
-as:"elemen"
-
-}
-
-]
-
-}
-
-]
-
-});
-
-if(!data){
-
-return res.status(404).json({
-
-message:
-"APL02 tidak ada"
-
-});
-
-}
-
-const doc=
-new PDFDocument({
-
-margin:50
-
-});
-
-res.setHeader(
-"Content-Type",
-"application/pdf"
-);
-
-res.setHeader(
-"Content-Disposition",
-`inline; filename=APL02-${id_peserta}.pdf`
-);
-
-doc.pipe(res);
-
-doc
-.fontSize(18)
-.text(
-"FORM APL 02",
-{
-align:"center"
-}
-);
-
-doc.moveDown();
-
-doc.text(
-`Skema : ${data.peserta.jadwal.skema.judul_skema}`
-);
-
-doc.text(
-`Asesi : ${
-data.peserta.profileAsesi?.nama_lengkap || "-"
-}`
-);
-
-doc.moveDown();
-
-data.detail.forEach(
-(d,index)=>{
-
-doc.fontSize(12)
-.text(
-`${index+1}. ${d.elemen.nama_elemen}`
-);
-
-doc.text(
-`Unit : ${d.unit?.judul_unit || "-"}`
-);
-
-doc.text(
-`Penilaian : ${d.kompeten}`
-);
-
-doc.text(
-`Catatan : ${d.catatan || "-"}`
-);
-
-doc.moveDown();
-
-}
-);
-
-doc.moveDown(2);
-
-const ttd=
-data.peserta
-.profileAsesi
-?.ttd_path;
-
-if(ttd){
-
-const p=
-path.join(
-process.cwd(),
-ttd
-);
-
-if(
-fs.existsSync(p)
-){
-
-doc.image(
-p,
-420,
-doc.y,
-{
-width:90
-}
-);
-
-}
-
-}
-
-doc.text(
-"Asesi",
-{
-align:"right"
-}
-);
-
-doc.end();
-
-}
-
-catch(err){
-
-return res.status(500).json({
-
-message:
-err.message
-
-});
-
-}
-
+    return res.status(500).json({
+      message: err.message
+    });
+  }
 };
