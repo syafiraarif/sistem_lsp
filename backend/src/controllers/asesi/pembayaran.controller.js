@@ -42,7 +42,7 @@ const formatTujuanTransfer = (item) => {
 };
 
 const findPesertaByUserAndSkema = async ({ id_user, id_skema }) => {
-  return PesertaJadwal.findOne({
+  return await PesertaJadwal.findOne({
     where: {
       id_user,
     },
@@ -59,9 +59,21 @@ const findPesertaByUserAndSkema = async ({ id_user, id_skema }) => {
   });
 };
 
-const getStatusLabel = (status) => {
-  if (!status) return "belum bayar";
-  return status;
+const buildBelumBayarPayload = ({ id_user, id_peserta = null, id_skema }) => {
+  return {
+    id_pembayaran: null,
+    id_user: id_user || null,
+    id_peserta: id_peserta || null,
+    id_skema: safeNumber(id_skema),
+    status: "belum bayar",
+    metode_pembayaran: null,
+    jalur_pembayaran: null,
+    nominal: 0,
+    waktu_batas: null,
+    waktu_pembayaran: null,
+    bukti_bayar: null,
+    catatan_admin: null,
+  };
 };
 
 /* ===============================
@@ -99,21 +111,16 @@ exports.getDetailPembayaran = async (req, res) => {
       order: [["id_tujuan", "ASC"]],
     });
 
-    const tujuanTransferFormatted = tujuanTransfer.map(formatTujuanTransfer);
-
     return response.success(res, "Detail pembayaran", {
       skema: skema.judul_skema,
       kode_skema: skema.kode_skema,
       harga: Number(biaya?.nominal || 0),
-
-      tujuan_transfer: tujuanTransferFormatted,
-
+      tujuan_transfer: tujuanTransfer.map(formatTujuanTransfer),
       qris: {
         enabled: true,
         image_url: "/uploads/qris/qris.png",
         atas_nama: "LSP",
       },
-
       virtual_account: {
         enabled: true,
         nomor_va: `8808${String(id_skema).padStart(6, "0")}`,
@@ -252,21 +259,14 @@ exports.submitPembayaran = async (req, res) => {
       id_user,
       id_peserta: peserta.id_peserta,
       id_skema,
-
       metode_pembayaran,
-
       jalur_pembayaran,
-
       id_tujuan_transfer:
         metode_pembayaran === "transfer_rekening" ? id_tujuan_transfer : null,
-
       nominal: biaya.nominal,
-
       status:
         metode_pembayaran === "tunai" ? "menunggu_validasi" : "pending",
-
       waktu_pembayaran: new Date(),
-
       waktu_batas: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
@@ -378,20 +378,15 @@ exports.getStatusPembayaran = async (req, res) => {
     });
 
     if (!peserta) {
-      return response.success(res, "Belum memilih jadwal untuk skema ini", {
-        id_pembayaran: null,
-        id_user,
-        id_peserta: null,
-        id_skema,
-        status: "belum bayar",
-        metode_pembayaran: null,
-        jalur_pembayaran: null,
-        nominal: 0,
-        waktu_batas: null,
-        waktu_pembayaran: null,
-        bukti_bayar: null,
-        catatan_admin: null,
-      });
+      return response.success(
+        res,
+        "Belum memilih jadwal untuk skema ini",
+        buildBelumBayarPayload({
+          id_user,
+          id_peserta: null,
+          id_skema,
+        })
+      );
     }
 
     const pembayaran = await Pembayaran.findOne({
@@ -404,20 +399,15 @@ exports.getStatusPembayaran = async (req, res) => {
     });
 
     if (!pembayaran) {
-      return response.success(res, "Belum ada pembayaran untuk skema ini", {
-        id_pembayaran: null,
-        id_user,
-        id_peserta: peserta.id_peserta,
-        id_skema,
-        status: "belum bayar",
-        metode_pembayaran: null,
-        jalur_pembayaran: null,
-        nominal: 0,
-        waktu_batas: null,
-        waktu_pembayaran: null,
-        bukti_bayar: null,
-        catatan_admin: null,
-      });
+      return response.success(
+        res,
+        "Belum ada pembayaran untuk skema ini",
+        buildBelumBayarPayload({
+          id_user,
+          id_peserta: peserta.id_peserta,
+          id_skema,
+        })
+      );
     }
 
     return response.success(res, "Status pembayaran", {
@@ -425,7 +415,7 @@ exports.getStatusPembayaran = async (req, res) => {
       id_user: pembayaran.id_user,
       id_peserta: pembayaran.id_peserta,
       id_skema: pembayaran.id_skema,
-      status: getStatusLabel(pembayaran.status),
+      status: pembayaran.status || "belum bayar",
       metode_pembayaran: pembayaran.metode_pembayaran || null,
       jalur_pembayaran: pembayaran.jalur_pembayaran || null,
       nominal: pembayaran.nominal || 0,
@@ -437,16 +427,6 @@ exports.getStatusPembayaran = async (req, res) => {
   } catch (err) {
     console.error("GET STATUS PEMBAYARAN ERROR:", err);
 
-    return response.success(res, "Belum ada pembayaran untuk skema ini", {
-      id_pembayaran: null,
-      status: "belum bayar",
-      metode_pembayaran: null,
-      jalur_pembayaran: null,
-      nominal: 0,
-      waktu_batas: null,
-      waktu_pembayaran: null,
-      bukti_bayar: null,
-      catatan_admin: null,
-    });
+    return response.error(res, "Gagal mengambil status pembayaran", 500);
   }
 };
