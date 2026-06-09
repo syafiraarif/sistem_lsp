@@ -54,7 +54,9 @@ export default function PesertaJadwalAsesor() {
       setNilaiForm(createInitialNilaiForm(data));
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Gagal mengambil data peserta jadwal");
+      setError(
+        err.response?.data?.message || "Gagal mengambil data peserta jadwal"
+      );
     } finally {
       setLoading(false);
     }
@@ -62,31 +64,37 @@ export default function PesertaJadwalAsesor() {
 
   useEffect(() => {
     fetchPeserta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id_jadwal]);
 
   const filteredPeserta = useMemo(() => {
-    const keyword = search.toLowerCase();
+    const keyword = search.toLowerCase().trim();
 
     return pesertaList.filter((item) => {
       const user = getUserObject(item);
+      const kelengkapan = item.kelengkapan || {};
+      const status = normalizeStatusAsesmen(item.status_asesmen);
 
       const text = [
         user.nama,
         user.nama_lengkap,
         user.username,
         user.email,
-        item.status_asesmen,
+        item.nama_lengkap,
+        item.email,
+        item.nik,
+        status,
         item.nilai_akhir,
         item.keterangan,
         item.status,
+        kelengkapan.fria05_data?.nilai,
+        kelengkapan.fria05_data?.hasil,
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
 
-      const matchSearch = text.includes(keyword);
-
-      const status = item.status_asesmen || "belum_dinilai";
+      const matchSearch = !keyword || text.includes(keyword);
       const matchStatus = filterStatus === "semua" || status === filterStatus;
 
       return matchSearch && matchStatus;
@@ -95,38 +103,44 @@ export default function PesertaJadwalAsesor() {
 
   const totalPeserta = pesertaList.length;
   const totalKompeten = pesertaList.filter(
-    (item) => item.status_asesmen === "kompeten"
+    (item) => normalizeStatusAsesmen(item.status_asesmen) === "kompeten"
   ).length;
   const totalBelumKompeten = pesertaList.filter(
-    (item) => item.status_asesmen === "belum_kompeten"
+    (item) => normalizeStatusAsesmen(item.status_asesmen) === "belum_kompeten"
   ).length;
   const totalBelumDinilai = pesertaList.filter(
-    (item) => !item.status_asesmen
+    (item) => normalizeStatusAsesmen(item.status_asesmen) === "belum_dinilai"
   ).length;
 
   const jadwalInfo = pesertaList[0]?.jadwal || null;
 
-  const handleChangeNilai = (idPesertaJadwal, field, value) => {
+  const handleChangeNilai = (idPeserta, field, value) => {
     setNilaiForm((prev) => ({
       ...prev,
-      [idPesertaJadwal]: {
-        ...prev[idPesertaJadwal],
+      [idPeserta]: {
+        ...prev[idPeserta],
         [field]: value,
       },
     }));
   };
 
   const handleSimpanNilai = async (peserta) => {
-    const idPesertaJadwal = getPesertaJadwalId(peserta);
-    const form = nilaiForm[idPesertaJadwal] || {};
+    const idPeserta = getPesertaJadwalId(peserta);
+    const idJadwal = peserta.id_jadwal || id_jadwal;
+    const form = nilaiForm[idPeserta] || {};
 
-    if (!idPesertaJadwal) {
-      setError("ID peserta jadwal tidak ditemukan");
+    if (!idPeserta) {
+      setError("ID peserta tidak ditemukan");
       return;
     }
 
-    if (!form.status_asesmen) {
-      setError("Status asesmen wajib dipilih");
+    if (!idJadwal) {
+      setError("ID jadwal tidak ditemukan");
+      return;
+    }
+
+    if (!form.status_asesmen || form.status_asesmen === "belum_dinilai") {
+      setError("Hasil keputusan wajib dipilih: Kompeten atau Belum Kompeten");
       return;
     }
 
@@ -139,39 +153,64 @@ export default function PesertaJadwalAsesor() {
       return;
     }
 
+    const ok = window.confirm(
+      `Simpan keputusan akhir untuk ${getNamaPeserta(
+        peserta
+      )} sebagai ${formatStatus(form.status_asesmen)}?`
+    );
+
+    if (!ok) return;
+
     try {
-      setSavingId(idPesertaJadwal);
+      setSavingId(idPeserta);
       setError("");
       setPesan("");
 
-      await api.put(`/asesor/peserta/${idPesertaJadwal}/nilai`, {
-        status_asesmen: form.status_asesmen,
+      await api.post("/asesor/hasil-keputusan", {
+        id_peserta: Number(idPeserta),
+        id_jadwal: Number(idJadwal),
+        hasil: form.status_asesmen,
         nilai_akhir: Number(form.nilai_akhir),
-        keterangan: form.keterangan || "",
+        catatan_asesor: form.keterangan || "",
       });
 
-      setPesan("Nilai peserta berhasil disimpan");
+      setPesan("Keputusan asesmen berhasil disimpan");
       await fetchPeserta();
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Gagal menyimpan nilai peserta");
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Gagal menyimpan keputusan asesmen"
+      );
     } finally {
       setSavingId(null);
     }
   };
 
   const handleSimpanSemua = async () => {
+    const ok = window.confirm(
+      "Simpan semua keputusan peserta yang sudah terisi?"
+    );
+
+    if (!ok) return;
+
     try {
       setLoading(true);
       setError("");
       setPesan("");
 
       for (const peserta of pesertaList) {
-        const idPesertaJadwal = getPesertaJadwalId(peserta);
-        const form = nilaiForm[idPesertaJadwal] || {};
+        const idPeserta = getPesertaJadwalId(peserta);
+        const idJadwal = peserta.id_jadwal || id_jadwal;
+        const form = nilaiForm[idPeserta] || {};
 
-        if (!idPesertaJadwal) continue;
-        if (!form.status_asesmen) continue;
+        if (!idPeserta) continue;
+        if (!idJadwal) continue;
+        if (!form.status_asesmen || form.status_asesmen === "belum_dinilai") {
+          continue;
+        }
+
         if (
           form.nilai_akhir === "" ||
           form.nilai_akhir === undefined ||
@@ -180,18 +219,24 @@ export default function PesertaJadwalAsesor() {
           continue;
         }
 
-        await api.put(`/asesor/peserta/${idPesertaJadwal}/nilai`, {
-          status_asesmen: form.status_asesmen,
+        await api.post("/asesor/hasil-keputusan", {
+          id_peserta: Number(idPeserta),
+          id_jadwal: Number(idJadwal),
+          hasil: form.status_asesmen,
           nilai_akhir: Number(form.nilai_akhir),
-          keterangan: form.keterangan || "",
+          catatan_asesor: form.keterangan || "",
         });
       }
 
-      setPesan("Semua nilai yang terisi berhasil disimpan");
+      setPesan("Semua keputusan yang terisi berhasil disimpan");
       await fetchPeserta();
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Gagal menyimpan semua nilai peserta");
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Gagal menyimpan semua keputusan peserta"
+      );
     } finally {
       setLoading(false);
     }
@@ -212,7 +257,7 @@ export default function PesertaJadwalAsesor() {
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
                   <Users size={15} className="text-orange-500" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Peserta Jadwal
+                    Hasil Keputusan Asesmen
                   </span>
                 </div>
 
@@ -223,9 +268,9 @@ export default function PesertaJadwalAsesor() {
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Kelola daftar peserta pada jadwal uji kompetensi, isi nilai
-                  akhir, tentukan status kompetensi, dan tambahkan keterangan
-                  penilaian.
+                  Tetapkan hasil akhir peserta berdasarkan nilai ujian FR.IA.05
+                  dan kelengkapan data. Jika hasilnya Belum Kompeten, akun asesi
+                  akan bisa lanjut mengisi FR.AK.03 dan FR.AK.04.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -281,8 +326,8 @@ export default function PesertaJadwalAsesor() {
                   </h2>
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    Data peserta diambil berdasarkan jadwal uji kompetensi yang
-                    sedang dibuka.
+                    Keputusan akhir akan memperbarui status asesmen peserta dan
+                    menjadi dasar munculnya FR.AK.03 serta FR.AK.04.
                   </p>
 
                   <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
@@ -291,8 +336,8 @@ export default function PesertaJadwalAsesor() {
                       value={`${totalKompeten} Peserta`}
                     />
                     <HeroPill
-                      label="Belum Dinilai"
-                      value={`${totalBelumDinilai} Peserta`}
+                      label="Belum Kompeten"
+                      value={`${totalBelumKompeten} Peserta`}
                     />
                   </div>
                 </div>
@@ -336,6 +381,7 @@ export default function PesertaJadwalAsesor() {
                     "Jadwal Uji Kompetensi"
                   }
                 />
+
                 <InfoBox
                   icon={<FileText size={18} />}
                   label="Skema"
@@ -346,9 +392,10 @@ export default function PesertaJadwalAsesor() {
                     "-"
                   }
                 />
+
                 <InfoBox
                   icon={<Info size={18} />}
-                  label="Status"
+                  label="Status Jadwal"
                   value={jadwalInfo.status || "-"}
                 />
               </div>
@@ -361,16 +408,19 @@ export default function PesertaJadwalAsesor() {
               label="Total Peserta"
               value={`${totalPeserta} Peserta`}
             />
+
             <MiniStat
               icon={<CheckCircle2 size={22} />}
               label="Kompeten"
               value={`${totalKompeten} Peserta`}
             />
+
             <MiniStat
               icon={<ShieldCheck size={22} />}
               label="Belum Kompeten"
               value={`${totalBelumKompeten} Peserta`}
             />
+
             <MiniStat
               icon={<Info size={22} />}
               label="Belum Dinilai"
@@ -393,8 +443,8 @@ export default function PesertaJadwalAsesor() {
                 </h2>
 
                 <p className="mt-2 text-sm font-medium text-slate-400">
-                  Cari peserta berdasarkan nama, email, status asesmen, atau
-                  keterangan.
+                  Cari peserta berdasarkan nama, email, status asesmen, nilai,
+                  atau keterangan.
                 </p>
               </div>
 
@@ -420,7 +470,7 @@ export default function PesertaJadwalAsesor() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari nama peserta, email, status, atau keterangan..."
+                  placeholder="Cari nama peserta, email, status, nilai, atau keterangan..."
                   className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-12 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                 />
               </div>
@@ -443,8 +493,8 @@ export default function PesertaJadwalAsesor() {
               <EmptyState loading={loading} />
             ) : (
               filteredPeserta.map((peserta, index) => {
-                const idPesertaJadwal = getPesertaJadwalId(peserta);
-                const form = nilaiForm[idPesertaJadwal] || {
+                const idPeserta = getPesertaJadwalId(peserta);
+                const form = nilaiForm[idPeserta] || {
                   status_asesmen: "",
                   nilai_akhir: "",
                   keterangan: "",
@@ -452,13 +502,13 @@ export default function PesertaJadwalAsesor() {
 
                 return (
                   <PesertaCard
-                    key={`${idPesertaJadwal}-${index}`}
+                    key={`${idPeserta}-${index}`}
                     peserta={peserta}
                     index={index}
                     form={form}
-                    saving={savingId === idPesertaJadwal}
+                    saving={savingId === idPeserta}
                     onChange={(field, value) =>
-                      handleChangeNilai(idPesertaJadwal, field, value)
+                      handleChangeNilai(idPeserta, field, value)
                     }
                     onSave={() => handleSimpanNilai(peserta)}
                   />
@@ -473,18 +523,12 @@ export default function PesertaJadwalAsesor() {
 }
 
 function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
-  const user = getUserObject(peserta);
-
-  const nama =
-    user.nama_lengkap ||
-    user.nama ||
-    user.username ||
-    peserta.nama_lengkap ||
-    peserta.nama ||
-    "Nama peserta belum tersedia";
-
-  const email = user.email || peserta.email || "-";
-  const nik = user.nik || peserta.nik || peserta.no_identitas || "-";
+  const nama = getNamaPeserta(peserta);
+  const email = peserta.email || getUserObject(peserta).email || "-";
+  const nik = peserta.nik || peserta.no_identitas || "-";
+  const kelengkapan = peserta.kelengkapan || {};
+  const fria05 = peserta.fria05_penilaian || kelengkapan.fria05_data || null;
+  const keputusan = peserta.hasil_keputusan || kelengkapan.keputusan_data || null;
 
   return (
     <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
@@ -502,6 +546,12 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
                 </span>
 
                 <StatusAsesmenBadge status={form.status_asesmen} />
+
+                {keputusan && (
+                  <span className="inline-flex items-center rounded-full bg-green-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-600">
+                    Keputusan Tersimpan
+                  </span>
+                )}
               </div>
 
               <h3 className="text-2xl font-black text-[#071E3D] leading-tight">
@@ -520,121 +570,125 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
             disabled={saving}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:bg-slate-300 disabled:cursor-not-allowed"
           >
-            {saving ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Save size={16} />
-            )}
-            Simpan Nilai
+            {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
+            Simpan Keputusan
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[180px_220px_1fr] gap-4">
-          <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Nilai Akhir
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={form.nilai_akhir || ""}
-              onChange={(e) => onChange("nilai_akhir", e.target.value)}
-              placeholder="0 - 100"
-              className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-            />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+          <InfoBox
+            icon={<UserCheck size={18} />}
+            label="ID Peserta"
+            value={getPesertaJadwalId(peserta) || "-"}
+          />
 
+          <InfoBox icon={<Info size={18} />} label="NIK" value={nik} />
+
+          <InfoBox
+            icon={<Star size={18} />}
+            label="Nilai FR.IA.05"
+            value={
+              fria05
+                ? `${fria05.nilai || 0} (${formatStatus(fria05.hasil)})`
+                : "Belum Ada"
+            }
+          />
+
+          <InfoBox
+            icon={<ClipboardCheck size={18} />}
+            label="Kelengkapan"
+            value={`${kelengkapan.total_lengkap || 0}/${
+              kelengkapan.total_wajib || 4
+            }`}
+          />
+        </div>
+
+        <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KelengkapanBadge label="Presensi" active={kelengkapan.presensi} />
+          <KelengkapanBadge label="APL01" active={kelengkapan.apl01} />
+          <KelengkapanBadge label="APL02" active={kelengkapan.apl02} />
+          <KelengkapanBadge label="FR.IA.05" active={kelengkapan.fria05} />
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-[240px_200px_1fr] gap-4">
           <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Status Asesmen
+            <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Hasil Keputusan
             </label>
+
             <select
               value={form.status_asesmen || ""}
               onChange={(e) => onChange("status_asesmen", e.target.value)}
               className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
             >
-              <option value="">Pilih status</option>
+              <option value="">Pilih Hasil</option>
               <option value="kompeten">Kompeten</option>
               <option value="belum_kompeten">Belum Kompeten</option>
             </select>
           </div>
 
           <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Keterangan
+            <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Nilai Akhir
             </label>
+
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={form.nilai_akhir}
+              onChange={(e) => onChange("nilai_akhir", e.target.value)}
+              placeholder="0-100"
+              className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Catatan Asesor
+            </label>
+
             <textarea
-              value={form.keterangan || ""}
+              value={form.keterangan}
               onChange={(e) => onChange("keterangan", e.target.value)}
-              rows="3"
-              placeholder="Masukkan keterangan penilaian..."
-              className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+              placeholder="Catatan keputusan akhir asesmen..."
+              rows={3}
+              className="w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
             />
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <InfoBox
-            icon={<UserCheck size={18} />}
-            label="NIK / Identitas"
-            value={nik}
-          />
-          <InfoBox
-            icon={<Star size={18} />}
-            label="Nilai Saat Ini"
-            value={peserta.nilai_akhir ?? "-"}
-          />
-          <InfoBox
-            icon={<ClipboardCheck size={18} />}
-            label="Status Tersimpan"
-            value={formatStatusAsesmen(peserta.status_asesmen)}
-          />
-        </div>
+        {form.status_asesmen === "belum_kompeten" && (
+          <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-sm font-bold text-amber-700 leading-relaxed">
+            Jika disimpan sebagai Belum Kompeten, asesi akan diarahkan untuk
+            mengisi FR.AK.03 dan FR.AK.04 pada tahap berikutnya.
+          </div>
+        )}
       </div>
     </article>
   );
 }
 
-function InfoBox({ icon, label, value }) {
+/* =========================
+COMPONENTS
+========================= */
+
+function LoadingScreen() {
   return (
-    <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-4">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
-        {icon}
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-5">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl p-10 text-center max-w-sm w-full">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
+          <Loader2 className="animate-spin text-white" size={34} />
+        </div>
+
+        <h2 className="text-[#071E3D] font-black text-xl">Memuat Peserta</h2>
+
+        <p className="text-slate-500 text-sm mt-2 font-medium">
+          Mengambil data peserta uji kompetensi.
+        </p>
       </div>
-
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm font-black text-[#071E3D] line-clamp-2">
-        {value || "-"}
-      </p>
     </div>
-  );
-}
-
-function StatusAsesmenBadge({ status }) {
-  if (status === "kompeten") {
-    return (
-      <span className="inline-flex items-center rounded-full bg-green-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-600">
-        Kompeten
-      </span>
-    );
-  }
-
-  if (status === "belum_kompeten") {
-    return (
-      <span className="inline-flex items-center rounded-full bg-red-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500">
-        Belum Kompeten
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center rounded-full bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-      Belum Dinilai
-    </span>
   );
 }
 
@@ -649,6 +703,7 @@ function MiniStat({ icon, label, value }) {
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           {label}
         </p>
+
         <p className="text-[#071E3D] font-black mt-1 truncate">{value}</p>
       </div>
     </div>
@@ -661,6 +716,7 @@ function HeroPill({ label, value }) {
       <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
         {label}
       </p>
+
       <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );
@@ -668,9 +724,9 @@ function HeroPill({ label, value }) {
 
 function AlertBox({ type, icon, message }) {
   const styles = {
-    success: "border-green-100 bg-green-50 text-green-700",
-    error: "border-red-100 bg-red-50 text-red-600",
-    loading: "border-blue-100 bg-blue-50 text-blue-600",
+    success: "bg-green-50 border-green-100 text-green-600",
+    error: "bg-red-50 border-red-100 text-red-600",
+    loading: "bg-orange-50 border-orange-100 text-orange-600",
   };
 
   return (
@@ -679,84 +735,193 @@ function AlertBox({ type, icon, message }) {
         styles[type] || styles.loading
       }`}
     >
-      <div className="shrink-0">{icon}</div>
+      {icon}
       <span>{message}</span>
     </div>
   );
 }
 
-function EmptyState({ loading }) {
+function InfoBox({ icon, label, value }) {
   return (
-    <div className="rounded-[32px] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
-      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-        {loading ? (
-          <Loader2 size={30} className="animate-spin" />
-        ) : (
-          <Users size={30} />
-        )}
+    <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-4">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
+        {icon}
       </div>
 
-      <h3 className="text-2xl font-black text-[#071E3D]">
-        {loading ? "Memuat Peserta" : "Belum Ada Peserta"}
-      </h3>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+        {label}
+      </p>
 
-      <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
-        {loading
-          ? "Sistem sedang mengambil data peserta jadwal."
-          : "Belum ada peserta pada jadwal ini, atau data tidak cocok dengan filter pencarian."}
+      <p className="mt-1 text-sm font-black text-[#071E3D] line-clamp-2 capitalize">
+        {value || "-"}
       </p>
     </div>
   );
 }
 
-function createInitialNilaiForm(data) {
-  const initial = {};
-
-  data.forEach((item) => {
-    const id = getPesertaJadwalId(item);
-
-    if (!id) return;
-
-    initial[id] = {
-      status_asesmen: item.status_asesmen || "",
-      nilai_akhir:
-        item.nilai_akhir === null || item.nilai_akhir === undefined
-          ? ""
-          : item.nilai_akhir,
-      keterangan: item.keterangan || "",
-    };
-  });
-
-  return initial;
+function KelengkapanBadge({ label, active }) {
+  return (
+    <div
+      className={`rounded-2xl border px-4 py-3 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 ${
+        active
+          ? "border-green-100 bg-green-50 text-green-600"
+          : "border-slate-100 bg-slate-50 text-slate-400"
+      }`}
+    >
+      {active ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
+      {label}
+    </div>
+  );
 }
 
-function getPesertaJadwalId(item) {
-  return item?.id_peserta_jadwal || item?.id || item?.id_peserta;
+function StatusAsesmenBadge({ status }) {
+  const normalized = normalizeStatusAsesmen(status);
+
+  if (normalized === "kompeten") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-green-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-600">
+        Kompeten
+      </span>
+    );
+  }
+
+  if (normalized === "belum_kompeten") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-red-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-600">
+        Belum Kompeten
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center rounded-full bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+      Belum Dinilai
+    </span>
+  );
 }
 
-function getUserObject(item) {
-  return item?.user || item?.User || item?.asesi || item?.peserta || {};
+function EmptyState({ loading }) {
+  if (loading) return <LoadingScreen />;
+
+  return (
+    <div className="rounded-[32px] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
+      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+        <Users size={30} />
+      </div>
+
+      <h3 className="text-2xl font-black text-[#071E3D]">
+        Peserta Tidak Ditemukan
+      </h3>
+
+      <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
+        Belum ada peserta pada jadwal ini atau data tidak sesuai filter.
+      </p>
+    </div>
+  );
 }
+
+/* =========================
+HELPERS
+========================= */
 
 function getDisplayName() {
   try {
-    const storedUser = localStorage.getItem("user");
-    const user = storedUser ? JSON.parse(storedUser) : null;
+    const raw = localStorage.getItem("user");
+    const user = raw ? JSON.parse(raw) : null;
 
-    return (
-      user?.nama ||
-      user?.nama_lengkap ||
-      user?.username ||
-      user?.name ||
-      "Asesor"
-    );
+    return user?.nama || user?.nama_lengkap || user?.username || "Asesor";
   } catch (err) {
     return "Asesor";
   }
 }
 
-function formatStatusAsesmen(status) {
-  if (status === "kompeten") return "Kompeten";
-  if (status === "belum_kompeten") return "Belum Kompeten";
+function getUserObject(peserta) {
+  return peserta?.user || peserta?.User || peserta?.profileAsesi?.user || {};
+}
+
+function getPesertaJadwalId(peserta) {
+  return (
+    peserta?.id_peserta ||
+    peserta?.id_peserta_jadwal ||
+    peserta?.id ||
+    peserta?.id_pendaftaran ||
+    null
+  );
+}
+
+function getNamaPeserta(peserta) {
+  const user = getUserObject(peserta);
+  const profile = peserta?.profileAsesi || peserta?.asesi || {};
+
+  return (
+    peserta?.nama_lengkap ||
+    peserta?.nama ||
+    profile?.nama_lengkap ||
+    profile?.nama ||
+    user?.nama_lengkap ||
+    user?.nama ||
+    user?.username ||
+    "Nama peserta belum tersedia"
+  );
+}
+
+function normalizeStatusAsesmen(status) {
+  if (!status) return "belum_dinilai";
+
+  const value = String(status).toLowerCase().trim();
+
+  if (value === "kompeten") return "kompeten";
+  if (value === "belum kompeten") return "belum_kompeten";
+  if (value === "belum_kompeten") return "belum_kompeten";
+
+  if (value === "terdaftar") return "belum_dinilai";
+  if (value === "pra_asesmen") return "belum_dinilai";
+  if (value === "asesmen") return "belum_dinilai";
+
+  return value;
+}
+
+function formatStatus(status) {
+  if (!status) return "-";
+
+  const normalized = normalizeStatusAsesmen(status);
+
+  if (normalized === "kompeten") return "Kompeten";
+  if (normalized === "belum_kompeten") return "Belum Kompeten";
+
   return "Belum Dinilai";
+}
+
+function createInitialNilaiForm(data) {
+  const result = {};
+
+  data.forEach((peserta) => {
+    const idPeserta = getPesertaJadwalId(peserta);
+    const keputusan = peserta.hasil_keputusan || peserta.kelengkapan?.keputusan_data;
+    const fria05 = peserta.fria05_penilaian || peserta.kelengkapan?.fria05_data;
+
+    if (!idPeserta) return;
+
+    result[idPeserta] = {
+      status_asesmen: normalizeStatusAsesmen(
+        keputusan?.hasil || peserta.status_asesmen
+      ),
+
+      nilai_akhir:
+        peserta.nilai_akhir !== undefined &&
+        peserta.nilai_akhir !== null &&
+        peserta.nilai_akhir !== ""
+          ? peserta.nilai_akhir
+          : fria05?.nilai || "",
+
+      keterangan:
+        peserta.keterangan ||
+        keputusan?.catatan_asesor ||
+        (fria05?.hasil === "belum_kompeten"
+          ? "Berdasarkan hasil FR.IA.05, asesi belum kompeten."
+          : ""),
+    };
+  });
+
+  return result;
 }

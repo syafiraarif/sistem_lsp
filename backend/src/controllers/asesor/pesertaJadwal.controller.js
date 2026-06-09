@@ -6,6 +6,11 @@ const {
   Jadwal,
   JadwalAsesor,
   ProfileAsesi,
+  Presensi,
+  Apl01Asesmen,
+  Apl02,
+  FrIa05Penilaian,
+  HasilKeputusanAsesmen,
 } = require("../../models");
 
 /* =========================
@@ -13,18 +18,118 @@ HELPER
 ========================= */
 
 const normalizeStatusAsesmen = (status) => {
-  if (!status) return "belum_kompeten";
+  if (!status) return "belum_dinilai";
 
   const value = String(status).toLowerCase().trim();
 
   if (value === "kompeten") return "kompeten";
   if (value === "belum kompeten") return "belum_kompeten";
   if (value === "belum_kompeten") return "belum_kompeten";
-  if (value === "terdaftar") return "belum_kompeten";
-  if (value === "pra_asesmen") return "belum_kompeten";
-  if (value === "asesmen") return "belum_kompeten";
+
+  if (value === "terdaftar") return "belum_dinilai";
+  if (value === "pra_asesmen") return "belum_dinilai";
+  if (value === "asesmen") return "belum_dinilai";
 
   return value;
+};
+
+const getNamaAsesi = (plain) => {
+  const user = plain.user || {};
+  const profile = plain.profileAsesi || {};
+
+  return (
+    profile.nama_lengkap ||
+    profile.nama ||
+    user.nama_lengkap ||
+    user.nama ||
+    user.username ||
+    "-"
+  );
+};
+
+const getNikAsesi = (plain) => {
+  const profile = plain.profileAsesi || {};
+
+  return (
+    profile.nik ||
+    profile.no_ktp ||
+    profile.nomor_identitas ||
+    profile.no_identitas ||
+    "-"
+  );
+};
+
+const getEmailAsesi = (plain) => {
+  const user = plain.user || {};
+  const profile = plain.profileAsesi || {};
+
+  return user.email || profile.email || "-";
+};
+
+const getNoHpAsesi = (plain) => {
+  const user = plain.user || {};
+  const profile = plain.profileAsesi || {};
+
+  return user.no_hp || profile.no_hp || profile.nomor_hp || "-";
+};
+
+const getKelengkapanPeserta = async (id_peserta) => {
+  const [presensi, apl01, apl02, fria05, keputusan] = await Promise.all([
+    Presensi.findOne({
+      where: {
+        id_peserta,
+      },
+    }),
+
+    Apl01Asesmen.findOne({
+      where: {
+        id_peserta,
+      },
+    }),
+
+    Apl02.findOne({
+      where: {
+        id_peserta,
+      },
+    }),
+
+    FrIa05Penilaian.findOne({
+      where: {
+        id_peserta,
+      },
+      order: [["tanggal_penilaian", "DESC"], ["id_penilaian", "DESC"]],
+    }),
+
+    HasilKeputusanAsesmen.findOne({
+      where: {
+        id_peserta,
+      },
+      order: [["tanggal_keputusan", "DESC"], ["id_keputusan", "DESC"]],
+    }),
+  ]);
+
+  return {
+    presensi: Boolean(presensi),
+    apl01: Boolean(apl01),
+    apl02: Boolean(apl02),
+    fria05: Boolean(fria05),
+    keputusan: Boolean(keputusan),
+
+    presensi_data: presensi,
+    apl01_data: apl01,
+    apl02_data: apl02,
+    fria05_data: fria05,
+    keputusan_data: keputusan,
+
+    total_lengkap: [
+      Boolean(presensi),
+      Boolean(apl01),
+      Boolean(apl02),
+      Boolean(fria05),
+    ].filter(Boolean).length,
+
+    total_wajib: 4,
+  };
 };
 
 /* =========================
@@ -84,52 +189,53 @@ const getPesertaByJadwal = async (req, res) => {
       order: [["id_peserta", "ASC"]],
     });
 
-    const result = data.map((item) => {
-      const plain = item.toJSON ? item.toJSON() : item;
-      const user = plain.user || {};
-      const profile = plain.profileAsesi || {};
+    const result = [];
 
-      return {
+    for (const item of data) {
+      const plain = item.toJSON ? item.toJSON() : item;
+      const kelengkapan = await getKelengkapanPeserta(plain.id_peserta);
+
+      const nilaiFria05 = kelengkapan.fria05_data?.nilai;
+      const hasilFria05 = kelengkapan.fria05_data?.hasil;
+      const keputusan = kelengkapan.keputusan_data;
+
+      result.push({
         ...plain,
 
         id_peserta: plain.id_peserta,
         id_jadwal: plain.id_jadwal,
         id_user: plain.id_user,
 
-        nama_lengkap:
-          profile.nama_lengkap ||
-          profile.nama ||
-          user.nama_lengkap ||
-          user.nama ||
-          user.username ||
-          "-",
+        nama_lengkap: getNamaAsesi(plain),
+        nik: getNikAsesi(plain),
+        email: getEmailAsesi(plain),
+        no_hp: getNoHpAsesi(plain),
 
-        nik:
-          profile.nik ||
-          profile.no_ktp ||
-          profile.nomor_identitas ||
-          profile.no_identitas ||
-          "-",
+        status_asesmen: normalizeStatusAsesmen(
+          keputusan?.hasil || plain.status_asesmen
+        ),
 
-        email:
-          user.email ||
-          profile.email ||
-          "-",
+        nilai_akhir:
+          plain.nilai_akhir !== null && plain.nilai_akhir !== undefined
+            ? plain.nilai_akhir
+            : nilaiFria05 || "",
 
-        no_hp:
-          user.no_hp ||
-          profile.no_hp ||
-          profile.nomor_hp ||
-          "-",
+        keterangan:
+          plain.keterangan || keputusan?.catatan_asesor || "",
 
-        status_asesmen: normalizeStatusAsesmen(plain.status_asesmen),
-        nilai_akhir: plain.nilai_akhir,
-        keterangan: plain.keterangan,
+        hasil_keputusan: keputusan || null,
 
-        user,
-        profileAsesi: profile,
-      };
-    });
+        fria05_penilaian: kelengkapan.fria05_data || null,
+
+        nilai_fria05: nilaiFria05 || null,
+        hasil_fria05: hasilFria05 || null,
+
+        kelengkapan,
+
+        user: plain.user || {},
+        profileAsesi: plain.profileAsesi || {},
+      });
+    }
 
     return res.json({
       status: "success",
@@ -150,6 +256,10 @@ const getPesertaByJadwal = async (req, res) => {
 /* =========================
 UPDATE NILAI PESERTA
 PUT /api/asesor/peserta/:id/nilai
+
+Tetap disediakan untuk kompatibilitas lama,
+tapi alur utama sekarang pakai:
+POST /api/asesor/hasil-keputusan
 ========================= */
 
 const updateNilaiPeserta = async (req, res) => {
@@ -185,7 +295,8 @@ const updateNilaiPeserta = async (req, res) => {
     if (!jadwalAsesor) {
       return res.status(403).json({
         status: "error",
-        message: "Anda tidak memiliki akses untuk menilai peserta pada jadwal ini",
+        message:
+          "Anda tidak memiliki akses untuk menilai peserta pada jadwal ini",
       });
     }
 
@@ -201,9 +312,7 @@ const updateNilaiPeserta = async (req, res) => {
           : peserta.nilai_akhir,
 
       keterangan:
-        keterangan !== undefined
-          ? keterangan
-          : peserta.keterangan,
+        keterangan !== undefined ? keterangan : peserta.keterangan,
     });
 
     await peserta.reload();
