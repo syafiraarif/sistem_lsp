@@ -260,6 +260,25 @@ router.get(
 );
 
 /* =========================
+PRA ASESMEN / PRESENSI ASESI
+========================= */
+
+router.get(
+  "/pra-asesmen/form",
+  presensiController.getPraAsesmenForm
+);
+
+router.post(
+  "/pra-asesmen/submit",
+  presensiController.submitPraAsesmen
+);
+
+router.get(
+  "/pra-asesmen/download",
+  presensiController.downloadPraAsesmen
+);
+
+/* =========================
 PRESENSI ROUTES
 ========================= */
 
