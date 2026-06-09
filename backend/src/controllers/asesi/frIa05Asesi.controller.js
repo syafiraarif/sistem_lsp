@@ -10,7 +10,6 @@ const Jadwal = require("../../models/jadwal.model");
 const Skema = require("../../models/skema.model");
 const Tuk = require("../../models/tuk.model");
 const ProfileAsesi = require("../../models/profileAsesi.model");
-const ProfileAsesor = require("../../models/profileAsesor.model");
 
 /* =======================================
 HELPER
@@ -27,14 +26,14 @@ const getBaseUrl = (req) => {
 
 const toFileUrl = (req, filePath) => {
   if (!filePath) return null;
-  if (String(filePath).startsWith("http")) return filePath;
 
-  return `${getBaseUrl(req)}/${String(filePath).replace(/^\/+/, "").replace(/\\/g, "/")}`;
-};
+  if (String(filePath).startsWith("http")) {
+    return filePath;
+  }
 
-const safeNumber = (value) => {
-  const number = Number(value);
-  return Number.isNaN(number) ? null : number;
+  return `${getBaseUrl(req)}/${String(filePath)
+    .replace(/^\/+/, "")
+    .replace(/\\/g, "/")}`;
 };
 
 const sanitizeOpsi = (opsi = []) => {
@@ -62,11 +61,30 @@ const sanitizeSoal = (soal = [], req) => {
     }));
 };
 
+const normalizeHasil = (hasil) => {
+  const plainHasil = toPlain(hasil);
+
+  if (!plainHasil) return null;
+
+  return {
+    id_penilaian: plainHasil.id_penilaian,
+    id_peserta: plainHasil.id_peserta,
+    id_fr_ia_05: plainHasil.id_fr_ia_05,
+    jumlah_benar: Number(plainHasil.jumlah_benar || 0),
+    jumlah_salah: Number(plainHasil.jumlah_salah || 0),
+    nilai: Number(plainHasil.nilai || 0),
+    hasil: plainHasil.hasil || "-",
+    umpan_balik: plainHasil.umpan_balik || "",
+    catatan: plainHasil.catatan || "",
+    tanggal_penilaian: plainHasil.tanggal_penilaian || null,
+  };
+};
+
 const buildPaketPayload = (paket, peserta, profile, hasil, req) => {
   const plainPaket = toPlain(paket);
   const plainPeserta = toPlain(peserta);
   const plainProfile = toPlain(profile);
-  const plainHasil = toPlain(hasil);
+  const plainHasil = normalizeHasil(hasil);
 
   const jadwal = plainPaket?.jadwal || plainPeserta?.jadwal || {};
   const skema = plainPaket?.skema || jadwal?.skema || {};
@@ -79,7 +97,7 @@ const buildPaketPayload = (paket, peserta, profile, hasil, req) => {
       id_skema: plainPaket?.id_skema,
       kode_paket: plainPaket?.kode_paket,
       judul_paket: plainPaket?.judul_paket,
-      passing_grade: plainPaket?.passing_grade || 70,
+      passing_grade: Number(plainPaket?.passing_grade || 70),
       soal: sanitizeSoal(plainPaket?.soal || [], req),
     },
 
@@ -121,7 +139,7 @@ const buildPaketPayload = (paket, peserta, profile, hasil, req) => {
       alamat: tuk?.alamat || "-",
     },
 
-    hasil: plainHasil || null,
+    hasil: plainHasil,
     already_submitted: Boolean(plainHasil),
   };
 };
@@ -304,7 +322,9 @@ exports.getPaketByJadwal = async (req, res) => {
 
     return res.json({
       status: "success",
-      message: "Paket FR.IA.05 berhasil diambil",
+      message: hasil
+        ? "FR.IA.05 sudah dikerjakan"
+        : "Paket FR.IA.05 berhasil diambil",
       data: buildPaketPayload(paket, peserta, profile, hasil, req),
     });
   } catch (err) {
@@ -510,7 +530,9 @@ exports.submit = async (req, res) => {
     }
 
     const soalIds = soalPaket.map((item) => Number(item.id_soal));
-    const uniqueSoalJawaban = [...new Set(jawaban.map((item) => Number(item.id_soal)))];
+    const uniqueSoalJawaban = [
+      ...new Set(jawaban.map((item) => Number(item.id_soal))),
+    ];
 
     if (uniqueSoalJawaban.length !== soalPaket.length) {
       await transaction.rollback();
@@ -521,7 +543,9 @@ exports.submit = async (req, res) => {
       });
     }
 
-    const invalidSoal = uniqueSoalJawaban.find((id_soal) => !soalIds.includes(Number(id_soal)));
+    const invalidSoal = uniqueSoalJawaban.find(
+      (id_soal) => !soalIds.includes(Number(id_soal))
+    );
 
     if (invalidSoal) {
       await transaction.rollback();
@@ -609,14 +633,17 @@ exports.submit = async (req, res) => {
 
     return res.json({
       status: "success",
-      message: "Submit FR.IA.05 berhasil",
-      data: penilaian,
+      message: "Submit FR.IA.05 berhasil. Nilai otomatis sudah dihitung.",
+      data: normalizeHasil(penilaian),
       hasil: {
         total,
+        jumlah_benar: benar,
+        jumlah_salah: salah,
         benar,
         salah,
         nilai,
         passing_grade: passingGrade,
+        hasil: hasilStatus,
         status: hasilStatus,
       },
     });
@@ -661,28 +688,6 @@ exports.getHasil = async (req, res) => {
         id_peserta,
         id_fr_ia_05,
       },
-      include: [
-        {
-          model: FrIa05,
-          as: "paket",
-          include: [
-            {
-              model: Jadwal,
-              as: "jadwal",
-              include: [
-                {
-                  model: Skema,
-                  as: "skema",
-                },
-                {
-                  model: Tuk,
-                  as: "tuk",
-                },
-              ],
-            },
-          ],
-        },
-      ],
     });
 
     if (!data) {
@@ -694,8 +699,8 @@ exports.getHasil = async (req, res) => {
 
     return res.json({
       status: "success",
-      message: "Hasil ujian",
-      data,
+      message: "Hasil ujian FR.IA.05 berhasil diambil",
+      data: normalizeHasil(data),
     });
   } catch (err) {
     console.error("GET HASIL FRIA05 ASESI ERROR:", err);

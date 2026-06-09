@@ -8,7 +8,6 @@ import {
   AlertCircle,
   ArrowLeft,
   BadgeCheck,
-  CalendarCheck,
   CheckCircle,
   ClipboardList,
   FileText,
@@ -19,7 +18,6 @@ import {
   ShieldCheck,
   Sparkles,
   Trophy,
-  UserCheck,
   XCircle,
 } from "lucide-react";
 
@@ -75,7 +73,9 @@ export default function FRIA05Asesi() {
       let res;
 
       if (id_jadwal) {
-        res = await api.get(`/asesi/fr-ia05/paket-jadwal/${id_jadwal}/${id_peserta}`);
+        res = await api.get(
+          `/asesi/fr-ia05/paket-jadwal/${id_jadwal}/${id_peserta}`
+        );
       } else if (id_fr_ia_05) {
         res = await api.get(`/asesi/fr-ia05/${id_fr_ia_05}/${id_peserta}`);
       } else {
@@ -89,7 +89,7 @@ export default function FRIA05Asesi() {
       }
 
       setPayload(data);
-      setHasil(data.hasil || null);
+      setHasil(normalizeHasilFrontend(data.hasil));
 
       const initialAnswers = {};
 
@@ -132,7 +132,8 @@ export default function FRIA05Asesi() {
   const jadwal = payload?.jadwal || {};
   const tuk = payload?.tuk || {};
 
-  const alreadySubmitted = Boolean(payload?.already_submitted || hasil);
+  const normalizedHasil = normalizeHasilFrontend(hasil);
+  const alreadySubmitted = Boolean(payload?.already_submitted || normalizedHasil);
 
   const answeredCount = useMemo(() => {
     return Object.values(selectedAnswers).filter(Boolean).length;
@@ -189,26 +190,36 @@ export default function FRIA05Asesi() {
       setSubmitting(true);
 
       const jawaban = soalList.map((soal) => ({
-        id_soal: soal.id_soal,
-        id_opsi: selectedAnswers[soal.id_soal],
+        id_soal: Number(soal.id_soal),
+        id_opsi: Number(selectedAnswers[soal.id_soal]),
       }));
 
-      const res = await api.post("/asesi/fr-ia05/submit", {
+      const submitRes = await api.post("/asesi/fr-ia05/submit", {
         id_peserta: Number(id_peserta),
         id_fr_ia_05: Number(paket.id_fr_ia_05),
         jawaban,
       });
 
-      alert(res.data?.message || "FR.IA.05 berhasil disubmit.");
+      const hasilSubmit = normalizeHasilFrontend(
+        submitRes.data?.data || submitRes.data?.hasil
+      );
+
+      setHasil(hasilSubmit);
+
+      alert(
+        `FR.IA.05 berhasil disubmit.\nNilai: ${
+          hasilSubmit?.nilai ?? "-"
+        }\nStatus: ${formatStatus(hasilSubmit?.hasil || hasilSubmit?.status)}`
+      );
 
       try {
         const hasilRes = await api.get(
           `/asesi/fr-ia05/hasil/${paket.id_fr_ia_05}/${id_peserta}`
         );
 
-        setHasil(hasilRes.data?.data || res.data?.hasil || null);
+        setHasil(normalizeHasilFrontend(hasilRes.data?.data));
       } catch (hasilErr) {
-        setHasil(res.data?.hasil || null);
+        setHasil(hasilSubmit);
       }
 
       await fetchData();
@@ -304,15 +315,21 @@ export default function FRIA05Asesi() {
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
                     {alreadySubmitted
-                      ? "Jawaban sudah dikunci dan tidak dapat diulang."
+                      ? `Nilai: ${normalizedHasil?.nilai ?? "-"} | Status: ${formatStatus(
+                          normalizedHasil?.hasil || normalizedHasil?.status
+                        )}`
                       : `${answeredCount} dari ${soalList.length} soal sudah dijawab.`}
                   </p>
 
                   <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
                     <HeroPill label="Soal" value={`${soalList.length}`} />
                     <HeroPill
-                      label="Terjawab"
-                      value={`${answeredCount}/${soalList.length}`}
+                      label={alreadySubmitted ? "Nilai" : "Terjawab"}
+                      value={
+                        alreadySubmitted
+                          ? `${normalizedHasil?.nilai ?? "-"}`
+                          : `${answeredCount}/${soalList.length}`
+                      }
                     />
                   </div>
                 </div>
@@ -348,17 +365,14 @@ export default function FRIA05Asesi() {
                 <MiniStat
                   icon={<Trophy size={22} />}
                   label="Hasil"
-                  value={hasil?.hasil || hasil?.status || "-"}
+                  value={formatStatus(normalizedHasil?.hasil || normalizedHasil?.status)}
                 />
               </section>
 
-              {alreadySubmitted && <HasilCard hasil={hasil} />}
+              {alreadySubmitted && <HasilCard hasil={normalizedHasil} />}
 
               {!ttdUrl && !alreadySubmitted && (
-                <InfoAlert
-                  type="warning"
-                  message="TTD asesi belum tersedia. Silakan upload TTD di profile sebelum submit."
-                />
+                <InfoAlert message="TTD asesi belum tersedia. Silakan upload TTD di profile sebelum submit." />
               )}
 
               <section className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start">
@@ -377,7 +391,10 @@ export default function FRIA05Asesi() {
                     </table>
                   </Card>
 
-                  <Card title="Daftar Soal Pilihan Ganda" icon={<ClipboardList size={22} />}>
+                  <Card
+                    title="Daftar Soal Pilihan Ganda"
+                    icon={<ClipboardList size={22} />}
+                  >
                     {soalList.length === 0 ? (
                       <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
                         <Inbox size={34} className="mx-auto text-slate-300" />
@@ -397,7 +414,6 @@ export default function FRIA05Asesi() {
                             index={index}
                             selected={selectedAnswers[soal.id_soal]}
                             disabled={alreadySubmitted}
-                            getImageSrc={getImageSrc}
                             onSelect={handleSelectAnswer}
                           />
                         ))}
@@ -412,13 +428,21 @@ export default function FRIA05Asesi() {
                       <div className="space-y-4">
                         <StatusCard
                           label="Jawaban"
-                          desc={`${answeredCount} dari ${soalList.length} soal terjawab.`}
-                          status={allAnswered}
+                          desc={
+                            alreadySubmitted
+                              ? "Jawaban sudah dikunci."
+                              : `${answeredCount} dari ${soalList.length} soal terjawab.`
+                          }
+                          status={alreadySubmitted || allAnswered}
                         />
 
                         <StatusCard
                           label="TTD Asesi"
-                          desc={ttdUrl ? "TTD tersedia dari profile." : "TTD belum tersedia."}
+                          desc={
+                            ttdUrl
+                              ? "TTD tersedia dari profile."
+                              : "TTD belum tersedia."
+                          }
                           status={Boolean(ttdUrl)}
                         />
 
@@ -437,6 +461,7 @@ export default function FRIA05Asesi() {
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
                               TTD Asesi dari Profile
                             </p>
+
                             <div className="rounded-xl bg-white border border-slate-100 p-4">
                               <img
                                 src={ttdUrl}
@@ -450,7 +475,9 @@ export default function FRIA05Asesi() {
                         <button
                           type="button"
                           onClick={handleSubmit}
-                          disabled={!allAnswered || !ttdUrl || submitting || alreadySubmitted}
+                          disabled={
+                            !allAnswered || !ttdUrl || submitting || alreadySubmitted
+                          }
                           className={`w-full px-7 py-5 rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 ${
                             !allAnswered || !ttdUrl || submitting || alreadySubmitted
                               ? "bg-slate-300 cursor-not-allowed"
@@ -519,8 +546,9 @@ function MiniStat({ icon, label, value }) {
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           {label}
         </p>
+
         <p className="text-[#071E3D] font-black mt-1 truncate capitalize">
-          {String(value || "-").replace("_", " ")}
+          {value || "-"}
         </p>
       </div>
     </div>
@@ -533,6 +561,7 @@ function HeroPill({ label, value }) {
       <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
         {label}
       </p>
+
       <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );
@@ -565,6 +594,7 @@ function TableRow({ label, value }) {
       <td className="w-[220px] border border-slate-200 bg-slate-50 px-4 py-3 font-black text-[#071E3D]">
         {label}
       </td>
+
       <td className="border border-slate-200 px-4 py-3 font-semibold text-slate-600">
         {value || "-"}
       </td>
@@ -632,7 +662,7 @@ function SoalCard({ soal, index, selected, disabled, onSelect }) {
 }
 
 function HasilCard({ hasil }) {
-  const nilai = hasil?.nilai ?? hasil?.data?.nilai ?? "-";
+  const nilai = hasil?.nilai ?? "-";
   const benar = hasil?.jumlah_benar ?? hasil?.benar ?? "-";
   const salah = hasil?.jumlah_salah ?? hasil?.salah ?? "-";
   const status = hasil?.hasil || hasil?.status || "-";
@@ -644,8 +674,9 @@ function HasilCard({ hasil }) {
           <Trophy size={24} />
         </div>
 
-        <div>
+        <div className="w-full">
           <h3 className="text-xl font-black">Hasil FR.IA.05</h3>
+
           <p className="mt-1 text-sm font-semibold">
             Soal sudah dikerjakan dan tidak bisa diulang.
           </p>
@@ -654,7 +685,7 @@ function HasilCard({ hasil }) {
             <ResultPill label="Nilai" value={nilai} />
             <ResultPill label="Benar" value={benar} />
             <ResultPill label="Salah" value={salah} />
-            <ResultPill label="Status" value={String(status).replace("_", " ")} />
+            <ResultPill label="Status" value={formatStatus(status)} />
           </div>
         </div>
       </div>
@@ -668,6 +699,7 @@ function ResultPill({ label, value }) {
       <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">
         {label}
       </p>
+
       <p className="mt-1 text-lg font-black text-[#071E3D] capitalize">
         {value}
       </p>
@@ -704,6 +736,7 @@ function InfoAlert({ message }) {
   return (
     <div className="rounded-[24px] border border-amber-100 bg-amber-50 px-5 py-5 text-amber-700 flex items-start gap-3">
       <AlertCircle size={22} className="shrink-0 mt-0.5" />
+
       <div>
         <p className="font-black">{message}</p>
       </div>
@@ -716,6 +749,7 @@ function ErrorAlert({ message, onRetry }) {
     <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-5 text-red-600 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div className="flex items-start gap-3">
         <AlertCircle size={22} className="shrink-0 mt-0.5" />
+
         <div>
           <p className="font-black">Gagal Memuat Data</p>
           <p className="mt-1 text-sm font-semibold leading-relaxed">
@@ -753,4 +787,30 @@ function EmptyState() {
       </p>
     </div>
   );
+}
+
+/* =========================
+HELPER FRONTEND
+========================= */
+
+function normalizeHasilFrontend(data) {
+  if (!data) return null;
+
+  return {
+    id_penilaian: data.id_penilaian || null,
+    id_peserta: data.id_peserta || null,
+    id_fr_ia_05: data.id_fr_ia_05 || null,
+    jumlah_benar: Number(data.jumlah_benar ?? data.benar ?? 0),
+    jumlah_salah: Number(data.jumlah_salah ?? data.salah ?? 0),
+    nilai: Number(data.nilai ?? 0),
+    hasil: data.hasil || data.status || "-",
+    status: data.status || data.hasil || "-",
+    tanggal_penilaian: data.tanggal_penilaian || null,
+  };
+}
+
+function formatStatus(status) {
+  if (!status || status === "-") return "-";
+
+  return String(status).replace("_", " ");
 }
