@@ -17,52 +17,29 @@ const toNumberOrNull = (value) => {
   return Number.isNaN(parsed) ? null : parsed;
 };
 
-const getOrCreateKelompok = async ({
-  id_skema,
-  nama_kelompok,
-  deskripsi,
-  urutan,
-  transaction,
-}) => {
-  if (!id_skema) {
+const validateKelompokInSkema = async ({ id_skema, id_kelompok, transaction }) => {
+  const idSkemaNumber = toNumberOrNull(id_skema);
+  const idKelompokNumber = toNumberOrNull(id_kelompok);
+
+  if (!idSkemaNumber) {
     throw new Error("Skema wajib dipilih");
   }
 
-  if (!nama_kelompok || !String(nama_kelompok).trim()) {
-    throw new Error("Nama kelompok pekerjaan wajib diisi");
+  if (!idKelompokNumber) {
+    throw new Error("Kelompok pekerjaan wajib dipilih");
   }
 
-  const namaKelompok = String(nama_kelompok).trim();
-
-  let kelompok = await KelompokPekerjaan.findOne({
+  const kelompok = await KelompokPekerjaan.findOne({
     where: {
-      id_skema,
-      nama_kelompok: namaKelompok,
+      id_skema: idSkemaNumber,
+      id_kelompok: idKelompokNumber,
     },
     transaction,
   });
 
-  if (kelompok) {
-    await kelompok.update(
-      {
-        deskripsi: deskripsi ?? kelompok.deskripsi,
-        urutan: toNumberOrNull(urutan) || kelompok.urutan || 1,
-      },
-      { transaction }
-    );
-
-    return kelompok;
+  if (!kelompok) {
+    throw new Error("Kelompok pekerjaan tidak ditemukan pada skema ini");
   }
-
-  kelompok = await KelompokPekerjaan.create(
-    {
-      id_skema,
-      nama_kelompok: namaKelompok,
-      deskripsi: deskripsi || null,
-      urutan: toNumberOrNull(urutan) || 1,
-    },
-    { transaction }
-  );
 
   return kelompok;
 };
@@ -83,7 +60,7 @@ const attachKelompokToUnits = async (units) => {
       kp.deskripsi AS deskripsi_kelompok,
       kp.urutan AS urutan_kelompok
     FROM skema_unit su
-    LEFT JOIN kelompok_pekerjaan kp
+    INNER JOIN kelompok_pekerjaan kp
       ON kp.id_kelompok = su.id_kelompok
     ORDER BY
       kp.urutan ASC,
@@ -140,25 +117,17 @@ exports.create = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const {
-      id_skema,
-      id_skkni,
-      kode_unit,
-      judul_unit,
-      nama_kelompok,
-      deskripsi_kelompok,
-      urutan_kelompok,
-      urutan,
-    } = req.body;
+    const { id_skema, id_kelompok, id_skkni, kode_unit, judul_unit, urutan } =
+      req.body;
 
     if (!id_skema) {
       await t.rollback();
       return response.error(res, "Skema wajib dipilih", 400);
     }
 
-    if (!nama_kelompok) {
+    if (!id_kelompok) {
       await t.rollback();
-      return response.error(res, "Kelompok pekerjaan wajib diisi", 400);
+      return response.error(res, "Kelompok pekerjaan wajib dipilih", 400);
     }
 
     if (!id_skkni) {
@@ -171,19 +140,17 @@ exports.create = async (req, res) => {
       return response.error(res, "Kode unit dan judul unit wajib diisi", 400);
     }
 
-    const kelompok = await getOrCreateKelompok({
+    const kelompok = await validateKelompokInSkema({
       id_skema,
-      nama_kelompok,
-      deskripsi: deskripsi_kelompok,
-      urutan: urutan_kelompok,
+      id_kelompok,
       transaction: t,
     });
 
     const data = await UnitKompetensi.create(
       {
-        id_skkni,
-        kode_unit,
-        judul_unit,
+        id_skkni: toNumberOrNull(id_skkni),
+        kode_unit: String(kode_unit).trim(),
+        judul_unit: String(judul_unit).trim(),
       },
       { transaction: t }
     );
@@ -200,14 +167,10 @@ exports.create = async (req, res) => {
 
     await t.commit();
 
-    return response.success(
-      res,
-      "Unit kompetensi berhasil dibuat",
-      data
-    );
+    return response.success(res, "Unit kompetensi berhasil dibuat", data);
   } catch (err) {
     await t.rollback();
-    console.error(err);
+    console.error("CREATE UNIT ERROR:", err);
     return response.error(res, "Gagal menambahkan unit: " + err.message, 500);
   }
 };
@@ -255,7 +218,7 @@ exports.getAll = async (req, res) => {
 
     return response.success(res, "List unit kompetensi", result);
   } catch (err) {
-    console.error(err);
+    console.error("GET ALL UNIT ERROR:", err);
     return response.error(res, err.message);
   }
 };
@@ -297,7 +260,7 @@ exports.getById = async (req, res) => {
 
     return response.success(res, "Detail unit kompetensi", result[0]);
   } catch (err) {
-    console.error(err);
+    console.error("GET UNIT BY ID ERROR:", err);
     return response.error(res, err.message);
   }
 };
@@ -313,25 +276,17 @@ exports.update = async (req, res) => {
       return response.error(res, "Unit kompetensi tidak ditemukan", 404);
     }
 
-    const {
-      id_skema,
-      id_skkni,
-      kode_unit,
-      judul_unit,
-      nama_kelompok,
-      deskripsi_kelompok,
-      urutan_kelompok,
-      urutan,
-    } = req.body;
+    const { id_skema, id_kelompok, id_skkni, kode_unit, judul_unit, urutan } =
+      req.body;
 
     if (!id_skema) {
       await t.rollback();
       return response.error(res, "Skema wajib dipilih", 400);
     }
 
-    if (!nama_kelompok) {
+    if (!id_kelompok) {
       await t.rollback();
-      return response.error(res, "Kelompok pekerjaan wajib diisi", 400);
+      return response.error(res, "Kelompok pekerjaan wajib dipilih", 400);
     }
 
     if (!id_skkni) {
@@ -344,19 +299,17 @@ exports.update = async (req, res) => {
       return response.error(res, "Kode unit dan judul unit wajib diisi", 400);
     }
 
-    const kelompok = await getOrCreateKelompok({
+    const kelompok = await validateKelompokInSkema({
       id_skema,
-      nama_kelompok,
-      deskripsi: deskripsi_kelompok,
-      urutan: urutan_kelompok,
+      id_kelompok,
       transaction: t,
     });
 
     await data.update(
       {
-        id_skkni,
-        kode_unit,
-        judul_unit,
+        id_skkni: toNumberOrNull(id_skkni),
+        kode_unit: String(kode_unit).trim(),
+        judul_unit: String(judul_unit).trim(),
       },
       { transaction: t }
     );
@@ -364,7 +317,7 @@ exports.update = async (req, res) => {
     const existingLink = await SkemaUnit.findOne({
       where: {
         id_unit: data.id_unit,
-        id_skema,
+        id_skema: toNumberOrNull(id_skema),
       },
       transaction: t,
     });
@@ -394,7 +347,7 @@ exports.update = async (req, res) => {
     return response.success(res, "Unit kompetensi berhasil diperbarui", data);
   } catch (err) {
     await t.rollback();
-    console.error(err);
+    console.error("UPDATE UNIT ERROR:", err);
     return response.error(res, err.message);
   }
 };
@@ -424,7 +377,7 @@ exports.delete = async (req, res) => {
     return response.success(res, "Unit kompetensi berhasil dihapus");
   } catch (err) {
     await t.rollback();
-    console.error(err);
+    console.error("DELETE UNIT ERROR:", err);
     return response.error(res, err.message);
   }
 };

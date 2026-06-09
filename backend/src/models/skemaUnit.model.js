@@ -11,7 +11,7 @@ const SkemaUnit = sequelize.define(
     },
     id_kelompok: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
     },
     id_unit: {
       type: DataTypes.INTEGER,
