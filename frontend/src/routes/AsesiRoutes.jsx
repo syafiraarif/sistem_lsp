@@ -16,6 +16,7 @@ import BayarSkema from "../pages/asesi/BayarSkema";
 import APL01 from "../pages/asesi/APL01";
 import APL02 from "../pages/asesi/APL02";
 import PraAsesmenAsesi from "../pages/asesi/PraAsesmenAsesi";
+import FRIA05Asesi from "../pages/asesi/FRIA05Asesi";
 import Banding from "../pages/asesi/Banding";
 
 /* Lupa Password */
@@ -41,6 +42,17 @@ export default function AsesiRoutes() {
       <Route path="pembayaran/:id_skema" element={<BayarSkema />} />
       <Route path="pra-asesmen" element={<PraAsesmenAsesi />} />
       <Route path="pra-asesmen/:id_skema" element={<PraAsesmenAsesi />} />
+
+      {/* FR.IA.05 ASESI */}
+      <Route
+        path="fr-ia05/jadwal/:id_jadwal/:id_peserta"
+        element={<FRIA05Asesi />}
+      />
+
+      <Route
+        path="fr-ia05/:id_fr_ia_05/:id_peserta"
+        element={<FRIA05Asesi />}
+      />
 
       {/* BANDING */}
       <Route path="banding" element={<Banding />} />

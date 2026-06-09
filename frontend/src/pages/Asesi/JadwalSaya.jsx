@@ -1,3 +1,5 @@
+// frontend/src/pages/asesi/JadwalSaya.jsx
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import axios from "axios";
@@ -447,6 +449,28 @@ export default function JadwalSaya() {
     navigate(`/asesi/pra-asesmen/${idSkema}`);
   };
 
+  const pergiFRIA05 = (item) => {
+    const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
+    const idJadwal = item.id_jadwal || item.jadwal?.id_jadwal || item.Jadwal?.id_jadwal;
+
+    if (!isAPL01Done(item)) {
+      alert("Silakan submit APL01 terlebih dahulu sebelum mengerjakan FR.IA.05.");
+      return;
+    }
+
+    if (!idJadwal) {
+      alert("ID jadwal tidak ditemukan.");
+      return;
+    }
+
+    if (!idPeserta) {
+      alert("ID peserta tidak ditemukan. Silakan klik Refresh lalu coba lagi.");
+      return;
+    }
+
+    navigate(`/asesi/fr-ia05/jadwal/${idJadwal}/${idPeserta}`);
+  };
+
   const handleRefresh = async () => {
     await loadData(false);
   };
@@ -536,8 +560,8 @@ export default function JadwalSaya() {
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
                   Pilih jadwal uji kompetensi, lanjutkan pembayaran, dan akses
-                  formulir APL01, APL02, serta presensi setelah pembayaran
-                  dikonfirmasi.
+                  formulir APL01, APL02, presensi, serta FR.IA.05 setelah
+                  pembayaran dikonfirmasi.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -724,6 +748,7 @@ export default function JadwalSaya() {
                     pergiAPL01={pergiAPL01}
                     pergiAPL02={pergiAPL02}
                     pergiPresensi={pergiPresensi}
+                    pergiFRIA05={pergiFRIA05}
                   />
                 );
               })
@@ -754,6 +779,7 @@ function ScheduleCard({
   pergiAPL01,
   pergiAPL02,
   pergiPresensi,
+  pergiFRIA05,
 }) {
   const title = skema.judul_skema || "Skema tidak tersedia";
   const kodeSkema = skema.kode_skema || "SKEMA";
@@ -927,6 +953,15 @@ function ScheduleCard({
                 />
               ) : (
                 <LockedMessage text="Presensi akan tersedia setelah APL01 selesai disubmit." />
+              )}
+
+              {apl01Done ? (
+                <ActionButton
+                  title="FR.IA.05"
+                  onClick={() => pergiFRIA05(item)}
+                />
+              ) : (
+                <LockedMessage text="FR.IA.05 akan tersedia setelah APL01 selesai disubmit." />
               )}
             </div>
           ) : (

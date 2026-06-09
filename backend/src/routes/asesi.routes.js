@@ -356,6 +356,11 @@ FR.IA.05 ASESI
 ========================= */
 
 router.get(
+  "/fr-ia05/paket-jadwal/:id_jadwal/:id_peserta",
+  frIa05AsesiController.getPaketByJadwal
+);
+
+router.get(
   "/fr-ia05/:id_fr_ia_05/:id_peserta",
   frIa05AsesiController.getSoal
 );
