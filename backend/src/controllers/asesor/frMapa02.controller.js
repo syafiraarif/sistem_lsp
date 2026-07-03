@@ -1,641 +1,687 @@
 const {
-sequelize,
-FrMapa02,
-FrMapa02Unit,
-FrMapa02Muk,
-FrMapa01,
-SkemaUnit,
-UnitKompetensi,
-KelompokPekerjaan
+  sequelize,
 
-}=require("../../models");
+  // FR MAPA
+  FrMapa01,
+  FrMapa02,
+  FrMapa02Unit,
+  FrMapa02Muk,
 
-const PDFDocument=
-require("pdfkit");
+  // Master
+  Skema,
+  SkemaUnit,
+  UnitKompetensi,
+  KelompokPekerjaan,
 
+  // Jadwal
+  Jadwal,
+  PesertaJadwal,
 
+  // Profile
+  ProfileAsesor,
+  ProfileAsesi,
+  User
+
+} = require("../../models");
+
+const PDFDocument = require("pdfkit");
 
 /* =====================================
 MASTER MUK
-HANYA YANG DIPAKAI
 ===================================== */
 
-const MASTER_MUK=[
-
-{
-
-kode:"FR.IA.01",
-nama:"Ceklis Observasi"
-
-},
-
-{
-
-kode:"FR.IA.02",
-nama:"Tugas Praktik Demonstrasi"
-
-},
-
-{
-
-kode:"FR.IA.03",
-nama:"Pertanyaan Pendukung Observasi"
-
-},
-
-{
-
-kode:"FR.IA.05",
-nama:"Pertanyaan Tertulis Pilihan Ganda"
-
-}
-
+const MASTER_MUK = [
+  {
+    urutan: 1,
+    kode: "FR.IA.01",
+    nama: "Ceklis Observasi Aktivitas di Tempat Kerja atau Tempat Kerja Simulasi",
+    potensi: 1
+  },
+  {
+    urutan: 2,
+    kode: "FR.IA.02",
+    nama: "Tugas Praktik Demonstrasi",
+    potensi: 2
+  },
+  {
+    urutan: 3,
+    kode: "FR.IA.03",
+    nama: "Pertanyaan Untuk Mendukung Observasi",
+    potensi: 1
+  },
+  {
+    urutan: 4,
+    kode: "FR.IA.04.A",
+    nama: "Daftar Instruksi Terstruktur (Proyek)",
+    potensi: 3
+  },
+  {
+    urutan: 5,
+    kode: "FR.IA.04.B",
+    nama: "Daftar Instruksi Terstruktur (Kegiatan Lainnya)",
+    potensi: 4
+  },
+  {
+    urutan: 6,
+    kode: "FR.IA.05",
+    nama: "Pertanyaan Tertulis Pilihan Ganda",
+    potensi: 1
+  },
+  {
+    urutan: 7,
+    kode: "FR.IA.06",
+    nama: "Pertanyaan Tertulis Esai",
+    potensi: 2
+  },
+  {
+    urutan: 8,
+    kode: "FR.IA.07",
+    nama: "Pertanyaan Lisan",
+    potensi: 1
+  },
+  {
+    urutan: 9,
+    kode: "FR.IA.08",
+    nama: "Ceklis Verifikasi Portofolio",
+    potensi: 5
+  },
+  {
+    urutan: 10,
+    kode: "FR.IA.09",
+    nama: "Pertanyaan Wawancara",
+    potensi: 5
+  },
+  {
+    urutan: 11,
+    kode: "FR.IA.10",
+    nama: "Verifikasi Pihak Ketiga",
+    potensi: 5
+  },
+  {
+    urutan: 12,
+    kode: "FR.IA.11",
+    nama: "Ceklis Reviu Produk",
+    potensi: 5
+  }
 ];
-
-
 
 /* =====================================
 GENERATE MAPA02
 ===================================== */
 
-const generateMapa02=
-async(req,res)=>{
+const generateMapa02 = async (req, res) => {
 
-const t=
-await sequelize.transaction();
+  const t = await sequelize.transaction();
 
-try{
+  try {
 
-const id_user=
-req.user.id_user;
+    const id_user = req.user.id_user;
+    const { id_peserta } = req.body;
 
-const{
-id_jadwal
+    if (!id_peserta) {
+      await t.rollback();
 
-}=req.body;
+      return res.status(400).json({
+        success: false,
+        message: "ID Peserta wajib diisi."
+      });
+    }
 
+    // ==========================
+    // CEK PESERTA
+    // ==========================
 
+    const peserta = await PesertaJadwal.findOne({
+      where: {
+        id_peserta,
+        id_asesor: id_user
+      },
+      transaction: t
+    });
 
-const mapa01=
-await FrMapa01.findOne({
+    if (!peserta) {
 
-where:{
+      await t.rollback();
 
-id_jadwal,
+      return res.status(403).json({
+        success: false,
+        message: "Peserta bukan tanggung jawab asesor."
+      });
 
-id_asesor:
-id_user
+    }
 
-},
+    // ==========================
+    // CEK MAPA01
+    // ==========================
 
-transaction:t
+    const mapa01 = await FrMapa01.findOne({
+      where: {
+        id_peserta,
+        id_asesor: id_user
+      },
+      transaction: t
+    });
 
-});
+    if (!mapa01) {
 
+      await t.rollback();
 
-if(!mapa01){
+      return res.status(404).json({
+        success: false,
+        message: "FR.MAPA.01 belum dibuat."
+      });
 
-await t.rollback();
+    }
 
-return res.status(404).json({
+    // ==========================
+    // SUDAH ADA?
+    // ==========================
 
-message:
-"FR MAPA01 belum dibuat"
+    const existing = await FrMapa02.findOne({
+      where: {
+        id_mapa01: mapa01.id_mapa01
+      },
+      transaction: t
+    });
 
-});
+    if (existing) {
 
-}
+      await t.rollback();
 
+      return res.status(400).json({
+        success: false,
+        message: "FR.MAPA.02 sudah pernah dibuat."
+      });
 
+    }
 
-const existing=
-await FrMapa02.findOne({
+    // ==========================
+    // HEADER MAPA02
+    // ==========================
 
-where:{
+    const mapa02 = await FrMapa02.create({
 
-id_jadwal,
+      id_jadwal: mapa01.id_jadwal,
+      id_skema: mapa01.id_skema,
+      id_peserta,
+      id_asesor: id_user,
+      id_mapa01: mapa01.id_mapa01
 
-id_asesor:
-id_user
+    }, {
+      transaction: t
+    });
 
-},
+    // ==========================
+    // AMBIL UNIT SKEMA
+    // ==========================
 
-transaction:t
+    const units = await SkemaUnit.findAll({
 
-});
+      where: {
+        id_skema: mapa01.id_skema
+      },
 
+      include: [
+        {
+          model: UnitKompetensi,
+          as: "unit"
+        }
+      ],
 
-if(existing){
+      order: [
+        ["urutan", "ASC"]
+      ],
 
-await t.rollback();
+      transaction: t
 
-return res.status(400).json({
+    });
 
-message:
-"FR MAPA02 sudah ada"
+    // ==========================
+    // INSERT UNIT
+    // ==========================
 
-});
+    for (const u of units) {
 
-}
+      let id_kelompok = null;
 
+      // kalau memang ada relasi kelompok
+      if (u.unit && u.unit.id_kelompok) {
+        id_kelompok = u.unit.id_kelompok;
+      }
 
+      const unit = await FrMapa02Unit.create({
 
-const mapa02=
-await FrMapa02.create({
+        id_mapa02: mapa02.id_mapa02,
+        id_unit: u.id_unit,
+        id_kelompok,
+        urutan: u.urutan
 
-id_jadwal,
+      }, {
+        transaction: t
+      });
 
-id_skema:
-mapa01.id_skema,
+      // ==========================
+      // INSERT MASTER MUK
+      // ==========================
 
-id_asesor:
-id_user,
+      const mukData = MASTER_MUK.map(item => ({
 
-id_mapa01:
-mapa01.id_mapa01
+        id_mapa02_unit: unit.id_mapa02_unit,
 
-},
+        kode_muk: item.kode,
 
-{
+        nama_muk: item.nama,
 
-transaction:t
+        potensi_asesi: item.potensi,
 
-});
+        dipilih: false
 
+      }));
 
+      await FrMapa02Muk.bulkCreate(
+        mukData,
+        {
+          transaction: t
+        }
+      );
 
-const units=
-await SkemaUnit.findAll({
+    }
 
-where:{
+    await t.commit();
 
-id_skema:
-mapa01.id_skema
+    return res.status(201).json({
 
-},
+      success: true,
 
-include:[
+      message: "FR.MAPA.02 berhasil dibuat.",
 
-{
+      data: mapa02
 
-model:
-UnitKompetensi,
+    });
 
-as:"unit"
+  } catch (err) {
 
-},
+    await t.rollback();
 
-{
+    console.error("Generate MAPA02 Error :", err);
 
-model:
-KelompokPekerjaan,
+    return res.status(500).json({
 
-as:"kelompok"
+      success: false,
 
-}
+      message: err.message
 
-],
+    });
 
-order:[
-
-["urutan","ASC"]
-
-],
-
-transaction:t
-
-});
-
-
-
-for(const u of units){
-
-const unit=
-await FrMapa02Unit.create({
-
-id_mapa02:
-mapa02.id_mapa02,
-
-id_unit:
-u.id_unit,
-
-id_kelompok:
-u.id_kelompok,
-
-urutan:
-u.urutan
-
-},
-
-{
-
-transaction:t
-
-});
-
-
-
-const muk=
-MASTER_MUK.map(
-
-m=>({
-
-id_mapa02_unit:
-unit.id_mapa02_unit,
-
-kode_muk:
-m.kode,
-
-nama_muk:
-m.nama,
-
-dipilih:true
-
-})
-
-);
-
-
-
-await FrMapa02Muk.bulkCreate(
-
-muk,
-
-{
-
-transaction:t
-
-}
-
-);
-
-}
-
-
-
-await t.commit();
-
-
-res.status(201).json({
-
-message:
-"FR MAPA02 berhasil dibuat",
-
-data:
-mapa02
-
-});
-
-
-}catch(err){
-
-await t.rollback();
-
-res.status(500).json({
-
-message:
-err.message
-
-});
-
-}
+  }
 
 };
-
-
 
 /* =====================================
 GET MAPA02
 ===================================== */
 
-const getMapa02=
-async(req,res)=>{
+const getMapa02 = async (req, res) => {
 
-try{
+  try {
 
-const id_user=
-req.user.id_user;
+    const id_user = req.user.id_user;
+    const { id_peserta } = req.query;
 
-const{
-id_jadwal
+    if (!id_peserta) {
+      return res.status(400).json({
+        success: false,
+        message: "ID peserta wajib diisi."
+      });
+    }
 
-}=req.query;
+    // ==========================
+    // CEK MAPA01
+    // ==========================
 
+    const mapa01 = await FrMapa01.findOne({
+      where: {
+        id_peserta,
+        id_asesor: id_user
+      }
+    });
 
+    if (!mapa01) {
+      return res.status(404).json({
+        success: false,
+        message: "FR.MAPA.01 tidak ditemukan."
+      });
+    }
 
-const data=
-await FrMapa02.findOne({
+    // ==========================
+    // AMBIL MAPA02
+    // ==========================
 
-where:{
+    const data = await FrMapa02.findOne({
 
-id_jadwal,
+      where: {
+        id_mapa01: mapa01.id_mapa01
+      },
 
-id_asesor:
-id_user
+      include: [
 
-},
+        {
+          model: Skema,
+          as: "skema"
+        },
 
-include:[
+        {
+          model: FrMapa01,
+          as: "mapa01"
+        },
 
-{
+        {
+          model: FrMapa02Unit,
+          as: "unit",
 
-model:
-FrMapa02Unit,
+          include: [
 
-as:"unit",
+            {
+              model: UnitKompetensi,
+              as: "unitDetail"
+            },
 
-include:[
+            {
+              model: KelompokPekerjaan,
+              as: "kelompok"
+            },
 
-{
+            {
+              model: FrMapa02Muk,
+              as: "muk",
+              separate: true,
+              order: [["id_muk", "ASC"]]
+            }
 
-model:
-FrMapa02Muk,
+          ],
 
-as:"muk"
+          separate: true,
+          order: [["urutan", "ASC"]]
 
-}
+        }
 
-]
+      ]
 
-}
+    });
 
-]
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        message: "FR.MAPA.02 belum dibuat."
+      });
+    }
 
-});
+    return res.status(200).json({
 
+      success: true,
 
-res.json({
+      message: "Data FR.MAPA.02 berhasil diambil.",
 
-data
+      data
 
-});
+    });
 
+  } catch (err) {
 
-}catch(err){
+    console.error("Get MAPA02 Error :", err);
 
-res.status(500).json({
+    return res.status(500).json({
 
-message:
-err.message
+      success: false,
 
-});
+      message: err.message
 
-}
+    });
+
+  }
 
 };
-
-
 
 /* =====================================
-UPDATE CHECKBOX
+UPDATE CHECKBOX MUK
 ===================================== */
 
-const updateMapa02=
-async(req,res)=>{
+const updateMapa02 = async (req, res) => {
 
-const t=
-await sequelize.transaction();
+  const t = await sequelize.transaction();
 
-try{
+  try {
 
-const{
+    const { muk } = req.body;
 
-muk
+    if (!Array.isArray(muk) || muk.length === 0) {
 
-}=req.body;
+      await t.rollback();
 
+      return res.status(400).json({
+        success: false,
+        message: "Data MUK harus berupa array."
+      });
 
+    }
 
-for(const item of muk){
+    for (const item of muk) {
 
-await FrMapa02Muk.update(
+      if (!item.id_muk) {
 
-{
+        await t.rollback();
 
-dipilih:
-item.dipilih
+        return res.status(400).json({
+          success: false,
+          message: "id_muk tidak boleh kosong."
+        });
 
-},
+      }
 
-{
+      await FrMapa02Muk.update(
+        {
 
-where:{
+          dipilih:
+            item.dipilih !== undefined
+              ? item.dipilih
+              : false,
 
-id_muk:
-item.id_muk
+          potensi_asesi:
+            item.potensi_asesi !== undefined
+              ? item.potensi_asesi
+              : null
 
-},
+        },
+        {
 
-transaction:t
+          where: {
+            id_muk: item.id_muk
+          },
 
-}
+          transaction: t
 
-);
+        }
+      );
 
-}
+    }
 
+    await t.commit();
 
+    return res.status(200).json({
 
-await t.commit();
+      success: true,
 
-res.json({
+      message: "FR.MAPA.02 berhasil diperbarui."
 
-message:
-"MAPA02 berhasil diupdate"
+    });
 
-});
+  } catch (err) {
 
-}catch(err){
+    await t.rollback();
 
-await t.rollback();
+    console.error("Update MAPA02 Error :", err);
 
-res.status(500).json({
+    return res.status(500).json({
 
-message:
-err.message
+      success: false,
 
-});
+      message: err.message
 
-}
+    });
+
+  }
 
 };
-
-
 
 /* =====================================
-PDF
+DOWNLOAD PDF
 ===================================== */
 
-const downloadPdfMapa02=
-async(req,res)=>{
+const downloadPdfMapa02 = async (req, res) => {
 
-try{
+  try {
 
-const data=
-await FrMapa02.findByPk(
+    const data = await FrMapa02.findByPk(req.params.id, {
 
-req.params.id,
+      include: [
 
-{
+        {
+          model: FrMapa02Unit,
+          as: "unit",
 
-include:[
+          include: [
 
-{
+            {
+              model: UnitKompetensi,
+              as: "unitDetail"
+            },
 
-model:
-FrMapa02Unit,
+            {
+              model: KelompokPekerjaan,
+              as: "kelompok"
+            },
 
-as:"unit",
+            {
+              model: FrMapa02Muk,
+              as: "muk"
+            }
 
-include:[
+          ]
 
-{
+        }
 
-model:
-FrMapa02Muk,
+      ]
 
-as:"muk"
+    });
 
-}
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        message: "Data FR.MAPA.02 tidak ditemukan."
+      });
+    }
 
-]
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename=FR-MAPA02-${data.id_mapa02}.pdf`
+    );
 
-}
+    const doc = new PDFDocument({
+      margin: 40,
+      size: "A4"
+    });
 
-]
+    doc.pipe(res);
 
-}
+    // ==========================
+    // HEADER
+    // ==========================
 
-);
+    doc
+      .fontSize(18)
+      .font("Helvetica-Bold")
+      .text("FR.MAPA.02", {
+        align: "center"
+      });
 
+    doc
+      .fontSize(14)
+      .text("PETA INSTRUMEN ASESMEN", {
+        align: "center"
+      });
 
-if(!data){
+    doc.moveDown();
 
-return res.status(404).json({
+    doc.font("Helvetica");
 
-message:
-"Data tidak ditemukan"
+    doc.text(`ID MAPA02 : ${data.id_mapa02}`);
+    doc.text(`ID Jadwal : ${data.id_jadwal}`);
+    doc.text(`ID Skema  : ${data.id_skema}`);
+    doc.text(`ID Asesor : ${data.id_asesor}`);
 
-});
+    doc.moveDown();
 
-}
+    // ==========================
+    // UNIT
+    // ==========================
 
+    data.unit.forEach((unit, index) => {
 
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(12)
+        .text(`${index + 1}. ${unit.unitDetail?.kode_unit || "-"}`);
 
-res.setHeader(
-"Content-Type",
-"application/pdf"
-);
+      doc
+        .font("Helvetica")
+        .text(unit.unitDetail?.judul_unit || "-");
 
-res.setHeader(
+      if (unit.kelompok) {
 
-"Content-Disposition",
+        doc.text(
+          `Kelompok : ${unit.kelompok.nama_kelompok}`
+        );
 
-`inline; filename=FRMAPA02-${data.id_mapa02}.pdf`
+      }
 
-);
+      doc.moveDown(0.3);
 
+      unit.muk.forEach(item => {
 
+        const check = item.dipilih ? "[✓]" : "[ ]";
 
-const doc=
-new PDFDocument({
+        doc.text(
+          `${check} ${item.kode_muk} - ${item.nama_muk}`
+        );
 
-margin:40
+      });
 
-});
+      doc.moveDown();
 
-doc.pipe(res);
+    });
 
+    doc.end();
 
+  } catch (err) {
 
-doc
-.fontSize(16)
-.text(
-"FR.MAPA.02",
-{
-align:"center"
-}
-);
+    console.error("PDF MAPA02 Error :", err);
 
-doc.moveDown();
+    return res.status(500).json({
 
-doc.text(
-`Jadwal : ${data.id_jadwal}`
-);
+      success: false,
 
-doc.moveDown();
+      message: err.message
 
+    });
 
-
-data.unit.forEach(
-
-(unit,index)=>{
-
-doc
-.fontSize(12)
-.text(
-
-`${index+1}. Unit ${unit.id_unit}`
-
-);
-
-doc.moveDown(.3);
-
-
-
-unit.muk
-
-.filter(
-m=>m.dipilih
-)
-
-.forEach(
-
-m=>{
-
-doc.text(
-
-`• ${m.kode_muk} - ${m.nama_muk}`
-
-);
-
-}
-
-);
-
-doc.moveDown();
-
-}
-
-);
-
-
-
-doc.end();
-
-}catch(err){
-
-res.status(500).json({
-
-message:
-err.message
-
-});
-
-}
+  }
 
 };
 
-
-
-module.exports={
-
-generateMapa02,
-
-getMapa02,
-
-updateMapa02,
-
-downloadPdfMapa02
-
+module.exports = {
+  generateMapa02,
+  getMapa02,
+  updateMapa02,
+  downloadPdfMapa02
 };

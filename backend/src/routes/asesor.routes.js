@@ -285,6 +285,11 @@ router.put("/fr-ak01/:id", frAk01Controller.updateFrAk01);
 // list FR.AK.01 per jadwal (optional)
 router.get("/fr-ak01/list/:id_jadwal", frAk01Controller.listFrAk01);
 
+router.get(
+  "/fr-ak01/:id/pdf",
+  frAk01Controller.downloadPdfFrAk01
+);
+
 /* ========================= FR.AK.02 ========================= */
 
 // ambil detail FR.AK.02
@@ -299,6 +304,13 @@ router.put("/fr-ak02/:id", frAk02Controller.updateFrAk02);
 // list FR.AK.02 per jadwal
 router.get("/fr-ak02/list/:id_jadwal", frAk02Controller.listFrAk02);
 
+router.get(
+  "/fr-ak02/pdf/:id_jadwal/:id_peserta",
+  frAk02Controller.generatePdfFrAk02
+);
+
+
+/* ========================= FR.AK.05 ========================= */
 router.get("/fr-ak05", frAk05Controller.getFrAk05);
 
 router.post("/fr-ak05", frAk05Controller.submitFrAk05);
