@@ -38,8 +38,9 @@ exports.approve = async (req, res) => {
     await pembayaran.update({
       status: "paid",
       catatan_admin: req.body?.catatan_admin || null,
-      divalidasi_pada: new Date(),
     });
+
+    await pembayaran.reload();
 
     return response.success(res, "Pembayaran berhasil diterima", pembayaran);
   } catch (err) {
@@ -61,10 +62,11 @@ exports.reject = async (req, res) => {
     }
 
     await pembayaran.update({
-      status: "rejected",
+      status: "ditolak",
       catatan_admin: req.body?.catatan_admin || "Pembayaran ditolak admin",
-      divalidasi_pada: new Date(),
     });
+
+    await pembayaran.reload();
 
     return response.success(res, "Pembayaran berhasil ditolak", pembayaran);
   } catch (err) {

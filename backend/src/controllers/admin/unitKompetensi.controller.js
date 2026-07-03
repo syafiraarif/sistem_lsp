@@ -1,30 +1,176 @@
+const { QueryTypes } = require("sequelize");
+
 const UnitKompetensi = require("../../models/unitKompetensi.model");
 const Skkni = require("../../models/skkni.model");
 const UnitElemen = require("../../models/unitElemen.model");
 const UnitKuk = require("../../models/unitKuk.model");
 const SkemaUnit = require("../../models/skemaUnit.model");
 const Skema = require("../../models/skema.model");
+const KelompokPekerjaan = require("../../models/kelompokPekerjaan.model");
 const response = require("../../utils/response.util");
 
-exports.create = async (req, res) => {
-  try {
-    const { id_skema, ...unitData } = req.body;
-    
-    // Simpan Unit Kompetensi
-    const data = await UnitKompetensi.create(unitData);
+const sequelize = UnitKompetensi.sequelize;
 
-    // Otomatis masukkan relasinya ke tabel skema_unit
-    if (id_skema) {
-      await SkemaUnit.create({
-        id_skema: id_skema,
-        id_unit: data.id_unit,
-        urutan: 1
-      });
+const toNumberOrNull = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const validateKelompokInSkema = async ({ id_skema, id_kelompok, transaction }) => {
+  const idSkemaNumber = toNumberOrNull(id_skema);
+  const idKelompokNumber = toNumberOrNull(id_kelompok);
+
+  if (!idSkemaNumber) {
+    throw new Error("Skema wajib dipilih");
+  }
+
+  if (!idKelompokNumber) {
+    throw new Error("Kelompok pekerjaan wajib dipilih");
+  }
+
+  const kelompok = await KelompokPekerjaan.findOne({
+    where: {
+      id_skema: idSkemaNumber,
+      id_kelompok: idKelompokNumber,
+    },
+    transaction,
+  });
+
+  if (!kelompok) {
+    throw new Error("Kelompok pekerjaan tidak ditemukan pada skema ini");
+  }
+
+  return kelompok;
+};
+
+const attachKelompokToUnits = async (units) => {
+  const plainUnits = units.map((unit) =>
+    typeof unit.toJSON === "function" ? unit.toJSON() : unit
+  );
+
+  const relations = await sequelize.query(
+    `
+    SELECT 
+      su.id_skema,
+      su.id_kelompok,
+      su.id_unit,
+      su.urutan,
+      kp.nama_kelompok,
+      kp.deskripsi AS deskripsi_kelompok,
+      kp.urutan AS urutan_kelompok
+    FROM skema_unit su
+    INNER JOIN kelompok_pekerjaan kp
+      ON kp.id_kelompok = su.id_kelompok
+    ORDER BY
+      kp.urutan ASC,
+      su.urutan ASC
+    `,
+    { type: QueryTypes.SELECT }
+  );
+
+  return plainUnits.map((unit) => {
+    const idUnit = unit.id_unit || unit.id;
+
+    const unitRelations = relations.filter(
+      (rel) => Number(rel.id_unit) === Number(idUnit)
+    );
+
+    const skemaList = Array.isArray(unit.skemaList) ? unit.skemaList : [];
+
+    const enrichedSkemaList = skemaList.map((skema) => {
+      const rel = unitRelations.find(
+        (item) => Number(item.id_skema) === Number(skema.id_skema)
+      );
+
+      return {
+        ...skema,
+        id_kelompok: rel?.id_kelompok || null,
+        nama_kelompok: rel?.nama_kelompok || null,
+        deskripsi_kelompok: rel?.deskripsi_kelompok || null,
+        urutan_kelompok: rel?.urutan_kelompok || null,
+        urutan: rel?.urutan || null,
+      };
+    });
+
+    return {
+      ...unit,
+      skemaList: enrichedSkemaList,
+      kelompokList: unitRelations.map((rel) => ({
+        id_skema: rel.id_skema,
+        id_kelompok: rel.id_kelompok,
+        nama_kelompok: rel.nama_kelompok,
+        deskripsi: rel.deskripsi_kelompok,
+        urutan_kelompok: rel.urutan_kelompok,
+        urutan_unit: rel.urutan,
+      })),
+      id_kelompok: unitRelations[0]?.id_kelompok || null,
+      nama_kelompok: unitRelations[0]?.nama_kelompok || null,
+      deskripsi_kelompok: unitRelations[0]?.deskripsi_kelompok || null,
+      urutan_kelompok: unitRelations[0]?.urutan_kelompok || null,
+      urutan_skema_unit: unitRelations[0]?.urutan || null,
+    };
+  });
+};
+
+exports.create = async (req, res) => {
+  const t = await sequelize.transaction();
+
+  try {
+    const { id_skema, id_kelompok, id_skkni, kode_unit, judul_unit, urutan } =
+      req.body;
+
+    if (!id_skema) {
+      await t.rollback();
+      return response.error(res, "Skema wajib dipilih", 400);
     }
+
+    if (!id_kelompok) {
+      await t.rollback();
+      return response.error(res, "Kelompok pekerjaan wajib dipilih", 400);
+    }
+
+    if (!id_skkni) {
+      await t.rollback();
+      return response.error(res, "SKKNI wajib dipilih", 400);
+    }
+
+    if (!kode_unit || !judul_unit) {
+      await t.rollback();
+      return response.error(res, "Kode unit dan judul unit wajib diisi", 400);
+    }
+
+    const kelompok = await validateKelompokInSkema({
+      id_skema,
+      id_kelompok,
+      transaction: t,
+    });
+
+    const data = await UnitKompetensi.create(
+      {
+        id_skkni: toNumberOrNull(id_skkni),
+        kode_unit: String(kode_unit).trim(),
+        judul_unit: String(judul_unit).trim(),
+      },
+      { transaction: t }
+    );
+
+    await SkemaUnit.create(
+      {
+        id_skema: toNumberOrNull(id_skema),
+        id_kelompok: kelompok.id_kelompok,
+        id_unit: data.id_unit,
+        urutan: toNumberOrNull(urutan) || 1,
+      },
+      { transaction: t }
+    );
+
+    await t.commit();
 
     return response.success(res, "Unit kompetensi berhasil dibuat", data);
   } catch (err) {
-    console.error(err);
+    await t.rollback();
+    console.error("CREATE UNIT ERROR:", err);
     return response.error(res, "Gagal menambahkan unit: " + err.message, 500);
   }
 };
@@ -36,12 +182,14 @@ exports.getAll = async (req, res) => {
         {
           model: Skema,
           as: "skemaList",
-          through: { attributes: [] }
+          through: {
+            attributes: ["id_skema", "id_kelompok", "id_unit", "urutan"],
+          },
         },
         {
           model: Skkni,
           as: "skkni",
-          attributes: ["id_skkni", "judul_skkni", "no_skkni"]
+          attributes: ["id_skkni", "judul_skkni", "no_skkni"],
         },
         {
           model: UnitElemen,
@@ -49,20 +197,28 @@ exports.getAll = async (req, res) => {
           include: [
             {
               model: UnitKuk,
-              as: "kuk"
-            }
-          ]
-        }
+              as: "kuk",
+            },
+          ],
+        },
       ],
       order: [
-        ['id_unit', 'ASC'],
-        [{ model: UnitElemen, as: 'elemen' }, 'urutan', 'ASC'],
-        [{ model: UnitElemen, as: 'elemen' }, { model: UnitKuk, as: 'kuk' }, 'urutan', 'ASC']
-      ]
+        ["id_unit", "ASC"],
+        [{ model: UnitElemen, as: "elemen" }, "urutan", "ASC"],
+        [
+          { model: UnitElemen, as: "elemen" },
+          { model: UnitKuk, as: "kuk" },
+          "urutan",
+          "ASC",
+        ],
+      ],
     });
 
-    return response.success(res, "List unit kompetensi", data);
+    const result = await attachKelompokToUnits(data);
+
+    return response.success(res, "List unit kompetensi", result);
   } catch (err) {
+    console.error("GET ALL UNIT ERROR:", err);
     return response.error(res, err.message);
   }
 };
@@ -74,12 +230,14 @@ exports.getById = async (req, res) => {
         {
           model: Skema,
           as: "skemaList",
-          through: { attributes: [] }
+          through: {
+            attributes: ["id_skema", "id_kelompok", "id_unit", "urutan"],
+          },
         },
         {
           model: Skkni,
           as: "skkni",
-          attributes: ["id_skkni", "judul_skkni", "no_skkni"]
+          attributes: ["id_skkni", "judul_skkni", "no_skkni"],
         },
         {
           model: UnitElemen,
@@ -87,70 +245,139 @@ exports.getById = async (req, res) => {
           include: [
             {
               model: UnitKuk,
-              as: "kuk"
-            }
-          ]
-        }
+              as: "kuk",
+            },
+          ],
+        },
       ],
-      order: [
-        [{ model: UnitElemen, as: 'elemen' }, 'urutan', 'ASC'],
-        [{ model: UnitElemen, as: 'elemen' }, { model: UnitKuk, as: 'kuk' }, 'urutan', 'ASC']
-      ]
     });
 
     if (!data) {
       return response.error(res, "Unit kompetensi tidak ditemukan", 404);
     }
 
-    return response.success(res, "Detail unit kompetensi", data);
+    const result = await attachKelompokToUnits([data]);
+
+    return response.success(res, "Detail unit kompetensi", result[0]);
   } catch (err) {
+    console.error("GET UNIT BY ID ERROR:", err);
     return response.error(res, err.message);
   }
 };
 
 exports.update = async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
     const data = await UnitKompetensi.findByPk(req.params.id);
 
     if (!data) {
+      await t.rollback();
       return response.error(res, "Unit kompetensi tidak ditemukan", 404);
     }
 
-    const { id_skema, ...unitData } = req.body;
-    await data.update(unitData);
+    const { id_skema, id_kelompok, id_skkni, kode_unit, judul_unit, urutan } =
+      req.body;
 
-    // Update relasi ke skema jika diedit
-    if (id_skema) {
-      const existingLink = await SkemaUnit.findOne({
-        where: { id_unit: data.id_unit, id_skema: id_skema }
-      });
-      if (!existingLink) {
-        await SkemaUnit.create({
-          id_skema: id_skema,
-          id_unit: data.id_unit,
-          urutan: 1
-        });
-      }
+    if (!id_skema) {
+      await t.rollback();
+      return response.error(res, "Skema wajib dipilih", 400);
     }
+
+    if (!id_kelompok) {
+      await t.rollback();
+      return response.error(res, "Kelompok pekerjaan wajib dipilih", 400);
+    }
+
+    if (!id_skkni) {
+      await t.rollback();
+      return response.error(res, "SKKNI wajib dipilih", 400);
+    }
+
+    if (!kode_unit || !judul_unit) {
+      await t.rollback();
+      return response.error(res, "Kode unit dan judul unit wajib diisi", 400);
+    }
+
+    const kelompok = await validateKelompokInSkema({
+      id_skema,
+      id_kelompok,
+      transaction: t,
+    });
+
+    await data.update(
+      {
+        id_skkni: toNumberOrNull(id_skkni),
+        kode_unit: String(kode_unit).trim(),
+        judul_unit: String(judul_unit).trim(),
+      },
+      { transaction: t }
+    );
+
+    const existingLink = await SkemaUnit.findOne({
+      where: {
+        id_unit: data.id_unit,
+        id_skema: toNumberOrNull(id_skema),
+      },
+      transaction: t,
+    });
+
+    if (existingLink) {
+      await existingLink.update(
+        {
+          id_kelompok: kelompok.id_kelompok,
+          urutan: toNumberOrNull(urutan) || existingLink.urutan || 1,
+        },
+        { transaction: t }
+      );
+    } else {
+      await SkemaUnit.create(
+        {
+          id_skema: toNumberOrNull(id_skema),
+          id_kelompok: kelompok.id_kelompok,
+          id_unit: data.id_unit,
+          urutan: toNumberOrNull(urutan) || 1,
+        },
+        { transaction: t }
+      );
+    }
+
+    await t.commit();
 
     return response.success(res, "Unit kompetensi berhasil diperbarui", data);
   } catch (err) {
+    await t.rollback();
+    console.error("UPDATE UNIT ERROR:", err);
     return response.error(res, err.message);
   }
 };
 
 exports.delete = async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
     const data = await UnitKompetensi.findByPk(req.params.id);
 
     if (!data) {
+      await t.rollback();
       return response.error(res, "Unit kompetensi tidak ditemukan", 404);
     }
 
-    await data.destroy();
+    await SkemaUnit.destroy({
+      where: {
+        id_unit: data.id_unit,
+      },
+      transaction: t,
+    });
+
+    await data.destroy({ transaction: t });
+
+    await t.commit();
 
     return response.success(res, "Unit kompetensi berhasil dihapus");
   } catch (err) {
+    await t.rollback();
+    console.error("DELETE UNIT ERROR:", err);
     return response.error(res, err.message);
   }
 };

@@ -1,4 +1,4 @@
-// frontend/src/pages/Asesi/BayarSkema.jsx
+// frontend/src/pages/asesi/BayarSkema.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -34,6 +34,7 @@ export default function BayarSkema() {
   const [submitLoading, setSubmitLoading] = useState(false);
 
   const [skemaJudul, setSkemaJudul] = useState("");
+  const [kodeSkema, setKodeSkema] = useState("");
   const [harga, setHarga] = useState(0);
   const [tujuanTransfer, setTujuanTransfer] = useState([]);
   const [qris, setQris] = useState(null);
@@ -49,7 +50,6 @@ export default function BayarSkema() {
   const [waktuBatas, setWaktuBatas] = useState(null);
   const [error, setError] = useState("");
 
-  const hasFetchedRef = useRef(false);
   const requestRunningRef = useRef(false);
 
   const headers = useMemo(
@@ -60,9 +60,6 @@ export default function BayarSkema() {
   );
 
   useEffect(() => {
-    if (hasFetchedRef.current) return;
-
-    hasFetchedRef.current = true;
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id_skema]);
@@ -82,49 +79,53 @@ export default function BayarSkema() {
 
       const detailRes = await axios.get(
         `${API_BASE}/asesi/pembayaran/${id_skema}/detail`,
-        { headers }
+        {
+          headers,
+        }
       );
 
       const detail = detailRes.data?.data || {};
 
       setSkemaJudul(detail.skema || "-");
-      setHarga(detail.harga || 0);
-      setTujuanTransfer(Array.isArray(detail.tujuan_transfer) ? detail.tujuan_transfer : []);
+      setKodeSkema(detail.kode_skema || "-");
+      setHarga(Number(detail.harga || 0));
+      setTujuanTransfer(
+        Array.isArray(detail.tujuan_transfer) ? detail.tujuan_transfer : []
+      );
       setQris(detail.qris || null);
       setVirtualAccount(detail.virtual_account || null);
 
-      try {
-        const statusRes = await axios.get(
-          `${API_BASE}/asesi/pembayaran/${id_skema}/status`,
-          { headers }
-        );
+      const statusRes = await axios.get(
+        `${API_BASE}/asesi/pembayaran/${id_skema}/status`,
+        {
+          headers,
+        }
+      );
 
-        const statusData = statusRes.data?.data || {};
+      const statusData = statusRes.data?.data || {};
 
-        setStatusPembayaran(statusData.status || "belum bayar");
-        setIdPembayaran(statusData.id_pembayaran || null);
-        setWaktuBatas(statusData.waktu_batas || null);
-      } catch (statusErr) {
-        console.error("Gagal mengambil status pembayaran:", statusErr);
-
-        setStatusPembayaran("belum bayar");
-        setIdPembayaran(null);
-        setWaktuBatas(null);
-      }
+      setStatusPembayaran(statusData.status || "belum bayar");
+      setIdPembayaran(statusData.id_pembayaran || null);
+      setWaktuBatas(statusData.waktu_batas || null);
     } catch (err) {
       console.error(err);
+
       setError(
-        err.response?.data?.message ||
-          "Gagal mengambil data pembayaran."
+        err.response?.data?.message || "Gagal mengambil data pembayaran."
       );
+
+      setStatusPembayaran("belum bayar");
+      setIdPembayaran(null);
+      setWaktuBatas(null);
     } finally {
       requestRunningRef.current = false;
       setLoading(false);
     }
   };
 
-  const formatRupiah = (value) =>
-    `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
+  const formatRupiah = (value) => {
+    return `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
+  };
 
   const formatTanggal = (date) => {
     if (!date) return "-";
@@ -151,6 +152,38 @@ export default function BayarSkema() {
     setJalurPembayaran("");
     setSelectedTujuan("");
     setBuktiBayar(null);
+  };
+
+  const handleBuktiChange = (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) {
+      setBuktiBayar(null);
+      return;
+    }
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert("Bukti bayar harus berupa JPG, PNG, JPEG, atau PDF.");
+      e.target.value = "";
+      setBuktiBayar(null);
+      return;
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      alert("Ukuran bukti bayar maksimal 3 MB.");
+      e.target.value = "";
+      setBuktiBayar(null);
+      return;
+    }
+
+    setBuktiBayar(file);
   };
 
   const validateSubmit = () => {
@@ -202,23 +235,27 @@ export default function BayarSkema() {
     try {
       setSubmitLoading(true);
 
+      const payload = {
+        id_skema,
+        metode_pembayaran: metode,
+        jalur_pembayaran:
+          metode === "tunai"
+            ? "tunai"
+            : metode === "qris"
+            ? "qris"
+            : metode === "virtual_account"
+            ? "virtual_account"
+            : jalurPembayaran,
+        id_tujuan_transfer:
+          metode === "transfer_rekening" ? selectedTujuan : null,
+      };
+
       const submitRes = await axios.post(
         `${API_BASE}/asesi/pembayaran/submit`,
+        payload,
         {
-          id_skema,
-          metode_pembayaran: metode,
-          jalur_pembayaran:
-            metode === "tunai"
-              ? "tunai"
-              : metode === "qris"
-              ? "qris"
-              : metode === "virtual_account"
-              ? "virtual_account"
-              : jalurPembayaran,
-          id_tujuan_transfer:
-            metode === "transfer_rekening" ? selectedTujuan : null,
-        },
-        { headers }
+          headers,
+        }
       );
 
       const newIdPembayaran = submitRes.data?.data?.id_pembayaran;
@@ -243,7 +280,12 @@ export default function BayarSkema() {
       navigate("/asesi/jadwal-saya");
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Gagal mengajukan pembayaran.");
+
+      alert(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Gagal mengajukan pembayaran."
+      );
     } finally {
       setSubmitLoading(false);
     }
@@ -284,7 +326,9 @@ export default function BayarSkema() {
 
   const currentStatus = statusView[statusPembayaran] || statusView["belum bayar"];
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -352,10 +396,14 @@ export default function BayarSkema() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-white/50">
                   Total Pembayaran
                 </p>
+
                 <h2 className="text-4xl font-black mt-2">
                   {formatRupiah(harga)}
                 </h2>
-                <p className="text-white/60 text-sm mt-4">{skemaJudul}</p>
+
+                <p className="text-white/60 text-sm mt-4">
+                  {kodeSkema} - {skemaJudul}
+                </p>
 
                 <div className="grid grid-cols-2 gap-3 mt-8">
                   <HeroPill label="ID Skema" value={id_skema || "-"} />
@@ -372,11 +420,18 @@ export default function BayarSkema() {
               <div className={`rounded-2xl border p-5 ${currentStatus.className}`}>
                 <div className="flex items-start gap-3">
                   {currentStatus.icon}
+
                   <div>
                     <h3 className="font-black">{currentStatus.title}</h3>
                     <p className="text-sm font-medium mt-1">
                       {currentStatus.desc}
                     </p>
+
+                    {waktuBatas && (
+                      <p className="text-xs font-bold mt-2">
+                        Batas waktu: {formatTanggal(waktuBatas)}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -393,6 +448,7 @@ export default function BayarSkema() {
                           desc="Bayar langsung"
                           onClick={() => handleMetode("tunai")}
                         />
+
                         <ChoiceButton
                           active={metode === "transfer_rekening"}
                           icon={<CreditCard size={22} />}
@@ -400,6 +456,7 @@ export default function BayarSkema() {
                           desc="Bank / E-wallet"
                           onClick={() => handleMetode("transfer_rekening")}
                         />
+
                         <ChoiceButton
                           active={metode === "qris"}
                           icon={<QrCode size={22} />}
@@ -407,6 +464,7 @@ export default function BayarSkema() {
                           desc="Scan QR"
                           onClick={() => handleMetode("qris")}
                         />
+
                         <ChoiceButton
                           active={metode === "virtual_account"}
                           icon={<BadgeCheck size={22} />}
@@ -439,6 +497,7 @@ export default function BayarSkema() {
                             className="mt-4 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none"
                           >
                             <option value="">Pilih tujuan pembayaran</option>
+
                             {tujuanTransfer.map((item) => (
                               <option
                                 key={item.id_tujuan_transfer}
@@ -464,10 +523,16 @@ export default function BayarSkema() {
                       <PaymentStep number="2" title="QRIS">
                         <div className="rounded-3xl border border-slate-100 bg-slate-50 p-5 text-center">
                           <img
-                            src={`${APP_BASE}${qris?.image_url || "/uploads/qris/qris.png"}`}
+                            src={`${APP_BASE}${
+                              qris?.image_url || "/uploads/qris/qris.png"
+                            }`}
                             alt="QRIS"
                             className="mx-auto max-h-72 rounded-2xl bg-white border border-slate-100 p-3"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
                           />
+
                           <p className="mt-3 text-sm font-bold text-slate-500">
                             Scan QRIS lalu upload bukti pembayaran.
                           </p>
@@ -482,6 +547,7 @@ export default function BayarSkema() {
                           value={virtualAccount?.nomor_va || "-"}
                           highlight
                         />
+
                         <PaymentBox
                           label="Atas Nama"
                           value={virtualAccount?.atas_nama || "LSP"}
@@ -497,23 +563,24 @@ export default function BayarSkema() {
                           <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
                             <UploadCloud size={24} />
                           </div>
+
                           <div className="flex-1">
                             <p className="font-black text-[#071E3D]">
                               {buktiBayar
                                 ? buktiBayar.name
                                 : "Pilih file bukti pembayaran"}
                             </p>
+
                             <p className="text-xs text-slate-400 mt-1">
-                              Format JPG, PNG, atau PDF.
+                              Format JPG, PNG, JPEG, atau PDF. Maksimal 3 MB.
                             </p>
                           </div>
+
                           <input
                             type="file"
-                            accept=".jpg,.jpeg,.png,.pdf"
+                            accept="image/png,image/jpeg,image/jpg,application/pdf"
                             className="hidden"
-                            onChange={(e) =>
-                              setBuktiBayar(e.target.files?.[0] || null)
-                            }
+                            onChange={handleBuktiChange}
                           />
                         </label>
                       </PaymentStep>
@@ -565,7 +632,9 @@ export default function BayarSkema() {
                 <h3 className="font-black text-[#071E3D] text-xl mb-4">
                   Ringkasan
                 </h3>
+
                 <SummaryRow label="Skema" value={skemaJudul} />
+                <SummaryRow label="Kode" value={kodeSkema} />
                 <SummaryRow label="Total" value={formatRupiah(harga)} />
                 <SummaryRow label="Metode" value={metode || "-"} />
                 <SummaryRow label="Status" value={statusPembayaran} />
@@ -574,6 +643,7 @@ export default function BayarSkema() {
 
               <div className="bg-[#071E3D] rounded-[32px] p-6 text-white">
                 <h3 className="font-black text-lg mb-3">Alur Pembayaran</h3>
+
                 <ol className="space-y-2 text-sm text-white/70 font-medium">
                   <li>1. Pilih metode pembayaran.</li>
                   <li>2. Bayar sesuai nominal.</li>
@@ -595,7 +665,10 @@ function LoadingScreen() {
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl p-10 text-center">
         <Loader2 className="animate-spin text-orange-500 mx-auto mb-4" size={38} />
-        <h2 className="font-black text-[#071E3D] text-xl">Memuat Pembayaran</h2>
+
+        <h2 className="font-black text-[#071E3D] text-xl">
+          Memuat Pembayaran
+        </h2>
       </div>
     </div>
   );
@@ -612,11 +685,19 @@ function ChoiceButton({ active, icon, title, desc, onClick, small }) {
           : "bg-slate-50 text-[#071E3D] border-slate-100 hover:bg-orange-50 hover:border-orange-200"
       } ${small ? "min-h-[96px]" : "min-h-[130px]"}`}
     >
-      <div className={active ? "text-white" : "text-orange-500"}>{icon}</div>
+      <div className={active ? "text-white" : "text-orange-500"}>
+        {icon}
+      </div>
+
       <h4 className="font-black mt-3 uppercase text-xs tracking-widest">
         {title}
       </h4>
-      <p className={`text-xs mt-1 font-medium ${active ? "text-white/70" : "text-slate-400"}`}>
+
+      <p
+        className={`text-xs mt-1 font-medium ${
+          active ? "text-white/70" : "text-slate-400"
+        }`}
+      >
         {desc}
       </p>
     </button>
@@ -632,6 +713,7 @@ function PaymentStep({ number, title, children }) {
         </span>
         {title}
       </h3>
+
       {children}
     </div>
   );
@@ -649,6 +731,7 @@ function PaymentBox({ label, value, highlight }) {
       <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
         {label}
       </p>
+
       <p className="font-black text-lg mt-1">{value || "-"}</p>
     </div>
   );
@@ -658,6 +741,7 @@ function SummaryRow({ label, value }) {
   return (
     <div className="flex justify-between gap-4 py-3 border-b border-slate-100 last:border-0">
       <span className="text-sm font-bold text-slate-400">{label}</span>
+
       <span className="text-sm font-black text-[#071E3D] text-right">
         {value || "-"}
       </span>
@@ -671,6 +755,7 @@ function HeroPill({ label, value }) {
       <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
         {label}
       </p>
+
       <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );
@@ -680,6 +765,7 @@ function ErrorAlert({ message, onRetry }) {
   return (
     <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-4 text-sm font-semibold flex items-center justify-between gap-3 text-red-600">
       <span>{message}</span>
+
       <button onClick={onRetry} className="font-black uppercase text-xs">
         Coba Lagi
       </button>

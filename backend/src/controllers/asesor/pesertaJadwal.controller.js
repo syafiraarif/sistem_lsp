@@ -1,11 +1,153 @@
 // backend/src/controllers/asesor/pesertaJadwal.controller.js
 
-const { PesertaJadwal, User, Jadwal, JadwalAsesor } = require("../../models");
+const {
+  PesertaJadwal,
+  User,
+  Jadwal,
+  JadwalAsesor,
+  ProfileAsesi,
+  Presensi,
+  Apl01Asesmen,
+  Apl02,
+  FrIa05Penilaian,
+  HasilKeputusanAsesmen,
+} = require("../../models");
+
+/* =========================
+HELPER
+========================= */
+
+const normalizeStatusAsesmen = (status) => {
+  if (!status) return "belum_dinilai";
+
+  const value = String(status).toLowerCase().trim();
+
+  if (value === "kompeten") return "kompeten";
+  if (value === "belum kompeten") return "belum_kompeten";
+  if (value === "belum_kompeten") return "belum_kompeten";
+
+  if (value === "terdaftar") return "belum_dinilai";
+  if (value === "pra_asesmen") return "belum_dinilai";
+  if (value === "asesmen") return "belum_dinilai";
+
+  return value;
+};
+
+const getNamaAsesi = (plain) => {
+  const user = plain.user || {};
+  const profile = plain.profileAsesi || {};
+
+  return (
+    profile.nama_lengkap ||
+    profile.nama ||
+    user.nama_lengkap ||
+    user.nama ||
+    user.username ||
+    "-"
+  );
+};
+
+const getNikAsesi = (plain) => {
+  const profile = plain.profileAsesi || {};
+
+  return (
+    profile.nik ||
+    profile.no_ktp ||
+    profile.nomor_identitas ||
+    profile.no_identitas ||
+    "-"
+  );
+};
+
+const getEmailAsesi = (plain) => {
+  const user = plain.user || {};
+  const profile = plain.profileAsesi || {};
+
+  return user.email || profile.email || "-";
+};
+
+const getNoHpAsesi = (plain) => {
+  const user = plain.user || {};
+  const profile = plain.profileAsesi || {};
+
+  return user.no_hp || profile.no_hp || profile.nomor_hp || "-";
+};
+
+const getKelengkapanPeserta = async (id_peserta) => {
+  const [presensi, apl01, apl02, fria05, keputusan] = await Promise.all([
+    Presensi.findOne({
+      where: {
+        id_peserta,
+      },
+    }),
+
+    Apl01Asesmen.findOne({
+      where: {
+        id_peserta,
+      },
+    }),
+
+    Apl02.findOne({
+      where: {
+        id_peserta,
+      },
+    }),
+
+    FrIa05Penilaian.findOne({
+      where: {
+        id_peserta,
+      },
+      order: [["tanggal_penilaian", "DESC"], ["id_penilaian", "DESC"]],
+    }),
+
+    HasilKeputusanAsesmen.findOne({
+      where: {
+        id_peserta,
+      },
+      order: [["tanggal_keputusan", "DESC"], ["id_keputusan", "DESC"]],
+    }),
+  ]);
+
+  return {
+    presensi: Boolean(presensi),
+    apl01: Boolean(apl01),
+    apl02: Boolean(apl02),
+    fria05: Boolean(fria05),
+    keputusan: Boolean(keputusan),
+
+    presensi_data: presensi,
+    apl01_data: apl01,
+    apl02_data: apl02,
+    fria05_data: fria05,
+    keputusan_data: keputusan,
+
+    total_lengkap: [
+      Boolean(presensi),
+      Boolean(apl01),
+      Boolean(apl02),
+      Boolean(fria05),
+    ].filter(Boolean).length,
+
+    total_wajib: 4,
+  };
+};
+
+/* =========================
+GET PESERTA BY JADWAL
+GET /api/asesor/jadwal/:id_jadwal/peserta
+========================= */
 
 const getPesertaByJadwal = async (req, res) => {
   try {
     const { id_jadwal } = req.params;
     const id_user = req.user.id_user;
+
+    if (!id_jadwal) {
+      return res.status(400).json({
+        status: "error",
+        message: "ID jadwal wajib dikirim",
+      });
+    }
 
     const jadwalAsesor = await JadwalAsesor.findOne({
       where: {
@@ -16,53 +158,129 @@ const getPesertaByJadwal = async (req, res) => {
 
     if (!jadwalAsesor) {
       return res.status(403).json({
+        status: "error",
         message: "Anda tidak memiliki akses ke jadwal ini",
       });
     }
 
     const data = await PesertaJadwal.findAll({
-      where: { id_jadwal },
+      where: {
+        id_jadwal,
+      },
       include: [
         {
           model: User,
           as: "user",
           attributes: {
-            exclude: ["password"],
+            exclude: ["password", "password_hash"],
           },
+        },
+        {
+          model: ProfileAsesi,
+          as: "profileAsesi",
+          required: false,
         },
         {
           model: Jadwal,
           as: "jadwal",
+          required: false,
         },
       ],
-      order: [["id_peserta_jadwal", "ASC"]],
+      order: [["id_peserta", "ASC"]],
     });
 
-    return res.json({ data });
+    const result = [];
+
+    for (const item of data) {
+      const plain = item.toJSON ? item.toJSON() : item;
+      const kelengkapan = await getKelengkapanPeserta(plain.id_peserta);
+
+      const nilaiFria05 = kelengkapan.fria05_data?.nilai;
+      const hasilFria05 = kelengkapan.fria05_data?.hasil;
+      const keputusan = kelengkapan.keputusan_data;
+
+      result.push({
+        ...plain,
+
+        id_peserta: plain.id_peserta,
+        id_jadwal: plain.id_jadwal,
+        id_user: plain.id_user,
+
+        nama_lengkap: getNamaAsesi(plain),
+        nik: getNikAsesi(plain),
+        email: getEmailAsesi(plain),
+        no_hp: getNoHpAsesi(plain),
+
+        status_asesmen: normalizeStatusAsesmen(
+          keputusan?.hasil || plain.status_asesmen
+        ),
+
+        nilai_akhir:
+          plain.nilai_akhir !== null && plain.nilai_akhir !== undefined
+            ? plain.nilai_akhir
+            : nilaiFria05 || "",
+
+        keterangan:
+          plain.keterangan || keputusan?.catatan_asesor || "",
+
+        hasil_keputusan: keputusan || null,
+
+        fria05_penilaian: kelengkapan.fria05_data || null,
+
+        nilai_fria05: nilaiFria05 || null,
+        hasil_fria05: hasilFria05 || null,
+
+        kelengkapan,
+
+        user: plain.user || {},
+        profileAsesi: plain.profileAsesi || {},
+      });
+    }
+
+    return res.json({
+      status: "success",
+      message: "Data peserta jadwal berhasil diambil",
+      data: result,
+    });
   } catch (err) {
-    console.error(err);
+    console.error("GET PESERTA BY JADWAL ERROR:", err);
+
     return res.status(500).json({
+      status: "error",
       message: "Terjadi kesalahan server",
       error: err.message,
     });
   }
 };
 
+/* =========================
+UPDATE NILAI PESERTA
+PUT /api/asesor/peserta/:id/nilai
+
+Tetap disediakan untuk kompatibilitas lama,
+tapi alur utama sekarang pakai:
+POST /api/asesor/hasil-keputusan
+========================= */
+
 const updateNilaiPeserta = async (req, res) => {
   try {
     const { id } = req.params;
     const id_user = req.user.id_user;
 
-    const {
-      status_asesmen,
-      nilai_akhir,
-      keterangan,
-    } = req.body;
+    const { status_asesmen, nilai_akhir, keterangan } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        status: "error",
+        message: "ID peserta wajib dikirim",
+      });
+    }
 
     const peserta = await PesertaJadwal.findByPk(id);
 
     if (!peserta) {
       return res.status(404).json({
+        status: "error",
         message: "Peserta tidak ditemukan",
       });
     }
@@ -76,23 +294,39 @@ const updateNilaiPeserta = async (req, res) => {
 
     if (!jadwalAsesor) {
       return res.status(403).json({
-        message: "Anda tidak memiliki akses untuk menilai peserta pada jadwal ini",
+        status: "error",
+        message:
+          "Anda tidak memiliki akses untuk menilai peserta pada jadwal ini",
       });
     }
 
     await peserta.update({
-      status_asesmen,
-      nilai_akhir,
-      keterangan,
+      status_asesmen:
+        status_asesmen !== undefined && status_asesmen !== null
+          ? normalizeStatusAsesmen(status_asesmen)
+          : peserta.status_asesmen,
+
+      nilai_akhir:
+        nilai_akhir !== undefined && nilai_akhir !== null && nilai_akhir !== ""
+          ? nilai_akhir
+          : peserta.nilai_akhir,
+
+      keterangan:
+        keterangan !== undefined ? keterangan : peserta.keterangan,
     });
 
+    await peserta.reload();
+
     return res.json({
+      status: "success",
       message: "Nilai peserta berhasil diupdate",
       data: peserta,
     });
   } catch (err) {
-    console.error(err);
+    console.error("UPDATE NILAI PESERTA ERROR:", err);
+
     return res.status(500).json({
+      status: "error",
       message: "Terjadi kesalahan server",
       error: err.message,
     });

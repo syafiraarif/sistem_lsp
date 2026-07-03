@@ -9,6 +9,7 @@ const {
   PesertaJadwal,
   Jadwal,
   Skema,
+  Tuk,
   ProfileAsesi
 } = require("../../models");
 
@@ -402,7 +403,6 @@ exports.uploadBukti = async (req, res) => {
 GET APL.02
 =================================
 */
-
 exports.getApl02 = async (req, res) => {
   try {
     const { id_peserta } = req.params;
@@ -647,7 +647,6 @@ exports.submitApl02 = async (req, res) => {
 GENERATE PDF APL.02
 =================================
 */
-
 exports.generatePdfApl02 = async (req, res) => {
   try {
     const { id_peserta } = req.params;
@@ -715,6 +714,7 @@ exports.generatePdfApl02 = async (req, res) => {
     });
 
     doc.pipe(res);
+  
 
     // ==========================
     // HEADER

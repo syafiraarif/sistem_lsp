@@ -8,7 +8,6 @@ import HomeAsesi from "../pages/asesi/HomeAsesi";
 /* Profile System */
 import ProfileView from "../pages/asesi/ProfileView";
 import ProfileEdit from "../pages/asesi/ProfileEdit";
-import ProfileDokumen from "../pages/asesi/ProfileDokumen";
 
 /* Jadwal & Skema */
 import JadwalAsesi from "../pages/asesi/JadwalAsesi";
@@ -17,6 +16,10 @@ import BayarSkema from "../pages/asesi/BayarSkema";
 import APL01 from "../pages/asesi/APL01";
 import APL02 from "../pages/asesi/APL02";
 import PraAsesmenAsesi from "../pages/asesi/PraAsesmenAsesi";
+import FRIA05Asesi from "../pages/asesi/FRIA05Asesi";
+import HasilAkhirAsesi from "../pages/asesi/HasilAkhirAsesi";
+import FRAK03Asesi from "../pages/asesi/FRAK03Asesi";
+import FRAK04Asesi from "../pages/asesi/FRAK04Asesi";
 import Banding from "../pages/asesi/Banding";
 
 /* Lupa Password */
@@ -31,7 +34,6 @@ export default function AsesiRoutes() {
       {/* PROFILE */}
       <Route path="profile" element={<ProfileView />} />
       <Route path="profile/edit" element={<ProfileEdit />} />
-      <Route path="profile/dokumen" element={<ProfileDokumen />} />
 
       {/* JADWAL & SKEMA */}
       <Route path="jadwal" element={<JadwalAsesi />} />
@@ -44,7 +46,28 @@ export default function AsesiRoutes() {
       <Route path="pra-asesmen" element={<PraAsesmenAsesi />} />
       <Route path="pra-asesmen/:id_skema" element={<PraAsesmenAsesi />} />
 
-      {/* BANDING */}
+      {/* FR.IA.05 ASESI */}
+      <Route
+        path="fr-ia05/jadwal/:id_jadwal/:id_peserta"
+        element={<FRIA05Asesi />}
+      />
+
+      <Route
+        path="fr-ia05/:id_fr_ia_05/:id_peserta"
+        element={<FRIA05Asesi />}
+      />
+
+      {/* HASIL AKHIR */}
+      <Route path="hasil-akhir" element={<HasilAkhirAsesi />} />
+      <Route path="hasil-akhir/:id_peserta" element={<HasilAkhirAsesi />} />
+
+      {/* FR.AK.03 */}
+      <Route path="fr-ak03/:id_peserta" element={<FRAK03Asesi />} />
+
+      {/* FR.AK.04 */}
+      <Route path="fr-ak04/:id_peserta" element={<FRAK04Asesi />} />
+
+      {/* BANDING LAMA */}
       <Route path="banding" element={<Banding />} />
 
       {/* PASSWORD */}

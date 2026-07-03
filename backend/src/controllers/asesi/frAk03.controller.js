@@ -477,6 +477,7 @@ exports.generatePdfFrAk03 = async (req, res) => {
     );
 
     doc.moveDown();
+    doc.moveDown();
 
     // =========================
     // DETAIL PERTANYAAN

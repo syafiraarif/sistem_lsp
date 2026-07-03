@@ -70,106 +70,118 @@ const APL01 = () => {
   });
 
   const fetchAPL01Data = async () => {
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const token = getToken();
+    const token = getToken();
 
-      if (!token) {
-        navigate("/login");
-        return;
-      }
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
-      if (!id_peserta) {
-        alert("ID peserta tidak ditemukan di URL.");
-        navigate("/asesi/jadwal-saya");
-        return;
-      }
+    if (!id_peserta) {
+      alert("ID peserta tidak ditemukan di URL.");
+      navigate("/asesi/jadwal-saya");
+      return;
+    }
 
-      const formRes = await axios.get(ENDPOINT.getForm, {
-        headers: getHeaders(),
-      });
+    const formRes = await axios.get(ENDPOINT.getForm, {
+      headers: getHeaders(),
+    });
 
-      const pesertaData = formRes.data?.peserta || null;
-      const profileFromForm = formRes.data?.profile || null;
-      const persyaratanData = formRes.data?.persyaratan || [];
-      const unitKompetensiData =
-        formRes.data?.unit_kompetensi ||
-        formRes.data?.unitKompetensi ||
-        formRes.data?.unit ||
-        formRes.data?.units ||
-        [];
+    const formPayload = formRes.data?.data || formRes.data || {};
 
-      setPeserta(pesertaData);
-      setProfile(profileFromForm);
-      setPersyaratan(persyaratanData);
-      setUnitKompetensi(unitKompetensiData);
+    const pesertaData = formPayload.peserta || null;
+    const profileFromForm = formPayload.profile || null;
+    const persyaratanData = formPayload.persyaratan || [];
 
-      if (!profileFromForm) {
-        try {
-          const profileRes = await axios.get(ENDPOINT.getProfile, {
-            headers: getHeaders(),
-          });
+    const unitKompetensiData =
+      formPayload.unit_kompetensi ||
+      formPayload.unitKompetensi ||
+      formPayload.unit ||
+      formPayload.units ||
+      [];
 
-          setProfile(profileRes.data?.data || profileRes.data || null);
-        } catch (profileErr) {
-          console.error("Gagal mengambil profile asesi:", profileErr);
-        }
-      }
+    setPeserta(pesertaData);
+    setProfile(profileFromForm);
+    setPersyaratan(persyaratanData);
+    setUnitKompetensi(unitKompetensiData);
 
+    if (!profileFromForm) {
       try {
-        const apl01Res = await axios.get(ENDPOINT.getApl01, {
+        const profileRes = await axios.get(ENDPOINT.getProfile, {
           headers: getHeaders(),
         });
 
-        const existingApl01 = apl01Res.data?.data || null;
+        setProfile(profileRes.data?.data || profileRes.data || null);
+      } catch (profileErr) {
+        console.error("Gagal mengambil profile asesi:", profileErr);
+      }
+    }
 
-        if (existingApl01) {
-          setApl01(existingApl01);
-          setTujuan(existingApl01.tujuan_asesmen || "");
-          setTujuanLainnya(existingApl01.tujuan_lainnya || "");
+    try {
+      const apl01Res = await axios.get(ENDPOINT.getApl01, {
+        headers: getHeaders(),
+      });
 
-          const dokumenList = getDokumenList(existingApl01);
+      const existingApl01 = apl01Res.data?.data || null;
 
-          const uploadedPersyaratanIds = dokumenList
-            .map((dokumen) => Number(dokumen.id_persyaratan))
-            .filter(Boolean);
+      if (existingApl01) {
+        setApl01(existingApl01);
+        setTujuan(existingApl01.tujuan_asesmen || "");
+        setTujuanLainnya(existingApl01.tujuan_lainnya || "");
 
-          setSelectedPersyaratan(uploadedPersyaratanIds);
+        const dokumenList = getDokumenList(existingApl01);
 
-          const nomorMap = {};
-          const tanggalMap = {};
+        const uploadedPersyaratanIds = dokumenList
+          .map((dokumen) => Number(dokumen.id_persyaratan))
+          .filter(Boolean);
 
-          dokumenList.forEach((dokumen) => {
-            if (dokumen.id_persyaratan) {
-              nomorMap[dokumen.id_persyaratan] = dokumen.nomor_dokumen || "";
-              tanggalMap[dokumen.id_persyaratan] =
-                dokumen.tanggal_dokumen || "";
-            }
-          });
+        setSelectedPersyaratan(uploadedPersyaratanIds);
 
-          setNomorDokumen(nomorMap);
-          setTanggalDokumen(tanggalMap);
-        }
-      } catch (err) {
-        if (err.response?.status !== 404) {
-          console.error(err);
-        }
+        const nomorMap = {};
+        const tanggalMap = {};
 
+        dokumenList.forEach((dokumen) => {
+          if (dokumen.id_persyaratan) {
+            nomorMap[dokumen.id_persyaratan] = dokumen.nomor_dokumen || "";
+            tanggalMap[dokumen.id_persyaratan] =
+              dokumen.tanggal_dokumen || "";
+          }
+        });
+
+        setNomorDokumen(nomorMap);
+        setTanggalDokumen(tanggalMap);
+      } else {
         setApl01(null);
+        setSelectedPersyaratan([]);
+        setDokumenTambahan({});
+        setNomorDokumen({});
+        setTanggalDokumen({});
       }
     } catch (err) {
-      console.error(err);
-      alert(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Gagal mengambil data APL01."
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      console.error("GET APL01 ERROR:", err);
+
+      setApl01(null);
+      setSelectedPersyaratan([]);
+      setDokumenTambahan({});
+      setNomorDokumen({});
+      setTanggalDokumen({});
     }
-  };
+  } catch (err) {
+    console.error("GET FORM APL01 ERROR:", err);
+
+    alert(
+      err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Gagal mengambil data APL01."
+    );
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -781,7 +793,6 @@ const APL01 = () => {
                                 Judul Unit
                               </th>
                               <th className="p-4 text-left text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
-                                Jenis Standar
                               </th>
                             </tr>
                           </thead>

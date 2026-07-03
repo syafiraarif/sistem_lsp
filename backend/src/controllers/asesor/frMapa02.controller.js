@@ -17,11 +17,6 @@ const {
   Jadwal,
   PesertaJadwal,
 
-  // Profile
-  ProfileAsesor,
-  ProfileAsesi,
-  User
-
 } = require("../../models");
 
 const PDFDocument = require("pdfkit");

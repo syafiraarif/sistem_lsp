@@ -402,22 +402,8 @@ function JadwalKomiteCard({ item, index }) {
             />
 
             <ActionButton
-              icon={<FileQuestion size={16} />}
-              label="FR.IA.04A"
-              onClick={() => goTo(`/asesor/komite-teknis/${idJadwal}/fr-ia04a`)}
-              disabled={!idJadwal}
-            />
-
-            <ActionButton
-              icon={<FileQuestion size={16} />}
-              label="FR.IA.04B"
-              onClick={() => goTo(`/asesor/komite-teknis/${idJadwal}/fr-ia04b`)}
-              disabled={!idJadwal}
-            />
-
-            <ActionButton
               icon={<ClipboardCheck size={16} />}
-              label="Paket Soal FR.IA.05 - 08"
+              label="Paket Soal FR.IA.05"
               onClick={() =>
                 goTo(`/asesor/komite-teknis/${idJadwal}/paket-soal`)
               }

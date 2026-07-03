@@ -1,18 +1,13 @@
 const {
   sequelize,
-
   FrAk04,
-
   PesertaJadwal,
   Jadwal,
   Skema,
   Tuk,
-
   ProfileAsesi,
   ProfileAsesor,
-
   JadwalAsesor
-
 } = require("../../models");
 
 const PDFDocument = require("pdfkit");
@@ -400,73 +395,219 @@ exports.getFrAk04ByPeserta = async (req, res) => {
 
 };
 
-// ===============================
-// GENERATE PDF FR.AK.04
-// ===============================
+/* ===============================
+GENERATE PDF FR.AK.04
+GET /api/asesi/fr-ak04/pdf/:id_peserta
+=============================== */
+
 exports.generatePdfFrAk04 = async (req, res) => {
   try {
+
     const { id_peserta } = req.params;
+    const id_user = req.user.id_user;
+
+    // ===============================
+    // VALIDASI AKSES
+    // ===============================
+
+    const pesertaLogin = await PesertaJadwal.findOne({
+      where: {
+        id_peserta,
+        id_user
+      }
+    });
+
+    if (!pesertaLogin) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses"
+      });
+    }
+
+    // ===============================
+    // AMBIL DATA FR.AK.04
+    // ===============================
+
     const data = await FrAk04.findOne({
-      where: { id_peserta },
+      where: {
+        id_peserta
+      },
       include: [
         {
           model: PesertaJadwal,
           as: "peserta",
           include: [
-            { model: ProfileAsesi, as: "profileAsesi" },
-            { model: ProfileAsesor, as: "asesor_penguji" }
+            {
+              model: ProfileAsesi,
+              as: "profileAsesi"
+            },
+            {
+              model: ProfileAsesor,
+              as: "asesor_penguji"
+            }
           ]
         },
-        { model: Jadwal, as: "jadwal", include: [{ model: Skema, as: "skema" }, { model: Tuk, as: "tuk" }] }
+        {
+          model: Jadwal,
+          as: "jadwal",
+          include: [
+            {
+              model: Skema,
+              as: "skema"
+            },
+            {
+              model: Tuk,
+              as: "tuk"
+            }
+          ]
+        }
       ]
     });
 
-    if (!data) return res.status(404).json({ message: "Data tidak ditemukan" });
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        message: "Data FR.AK.04 tidak ditemukan"
+      });
+    }
 
-    const doc = new PDFDocument({ margin: 40 });
+    // ===============================
+    // PDF
+    // ===============================
+
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "inline; filename=FR_AK04.pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=FR-AK-04-${id_peserta}.pdf`
+    );
+
+    const doc = new PDFDocument({
+      margin: 40
+    });
+
     doc.pipe(res);
 
-    const namaAsesi = data.peserta.profileAsesi.nama_lengkap || "-";
-    const namaAsesor = data.peserta.asesor_penguji?.nama_lengkap || "-";
-    const namaSkema = data.jadwal.skema.judul_skema || "-";
-    const namaTuk = data.jadwal.tuk.nama_tuk || "-";
+    doc
+      .fontSize(18)
+      .font("Helvetica-Bold")
+      .text("FORM FR.AK.04", {
+        align: "center"
+      });
 
-    // Header
-    doc.fontSize(14).text("FR.AK.04. BANDING ASESMEN", { align: "center" });
-    doc.moveDown();
-    doc.fontSize(10).text(`Nama Asesi : ${namaAsesi}`);
-    doc.text(`Nama Asesor : ${namaAsesor}`);
-    doc.text(`Tanggal Asesmen : ${data.tanggal_asesmen}`);
-    doc.text(`Skema : ${namaSkema}`);
-    doc.text(`TUK : ${namaTuk}`);
     doc.moveDown();
 
-    // Jawaban Ya/Tidak
-    doc.text("Jawaban Asesi:");
+    doc.fontSize(11).font("Helvetica");
+
+    doc.text(
+      `Nama Asesi : ${data.peserta?.profileAsesi?.nama_lengkap || "-"}`
+    );
+
+    doc.text(
+      `NIK : ${data.peserta?.profileAsesi?.nik || "-"}`
+    );
+
+    doc.text(
+      `Tanggal Asesmen : ${data.tanggal_asesmen || "-"}`
+    );
+
+    doc.text(
+      `Skema : ${data.jadwal?.skema?.judul_skema || "-"}`
+    );
+
+    doc.text(
+      `TUK : ${data.jadwal?.tuk?.nama_tuk || "-"}`
+    );
+
+    doc.moveDown();
+
+    doc
+      .font("Helvetica-Bold")
+      .text("Jawaban Asesi");
+
     doc.moveDown(0.5);
-    doc.text(`1. Proses banding dijelaskan : ${data.proses_banding_dijelaskan.toUpperCase()}`);
-    doc.text(`2. Diskusi dengan asesor : ${data.diskusi_dengan_asesor.toUpperCase()}`);
-    doc.text(`3. Melibatkan orang lain : ${data.melibatkan_orang_lain.toUpperCase()}`);
+
+    doc
+      .font("Helvetica")
+      .text(
+        `1. Proses banding telah dijelaskan : ${String(
+          data.proses_banding_dijelaskan || "-"
+        ).toUpperCase()}`
+      );
+
+    doc.text(
+      `2. Telah berdiskusi dengan asesor : ${String(
+        data.diskusi_dengan_asesor || "-"
+      ).toUpperCase()}`
+    );
+
+    doc.text(
+      `3. Melibatkan orang lain : ${String(
+        data.melibatkan_orang_lain || "-"
+      ).toUpperCase()}`
+    );
+
     doc.moveDown();
 
-    // Alasan banding
-    doc.text("Alasan Banding:");
-    doc.text(data.alasan_banding || "-");
+    doc
+      .font("Helvetica-Bold")
+      .text("Alasan Banding");
+
+    doc
+      .font("Helvetica")
+      .text(data.alasan_banding || "-");
+
     doc.moveDown(2);
 
-    // TTD Asesi
-    doc.text("Tanda Tangan Asesi:");
-    if (data.peserta.profileAsesi.ttd_path) {
-      try { doc.image(data.peserta.profileAsesi.ttd_path, { width: 100 }); }
-      catch { doc.text("(TTD tidak ditemukan)"); }
-    } else { doc.text("-"); }
+    doc
+      .font("Helvetica-Bold")
+      .text("Tanda Tangan Asesi");
+
+    const ttd = data.ttd_asesi || data.peserta?.profileAsesi?.ttd_path;
+
+    if (ttd) {
+
+      const fullPath = path.join(
+        process.cwd(),
+        ttd
+      );
+
+      if (fs.existsSync(fullPath)) {
+
+        doc.image(fullPath, {
+          width: 120
+        });
+
+      } else {
+
+        doc.text("(File TTD tidak ditemukan)");
+
+      }
+
+    } else {
+
+      doc.text("-");
+
+    }
+
+    doc.moveDown(2);
+
+    doc.text(
+      data.peserta?.profileAsesi?.nama_lengkap || "-",
+      {
+        align: "right"
+      }
+    );
 
     doc.end();
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Gagal generate PDF FR.AK.04", error: err.message });
+
+    console.error("GENERATE PDF FR.AK.04 :", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+
   }
 };
