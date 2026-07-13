@@ -10,6 +10,10 @@ const dropdown = require("../controllers/public/dropdown.controller");
 const tukCtrl = require("../controllers/public/tukTempat.controller");
 const jadwalCtrl = require("../controllers/public/jadwal.controller");
 const asesorController = require("../controllers/public/asesor.controller");
+const feedbackController = require("../controllers/public/feedback.controller");
+
+router.post("/feedback", feedbackController.create);
+router.get("/feedback/active", feedbackController.getActiveFeedback);
 
 router.get("/asesor", asesorController.getAllPublic);
 router.get("/asesor/:id", asesorController.getByIdPublic);

@@ -13,6 +13,7 @@ import AssessorProfile from "../pages/public/AssessorProfile";
 import AssessorExplore from "../pages/public/AssessorExplore";
 import JadwalDetail from "../pages/public/JadwalDetail";
 import Jadwal from "../components/info/Jadwal";
+import FeedbackPublic from "../pages/public/Feedback";
 
 export default function AppRoutes() {
   return (
@@ -30,6 +31,7 @@ export default function AppRoutes() {
       <Route path="/explore-assessors" element={<AssessorExplore />} />
       <Route path="/jadwal-detail/:id" element={<JadwalDetail />} />
       <Route path="/jadwal" element={<Jadwal />} />
+      <Route path="/feedback" element={<FeedbackPublic />} />
     </Routes>
   );
 }

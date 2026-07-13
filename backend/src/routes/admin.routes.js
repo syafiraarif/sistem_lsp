@@ -36,8 +36,13 @@ const ia03Controller = require("../controllers/admin/ia03Pertanyaan.controller")
 const accountController = require("../controllers/admin/account.controller");
 const elemenKukController = require("../controllers/admin/elemenKuk.controller");
 const pembayaranController = require("../controllers/admin/pembayaran.controller");
+const feedbackAdminController = require("../controllers/admin/feedback.controller");
 
 router.use(authMiddleware, roleMiddleware.adminOnly);
+
+router.get("/feedback", feedbackAdminController.getAll);
+router.put("/feedback/:id/toggle-status", feedbackAdminController.toggleStatus);
+router.delete("/feedback/:id", feedbackAdminController.delete);
 
 router.get("/surveillance", ctrl.getAllSurveillance);
 router.put("/surveillance/:id/status", ctrl.updateStatusSurveillance);

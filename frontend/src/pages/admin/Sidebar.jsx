@@ -21,7 +21,8 @@ import {
   FaChevronDown,
   FaChevronRight,
   FaThumbtack,
-  FaMoneyBillWave, // Tambahan icon jika butuh indikator pin
+  FaMoneyBillWave,
+  FaStar, 
 } from "react-icons/fa";
 import { Menu, X, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -371,6 +372,14 @@ const SidebarContent = ({
             label="Layanan Banding"
             active={isActive("/admin/banding")}
             onClick={() => handleNav("/admin/banding")}
+            isExpanded={isExpanded}
+          />
+
+          <NavItem
+            icon={<FaStar />}
+            label="Layanan Feedback"
+            active={isActive("/admin/feedback")}
+            onClick={() => handleNav("/admin/feedback")}
             isExpanded={isExpanded}
           />
 

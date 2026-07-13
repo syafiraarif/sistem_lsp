@@ -35,8 +35,7 @@ import PesertaJadwal from "../pages/admin/PesertaJadwal";
 import KelompokPekerjaan from "../pages/admin/KelompokPekerjaan";
 import AsesiBelumKompeten from "../pages/admin/AsesiBelumKompeten";
 import ValidasiPembayaran from "../pages/admin/ValidasiPembayaran";
-
-// IMPORT LAPORAN SERTIFIKASI (MENGGANTIKAN LAPORAN UMUM)
+import FeedbackAdmin from "../pages/admin/Feedback";
 import LaporanSertifikasi from "../pages/admin/LaporanSertifikasi";
 
 
@@ -90,6 +89,7 @@ export default function AdminRoutes() {
           <Route path="asesor" element={<Asesor />} />
           <Route path="notifikasi" element={<Notifikasi />} />
           <Route path="pengaduan" element={<Pengaduan />} />
+          <Route path="feedback" element={<FeedbackAdmin />} />
           <Route path="profil-lsp" element={<ProfileAdmin />} />
           <Route path="banding" element={<Banding />} />
           <Route path="bank-soal" element={<BankSoal />} />
