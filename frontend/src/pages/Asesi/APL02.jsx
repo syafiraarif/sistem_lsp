@@ -131,8 +131,16 @@ export default function APL02() {
         throw formRes.reason;
       }
 
-      setSkema(formRes.value.data?.skema || null);
-      setFormUnits(formRes.value.data?.data || []);
+      console.log("FORM RES =", formRes.value.data);
+
+      setSkema(formRes.value.data?.data?.skema || null);
+
+        const units = formRes.value.data?.data?.units || [];
+
+        console.log("UNITS =", units);
+        console.log("IS ARRAY =", Array.isArray(units));
+
+        setFormUnits(units);
 
       if (profileRes.status === "fulfilled") {
         setProfile(profileRes.value.data?.data || null);

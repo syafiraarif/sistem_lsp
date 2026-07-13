@@ -247,9 +247,11 @@ export default function JadwalSaya() {
     for (const idSkema of uniqueSkemaIds) {
       try {
         const res = await axios.get(
-          `${API}/asesi/pembayaran/${idSkema}/status`,
-          { headers: getHeaders() }
-        );
+  `${API}/asesi/pembayaran/${idSkema}/status`,
+  {
+    headers: getHeaders(),
+  }
+);
 
         const data = res.data?.data || {};
 
@@ -302,15 +304,20 @@ export default function JadwalSaya() {
       if (!idPeserta) continue;
 
       try {
-        const res = await axios.get(`${API}/asesi/apl01/status/${idPeserta}`, {
-          headers: getHeaders(),
-        });
+        const res = await axios.get(
+  `${API}/asesi/apl01/${idPeserta}`,
+  {
+    headers: getHeaders(),
+  }
+);
+
+        const apl01 = res.data?.data?.apl01;
 
         result[idPeserta] = {
-          exists: Boolean(res.data?.data?.exists),
-          submitted: Boolean(res.data?.data?.submitted),
-          status: res.data?.data?.status_apl01 || "belum_ada",
-          id_apl01: res.data?.data?.id_apl01 || null,
+          exists: !!apl01,
+          submitted: apl01?.status === "submitted",
+          status: apl01?.status || "belum_ada",
+          id_apl01: apl01?.id_apl01 || null,
         };
       } catch (err) {
         result[idPeserta] = {
