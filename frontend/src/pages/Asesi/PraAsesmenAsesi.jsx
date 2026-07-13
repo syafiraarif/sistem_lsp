@@ -53,6 +53,13 @@ export default function PraAsesmenAsesi() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [checklist, setChecklist] = useState({
+  siap: false,
+  syarat: false,
+  perangkat: false,
+  aturan: false,
+  jujur: false,
+});
 
   const [error, setError] = useState("");
 
@@ -178,7 +185,14 @@ export default function PraAsesmenAsesi() {
     return Boolean(formData?.ttd_asesi_ready || ttdUrl);
   }, [formData, ttdUrl]);
 
-  const canSubmit = Boolean(formData?.can_submit) && statusTtd && !statusSubmit && !submitting;
+  const semuaChecklist = Object.values(checklist).every(Boolean);
+
+    const canSubmit =
+      Boolean(formData?.can_submit) &&
+      statusTtd &&
+      semuaChecklist &&
+      !statusSubmit &&
+      !submitting;
 
   const downloadLink = useMemo(() => {
     const query = id_skema ? `?id_skema=${id_skema}` : "";
@@ -236,7 +250,14 @@ export default function PraAsesmenAsesi() {
       return;
     }
 
-    const ok = window.confirm("Yakin ingin submit presensi pra asesmen?");
+    const ok = window.confirm(
+`Pastikan seluruh data sudah benar.
+
+Setelah presensi berhasil,
+Anda akan diarahkan menuju halaman ujian.
+
+Apakah Anda yakin?`
+);
     if (!ok) return;
 
     try {
@@ -249,6 +270,12 @@ export default function PraAsesmenAsesi() {
       alert(res.data?.message || "Pra asesmen berhasil disubmit.");
 
       await loadPage();
+
+setTimeout(() => {
+
+    navigate("/asesi/jadwal-saya");
+
+},1000);
     } catch (err) {
       console.error(err);
 
@@ -589,6 +616,125 @@ export default function PraAsesmenAsesi() {
                           }
                           status={statusSubmit}
                         />
+
+                        <div className="rounded-2xl border border-slate-100 p-5 bg-slate-50">
+
+    <h3 className="font-black text-[#071E3D] mb-4">
+
+        Konfirmasi Kesiapan
+
+    </h3>
+
+    <div className="space-y-3">
+
+        <label className="flex items-start gap-3">
+
+            <input
+                type="checkbox"
+                checked={checklist.siap}
+                onChange={(e)=>
+                    setChecklist({
+                        ...checklist,
+                        siap:e.target.checked
+                    })
+                }
+            />
+
+            <span>
+
+                Saya siap mengikuti asesmen kompetensi secara online.
+
+            </span>
+
+        </label>
+
+        <label className="flex items-start gap-3">
+
+            <input
+                type="checkbox"
+                checked={checklist.syarat}
+                onChange={(e)=>
+                    setChecklist({
+                        ...checklist,
+                        syarat:e.target.checked
+                    })
+                }
+            />
+
+            <span>
+
+                Saya telah memenuhi seluruh persyaratan asesmen.
+
+            </span>
+
+        </label>
+
+        <label className="flex items-start gap-3">
+
+            <input
+                type="checkbox"
+                checked={checklist.perangkat}
+                onChange={(e)=>
+                    setChecklist({
+                        ...checklist,
+                        perangkat:e.target.checked
+                    })
+                }
+            />
+
+            <span>
+
+                Perangkat, kamera, dan koneksi internet saya siap digunakan.
+
+            </span>
+
+        </label>
+
+        <label className="flex items-start gap-3">
+
+            <input
+                type="checkbox"
+                checked={checklist.aturan}
+                onChange={(e)=>
+                    setChecklist({
+                        ...checklist,
+                        aturan:e.target.checked
+                    })
+                }
+            />
+
+            <span>
+
+                Saya memahami tata tertib asesmen dan bersedia mematuhinya.
+
+            </span>
+
+        </label>
+
+        <label className="flex items-start gap-3">
+
+            <input
+                type="checkbox"
+                checked={checklist.jujur}
+                onChange={(e)=>
+                    setChecklist({
+                        ...checklist,
+                        jujur:e.target.checked
+                    })
+                }
+            />
+
+            <span>
+
+                Saya akan mengerjakan asesmen secara mandiri tanpa bantuan pihak lain.
+
+            </span>
+
+        </label>
+
+    </div>
+
+</div>
 
                         <button
                           type="button"

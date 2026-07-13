@@ -33,6 +33,9 @@ export default function JadwalSaya() {
   const [myJadwal, setMyJadwal] = useState([]);
   const [pembayaran, setPembayaran] = useState({});
   const [apl01Status, setApl01Status] = useState({});
+  const [apl02Status, setApl02Status] = useState({});
+  const [presensiStatus, setPresensiStatus] = useState({});
+  const [fria05Status, setFria05Status] = useState({});
   const [loading, setLoading] = useState(true);
   const [choosingId, setChoosingId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -221,6 +224,9 @@ export default function JadwalSaya() {
 
       await loadStatusPembayaran(jadwalData);
       await loadStatusAPL01(selected);
+      await loadStatusAPL02(selected);
+      await loadStatusPresensi(selected);
+      await loadStatusFRIA05(selected);
     } catch (err) {
       console.error(err);
 
@@ -333,6 +339,153 @@ export default function JadwalSaya() {
 
     setApl01Status(result);
   };
+
+  const loadStatusAPL02 = async (selectedData) => {
+
+    const result = {};
+
+    for (const item of selectedData) {
+
+        const idPeserta =
+            item.id_peserta ||
+            item.raw?.id_peserta ||
+            item.raw?.id_peserta_jadwal ||
+            item.raw?.id ||
+            item.raw?.id_pendaftaran;
+
+        if (!idPeserta) continue;
+
+        try {
+
+            const res = await axios.get(
+                `${API}/asesi/apl02/${idPeserta}`,
+                {
+                    headers: getHeaders(),
+                }
+            );
+
+            const apl02 = res.data?.data?.apl02;
+
+            result[idPeserta] = {
+                exists: !!apl02,
+                submitted: apl02?.status === "submitted",
+                status: apl02?.status || "belum_ada",
+                id_apl02: apl02?.id_apl02 || null,
+            };
+
+        } catch (err) {
+
+            result[idPeserta] = {
+                exists: false,
+                submitted: false,
+                status: "belum_ada",
+                id_apl02: null,
+            };
+
+        }
+
+        await sleep(80);
+    }
+
+    setApl02Status(result);
+
+};
+
+const loadStatusPresensi = async (selectedData) => {
+
+    const result = {};
+
+    for (const item of selectedData) {
+
+        const idPeserta =
+            item.id_peserta ||
+            item.raw?.id_peserta ||
+            item.raw?.id_peserta_jadwal ||
+            item.raw?.id ||
+            item.raw?.id_pendaftaran;
+
+        if (!idPeserta) continue;
+
+        try {
+
+            const res = await axios.get(
+                `${API}/asesi/presensi/status/${idPeserta}`,
+                {
+                    headers: getHeaders(),
+                }
+            );
+
+            const data = res.data?.data;
+
+            result[idPeserta] = {
+                hadir: data?.hadir === true,
+                status: data?.status || "belum",
+            };
+
+        } catch (err) {
+
+            result[idPeserta] = {
+                hadir: false,
+                status: "belum",
+            };
+
+        }
+
+        await sleep(80);
+
+    }
+
+    setPresensiStatus(result);
+
+};
+
+const loadStatusFRIA05 = async (selectedData) => {
+
+    const result = {};
+
+    for (const item of selectedData) {
+
+        const idPeserta =
+            item.id_peserta ||
+            item.raw?.id_peserta ||
+            item.raw?.id_peserta_jadwal ||
+            item.raw?.id ||
+            item.raw?.id_pendaftaran;
+
+        if (!idPeserta) continue;
+
+        try {
+
+            const res = await axios.get(
+                `${API}/asesi/fr-ia05/status/${idPeserta}`,
+                {
+                    headers: getHeaders(),
+                }
+            );
+
+            const data = res.data?.data;
+
+            result[idPeserta] = {
+                submitted: data?.submitted === true,
+                status: data?.status || "belum",
+            };
+
+        } catch (err) {
+
+            result[idPeserta] = {
+                submitted: false,
+                status: "belum",
+            };
+
+        }
+
+        await sleep(80);
+
+    }
+
+    setFria05Status(result);
+
+};
 
   const pilihJadwal = async (id_jadwal) => {
     setChoosingId(id_jadwal);
@@ -741,6 +894,9 @@ export default function JadwalSaya() {
                     menungguValidasi={menungguValidasi}
                     pembayaranDitolak={pembayaranDitolak}
                     apl01Data={apl01Status[idPeserta] || {}}
+                    apl02Data={apl02Status[idPeserta] || {}}
+                    presensiData={presensiStatus[idPeserta] || {}}
+                    fria05Data={fria05Status[idPeserta] || {}}
                     formatTanggal={formatTanggal}
                     pilihJadwal={pilihJadwal}
                     pergiBayar={pergiBayar}
@@ -773,6 +929,9 @@ function ScheduleCard({
   menungguValidasi,
   pembayaranDitolak,
   apl01Data,
+  apl02Data,
+  presensiData,
+  fria05Data,
   formatTanggal,
   pilihJadwal,
   pergiBayar,
@@ -790,29 +949,43 @@ function ScheduleCard({
     item.tgl_akhir
   )}`;
 
-  // ================= LOGIKA ALUR KERJA (WORKFLOW GATES) =================
-  const isApl01Done = apl01Data?.submitted || apl01Data?.exists;
-  
-  // Status Validasi APL01 dari Backend
-  const statusApl01 = String(apl01Data?.status || "").toLowerCase();
-  const isApl01Valid = ["diterima", "valid", "memenuhi_syarat", "selesai"].includes(statusApl01);
+  const isApl01Done = apl01Data?.submitted === true;
 
-  // Cek pencocokan tanggal hari H dengan tanggal jadwal ujian (Presensi hanya terbuka di hari H)
-  let isHariH = false;
-  const tglUjian = item.tgl_awal || item.waktu_pelaksanaan || item.jadwal?.tgl_awal;
-  if (tglUjian) {
-    const hariIni = new Date();
-    const hariH = new Date(tglUjian);
-    if (!isNaN(hariH.getTime())) {
-      isHariH = hariIni.getFullYear() === hariH.getFullYear() &&
-                hariIni.getMonth() === hariH.getMonth() &&
-                hariIni.getDate() === hariH.getDate();
-    }
-  }
+const isApl02Done = apl02Data?.submitted === true;
 
-  // Syarat pembukaan tombol:
-  const unlockApl02 = isApl01Done; // Terbuka apabila APL01 sudah dikerjakan
-  const unlockHasilAkhir = item.status_asesmen === "kompeten" || item.status_asesmen === "belum_kompeten";
+const isPresensiDone = presensiData?.hadir === true;
+
+const isFria05Done = fria05Data?.submitted === true;
+
+// cek tanggal ujian
+let isHariH = false;
+
+const mulai = new Date(item.tgl_awal);
+
+const selesai = new Date(item.tgl_akhir);
+
+const hariIni = new Date();
+
+if (
+    hariIni >= mulai &&
+    hariIni <= selesai
+){
+    isHariH = true;
+}
+
+const unlockApl02 = isApl01Done;
+
+const unlockPresensi =
+    isApl01Done &&
+    isApl02Done &&
+    isHariH;
+
+const unlockFRIA05 =
+    isPresensiDone &&
+    isHariH;
+
+const unlockHasilAkhir =
+    isFria05Done;
   // ======================================================================
 
   return (
@@ -979,28 +1152,36 @@ function ScheduleCard({
               )}
 
               {/* Syarat Presensi: APL01 dan APL02 harus Valid + Wajib Hari H */}
-              {isApl01Valid ? (
-                isHariH ? (
-                  <ActionButton
-                    title="Presensi Ujian"
-                    onClick={() => pergiPresensi(item)}
-                  />
-                ) : (
-                  <LockedMessage text={`Presensi baru akan dibuka pada tanggal pelaksanaan ujian (${formatTanggal(tglUjian)}).`} />
-                )
-              ) : (
-                <LockedMessage text="Presensi terkunci. Menunggu Asesor memvalidasi persyaratan APL01 & APL02 Anda." />
-              )}
+              {unlockPresensi ? (
+
+<ActionButton
+    title="Presensi Ujian"
+    onClick={() => pergiPresensi(item)}
+/>
+
+) : (
+
+<LockedMessage
+text="Presensi akan terbuka setelah APL01 dan APL02 selesai serta jadwal ujian sudah dimulai."
+/>
+
+)}
 
               {/* Syarat FR.IA.05: Harus di Hari H dan Berkas Valid */}
-              {isApl01Valid && isHariH ? (
-                <ActionButton
-                  title="Mulai FR.IA.05"
-                  onClick={() => pergiFRIA05(item)}
-                />
-              ) : (
-                <LockedMessage text="Ujian FR.IA.05 akan terbuka otomatis setelah Anda melakukan Presensi di hari H." />
-              )}
+              {unlockFRIA05 ? (
+
+<ActionButton
+title="Mulai FR.IA.05"
+onClick={() => pergiFRIA05(item)}
+/>
+
+) : (
+
+<LockedMessage
+text="FR.IA.05 akan terbuka setelah Anda melakukan presensi."
+/>
+
+)}
 
               {unlockHasilAkhir ? (
                 <ActionButton

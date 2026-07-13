@@ -356,6 +356,11 @@ router.get(
 );
 
 router.get(
+  "/fr-ia05/status/:id_peserta",
+  frIa05AsesiController.getStatus
+);
+
+router.get(
   "/fr-ia05/:id_fr_ia_05/:id_peserta",
   frIa05AsesiController.getSoal
 );

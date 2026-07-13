@@ -712,3 +712,68 @@ exports.getHasil = async (req, res) => {
     });
   }
 };
+
+
+exports.getStatus = async (req, res) => {
+  try {
+
+    const { id_peserta } = req.params;
+
+    const peserta = await PesertaJadwal.findOne({
+      where: {
+        id_peserta,
+        id_user: req.user.id_user
+      }
+    });
+
+    if (!peserta) {
+      return res.status(404).json({
+        status: "error",
+        message: "Peserta tidak ditemukan"
+      });
+    }
+
+    const paket = await FrIa05.findOne({
+      where: {
+        id_jadwal: peserta.id_jadwal
+      },
+      order: [["id_fr_ia_05","DESC"]]
+    });
+
+    if (!paket) {
+      return res.json({
+        status: "success",
+        data: {
+          submitted: false,
+          status: "belum"
+        }
+      });
+    }
+
+    const hasil = await Penilaian.findOne({
+      where: {
+        id_peserta,
+        id_fr_ia_05: paket.id_fr_ia_05
+      }
+    });
+
+    return res.json({
+      status: "success",
+      data: {
+        submitted: !!hasil,
+        status: hasil ? "submitted" : "belum",
+        id_fr_ia_05: paket.id_fr_ia_05
+      }
+    });
+
+  } catch(err){
+
+    console.error(err);
+
+    return res.status(500).json({
+      status:"error",
+      message:"Gagal mengambil status FR.IA.05"
+    });
+
+  }
+};
