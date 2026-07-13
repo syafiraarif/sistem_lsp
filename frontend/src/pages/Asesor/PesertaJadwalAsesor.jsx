@@ -531,9 +531,11 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
   const fria05 = peserta.fria05_penilaian || kelengkapan.fria05_data || null;
   const keputusan = peserta.hasil_keputusan || kelengkapan.keputusan_data || null;
 
-  // =============== LOGIKA PENGUNCIAN ASESOR ===============
-  const isFria05Selesai = Boolean(kelengkapan.fria05) || Boolean(fria05);
-  // ========================================================
+  // ================= LOGIKA PENGUNCIAN PENILAIAN ASESOR =================
+  // Memastikan asesor baru bisa menyimpan keputusan SETELAH ujian asesi masuk
+  // Kita cek juga jika memang nilai_akhir sebelumnya telah diisi secara manual di db (mengindari block bug)
+  const isFria05Selesai = Boolean(kelengkapan.fria05) || Boolean(fria05) || (peserta.nilai_akhir !== null && peserta.nilai_akhir !== undefined);
+  // ======================================================================
 
   return (
     <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
@@ -573,7 +575,7 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
             type="button"
             onClick={onSave}
             disabled={saving || !isFria05Selesai}
-            title={!isFria05Selesai ? "Asesi belum submit Ujian FR.IA.05" : "Simpan Penilaian"}
+            title={!isFria05Selesai ? "Asesi belum menyelesaikan FR.IA.05" : "Simpan Keputusan"}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:bg-slate-300 disabled:cursor-not-allowed"
           >
             {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
@@ -616,10 +618,11 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
           <KelengkapanBadge label="FR.IA.05" active={kelengkapan.fria05} />
         </div>
 
+        {/* Notifikasi Gembok Asesor (Apabila asesi belum selesai FR.IA.05) */}
         {!isFria05Selesai && (
           <div className="mb-5 flex w-full items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-xs font-bold text-red-600 leading-relaxed">
             <Lock size={16} className="shrink-0" />
-            Asesi belum menyelesaikan ujian FR.IA.05. Pengisian keputusan akhir dikunci.
+            Asesi belum mensubmit ujian FR.IA.05. Pengisian form keputusan akhir sedang dikunci.
           </div>
         )}
 
