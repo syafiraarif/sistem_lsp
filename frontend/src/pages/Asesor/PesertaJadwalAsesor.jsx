@@ -1,4 +1,4 @@
-// frontend/src/pages/asesor/PesertaJadwalAsesor.jsx
+// frontend/src/pages/Asesor/PesertaJadwalAsesor.jsx
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -21,6 +21,7 @@ import {
   UserCheck,
   Users,
   XCircle,
+  Lock,
 } from "lucide-react";
 import api from "../../services/api";
 
@@ -530,6 +531,10 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
   const fria05 = peserta.fria05_penilaian || kelengkapan.fria05_data || null;
   const keputusan = peserta.hasil_keputusan || kelengkapan.keputusan_data || null;
 
+  // =============== LOGIKA PENGUNCIAN ASESOR ===============
+  const isFria05Selesai = Boolean(kelengkapan.fria05) || Boolean(fria05);
+  // ========================================================
+
   return (
     <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
       <div className="p-6">
@@ -567,7 +572,8 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
           <button
             type="button"
             onClick={onSave}
-            disabled={saving}
+            disabled={saving || !isFria05Selesai}
+            title={!isFria05Selesai ? "Asesi belum submit Ujian FR.IA.05" : "Simpan Penilaian"}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:bg-slate-300 disabled:cursor-not-allowed"
           >
             {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
@@ -610,6 +616,13 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
           <KelengkapanBadge label="FR.IA.05" active={kelengkapan.fria05} />
         </div>
 
+        {!isFria05Selesai && (
+          <div className="mb-5 flex w-full items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-xs font-bold text-red-600 leading-relaxed">
+            <Lock size={16} className="shrink-0" />
+            Asesi belum menyelesaikan ujian FR.IA.05. Pengisian keputusan akhir dikunci.
+          </div>
+        )}
+
         <div className="grid grid-cols-1 xl:grid-cols-[240px_200px_1fr] gap-4">
           <div>
             <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -619,7 +632,8 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
             <select
               value={form.status_asesmen || ""}
               onChange={(e) => onChange("status_asesmen", e.target.value)}
-              className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+              disabled={!isFria05Selesai}
+              className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <option value="">Pilih Hasil</option>
               <option value="kompeten">Kompeten</option>
@@ -639,8 +653,9 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
               step="0.01"
               value={form.nilai_akhir}
               onChange={(e) => onChange("nilai_akhir", e.target.value)}
+              disabled={!isFria05Selesai}
               placeholder="0-100"
-              className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+              className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
@@ -652,9 +667,10 @@ function PesertaCard({ peserta, index, form, saving, onChange, onSave }) {
             <textarea
               value={form.keterangan}
               onChange={(e) => onChange("keterangan", e.target.value)}
+              disabled={!isFria05Selesai}
               placeholder="Catatan keputusan akhir asesmen..."
               rows={3}
-              className="w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+              className="w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
         </div>
