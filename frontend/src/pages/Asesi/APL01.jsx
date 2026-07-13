@@ -126,15 +126,16 @@ const APL01 = () => {
 
     try {
       const apl01Res = await axios.get(ENDPOINT.getApl01, {
-        headers: getHeaders(),
-      });
+  headers: getHeaders(),
+});
 
-      const existingApl01 = apl01Res.data?.data || null;
+const response = apl01Res.data?.data || null;
+const existingApl01 = response?.apl01 || null;
 
-      if (existingApl01) {
-        setApl01(existingApl01);
-        setTujuan(existingApl01.tujuan_asesmen || "");
-        setTujuanLainnya(existingApl01.tujuan_lainnya || "");
+if (existingApl01) {
+  setApl01(existingApl01);
+  setTujuan(existingApl01.tujuan_asesmen || "");
+  setTujuanLainnya(existingApl01.tujuan_lainnya || "");
 
         const dokumenList = getDokumenList(existingApl01);
 
@@ -459,40 +460,47 @@ const APL01 = () => {
 
   const createAPL01 = async () => {
     const payload = {
-      id_peserta: Number(id_peserta),
-      tujuan_asesmen: tujuan,
-      tujuan_lainnya: tujuan === "lainnya" ? tujuanLainnya : null,
+        id_peserta: Number(id_peserta),
+        tujuan_asesmen: tujuan,
+        tujuan_lainnya: tujuan === "lainnya" ? tujuanLainnya : null,
     };
 
-    const res = await axios.post(ENDPOINT.createApl01, payload, {
-      headers: getHeaders(),
+    const res = await axios.post(
+        ENDPOINT.createApl01,
+        payload,
+        {
+            headers:getHeaders()
+        }
+    );
+
+    console.log("RES DATA =", res.data);
+
+    return res.data;
+}
+
+  const uploadDokumen = async (id_apl01) => { 
+
+  for (const id_persyaratan of selectedPersyaratan) {
+    const file = dokumenTambahan[id_persyaratan];
+
+    if (!file) continue;
+
+    const formData = new FormData();
+
+    formData.append("id_apl01", id_apl01);
+    formData.append("id_persyaratan", id_persyaratan);
+    formData.append("nomor_dokumen", nomorDokumen[id_persyaratan] || "");
+    formData.append("tanggal_dokumen", tanggalDokumen[id_persyaratan] || "");
+    formData.append("file_dokumen", file);
+
+    await axios.post(ENDPOINT.uploadDokumen, formData, {
+      headers: {
+        ...getHeaders(),
+        "Content-Type": "multipart/form-data",
+      },
     });
-
-    return res.data?.data;
-  };
-
-  const uploadDokumen = async (id_apl01) => {
-    for (const id_persyaratan of selectedPersyaratan) {
-      const file = dokumenTambahan[id_persyaratan];
-
-      if (!file) continue;
-
-      const formData = new FormData();
-
-      formData.append("id_apl01", id_apl01);
-      formData.append("id_persyaratan", id_persyaratan);
-      formData.append("nomor_dokumen", nomorDokumen[id_persyaratan] || "");
-      formData.append("tanggal_dokumen", tanggalDokumen[id_persyaratan] || "");
-      formData.append("file_dokumen", file);
-
-      await axios.post(ENDPOINT.uploadDokumen, formData, {
-        headers: {
-          ...getHeaders(),
-          "Content-Type": "multipart/form-data",
-        },
-      });
-    }
-  };
+  }
+};
 
   const submitFinalAPL01 = async (id_apl01) => {
     await axios.put(
@@ -514,19 +522,27 @@ const APL01 = () => {
 
       let currentApl01 = apl01;
 
-      if (!currentApl01) {
-        currentApl01 = await createAPL01();
+if (!currentApl01) {
+  currentApl01 = await createAPL01();
 
-        if (!currentApl01?.id_apl01) {
-          alert("APL01 berhasil dibuat, tapi ID APL01 tidak ditemukan.");
-          return;
-        }
+  console.log("CURRENT APL01 =", currentApl01);
 
-        setApl01(currentApl01);
-      }
+  if (!currentApl01?.id_apl01) {
+    alert("APL01 berhasil dibuat, tapi ID APL01 tidak ditemukan.");
+    return;
+  }
 
-      await uploadDokumen(currentApl01.id_apl01);
-      await submitFinalAPL01(currentApl01.id_apl01);
+  setApl01(currentApl01);
+}
+
+      const idApl01 =
+        currentApl01.id_apl01 ||
+        currentApl01.apl01?.id_apl01;
+
+      console.log("ID FINAL =", idApl01);
+
+      await uploadDokumen(idApl01);
+      await submitFinalAPL01(idApl01);
 
       alert("APL01 berhasil disubmit.");
       navigate("/asesi/jadwal-saya");
