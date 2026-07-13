@@ -63,9 +63,12 @@ app.use((err, req, res, next) => {
 });
 
 app.use((req, res) => {
+  console.log("404:", req.method, req.originalUrl);
+
   res.status(404).json({
     success: false,
-    message: "Endpoint tidak ditemukan"
+    message: "Endpoint tidak ditemukan",
+    url: req.originalUrl
   });
 });
 

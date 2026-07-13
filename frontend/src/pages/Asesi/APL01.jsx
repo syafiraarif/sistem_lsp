@@ -1,5 +1,3 @@
-// src/pages/asesi/APL01.jsx
-
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
@@ -94,7 +92,13 @@ const APL01 = () => {
 
     const pesertaData = formPayload.peserta || null;
     const profileFromForm = formPayload.profile || null;
-    const persyaratanData = formPayload.persyaratan || [];
+    
+    // ---> TAMBAHAN/PERBAIKAN: Menggabungkan semua array persyaratan <---
+    const persyaratanData = [
+      ...(formPayload.persyaratan || []),
+      ...(formPayload.persyaratanDasar || []),
+      ...(formPayload.persyaratanAdministratif || [])
+    ];
 
     const unitKompetensiData =
       formPayload.unit_kompetensi ||
@@ -892,19 +896,19 @@ const APL01 = () => {
                               </div>
 
                               {p.keterangan ? (
-  <div className="mt-2 rounded-2xl border border-orange-100 bg-white/70 px-4 py-3">
-    <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 mb-1">
-      Keterangan
-    </p>
-    <p className="text-xs font-semibold leading-relaxed text-slate-500">
-      {p.keterangan}
-    </p>
-  </div>
-) : (
-  <p className="text-slate-400 text-xs font-medium">
-    Centang persyaratan lalu upload dokumen pendukung.
-  </p>
-)}
+                                <div className="mt-2 rounded-2xl border border-orange-100 bg-white/70 px-4 py-3">
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 mb-1">
+                                    Keterangan
+                                  </p>
+                                  <p className="text-xs font-semibold leading-relaxed text-slate-500">
+                                    {p.keterangan}
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="text-slate-400 text-xs font-medium">
+                                  Centang persyaratan lalu upload dokumen pendukung.
+                                </p>
+                              )}
                             </div>
                           </label>
 

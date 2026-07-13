@@ -2,15 +2,15 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import {
   AlertCircle,
   ArrowLeft,
   BadgeCheck,
-  CalendarCheck,
   CheckCircle,
   ClipboardCheck,
+  Download,
   FileText,
   Inbox,
   Loader2,
@@ -41,11 +41,13 @@ api.interceptors.request.use((config) => {
 
 export default function HasilAkhirAsesi() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id_peserta } = useParams();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [downloading, setDownloading] = useState("");
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
@@ -76,7 +78,30 @@ export default function HasilAkhirAsesi() {
   useEffect(() => {
     fetchHasil();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id_peserta]);
+  }, [id_peserta, location.key]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!loading) {
+        fetchHasil();
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && !loading) {
+        fetchHasil();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, id_peserta]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -92,11 +117,7 @@ export default function HasilAkhirAsesi() {
   const kelengkapanData = kelengkapan?.data || {};
 
   const nilaiAkhir = useMemo(() => {
-    return (
-      data?.nilai_akhir ||
-      kelengkapanData?.fria05?.nilai ||
-      "-"
-    );
+    return data?.nilai_akhir ?? kelengkapanData?.fria05?.nilai ?? "-";
   }, [data, kelengkapanData]);
 
   const handleGoFrAk03 = () => {
@@ -115,6 +136,56 @@ export default function HasilAkhirAsesi() {
     }
 
     navigate(`/asesi/fr-ak04/${data.id_peserta}`);
+  };
+
+  const handleDownloadPdf = async (type) => {
+    if (!data?.id_peserta) {
+      alert("ID peserta tidak ditemukan.");
+      return;
+    }
+
+    try {
+      setDownloading(type);
+
+      const endpoint =
+        type === "frak03"
+          ? `/asesi/fr-ak03/pdf/${data.id_peserta}`
+          : `/asesi/fr-ak04/pdf/${data.id_peserta}`;
+
+      const filename =
+        type === "frak03"
+          ? `FR-AK-03-${data.id_peserta}.pdf`
+          : `FR-AK-04-${data.id_peserta}.pdf`;
+
+      const res = await api.get(endpoint, {
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(
+        new Blob([res.data], {
+          type: "application/pdf",
+        })
+      );
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+
+      alert(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Gagal mengunduh PDF."
+      );
+    } finally {
+      setDownloading("");
+    }
   };
 
   if (loading) {
@@ -147,9 +218,9 @@ export default function HasilAkhirAsesi() {
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Lihat keputusan akhir dari asesor penguji. Jika hasil belum
-                  kompeten, sistem akan menampilkan tombol untuk mengisi
-                  FR.AK.03 dan FR.AK.04.
+                  Lihat keputusan akhir asesor dan cek kelengkapan dokumen.
+                  Jika hasil belum kompeten, FR.AK.03 dan FR.AK.04 akan muncul
+                  sebagai tindak lanjut.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -196,7 +267,9 @@ export default function HasilAkhirAsesi() {
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
                     {isBelumKompeten
-                      ? "Anda perlu mengisi FR.AK.03 dan FR.AK.04."
+                      ? data?.tindak_lanjut_selesai
+                        ? "FR.AK.03 dan FR.AK.04 sudah lengkap."
+                        : "Anda perlu mengisi FR.AK.03 dan FR.AK.04."
                       : isKompeten
                       ? "Selamat, Anda dinyatakan kompeten."
                       : "Hasil akhir belum tersedia dari asesor."}
@@ -237,7 +310,13 @@ export default function HasilAkhirAsesi() {
                 />
 
                 <MiniStat
-                  icon={isKompeten ? <ShieldCheck size={22} /> : <ShieldAlert size={22} />}
+                  icon={
+                    isKompeten ? (
+                      <ShieldCheck size={22} />
+                    ) : (
+                      <ShieldAlert size={22} />
+                    )
+                  }
                   label="Status"
                   value={formatStatus(status)}
                 />
@@ -279,16 +358,31 @@ export default function HasilAkhirAsesi() {
 
               <section className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start">
                 <div className="space-y-6">
-                  <Card title="Detail Hasil Akhir" icon={<ClipboardCheck size={22} />}>
+                  <Card
+                    title="Detail Hasil Akhir"
+                    icon={<ClipboardCheck size={22} />}
+                  >
                     <table className="w-full border-collapse border border-slate-200 text-sm">
                       <tbody>
                         <TableRow label="Nama Asesi" value={data.nama_asesi} />
                         <TableRow label="NIK" value={data.nik} />
-                        <TableRow label="Judul Skema" value={data.skema?.judul_skema} />
-                        <TableRow label="Kode Skema" value={data.skema?.kode_skema} />
+                        <TableRow
+                          label="Judul Skema"
+                          value={data.skema?.judul_skema}
+                        />
+                        <TableRow
+                          label="Kode Skema"
+                          value={data.skema?.kode_skema}
+                        />
                         <TableRow label="TUK" value={data.tuk?.nama_tuk} />
-                        <TableRow label="Jadwal" value={data.jadwal?.nama_kegiatan} />
-                        <TableRow label="Tanggal" value={data.jadwal?.tgl_awal} />
+                        <TableRow
+                          label="Jadwal"
+                          value={data.jadwal?.nama_kegiatan}
+                        />
+                        <TableRow
+                          label="Tanggal"
+                          value={data.jadwal?.tgl_awal}
+                        />
                         <TableRow label="Nilai Akhir" value={nilaiAkhir} />
                         <TableRow label="Status" value={formatStatus(status)} />
                         <TableRow
@@ -301,12 +395,35 @@ export default function HasilAkhirAsesi() {
 
                   <Card title="Kelengkapan Dokumen" icon={<FileText size={22} />}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <KelengkapanBadge label="Presensi" active={kelengkapan.presensi} />
-                      <KelengkapanBadge label="APL01" active={kelengkapan.apl01} />
-                      <KelengkapanBadge label="APL02" active={kelengkapan.apl02} />
-                      <KelengkapanBadge label="FR.IA.05" active={kelengkapan.fria05} />
-                      <KelengkapanBadge label="FR.AK.03" active={kelengkapan.fr_ak03} />
-                      <KelengkapanBadge label="FR.AK.04" active={kelengkapan.fr_ak04} />
+                      <KelengkapanBadge
+                        label="Presensi"
+                        active={kelengkapan.presensi}
+                      />
+
+                      <KelengkapanBadge
+                        label="APL01"
+                        active={kelengkapan.apl01}
+                      />
+
+                      <KelengkapanBadge
+                        label="APL02"
+                        active={kelengkapan.apl02}
+                      />
+
+                      <KelengkapanBadge
+                        label="FR.IA.05"
+                        active={kelengkapan.fria05}
+                      />
+
+                      <KelengkapanBadge
+                        label="FR.AK.03"
+                        active={kelengkapan.fr_ak03}
+                      />
+
+                      <KelengkapanBadge
+                        label="FR.AK.04"
+                        active={kelengkapan.fr_ak04}
+                      />
                     </div>
                   </Card>
                 </div>
@@ -318,24 +435,30 @@ export default function HasilAkhirAsesi() {
                         <div className="space-y-4">
                           <p className="text-sm font-semibold text-slate-500 leading-relaxed">
                             Karena hasil akhir belum kompeten, Anda perlu
-                            mengisi FR.AK.03 dan FR.AK.04.
+                            melengkapi FR.AK.03 dan FR.AK.04.
                           </p>
 
-                          <button
-                            type="button"
-                            onClick={handleGoFrAk03}
-                            className="w-full rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
-                          >
-                            Isi FR.AK.03
-                          </button>
+                          <FollowUpAction
+                            title="FR.AK.03"
+                            active={kelengkapan.fr_ak03}
+                            downloading={downloading === "frak03"}
+                            onOpen={handleGoFrAk03}
+                            onDownload={() => handleDownloadPdf("frak03")}
+                          />
 
-                          <button
-                            type="button"
-                            onClick={handleGoFrAk04}
-                            className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
-                          >
-                            Isi FR.AK.04
-                          </button>
+                          <FollowUpAction
+                            title="FR.AK.04"
+                            active={kelengkapan.fr_ak04}
+                            downloading={downloading === "frak04"}
+                            onOpen={handleGoFrAk04}
+                            onDownload={() => handleDownloadPdf("frak04")}
+                          />
+
+                          {data?.tindak_lanjut_selesai && (
+                            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold text-emerald-700 leading-relaxed">
+                              FR.AK.03 dan FR.AK.04 sudah lengkap.
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold text-emerald-700 leading-relaxed">
@@ -457,6 +580,76 @@ function KelengkapanBadge({ label, active }) {
     >
       {active ? <CheckCircle size={15} /> : <XCircle size={15} />}
       {label}
+    </div>
+  );
+}
+
+function FollowUpAction({ title, active, downloading, onOpen, onDownload }) {
+  return (
+    <div
+      className={`rounded-[24px] border p-4 ${
+        active
+          ? "border-emerald-100 bg-emerald-50"
+          : "border-amber-100 bg-amber-50"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white ${
+            active ? "text-emerald-600" : "text-amber-600"
+          }`}
+        >
+          {active ? <CheckCircle size={20} /> : <ShieldAlert size={20} />}
+        </div>
+
+        <div className="flex-1">
+          <p
+            className={`font-black ${
+              active ? "text-emerald-700" : "text-amber-700"
+            }`}
+          >
+            {title}
+          </p>
+
+          <p
+            className={`mt-1 text-xs font-semibold leading-relaxed ${
+              active ? "text-emerald-700" : "text-amber-700"
+            }`}
+          >
+            {active
+              ? `${title} sudah diisi. Anda bisa melihat ulang atau download PDF.`
+              : `${title} belum diisi. Silakan lengkapi form.`}
+          </p>
+
+          <div className="mt-4 grid grid-cols-1 gap-3">
+            <button
+              type="button"
+              onClick={onOpen}
+              className={`w-full rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition-all ${
+                active ? "bg-emerald-600 hover:bg-[#071E3D]" : "bg-orange-500 hover:bg-[#071E3D]"
+              }`}
+            >
+              {active ? `Lihat ${title}` : `Isi ${title}`}
+            </button>
+
+            {active && (
+              <button
+                type="button"
+                onClick={onDownload}
+                disabled={downloading}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+              >
+                {downloading ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Download size={15} />
+                )}
+                Download PDF
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

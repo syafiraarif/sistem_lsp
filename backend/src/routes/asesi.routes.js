@@ -1,3 +1,4 @@
+console.log("ASESI ROUTES LOADED");
 const router = require("express").Router();
 
 const authMiddleware = require("../middlewares/auth.middleware");
@@ -72,6 +73,10 @@ router.post(
 
 router.post(
   "/apl01/upload",
+  (req, res, next) => {
+    console.log("MASUK ROUTE UPLOAD");
+    next();
+  },
   uploadMiddleware,
   apl01Controller.uploadDokumenApl01
 );
