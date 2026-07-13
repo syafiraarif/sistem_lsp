@@ -1,13 +1,8 @@
-// controllers/admin/asesor.controller.js
 const XLSX = require("xlsx");
-const { Op } = require("sequelize"); // Tambahan untuk fitur pencarian
+const { Op } = require("sequelize"); 
 const { User, ProfileAsesor, Role, Notifikasi, Skema  } = require("../../models");
 const response = require("../../utils/response.util");
-const { 
-  createUser, 
-  resetUserPassword,
-  sendAccountEmail // Asumsi ini ada di service kamu berdasarkan penggunaannya di resetPassword
-} = require("../../services/account.service");
+const {createUser, resetUserPassword, sendAccountEmail} = require("../../services/account.service");
 const sequelize = require("../../config/database");
 
 exports.createAsesor = async (req, res) => {
@@ -20,7 +15,6 @@ exports.createAsesor = async (req, res) => {
       transaction: t
     });
 
-    // AUTO CREATE ROLE
     if (!role) {
       role = await Role.create({ role_name: "ASESOR" }, { transaction: t });
     }
@@ -57,33 +51,59 @@ exports.downloadTemplate = async (req, res) => {
     const headers = [
       "nik", "email", "no_hp", "gelar_depan", "nama_lengkap", "gelar_belakang", 
       "jenis_kelamin", "tempat_lahir", "tanggal_lahir", "kebangsaan", 
-      "pendidikan_terakhir", "tahun_lulus", "institut_asal", "alamat", "rt", "rw", 
-      "provinsi", "kota", "kecamatan", "kelurahan", "kode_pos", "bidang_keahlian", 
-      "no_reg_asesor", "no_lisensi", "masa_berlaku", "status_asesor"
+      "pendidikan_terakhir", "tahun_lulus", "institut_asal",
+      "alamat_ktp", "rt_ktp", "rw_ktp", "provinsi_ktp", "kota_ktp", "kecamatan_ktp", "kelurahan_ktp", "kode_pos_ktp",
+      "alamat_domisili", "rt_domisili", "rw_domisili", "provinsi_domisili", "kota_domisili", "kecamatan_domisili", "kelurahan_domisili", "kode_pos_domisili",
+      "bidang_keahlian", "no_reg_asesor", "no_lisensi", "masa_berlaku", "status_asesor"
     ];
 
     const exampleData = [{
       nik: "3404012345678901",
       email: "asesor.contoh@email.com",
       no_hp: "081987654321",
+      gelar_depan: "Dr.",
       nama_lengkap: "Siti Aminah",
+      gelar_belakang: "M.Kom.",
       jenis_kelamin: "perempuan",
+      tempat_lahir: "Yogyakarta",
+      tanggal_lahir: "1990-01-01",
+      kebangsaan: "Indonesia",
+      pendidikan_terakhir: "S2",
+      tahun_lulus: 2015,
+      institut_asal: "Universitas Gadjah Mada",
+      alamat_ktp: "Jl. Contoh No. 123",
+      rt_ktp: "01",
+      rw_ktp: "02",
+      provinsi_ktp: "DI Yogyakarta",
+      kota_ktp: "Yogyakarta",
+      kecamatan_ktp: "Gondokusuman",
+      kelurahan_ktp: "Terban",
+      kode_pos_ktp: "55223",
+      alamat_domisili: "Jl. Contoh No. 123",
+      rt_domisili: "01",
+      rw_domisili: "02",
+      provinsi_domisili: "DI Yogyakarta",
+      kota_domisili: "Yogyakarta",
+      kecamatan_domisili: "Gondokusuman",
+      kelurahan_domisili: "Terban",
+      kode_pos_domisili: "55223",
+      bidang_keahlian: "Informatika",
+      no_reg_asesor: "REG123456",
+      no_lisensi: "LSI789012",
+      masa_berlaku: "2030-01-01",
       status_asesor: "aktif"
     }];
 
-    // Buat worksheet
     const ws = XLSX.utils.json_to_sheet(exampleData, { header: headers });
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template_Asesor");
 
-    // ✅ Tulis ke buffer dengan format XLSX murni
     const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
-    // ✅ Header harus sangat spesifik
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", "attachment; filename=Template_Import_Asesor.xlsx");
     
-    return res.end(buffer); // Gunakan res.end untuk mengirim buffer biner
+    return res.end(buffer);
 
   } catch (err) {
     console.error("Gagal buat template:", err);
@@ -97,12 +117,11 @@ exports.importAsesorExcel = async (req, res) => {
       return response.error(res, "File tidak ditemukan", 400);
     }
 
-    // 1. Baca Buffer Excel dengan aman
     let workbook;
     try {
       workbook = XLSX.read(req.file.buffer, { 
         type: "buffer",
-        cellDates: true // Membantu parsing format tanggal otomatis
+        cellDates: true 
       });
     } catch (xlsxErr) {
       console.error("Gagal membaca struktur Excel:", xlsxErr);
@@ -112,14 +131,12 @@ exports.importAsesorExcel = async (req, res) => {
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     
-    // raw: false agar NIK/No HP panjang tidak berubah jadi format scientific (e.g. 3.4E+15)
     const data = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: "" });
 
     if (!data || data.length === 0) {
       return response.error(res, "File Excel kosong atau tidak memiliki data.", 400);
     }
 
-    // 2. Pastikan Role ASESOR tersedia
     let role = await Role.findOne({ where: { role_name: "ASESOR" } });
     if (!role) {
       role = await Role.create({ role_name: "ASESOR" });
@@ -129,33 +146,26 @@ exports.importAsesorExcel = async (req, res) => {
     let totalFailed = 0;
     let errorDetails = [];
 
-    // 3. Looping Data
     for (const [index, row] of data.entries()) {
       const t = await sequelize.transaction();
 
       try {
-        // Sanitasi input dasar
         const nikStr = row.nik ? String(row.nik).trim() : "";
         const emailStr = row.email ? String(row.email).trim() : "";
         const noHpStr = row.no_hp ? String(row.no_hp).trim().replace(/\D/g, "") : null;
 
-        // Validasi kolom wajib
         if (!nikStr || !emailStr) {
           throw new Error("NIK atau Email tidak boleh kosong");
         }
 
-        // Cek Duplikat di sistem (User)
         const existingUser = await User.findOne({
-          where: {
-            [Op.or]: [{ username: nikStr }, { email: emailStr }]
-          }
+          where: { [Op.or]: [{ username: nikStr }, { email: emailStr }] }
         });
 
         if (existingUser) {
           throw new Error(`User dengan NIK/Email tersebut sudah terdaftar`);
         }
 
-        // A. Buat User (Akun Login)
         const { user } = await createUser({
           username: nikStr,
           email: emailStr,
@@ -163,7 +173,6 @@ exports.importAsesorExcel = async (req, res) => {
           id_role: role.id_role
         }, { transaction: t });
 
-        // B. Buat Profile Asesor
         await ProfileAsesor.create({
           id_user: user.id_user,
           nik: nikStr,
@@ -177,14 +186,25 @@ exports.importAsesorExcel = async (req, res) => {
           pendidikan_terakhir: row.pendidikan_terakhir || "S1",
           tahun_lulus: row.tahun_lulus ? parseInt(row.tahun_lulus) : null,
           institut_asal: row.institut_asal || null,
-          alamat: row.alamat || null,
-          rt: row.rt || null,
-          rw: row.rw || null,
-          provinsi: row.provinsi || null,
-          kota: row.kota || null,
-          kecamatan: row.kecamatan || null,
-          kelurahan: row.kelurahan || null,
-          kode_pos: row.kode_pos || null,
+
+          alamat_ktp: row.alamat_ktp || null,
+          rt_ktp: row.rt_ktp || null,
+          rw_ktp: row.rw_ktp || null,
+          provinsi_ktp: row.provinsi_ktp || null,
+          kota_ktp: row.kota_ktp || null,
+          kecamatan_ktp: row.kecamatan_ktp || null,
+          kelurahan_ktp: row.kelurahan_ktp || null,
+          kode_pos_ktp: row.kode_pos_ktp || null,
+
+          alamat_domisili: row.alamat_domisili || null,
+          rt_domisili: row.rt_domisili || null,
+          rw_domisili: row.rw_domisili || null,
+          provinsi_domisili: row.provinsi_domisili || null,
+          kota_domisili: row.kota_domisili || null,
+          kecamatan_domisili: row.kecamatan_domisili || null,
+          kelurahan_domisili: row.kelurahan_domisili || null,
+          kode_pos_domisili: row.kode_pos_domisili || null,
+
           bidang_keahlian: row.bidang_keahlian || null,
           no_reg_asesor: row.no_reg_asesor || null,
           no_lisensi: row.no_lisensi || null,
@@ -194,20 +214,11 @@ exports.importAsesorExcel = async (req, res) => {
 
         await t.commit();
         totalSuccess++;
-
       } catch (err) {
         await t.rollback();
         totalFailed++;
-        errorDetails.push(`Baris ${index + 2} (${row.nik || 'N/A'}): ${err.message}`);
-        console.error(`[Import Error] Baris ${index + 2}:`, err.message);
+        errorDetails.push(`Baris ${index + 2}: ${err.message}`);
       }
-    }
-
-    // 4. Kirim Response
-    if (totalSuccess === 0 && totalFailed > 0) {
-      return response.error(res, `Gagal import seluruh data. Terdeteksi ${totalFailed} baris bermasalah.`, 400, {
-        errors: errorDetails
-      });
     }
 
     return response.success(res, `Proses import selesai.`, {
@@ -217,7 +228,6 @@ exports.importAsesorExcel = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("KESALAHAN UTAMA IMPORT:", err);
     return response.error(res, "Terjadi kesalahan server saat memproses file Excel.", 500);
   }
 };
@@ -241,7 +251,7 @@ exports.getAll = async (req, res) => {
       include: [
         {
           model: User,
-          as: "user", // Pastikan alias sesuai dengan models/index.js
+          as: "user", 
           attributes: ["id_user", "email", "no_hp", "status_user"],
           include: [
             {
@@ -252,7 +262,6 @@ exports.getAll = async (req, res) => {
           ]
         }
       ],
-      // FIX: Jangan pakai createdAt karena di model diset timestamps: false
       order: [['id_user', 'DESC']] 
     });
 
@@ -277,7 +286,7 @@ exports.getById = async (req, res) => {
     const data = await ProfileAsesor.findByPk(req.params.id, {
       include: {
         model: User,
-        as: "user" // ✅ WAJIB DITAMBAHKAN
+        as: "user" 
       }
     });
 
@@ -352,7 +361,6 @@ exports.resetPassword = async (req, res) => {
     }
 
     try {
-      // Pastikan ada function createNotifikasi, atau perbaiki importnya jika di file lain
       const { createNotifikasi } = require("../../services/notifikasi.service"); 
       await createNotifikasi({
         channel: "email",
