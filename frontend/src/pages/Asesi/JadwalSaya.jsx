@@ -1,4 +1,4 @@
-// frontend/src/pages/asesi/JadwalSaya.jsx
+// frontend/src/pages/Asesi/JadwalSaya.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
@@ -25,6 +25,7 @@ import {
   Sparkles,
   Tag,
   XCircle,
+  Lock,
 } from "lucide-react";
 
 export default function JadwalSaya() {
@@ -178,11 +179,6 @@ export default function JadwalSaya() {
     return normalizePaymentStatus(data.status);
   };
 
-  const isAPL01Done = (item) => {
-    const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
-    return Boolean(apl01Status[idPeserta]?.submitted);
-  };
-
   const loadData = async (showMainLoading = true) => {
     if (requestRunningRef.current) return;
 
@@ -251,9 +247,11 @@ export default function JadwalSaya() {
     for (const idSkema of uniqueSkemaIds) {
       try {
         const res = await axios.get(
-          `${API}/asesi/pembayaran/${idSkema}/status`,
-          { headers: getHeaders() }
-        );
+  `${API}/asesi/pembayaran/${idSkema}/status`,
+  {
+    headers: getHeaders(),
+  }
+);
 
         const data = res.data?.data || {};
 
@@ -306,15 +304,20 @@ export default function JadwalSaya() {
       if (!idPeserta) continue;
 
       try {
-        const res = await axios.get(`${API}/asesi/apl01/status/${idPeserta}`, {
-          headers: getHeaders(),
-        });
+        const res = await axios.get(
+  `${API}/asesi/apl01/${idPeserta}`,
+  {
+    headers: getHeaders(),
+  }
+);
+
+        const apl01 = res.data?.data?.apl01;
 
         result[idPeserta] = {
-          exists: Boolean(res.data?.data?.exists),
-          submitted: Boolean(res.data?.data?.submitted),
-          status: res.data?.data?.status_apl01 || "belum_ada",
-          id_apl01: res.data?.data?.id_apl01 || null,
+          exists: !!apl01,
+          submitted: apl01?.status === "submitted",
+          status: apl01?.status || "belum_ada",
+          id_apl01: apl01?.id_apl01 || null,
         };
       } catch (err) {
         result[idPeserta] = {
@@ -416,11 +419,6 @@ export default function JadwalSaya() {
     const idSkema = getIdSkema(item);
     const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
 
-    if (!isAPL01Done(item)) {
-      alert("Silakan kerjakan APL01 terlebih dahulu sebelum mengisi APL02.");
-      return;
-    }
-
     if (!idSkema) {
       alert("ID skema tidak ditemukan.");
       return;
@@ -436,11 +434,6 @@ export default function JadwalSaya() {
   const pergiPresensi = (item) => {
     const idSkema = getIdSkema(item);
 
-    if (!isAPL01Done(item)) {
-      alert("Silakan submit APL01 terlebih dahulu sebelum presensi.");
-      return;
-    }
-
     if (!idSkema) {
       alert("ID skema tidak ditemukan.");
       return;
@@ -453,11 +446,6 @@ export default function JadwalSaya() {
     const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
     const idJadwal =
       item.id_jadwal || item.jadwal?.id_jadwal || item.Jadwal?.id_jadwal;
-
-    if (!isAPL01Done(item)) {
-      alert("Silakan submit APL01 terlebih dahulu sebelum mengerjakan FR.IA.05.");
-      return;
-    }
 
     if (!idJadwal) {
       alert("ID jadwal tidak ditemukan.");
@@ -572,8 +560,8 @@ export default function JadwalSaya() {
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
                   Pilih jadwal uji kompetensi, lanjutkan pembayaran, dan akses
-                  APL01, APL02, presensi, FR.IA.05, serta hasil akhir setelah
-                  pembayaran dikonfirmasi.
+                  APL01, APL02, presensi, FR.IA.05, serta hasil akhir sesuai 
+                  dengan tahapan yang berlaku.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -737,7 +725,6 @@ export default function JadwalSaya() {
                   statusBayar === "pending" ||
                   statusBayar === "menunggu_validasi";
                 const pembayaranDitolak = statusBayar === "ditolak";
-                const apl01Done = isAPL01Done(item);
 
                 return (
                   <ScheduleCard
@@ -753,7 +740,7 @@ export default function JadwalSaya() {
                     sudahPaid={sudahPaid}
                     menungguValidasi={menungguValidasi}
                     pembayaranDitolak={pembayaranDitolak}
-                    apl01Done={apl01Done}
+                    apl01Data={apl01Status[idPeserta] || {}}
                     formatTanggal={formatTanggal}
                     pilihJadwal={pilihJadwal}
                     pergiBayar={pergiBayar}
@@ -785,7 +772,7 @@ function ScheduleCard({
   sudahPaid,
   menungguValidasi,
   pembayaranDitolak,
-  apl01Done,
+  apl01Data,
   formatTanggal,
   pilihJadwal,
   pergiBayar,
@@ -802,6 +789,31 @@ function ScheduleCard({
   const tanggal = `${formatTanggal(item.tgl_awal)} - ${formatTanggal(
     item.tgl_akhir
   )}`;
+
+  // ================= LOGIKA ALUR KERJA (WORKFLOW GATES) =================
+  const isApl01Done = apl01Data?.submitted || apl01Data?.exists;
+  
+  // Status Validasi APL01 dari Backend
+  const statusApl01 = String(apl01Data?.status || "").toLowerCase();
+  const isApl01Valid = ["diterima", "valid", "memenuhi_syarat", "selesai"].includes(statusApl01);
+
+  // Cek pencocokan tanggal hari H dengan tanggal jadwal ujian (Presensi hanya terbuka di hari H)
+  let isHariH = false;
+  const tglUjian = item.tgl_awal || item.waktu_pelaksanaan || item.jadwal?.tgl_awal;
+  if (tglUjian) {
+    const hariIni = new Date();
+    const hariH = new Date(tglUjian);
+    if (!isNaN(hariH.getTime())) {
+      isHariH = hariIni.getFullYear() === hariH.getFullYear() &&
+                hariIni.getMonth() === hariH.getMonth() &&
+                hariIni.getDate() === hariH.getDate();
+    }
+  }
+
+  // Syarat pembukaan tombol:
+  const unlockApl02 = isApl01Done; // Terbuka apabila APL01 sudah dikerjakan
+  const unlockHasilAkhir = item.status_asesmen === "kompeten" || item.status_asesmen === "belum_kompeten";
+  // ======================================================================
 
   return (
     <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
@@ -830,7 +842,7 @@ function ScheduleCard({
                   <StatusBadge type="danger" label="Ditolak" />
                 )}
 
-                {apl01Done && (
+                {isApl01Done && (
                   <StatusBadge type="success" label="APL01 Selesai" />
                 )}
               </div>
@@ -901,7 +913,7 @@ function ScheduleCard({
 
             <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
               Pilih jadwal, lakukan pembayaran, lalu lanjutkan pengisian form
-              asesmen.
+              asesmen secara berurutan sesuai alur.
             </p>
           </div>
 
@@ -952,39 +964,51 @@ function ScheduleCard({
             </div>
           ) : sudahPaid ? (
             <div className="grid grid-cols-1 gap-3">
-              <ActionButton title="APL01" onClick={() => pergiAPL01(item)} />
+              <ActionButton 
+                title={isApl01Done ? "Lihat APL01" : "Isi APL01"} 
+                onClick={() => pergiAPL01(item)} 
+              />
 
-              {apl01Done ? (
-                <ActionButton title="APL02" onClick={() => pergiAPL02(item)} />
+              {unlockApl02 ? (
+                <ActionButton 
+                  title="Isi / Lihat APL02" 
+                  onClick={() => pergiAPL02(item)} 
+                />
               ) : (
                 <LockedMessage text="APL02 akan tersedia setelah APL01 selesai disubmit." />
               )}
 
-              {apl01Done ? (
-                <ActionButton
-                  title="Presensi"
-                  onClick={() => pergiPresensi(item)}
-                />
+              {/* Syarat Presensi: APL01 dan APL02 harus Valid + Wajib Hari H */}
+              {isApl01Valid ? (
+                isHariH ? (
+                  <ActionButton
+                    title="Presensi Ujian"
+                    onClick={() => pergiPresensi(item)}
+                  />
+                ) : (
+                  <LockedMessage text={`Presensi baru akan dibuka pada tanggal pelaksanaan ujian (${formatTanggal(tglUjian)}).`} />
+                )
               ) : (
-                <LockedMessage text="Presensi akan tersedia setelah APL01 selesai disubmit." />
+                <LockedMessage text="Presensi terkunci. Menunggu Asesor memvalidasi persyaratan APL01 & APL02 Anda." />
               )}
 
-              {apl01Done ? (
+              {/* Syarat FR.IA.05: Harus di Hari H dan Berkas Valid */}
+              {isApl01Valid && isHariH ? (
                 <ActionButton
-                  title="FR.IA.05"
+                  title="Mulai FR.IA.05"
                   onClick={() => pergiFRIA05(item)}
                 />
               ) : (
-                <LockedMessage text="FR.IA.05 akan tersedia setelah APL01 selesai disubmit." />
+                <LockedMessage text="Ujian FR.IA.05 akan terbuka otomatis setelah Anda melakukan Presensi di hari H." />
               )}
 
-              {apl01Done ? (
+              {unlockHasilAkhir ? (
                 <ActionButton
-                  title="Hasil Akhir"
+                  title="Lihat Hasil Akhir"
                   onClick={() => pergiHasilAkhir(item)}
                 />
               ) : (
-                <LockedMessage text="Hasil akhir akan tersedia setelah proses asesmen berjalan." />
+                <LockedMessage text="Hasil akhir akan diumumkan setelah asesor menyelesaikan penilaian FR.IA.05." />
               )}
             </div>
           ) : (
@@ -1102,7 +1126,8 @@ function ActionButton({ title, onClick }) {
 
 function LockedMessage({ text }) {
   return (
-    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-[11px] font-bold text-slate-500 leading-relaxed">
+    <div className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3.5 text-[11px] font-bold text-slate-500 text-center leading-relaxed">
+      <Lock size={14} className="shrink-0 text-slate-400" />
       {text}
     </div>
   );

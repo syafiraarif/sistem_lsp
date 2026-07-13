@@ -1,5 +1,5 @@
+const models = require("../../models");
 const {
-  sequelize,
   HasilKeputusanAsesmen,
   PesertaJadwal,
   JadwalAsesor,
@@ -10,7 +10,10 @@ const {
   Apl01Asesmen,
   Apl02,
   FrIa05Penilaian,
-} = require("../../models");
+} = models;
+
+// PERBAIKAN: Fallback instance sequelize dari config jika dari models/index.js undefined
+const sequelize = models.sequelize || require("../../config/database");
 
 /* =========================
 HELPER
@@ -105,6 +108,7 @@ const cekAksesAsesorKePeserta = async ({
 };
 
 const getNilaiFria05 = async (id_peserta, transaction = null) => {
+  if (!id_peserta) return null; // Proteksi query
   return FrIa05Penilaian.findOne({
     where: {
       id_peserta,
@@ -115,6 +119,18 @@ const getNilaiFria05 = async (id_peserta, transaction = null) => {
 };
 
 const buildKelengkapan = async (id_peserta) => {
+  // PERBAIKAN: Jika id_peserta undefined, kembalikan false agar tidak fetch data peserta lain secara acak
+  if (!id_peserta) {
+    return {
+      presensi: false,
+      apl01: false,
+      apl02: false,
+      fria05: false,
+      keputusan: false,
+      data: {},
+    };
+  }
+
   const [presensi, apl01, apl02, fria05, keputusan] = await Promise.all([
     Presensi.findOne({ where: { id_peserta } }),
     Apl01Asesmen.findOne({ where: { id_peserta } }),
@@ -146,7 +162,9 @@ const buildResponseKeputusan = async (keputusan) => {
   if (!keputusan) return null;
 
   const plain = keputusan.toJSON ? keputusan.toJSON() : keputusan;
-  const kelengkapan = await buildKelengkapan(plain.id_peserta);
+  // Memastikan mengambil id yang tepat
+  const idPesertaValid = plain.id_peserta || plain.id;
+  const kelengkapan = await buildKelengkapan(idPesertaValid);
 
   return {
     ...plain,

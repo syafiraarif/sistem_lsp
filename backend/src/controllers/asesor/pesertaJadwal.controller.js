@@ -1,5 +1,3 @@
-// backend/src/controllers/asesor/pesertaJadwal.controller.js
-
 const {
   PesertaJadwal,
   User,
@@ -74,6 +72,25 @@ const getNoHpAsesi = (plain) => {
 };
 
 const getKelengkapanPeserta = async (id_peserta) => {
+  // PERBAIKAN: Jika id_peserta null atau undefined, batalkan fetch. 
+  // Jika tidak, Sequelize akan menarik semua row tanpa filter (milik orang lain)
+  if (!id_peserta) {
+    return {
+      presensi: false,
+      apl01: false,
+      apl02: false,
+      fria05: false,
+      keputusan: false,
+      presensi_data: null,
+      apl01_data: null,
+      apl02_data: null,
+      fria05_data: null,
+      keputusan_data: null,
+      total_lengkap: 0,
+      total_wajib: 4,
+    };
+  }
+
   const [presensi, apl01, apl02, fria05, keputusan] = await Promise.all([
     Presensi.findOne({
       where: {
@@ -193,7 +210,9 @@ const getPesertaByJadwal = async (req, res) => {
 
     for (const item of data) {
       const plain = item.toJSON ? item.toJSON() : item;
-      const kelengkapan = await getKelengkapanPeserta(plain.id_peserta);
+      // PERBAIKAN: Antisipasi jika `id_peserta` dalam plain terdefinisi menggunakan key `.id`
+      const idPesertaValid = plain.id_peserta || plain.id;
+      const kelengkapan = await getKelengkapanPeserta(idPesertaValid);
 
       const nilaiFria05 = kelengkapan.fria05_data?.nilai;
       const hasilFria05 = kelengkapan.fria05_data?.hasil;
@@ -202,7 +221,7 @@ const getPesertaByJadwal = async (req, res) => {
       result.push({
         ...plain,
 
-        id_peserta: plain.id_peserta,
+        id_peserta: idPesertaValid,
         id_jadwal: plain.id_jadwal,
         id_user: plain.id_user,
 
@@ -256,10 +275,6 @@ const getPesertaByJadwal = async (req, res) => {
 /* =========================
 UPDATE NILAI PESERTA
 PUT /api/asesor/peserta/:id/nilai
-
-Tetap disediakan untuk kompatibilitas lama,
-tapi alur utama sekarang pakai:
-POST /api/asesor/hasil-keputusan
 ========================= */
 
 const updateNilaiPeserta = async (req, res) => {
