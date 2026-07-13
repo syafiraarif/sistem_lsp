@@ -576,7 +576,11 @@ UPLOAD DOKUMEN APL.01
 
 exports.uploadDokumenApl01 = async (req, res) => {
 
-  try {
+    console.log("=== MASUK CONTROLLER ===");
+    console.log(req.body);
+    console.log(req.files);
+
+    try {
 
     const {
       id_apl01,
