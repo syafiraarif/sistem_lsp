@@ -41,26 +41,19 @@ exports.getSkemaDropdown = async (req, res) => {
 exports.getKebangsaanDropdown = async (req, res) => {
   try {
     const response = await axios.get(
-      "https://www.restcountries.com/v3.1/all?fields=name,translations"
+      "https://countriesnow.space/api/v0.1/countries"
     );
 
-    const data = response.data
-      .map((item) => {
-        const nama =
-          item.translations?.ind?.common ||
-          item.name?.common;
-
-        return {
-          value: nama,
-          label: nama,
-        };
-      })
-      .filter((item) => item.value)
+    const data = response.data.data
+      .map((item) => ({
+        value: item.country,
+        label: item.country,
+      }))
       .sort((a, b) => a.label.localeCompare(b.label));
 
     res.json(data);
   } catch (err) {
-    console.error("GET KEBANGSAAN ERROR:", err.message);
+    console.error(err);
     res.status(500).json({
       message: "Gagal mengambil data kebangsaan",
     });

@@ -32,8 +32,12 @@ exports.getAllPublic = async (req, res) => {
         "no_lisensi",
         "status_asesor",
         "foto_profil",
-        "kota",
-        "provinsi",
+
+        "kota_ktp",
+        "provinsi_ktp",
+
+        "kota_domisili",
+        "provinsi_domisili",
       ],
       include: [
         {
@@ -76,8 +80,11 @@ exports.getAllPublic = async (req, res) => {
         email: item.user?.email || null,
         no_hp: item.user?.no_hp || null,
 
-        kota: item.kota || null,
-        provinsi: item.provinsi || null,
+        kota_ktp: item.kota_ktp || null,
+        provinsi_ktp: item.provinsi_ktp || null,
+
+        kota_domisili: item.kota_domisili || null,
+        provinsi_domisili: item.provinsi_domisili || null,
       };
     });
 
@@ -99,18 +106,34 @@ exports.getByIdPublic = async (req, res) => {
   try {
     const asesor = await ProfileAsesor.findByPk(req.params.id, {
       attributes: [
-        "id_user",
-        "nama_lengkap",
-        "gelar_depan",
-        "gelar_belakang",
-        "bidang_keahlian",
-        "institut_asal",
-        "no_reg_asesor",
-        "no_lisensi",
-        "status_asesor",
-        "foto_profil",
-        "kota",
-        "provinsi",
+          "id_user",
+          "nama_lengkap",
+          "gelar_depan",
+          "gelar_belakang",
+          "bidang_keahlian",
+          "institut_asal",
+          "no_reg_asesor",
+          "no_lisensi",
+          "status_asesor",
+          "foto_profil",
+
+          "alamat_ktp",
+          "rt_ktp",
+          "rw_ktp",
+          "provinsi_ktp",
+          "kota_ktp",
+          "kecamatan_ktp",
+          "kelurahan_ktp",
+          "kode_pos_ktp",
+
+          "alamat_domisili",
+          "rt_domisili",
+          "rw_domisili",
+          "provinsi_domisili",
+          "kota_domisili",
+          "kecamatan_domisili",
+          "kelurahan_domisili",
+          "kode_pos_domisili",
       ],
       include: [
         {
@@ -160,8 +183,23 @@ exports.getByIdPublic = async (req, res) => {
         email: item.user?.email || null,
         no_hp: item.user?.no_hp || null,
 
-        kota: item.kota || null,
-        provinsi: item.provinsi || null,
+        alamat_ktp: item.alamat_ktp,
+        rt_ktp: item.rt_ktp,
+        rw_ktp: item.rw_ktp,
+        provinsi_ktp: item.provinsi_ktp,
+        kota_ktp: item.kota_ktp,
+        kecamatan_ktp: item.kecamatan_ktp,
+        kelurahan_ktp: item.kelurahan_ktp,
+        kode_pos_ktp: item.kode_pos_ktp,
+
+        alamat_domisili: item.alamat_domisili,
+        rt_domisili: item.rt_domisili,
+        rw_domisili: item.rw_domisili,
+        provinsi_domisili: item.provinsi_domisili,
+        kota_domisili: item.kota_domisili,
+        kecamatan_domisili: item.kecamatan_domisili,
+        kelurahan_domisili: item.kelurahan_domisili,
+        kode_pos_domisili: item.kode_pos_domisili,
       },
     });
   } catch (error) {
