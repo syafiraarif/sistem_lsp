@@ -303,7 +303,7 @@ exports.uploadBukti = async (req, res) => {
       tanggal_dokumen
     } = req.body;
 
-    const file = req.files?.file_dokumen?.[0];
+    const file = req.files?.file_bukti?.[0];
 
     if (!id_detail) {
       return res.status(400).json({
@@ -557,6 +557,66 @@ exports.deleteBukti = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Gagal menghapus bukti portofolio.",
+      error: err.message
+    });
+  }
+};
+
+/*
+=================================
+SAVE REKOMENDASI
+=================================
+*/
+
+exports.saveRekomendasi = async (req, res) => {
+  try {
+    const {
+      id_apl02,
+      rekomendasi_asesi,
+      pendekatan_rekomendasi
+    } = req.body;
+
+    if (!id_apl02) {
+      return res.status(400).json({
+        success: false,
+        message: "ID APL.02 wajib diisi."
+      });
+    }
+
+    const apl02 = await Apl02.findByPk(id_apl02);
+
+    if (!apl02) {
+      return res.status(404).json({
+        success: false,
+        message: "APL.02 tidak ditemukan."
+      });
+    }
+
+    if (apl02.status !== "draft") {
+      return res.status(400).json({
+        success: false,
+        message: "APL.02 sudah disubmit."
+      });
+    }
+
+    await apl02.update({
+      rekomendasi_asesi: rekomendasi_asesi || "",
+      pendekatan_rekomendasi: pendekatan_rekomendasi || "",
+      updated_at: new Date()
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Rekomendasi berhasil disimpan.",
+      data: apl02
+    });
+
+  } catch (err) {
+    console.error("SAVE REKOMENDASI:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Gagal menyimpan rekomendasi.",
       error: err.message
     });
   }

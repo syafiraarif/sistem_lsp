@@ -321,7 +321,7 @@ export default function JadwalSaya() {
 
         result[idPeserta] = {
           exists: !!apl01,
-          submitted: apl01?.status === "submitted",
+          submitted: apl01?.status === "submit",
           status: apl01?.status || "belum_ada",
           id_apl01: apl01?.id_apl01 || null,
         };
@@ -415,11 +415,14 @@ const loadStatusPresensi = async (selectedData) => {
                 }
             );
 
-            const data = res.data?.data;
+            const data = res.data?.data || {};
 
             result[idPeserta] = {
-                hadir: data?.hadir === true,
-                status: data?.status || "belum",
+                hadir: data?.is_submitted === true,
+                status:
+                  data?.is_submitted
+                  ? "hadir"
+                  : "belum",
             };
 
         } catch (err) {
@@ -463,7 +466,7 @@ const loadStatusFRIA05 = async (selectedData) => {
                 }
             );
 
-            const data = res.data?.data;
+            const data = res.data?.data || {};
 
             result[idPeserta] = {
                 submitted: data?.submitted === true,
@@ -872,12 +875,12 @@ const loadStatusFRIA05 = async (selectedData) => {
                 const sudahDipilih = isSudahDipilih(item.id_jadwal);
                 const sedangMemilih = choosingId === item.id_jadwal;
                 const pembayaranData = getPembayaranData(item);
-                const statusBayar = getStatusPembayaran(item);
-                const sudahPaid = statusBayar === "paid";
+                const statusPembayaran = getStatusPembayaran(item);
+                const sudahPaid = statusPembayaran === "paid";
                 const menungguValidasi =
-                  statusBayar === "pending" ||
-                  statusBayar === "menunggu_validasi";
-                const pembayaranDitolak = statusBayar === "ditolak";
+                  statusPembayaran === "pending" ||
+                  statusPembayaran === "menunggu_validasi";
+                const pembayaranDitolak = statusPembayaran === "ditolak";
 
                 return (
                   <ScheduleCard
@@ -889,7 +892,7 @@ const loadStatusFRIA05 = async (selectedData) => {
                     sudahDipilih={sudahDipilih}
                     sedangMemilih={sedangMemilih}
                     pembayaranData={pembayaranData}
-                    statusBayar={statusBayar}
+                    statusPembayaran={statusPembayaran}
                     sudahPaid={sudahPaid}
                     menungguValidasi={menungguValidasi}
                     pembayaranDitolak={pembayaranDitolak}
@@ -924,7 +927,7 @@ function ScheduleCard({
   sudahDipilih,
   sedangMemilih,
   pembayaranData,
-  statusBayar,
+  statusPembayaran,
   sudahPaid,
   menungguValidasi,
   pembayaranDitolak,
@@ -958,33 +961,33 @@ const isPresensiDone = presensiData?.hadir === true;
 const isFria05Done = fria05Data?.submitted === true;
 
 // cek tanggal ujian
-let isHariH = false;
-
 const mulai = new Date(item.tgl_awal);
 
 const selesai = new Date(item.tgl_akhir);
 
+selesai.setHours(23, 59, 59, 999);
+
 const hariIni = new Date();
 
-if (
-    hariIni >= mulai &&
-    hariIni <= selesai
-){
-    isHariH = true;
-}
+const isHariH =
+  hariIni >= mulai &&
+  hariIni <= selesai;
 
-const unlockApl02 = isApl01Done;
+const unlockApl02 = sudahPaid && isApl01Done;
 
 const unlockPresensi =
+    sudahPaid &&
     isApl01Done &&
     isApl02Done &&
     isHariH;
 
 const unlockFRIA05 =
+    sudahPaid &&
     isPresensiDone &&
     isHariH;
 
 const unlockHasilAkhir =
+    sudahPaid &&
     isFria05Done;
   // ======================================================================
 
@@ -1137,10 +1140,10 @@ const unlockHasilAkhir =
             </div>
           ) : sudahPaid ? (
             <div className="grid grid-cols-1 gap-3">
-              <ActionButton 
-                title={isApl01Done ? "Lihat APL01" : "Isi APL01"} 
-                onClick={() => pergiAPL01(item)} 
-              />
+              <ActionButton
+                title={isApl01Done ? "Lihat APL01" : "Isi APL01"}
+                onClick={() => pergiAPL01(item)}
+                />
 
               {unlockApl02 ? (
                 <ActionButton 
@@ -1292,12 +1295,17 @@ function DetailItem({ icon, label, value }) {
   );
 }
 
-function ActionButton({ title, onClick }) {
+function ActionButton({ title, onClick, disabled = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+      disabled={disabled}
+      className={`flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 text-xs font-black uppercase tracking-widest transition-all ${
+        disabled
+          ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+          : "border border-slate-100 bg-white text-[#071E3D] hover:bg-[#071E3D] hover:text-white"
+      }`}
     >
       <FileText size={16} />
       {title}

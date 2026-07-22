@@ -103,85 +103,88 @@ export default function APL02() {
     }
   };
 
-  const loadPage = async () => {
-    try {
-      setLoading(true);
-      setError("");
+const loadPage = async () => {
+  try {
+    setLoading(true);
+    setError("");
 
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
-      const pesertaId = await resolveIdPeserta();
-
-      const [formRes, profileRes, fileRes] = await Promise.allSettled([
-        axios.get(`${API}/asesi/apl02/form/${id_skema}`, {
-          headers
-        }),
-        axios.get(`${API}/asesi/profile`, {
-          headers
-        }),
-        axios.get(`${API}/asesi/profile/files`, {
-          headers
-        })
-      ]);
-
-      if (formRes.status !== "fulfilled") {
-        throw formRes.reason;
-      }
-
-      console.log("FORM RES =", formRes.value.data);
-
-      setSkema(formRes.value.data?.data?.skema || null);
-
-        const units = formRes.value.data?.data?.units || [];
-
-        console.log("UNITS =", units);
-        console.log("IS ARRAY =", Array.isArray(units));
-
-        setFormUnits(units);
-
-      if (profileRes.status === "fulfilled") {
-        setProfile(profileRes.value.data?.data || null);
-      }
-
-      if (fileRes.status === "fulfilled") {
-        setFiles(fileRes.value.data?.data || {});
-      }
-
-      if (!pesertaId) {
-        setError("ID peserta tidak ditemukan. Buka APL02 dari halaman Jadwal Saya.");
-        return;
-      }
-
-      const created = await axios.post(
-        `${API}/asesi/apl02/create`,
-        {
-          id_peserta: pesertaId
-        },
-        {
-          headers
-        }
-      );
-
-      const apl02Data = created.data?.data || null;
-
-      setApl02(apl02Data);
-
-      await loadExistingApl02(pesertaId, apl02Data);
-    } catch (err) {
-      console.error("LOAD APL02 ERROR:", err);
-
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Gagal memuat APL02."
-      );
-    } finally {
-      setLoading(false);
+    if (!token) {
+      navigate("/login");
+      return;
     }
-  };
+
+    const pesertaId = await resolveIdPeserta();
+
+    const [formRes, profileRes, fileRes] = await Promise.allSettled([
+      axios.get(`${API}/asesi/apl02/form/${id_skema}`, {
+        headers
+      }),
+      axios.get(`${API}/asesi/profile`, {
+        headers
+      }),
+      axios.get(`${API}/asesi/profile/files`, {
+        headers
+      })
+    ]);
+
+    if (formRes.status !== "fulfilled") {
+      throw formRes.reason;
+    }
+
+    console.log("FORM RES =", formRes.value.data);
+
+    setSkema(formRes.value.data?.data?.skema || null);
+
+    const units = formRes.value.data?.data?.units || [];
+
+    console.log("UNITS =", units);
+    console.log("IS ARRAY =", Array.isArray(units));
+
+    setFormUnits(units);
+
+    if (profileRes.status === "fulfilled") {
+      setProfile(profileRes.value.data?.data || null);
+    }
+
+    if (fileRes.status === "fulfilled") {
+      setFiles(fileRes.value.data?.data || {});
+    }
+
+    if (!pesertaId) {
+      setError(
+        "ID peserta tidak ditemukan. Buka APL02 dari halaman Jadwal Saya."
+      );
+      return;
+    }
+
+    const created = await axios.post(
+      `${API}/asesi/apl02/create`,
+      {
+        id_peserta: pesertaId
+      },
+      {
+        headers
+      }
+    );
+
+    const apl02Data = created.data?.data || null;
+
+    setApl02(apl02Data);
+
+    await loadExistingApl02(pesertaId, apl02Data);
+
+  } catch (err) {
+    console.error("LOAD APL02 ERROR:", err);
+
+    setError(
+      err.response?.data?.message ||
+      err.message ||
+      "Gagal memuat APL02."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   const loadExistingApl02 = async (pesertaId = idPeserta, fallback = null) => {
     try {
@@ -312,106 +315,175 @@ export default function APL02() {
   };
 
   const savePenilaian = async (id_elemen) => {
-    const answer = answers[id_elemen] || {};
+  const answer = answers[id_elemen] || {};
 
-    if (!answer.kompeten) {
-      alert("Pilih K atau BK dulu.");
-      return;
+  if (!answer.kompeten) {
+    alert("Pilih K atau BK dulu.");
+    return;
+  }
+
+  if (!apl02?.id_apl02) {
+    alert("APL02 belum dibuat. Refresh halaman.");
+    return;
+  }
+
+  if (isLocked) {
+    alert("APL02 sudah submit.");
+    return;
+  }
+
+  try {
+    setSavingKey(`penilaian-${id_elemen}`);
+
+    const unit = formUnits.find((u) =>
+      getElemenList(getUnit(u)).some(
+        (e) => e.id_elemen === id_elemen
+      )
+    );
+
+    const res = await axios.post(
+      `${API}/asesi/apl02/penilaian`,
+      {
+        id_apl02: apl02.id_apl02,
+        id_unit: getUnit(unit).id_unit,
+        id_elemen,
+        kompeten: answer.kompeten,
+        catatan: answer.catatan || ""
+      },
+      {
+        headers
+      }
+    );
+
+    const detail = res.data.data;
+
+    setAnswers((prev) => ({
+      ...prev,
+      [id_elemen]: {
+        ...prev[id_elemen],
+        id_detail: detail.id_detail
+      }
+    }));
+
+    alert("Penilaian berhasil disimpan.");
+  } catch (err) {
+    console.error("SAVE PENILAIAN ERROR:", err);
+
+    alert(
+      err.response?.data?.message ||
+      "Gagal menyimpan penilaian."
+    );
+  } finally {
+    setSavingKey("");
+  }
+};
+
+const saveRekomendasi = async (silent = false) => {
+  if (!apl02?.id_apl02) {
+    if (!silent) {
+      alert("APL02 belum dibuat.");
     }
+    return false;
+  }
 
-    if (!apl02?.id_apl02) {
-      alert("APL02 belum dibuat. Refresh halaman.");
-      return;
-    }
-
-    if (isLocked) {
+  if (isLocked) {
+    if (!silent) {
       alert("APL02 sudah submit.");
-      return;
+    }
+    return false;
+  }
+
+  try {
+    setSavingKey("rekomendasi");
+
+    await axios.post(
+      `${API}/asesi/apl02/rekomendasi`,
+      {
+        id_apl02: apl02.id_apl02,
+        rekomendasi_asesi: rekomendasi,
+        pendekatan_rekomendasi: pendekatan
+      },
+      {
+        headers
+      }
+    );
+
+    if (!silent) {
+      alert("Rekomendasi berhasil disimpan.");
     }
 
-    try {
-      setSavingKey(`penilaian-${id_elemen}`);
+    return true;
+  } catch (err) {
+    console.error("SAVE REKOMENDASI ERROR:", err);
 
-      const res = await axios.post(
-        `${API}/asesi/apl02/penilaian`,
-        {
-          id_apl02: apl02.id_apl02,
-          id_elemen,
-          kompeten: answer.kompeten,
-          catatan: answer.catatan || ""
-        },
-        {
-          headers
-        }
-      );
-
-      const detail = res.data?.data || {};
-
-      setAnswers((prev) => ({
-        ...prev,
-        [id_elemen]: {
-          ...prev[id_elemen],
-          id_detail: detail.id_detail
-        }
-      }));
-
-      alert("Penilaian berhasil disimpan.");
-    } catch (err) {
-      console.error("SAVE PENILAIAN ERROR:", err);
-
+    if (!silent) {
       alert(
         err.response?.data?.message ||
-          "Gagal menyimpan penilaian."
+        "Gagal menyimpan rekomendasi."
       );
-    } finally {
-      setSavingKey("");
-    }
-  };
-
-  const saveRekomendasi = async (silent = false) => {
-    if (!apl02?.id_apl02) {
-      if (!silent) alert("APL02 belum dibuat.");
-      return false;
     }
 
-    if (isLocked) {
-      if (!silent) alert("APL02 sudah submit.");
-      return false;
-    }
+    return false;
+  } finally {
+    setSavingKey("");
+  }
+};
 
-    try {
-      setSavingKey("rekomendasi");
+const uploadBukti = async (idElemen, file) => {
+  const answer = answers[idElemen];
 
-      await axios.post(
-        `${API}/asesi/apl02/rekomendasi`,
-        {
-          id_apl02: apl02.id_apl02,
-          rekomendasi_asesi: rekomendasi,
-          pendekatan_rekomendasi: pendekatan
-        },
-        {
-          headers
+  if (!answer?.id_detail) {
+    alert("Simpan penilaian terlebih dahulu.");
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+
+    formData.append("id_detail", answer.id_detail);
+    formData.append("file_bukti", file);
+
+    await axios.post(
+      `${API}/asesi/apl02/upload`,
+      formData,
+      {
+        headers: {
+          ...headers,
+          "Content-Type": "multipart/form-data"
         }
-      );
-
-      if (!silent) alert("Rekomendasi berhasil disimpan.");
-
-      return true;
-    } catch (err) {
-      console.error("SAVE REKOMENDASI ERROR:", err);
-
-      if (!silent) {
-        alert(
-          err.response?.data?.message ||
-            "Gagal menyimpan rekomendasi."
-        );
       }
+    );
 
-      return false;
-    } finally {
-      setSavingKey("");
-    }
-  };
+    await loadExistingApl02();
+  } catch (err) {
+    console.error("UPLOAD BUKTI ERROR:", err);
+
+    alert(
+      err.response?.data?.message ||
+      "Gagal upload bukti."
+    );
+  }
+};
+
+const hapusBukti = async (id_bukti) => {
+  try {
+    await axios.delete(
+      `${API}/asesi/apl02/bukti/${id_bukti}`,
+      {
+        headers
+      }
+    );
+
+    await loadExistingApl02();
+  } catch (err) {
+    console.error("HAPUS BUKTI ERROR:", err);
+
+    alert(
+      err.response?.data?.message ||
+      "Gagal menghapus bukti."
+    );
+  }
+};
 
   const submitApl02 = async () => {
     if (!apl02?.id_apl02) {
@@ -419,27 +491,31 @@ export default function APL02() {
       return;
     }
 
-    if (totalTerisi === 0) {
-      alert("Isi minimal satu penilaian terlebih dahulu.");
+    if (totalTerisi !== totalElemen) {
+      alert("Masih ada elemen kompetensi yang belum diisi.");
       return;
     }
 
     try {
       setSubmitting(true);
 
-      await saveRekomendasi(true);
+      const saved = await saveRekomendasi(true);
 
-      await axios.put(
-        `${API}/asesi/apl02/submit/${apl02.id_apl02}`,
-        {},
-        {
-          headers
+        if (!saved) {
+          return;
         }
-      );
+
+        await axios.put(
+          `${API}/asesi/apl02/submit/${apl02.id_apl02}`,
+          {},
+          {
+            headers
+          }
+        );
 
       alert("APL02 berhasil disubmit.");
 
-      await loadExistingApl02(idPeserta, apl02);
+      await loadPage();
     } catch (err) {
       console.error("SUBMIT APL02 ERROR:", err);
 
@@ -798,17 +874,64 @@ export default function APL02() {
                                   />
                                 </td>
 
+                                
+
                                 <td className="border border-slate-200 px-3 py-4 align-top">
-                                  <textarea
-                                    value={answer.catatan || ""}
-                                    disabled={isLocked}
-                                    onChange={(e) =>
-                                      updateAnswer(idElemen, "catatan", e.target.value)
+                                <input
+                                  type="file"
+                                  disabled={isLocked || !answer.id_detail}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+
+                                    if (file) {
+                                      uploadBukti(idElemen, file);
                                     }
-                                    placeholder="Tulis bukti yang relevan..."
-                                    className="min-h-[120px] w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-[#071E3D] outline-none focus:border-orange-300 focus:bg-white disabled:opacity-70"
-                                  />
-                                </td>
+
+                                    e.target.value = "";
+                                  }}
+                                  className="mb-3 block w-full text-sm"
+                                />
+
+                                {answer.buktiTambahan?.length > 0 && (
+                                  <div className="mb-3 space-y-2">
+                                    {answer.buktiTambahan.map((file) => (
+                                      <div
+                                        key={file.id_bukti}
+                                        className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2"
+                                      >
+                                        <a
+                                          href={getImageSrc(file.file_path)}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-sm font-semibold text-blue-600 hover:underline"
+                                        >
+                                          {file.nama_file}
+                                        </a>
+
+                                        {!isLocked && (
+                                          <button
+                                            type="button"
+                                            onClick={() => hapusBukti(file.id_bukti)}
+                                            className="text-red-500 text-sm font-bold"
+                                          >
+                                            Hapus
+                                          </button>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                <textarea
+                                  value={answer.catatan || ""}
+                                  disabled={isLocked}
+                                  onChange={(e) =>
+                                    updateAnswer(idElemen, "catatan", e.target.value)
+                                  }
+                                  placeholder="Tulis bukti yang relevan..."
+                                  className="min-h-[120px] w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-[#071E3D] outline-none focus:border-orange-300 focus:bg-white disabled:opacity-70"
+                                />
+                              </td>
 
                                 <td className="border border-slate-200 px-3 py-4 align-top text-center">
                                   <button

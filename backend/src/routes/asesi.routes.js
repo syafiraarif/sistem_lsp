@@ -146,6 +146,11 @@ router.post(
   apl02Controller.uploadBukti
 );
 
+router.post(
+  "/apl02/rekomendasi",
+  apl02Controller.saveRekomendasi
+);
+
 router.get(
   "/apl02/pdf/:id_peserta",
   apl02Controller.generatePdfApl02
