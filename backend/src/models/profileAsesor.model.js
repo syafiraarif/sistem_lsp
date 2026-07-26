@@ -15,6 +15,7 @@ const ProfileAsesor = sequelize.define("profile_asesor", {
   pendidikan_terakhir: DataTypes.STRING(100),
   tahun_lulus: DataTypes.INTEGER,
   institut_asal: DataTypes.STRING(150),
+  alamat: DataTypes.TEXT,
 
   alamat_ktp: DataTypes.TEXT,
   rt_ktp: DataTypes.STRING(5),
@@ -25,14 +26,45 @@ const ProfileAsesor = sequelize.define("profile_asesor", {
   kelurahan_ktp: DataTypes.STRING(100),
   kode_pos_ktp: DataTypes.STRING(10),
 
-  alamat_domisili: DataTypes.TEXT,
-  rt_domisili: DataTypes.STRING(5),
-  rw_domisili: DataTypes.STRING(5),
-  provinsi_domisili: DataTypes.STRING(100),
-  kota_domisili: DataTypes.STRING(100),
-  kecamatan_domisili: DataTypes.STRING(100),
-  kelurahan_domisili: DataTypes.STRING(100),
-  kode_pos_domisili: DataTypes.STRING(10),
+  alamat_domisili: {
+  type: DataTypes.TEXT,
+  field: "alamat_domisili"
+},
+
+rt_domisili: {
+  type: DataTypes.STRING(5),
+  field: "rt"
+},
+
+rw_domisili: {
+  type: DataTypes.STRING(5),
+  field: "rw"
+},
+
+provinsi_domisili: {
+  type: DataTypes.STRING(100),
+  field: "provinsi"
+},
+
+kota_domisili: {
+  type: DataTypes.STRING(100),
+  field: "kota"
+},
+
+kecamatan_domisili: {
+  type: DataTypes.STRING(100),
+  field: "kecamatan"
+},
+
+kelurahan_domisili: {
+  type: DataTypes.STRING(100),
+  field: "kelurahan"
+},
+
+kode_pos_domisili: {
+  type: DataTypes.STRING(10),
+  field: "kode_pos"
+},
 
   bidang_keahlian: DataTypes.STRING(150),
 

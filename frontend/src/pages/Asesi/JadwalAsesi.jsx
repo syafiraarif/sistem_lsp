@@ -164,7 +164,7 @@ export default function JadwalAsesi() {
         { headers: getHeaders() }
       );
 
-      alert("Jadwal berhasil dipilih, tinggal menunggu diterima.");
+      alert("Jadwal berhasil dipilih");
 
       const data = res.data?.data || {};
 

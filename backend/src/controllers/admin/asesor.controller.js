@@ -53,7 +53,7 @@ exports.downloadTemplate = async (req, res) => {
       "jenis_kelamin", "tempat_lahir", "tanggal_lahir", "kebangsaan", 
       "pendidikan_terakhir", "tahun_lulus", "institut_asal",
       "alamat_ktp", "rt_ktp", "rw_ktp", "provinsi_ktp", "kota_ktp", "kecamatan_ktp", "kelurahan_ktp", "kode_pos_ktp",
-      "alamat_domisili", "rt_domisili", "rw_domisili", "provinsi_domisili", "kota_domisili", "kecamatan_domisili", "kelurahan_domisili", "kode_pos_domisili",
+      "alamat_domisili","rt","rw","provinsi","kota","kecamatan","kelurahan","kode_pos",
       "bidang_keahlian", "no_reg_asesor", "no_lisensi", "masa_berlaku", "status_asesor"
     ];
 
@@ -80,12 +80,12 @@ exports.downloadTemplate = async (req, res) => {
       kelurahan_ktp: "Terban",
       kode_pos_ktp: "55223",
       alamat_domisili: "Jl. Contoh No. 123",
-      rt_domisili: "01",
-      rw_domisili: "02",
-      provinsi_domisili: "DI Yogyakarta",
-      kota_domisili: "Yogyakarta",
-      kecamatan_domisili: "Gondokusuman",
-      kelurahan_domisili: "Terban",
+      rt: "01",
+      rw: "02",
+      provinsi: "DI Yogyakarta",
+      kota: "Yogyakarta",
+      kecamatan: "Gondokusuman",
+      kelurahan: "Terban",
       kode_pos_domisili: "55223",
       bidang_keahlian: "Informatika",
       no_reg_asesor: "REG123456",
@@ -197,13 +197,13 @@ exports.importAsesorExcel = async (req, res) => {
           kode_pos_ktp: row.kode_pos_ktp || null,
 
           alamat_domisili: row.alamat_domisili || null,
-          rt_domisili: row.rt_domisili || null,
-          rw_domisili: row.rw_domisili || null,
-          provinsi_domisili: row.provinsi_domisili || null,
-          kota_domisili: row.kota_domisili || null,
-          kecamatan_domisili: row.kecamatan_domisili || null,
-          kelurahan_domisili: row.kelurahan_domisili || null,
-          kode_pos_domisili: row.kode_pos_domisili || null,
+          rt_domisili: row.rt,
+          rw_domisili: row.rw,
+          provinsi_domisili: row.provinsi,
+          kota_domisili: row.kota,
+          kecamatan_domisili: row.kecamatan,
+          kelurahan_domisili: row.kelurahan,
+          kode_pos_domisili: row.kode_pos,
 
           bidang_keahlian: row.bidang_keahlian || null,
           no_reg_asesor: row.no_reg_asesor || null,
@@ -330,12 +330,16 @@ exports.delete = async (req, res) => {
       }
     }
 
-    await User.destroy({
-      where: { id_user: asesor.id_user },
-      transaction: t
+    await asesor.destroy({
+    transaction: t
     });
 
-    await asesor.destroy({ transaction: t });
+    await User.destroy({
+      where: {
+        id_user: asesor.id_user
+      },
+      transaction: t
+    });
 
     await t.commit();
     return response.success(res, "Asesor berhasil dihapus");

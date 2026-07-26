@@ -34,23 +34,15 @@ exports.assign = async (req, res) => {
 exports.getByJadwal = async (req, res) => {
   try {
     const data = await JadwalAsesor.findAll({
-      where: { id_jadwal: req.params.id_jadwal },
-      include: [
-        { 
-          model: User, 
-          as: "asesor", 
-          attributes: ["id_user","username","email"],
-          // TAMBAHKAN INCLUDE PROFILE ASESOR DI SINI
-          include: [
-            { model: ProfileAsesor } 
-          ]
-        }
-      ]
+      where: {
+        id_jadwal: req.params.id_jadwal
+      }
     });
 
-    return response.success(res, "List Asesor Jadwal", data);
+    return response.success(res, "OK", data);
 
   } catch (err) {
+    console.error(err);
     return response.error(res, err.message);
   }
 };

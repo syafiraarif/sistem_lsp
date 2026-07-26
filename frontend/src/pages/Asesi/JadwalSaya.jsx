@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import axios from "axios";
+import FRIA05AsesiWarning from "./FRIA05AsesiWarning";
 import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
@@ -36,6 +37,7 @@ export default function JadwalSaya() {
   const [apl02Status, setApl02Status] = useState({});
   const [presensiStatus, setPresensiStatus] = useState({});
   const [fria05Status, setFria05Status] = useState({});
+  const [hasilAsesmenStatus, setHasilAsesmenStatus] = useState({});
   const [loading, setLoading] = useState(true);
   const [choosingId, setChoosingId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -43,6 +45,8 @@ export default function JadwalSaya() {
   const [filter, setFilter] = useState("semua");
   const [error, setError] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [showFRIA05Warning, setShowFRIA05Warning] = useState(false);
+  const [selectedFRIA05Item, setSelectedFRIA05Item] = useState(null);
 
   const hasLoadedRef = useRef(false);
   const requestRunningRef = useRef(false);
@@ -227,6 +231,7 @@ export default function JadwalSaya() {
       await loadStatusAPL02(selected);
       await loadStatusPresensi(selected);
       await loadStatusFRIA05(selected);
+      await loadStatusHasilAsesmen(selected);
     } catch (err) {
       console.error(err);
 
@@ -490,6 +495,57 @@ const loadStatusFRIA05 = async (selectedData) => {
 
 };
 
+const loadStatusHasilAsesmen = async (selectedData) => {
+
+    const result = {};
+
+    for (const item of selectedData) {
+
+        const idPeserta =
+            item.id_peserta ||
+            item.raw?.id_peserta ||
+            item.raw?.id_peserta_jadwal ||
+            item.raw?.id ||
+            item.raw?.id_pendaftaran;
+
+        if (!idPeserta) continue;
+
+        try {
+
+            const res = await axios.get(
+                `${API}/asesi/hasil-saya/detail?id_peserta=${idPeserta}`,
+                {
+                    headers: getHeaders(),
+                }
+            );
+
+            const data = res.data?.data || {};
+
+            result[idPeserta] = {
+                tersedia: true,
+                status:
+                    data.status_asesmen ||
+                    data.hasil ||
+                    "belum_tersedia",
+            };
+
+        } catch (err) {
+
+            result[idPeserta] = {
+                tersedia: false,
+                status: "belum_tersedia",
+            };
+
+        }
+
+        await sleep(80);
+
+    }
+
+    setHasilAsesmenStatus(result);
+
+};
+
   const pilihJadwal = async (id_jadwal) => {
     setChoosingId(id_jadwal);
 
@@ -599,22 +655,39 @@ const loadStatusFRIA05 = async (selectedData) => {
   };
 
   const pergiFRIA05 = (item) => {
-    const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
+    setSelectedFRIA05Item(item);
+    setShowFRIA05Warning(true);
+};
+
+const mulaiFRIA05 = () => {
+
+    if (!selectedFRIA05Item) return;
+
+    const idPeserta = getIdPesertaByJadwal(
+        selectedFRIA05Item.id_jadwal
+    );
+
     const idJadwal =
-      item.id_jadwal || item.jadwal?.id_jadwal || item.Jadwal?.id_jadwal;
+        selectedFRIA05Item.id_jadwal ||
+        selectedFRIA05Item.jadwal?.id_jadwal ||
+        selectedFRIA05Item.Jadwal?.id_jadwal;
 
     if (!idJadwal) {
-      alert("ID jadwal tidak ditemukan.");
-      return;
+        alert("ID jadwal tidak ditemukan.");
+        return;
     }
 
     if (!idPeserta) {
-      alert("ID peserta tidak ditemukan. Silakan klik Refresh lalu coba lagi.");
-      return;
+        alert("ID peserta tidak ditemukan.");
+        return;
     }
 
-    navigate(`/asesi/fr-ia05/jadwal/${idJadwal}/${idPeserta}`);
-  };
+    setShowFRIA05Warning(false);
+
+    navigate(
+        `/asesi/fr-ia05/jadwal/${idJadwal}/${idPeserta}`
+    );
+};
 
   const pergiHasilAkhir = (item) => {
     const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
@@ -900,6 +973,7 @@ const loadStatusFRIA05 = async (selectedData) => {
                     apl02Data={apl02Status[idPeserta] || {}}
                     presensiData={presensiStatus[idPeserta] || {}}
                     fria05Data={fria05Status[idPeserta] || {}}
+                    hasilAsesmenData={hasilAsesmenStatus[idPeserta] || {}}
                     formatTanggal={formatTanggal}
                     pilihJadwal={pilihJadwal}
                     pergiBayar={pergiBayar}
@@ -914,6 +988,15 @@ const loadStatusFRIA05 = async (selectedData) => {
             )}
           </section>
         </div>
+        <FRIA05AsesiWarning
+    open={showFRIA05Warning}
+    duration={120}
+    onClose={() => {
+        setShowFRIA05Warning(false);
+        setSelectedFRIA05Item(null);
+    }}
+    onConfirm={mulaiFRIA05}
+/>
       </main>
     </div>
   );
@@ -935,6 +1018,7 @@ function ScheduleCard({
   apl02Data,
   presensiData,
   fria05Data,
+  hasilAsesmenData,
   formatTanggal,
   pilihJadwal,
   pergiBayar,
@@ -957,8 +1041,6 @@ function ScheduleCard({
 const isApl02Done = apl02Data?.submitted === true;
 
 const isPresensiDone = presensiData?.hadir === true;
-
-const isFria05Done = fria05Data?.submitted === true;
 
 // cek tanggal ujian
 const mulai = new Date(item.tgl_awal);
@@ -983,12 +1065,25 @@ const unlockPresensi =
 
 const unlockFRIA05 =
     sudahPaid &&
+    isApl01Done &&
+    isApl02Done &&
     isPresensiDone &&
     isHariH;
 
+const fria05Submitted =
+    fria05Data?.submitted === true;
+
+
+const hasilSudahTerbit = [
+    "kompeten",
+    "belum_kompeten",
+].includes(
+    (hasilAsesmenData?.status || "").toLowerCase()
+);
+
 const unlockHasilAkhir =
     sudahPaid &&
-    isFria05Done;
+    hasilSudahTerbit;
   // ======================================================================
 
   return (
@@ -1170,19 +1265,30 @@ text="Presensi akan terbuka setelah APL01 dan APL02 selesai serta jadwal ujian s
 
 )}
 
-              {/* Syarat FR.IA.05: Harus di Hari H dan Berkas Valid */}
-              {unlockFRIA05 ? (
+{/* ================= FR.IA.05 ================= */}
 
-<ActionButton
-title="Mulai FR.IA.05"
-onClick={() => pergiFRIA05(item)}
+{unlockFRIA05 ? (
+
+    fria05Submitted ? (
+
+        <LockedMessage
+            text="FR.IA.05 telah disubmit. Menunggu penilaian asesor."
+        />
+
+    ) : (
+
+        <ActionButton
+    title="Mulai FR.IA.05"
+    onClick={() => pergiFRIA05(item)}
 />
+
+    )
 
 ) : (
 
-<LockedMessage
-text="FR.IA.05 akan terbuka setelah Anda melakukan presensi."
-/>
+    <LockedMessage
+        text="FR.IA.05 akan terbuka setelah Anda melakukan presensi."
+    />
 
 )}
 

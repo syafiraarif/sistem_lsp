@@ -76,20 +76,35 @@ const JadwalAsesor = () => {
       }
 
       // 2. Ambil Asesor yang sudah ditugaskan ke jadwal ini
-      const resAssigned = await api.get(`/admin/jadwal-asesor/${id_jadwal}`);
-      const assignedBody = resAssigned.data !== undefined ? resAssigned.data : resAssigned;
-      setAssignedAsesors(extractArrayData(assignedBody));
+      let assigned = [];
+      try {
+          const resAssigned = await api.get(
+              `/admin/jadwal-asesor/${id_jadwal}`
+          );
+         assigned = extractArrayData(resAssigned.data);
+        } catch (err) {
+            console.error(
+                "Error mengambil data asesor",
+                err.response?.data || err
+            );
+            assigned = [];
+        }
+        setAssignedAsesors(assigned);
 
       // 3. Ambil daftar semua Asesor yang tersedia (untuk dropdown form)
       // *Perbaikan: Menggunakan fungsi extractArrayData yang lebih robust
       const resAsesor = await api.get('/admin/asesor');
-      const asesorBody = resAsesor.data !== undefined ? resAsesor.data : resAsesor;
-      setAvailableAsesors(extractArrayData(asesorBody));
-
+      const asesorBody = extractArrayData(resAsesor.data);
+      setAvailableAsesors(asesorBody);
     } catch (error) {
-      console.error("Gagal mengambil data", error);
-      Swal.fire('Gagal', 'Terjadi kesalahan saat memuat data', 'error');
-    } finally {
+    console.error(error.response?.data);
+    Swal.fire({
+        icon:"error",
+        title:"Backend Error",
+        text:error.response?.data?.message ||
+             error.message
+    });
+} finally {
       setLoading(false);
     }
   };
@@ -355,14 +370,23 @@ const JadwalAsesor = () => {
                   <option value="">-- Pilih Asesor --</option>
                   {availableAsesors.map((asesor, index) => {
                     const idAsesor = asesor.id_user || asesor.id || asesor.user?.id_user || asesor.User?.id_user;
-                    const namaAsesor = asesor.nama_lengkap || asesor.username || asesor.nama || asesor.user?.username || asesor.User?.username || 'Tanpa Nama';
-                    const emailAsesor = asesor.email || asesor.user?.email || asesor.User?.email || '';
+                    const getNamaAsesor = (asesor) =>
+                        asesor.nama_lengkap ||
+                        asesor.user?.nama_lengkap ||
+                        asesor.user?.profileAsesor?.nama_lengkap ||
+                        asesor.user?.ProfileAsesor?.nama_lengkap ||
+                        asesor.user?.ProfileAsesors?.[0]?.nama_lengkap ||
+                        asesor.username ||
+                        asesor.user?.username ||
+                        "Tanpa Nama";
+                      const emailAsesor = asesor.email || asesor.user?.email || asesor.User?.email || '';
 
                     if (!idAsesor) return null;
 
                     return (
-                      <option key={index} value={idAsesor}>
-                        {namaAsesor} {emailAsesor ? `- ${emailAsesor}` : ''}
+                      <option key={idAsesor} value={idAsesor}>
+                        {getNamaAsesor(asesor)}
+                        {emailAsesor ? ` - ${emailAsesor}` : ""}
                       </option>
                     );
                   })}
@@ -463,16 +487,27 @@ const JadwalAsesor = () => {
 
                   <tbody>
                     {assignedAsesors.map((item, index) => {
-                      const user = item.asesor || item.Asesor || {};
+                      const user =
+                      item.asesor ||
+                      item.Asesor ||
+                      {};
+                          
+                      const profile =
+                      user.ProfileAsesor ||
+                      user.profileAsesor ||
+                      user.ProfileAsesors?.[0] ||
+                      {};
 
                       return (
-                        <tr
-                          key={index}
-                          className="border-b border-slate-100 transition-all last:border-0 hover:bg-orange-50/30"
-                        >
+                        <tr key={`${item.id_user}-${item.jenis_tugas}`}>
                           <td className="px-5 py-4">
                             <div className="text-sm font-black text-[#071E3D]">
-                              {user.nama_lengkap || user.username || user.nama || 'Tanpa Nama'}
+                                {
+                                      profile.nama_lengkap ||
+                                      user.nama_lengkap ||
+                                      user.username ||
+                                      "Tanpa Nama"
+                                  }
                             </div>
                             <div className="mt-1 text-xs font-semibold text-slate-400">
                               {user.email || '-'}
@@ -487,7 +522,7 @@ const JadwalAsesor = () => {
 
                           <td className="px-5 py-4">
                             <span className="inline-flex rounded-full bg-orange-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-orange-500">
-                              {item.jenis_tugas.replace('_', ' ')}
+                              {item.jenis_tugas.replace(/_/g, " ")}
                             </span>
                           </td>
 
