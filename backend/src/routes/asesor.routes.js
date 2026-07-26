@@ -110,6 +110,11 @@ router.put(
   pesertaJadwalController.updateNilaiPeserta
 );
 
+router.get(
+  "/list-asesor",
+  jadwalAsesorController.getListAsesor
+);
+
 /* ===================================================
    MKVA
 =================================================== */

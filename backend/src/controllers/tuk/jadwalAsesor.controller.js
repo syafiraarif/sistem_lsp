@@ -30,7 +30,7 @@ const JENIS_TUGAS_RULE = {
   },
 
   komite_teknis: {
-    min: 3,
+    min: 1,
     max: 3
   }
 };
@@ -780,7 +780,7 @@ const getJenisTugasAvailable =
           jenis_tugas:
             "komite_teknis",
 
-          minimal: 3,
+          minimal: 1,
           maksimal: 3
         }
 

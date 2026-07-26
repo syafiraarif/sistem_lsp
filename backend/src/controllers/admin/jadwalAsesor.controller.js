@@ -36,7 +36,28 @@ exports.getByJadwal = async (req, res) => {
     const data = await JadwalAsesor.findAll({
       where: {
         id_jadwal: req.params.id_jadwal
-      }
+      },
+      include: [
+        {
+          model: User,
+          as: "asesor",
+          attributes: [
+            "id_user",
+            "username",
+            "email"
+          ]
+        },
+        {
+          model: ProfileAsesor,
+          as: "profileAsesor",
+          attributes: [
+            "nama_lengkap"
+          ]
+        }
+      ],
+      order: [
+        ["jenis_tugas", "ASC"]
+      ]
     });
 
     return response.success(res, "OK", data);

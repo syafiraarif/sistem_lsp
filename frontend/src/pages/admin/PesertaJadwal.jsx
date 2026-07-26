@@ -107,7 +107,7 @@ const PesertaJadwal = () => {
   // Helper untuk mendapatkan nama Asesor di Dropdown
   const getDropdownAsesorName = (itemJadwalAsesor) => {
     const user = itemJadwalAsesor.asesor || {};
-    const profile = user.ProfileAsesor || user.profile_asesor || {};
+    const profile = item.profileAsesor || {};
     
     if (profile.nama_lengkap) return profile.nama_lengkap;
     if (user.nama) return user.nama;

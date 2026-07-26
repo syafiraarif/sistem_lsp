@@ -62,14 +62,44 @@ export default function FRIA02() {
 
   const [loading, setLoading] = useState(true);
   const [jadwal, setJadwal] = useState(null);
+  const [listAsesor, setListAsesor] = useState([]);
+
 
   const [form, setForm] = useState({
-    nama_asesor: getDisplayName(),
-    nama_asesi: "",
-    tanggal: "",
-    petunjuk: defaultPetunjuk,
-    kelompok: defaultKelompok,
-  });
+  nama_asesor: getDisplayName(),
+  nama_asesi: "",
+  tanggal: "",
+
+  petunjuk: defaultPetunjuk,
+  kelompok: defaultKelompok,
+
+  asesi: {
+    nama: "",
+    ttd: "",
+  },
+
+  asesor: {
+    nama: "",
+    no_reg: "",
+    ttd: "",
+  },
+
+  penyusun: [
+    {
+      nama: "",
+      nomor_met: "",
+      ttd: "",
+    },
+  ],
+
+  validator: [
+    {
+      nama: "",
+      nomor_met: "",
+      ttd: "",
+    },
+  ],
+});
 
   const localStorageKey = useMemo(
     () => `fria02-komite-teknis-${jadwalId}`,
@@ -107,6 +137,14 @@ export default function FRIA02() {
         });
 
         setJadwal(found?.jadwal || found || null);
+        const asesorRes = await api.get("/asesor/list-asesor");
+
+        setListAsesor(
+          Array.isArray(asesorRes.data?.data)
+            ? asesorRes.data.data
+            : []
+        );
+        console.log("ASESOR", asesorRes.data);
       } catch (err) {
         console.error(err);
         alert(err.response?.data?.message || "Gagal memuat data FR.IA.02");
@@ -242,6 +280,76 @@ export default function FRIA02() {
       kelompok: prev.kelompok.filter((_, itemIndex) => itemIndex !== index),
     }));
   };
+
+  const updatePenyusun = (index, field, value) => {
+  setForm((prev) => ({
+    ...prev,
+    penyusun: prev.penyusun.map((item, i) =>
+      i === index
+        ? {
+            ...item,
+            [field]: value,
+          }
+        : item
+    ),
+  }));
+};
+
+const updateValidator = (index, field, value) => {
+  setForm((prev) => ({
+    ...prev,
+    validator: prev.validator.map((item, i) =>
+      i === index
+        ? {
+            ...item,
+            [field]: value,
+          }
+        : item
+    ),
+  }));
+};
+
+const addPenyusun = () => {
+  setForm((prev) => ({
+    ...prev,
+    penyusun: [
+      ...prev.penyusun,
+      {
+        nama: "",
+        nomor_met: "",
+        ttd: "",
+      },
+    ],
+  }));
+};
+
+const addValidator = () => {
+  setForm((prev) => ({
+    ...prev,
+    validator: [
+      ...prev.validator,
+      {
+        nama: "",
+        nomor_met: "",
+        ttd: "",
+      },
+    ],
+  }));
+};
+
+const removePenyusun = (index) => {
+  setForm((prev) => ({
+    ...prev,
+    penyusun: prev.penyusun.filter((_, i) => i !== index),
+  }));
+};
+
+const removeValidator = (index) => {
+  setForm((prev) => ({
+    ...prev,
+    validator: prev.validator.filter((_, i) => i !== index),
+  }));
+};
 
   if (loading) {
     return (
@@ -605,7 +713,423 @@ export default function FRIA02() {
             <Plus size={16} />
             Tambah Kelompok Pekerjaan
           </button>
+
+          <section className="mt-10">
+
+  {/* ================= ASESI ================= */}
+
+  <table className="w-full border-collapse border border-black text-[13px]">
+    <tbody>
+
+      <tr>
+        <td
+          colSpan={3}
+          className="border border-black px-2 py-1 font-bold"
+        >
+          ASESI :
+        </td>
+      </tr>
+
+      <tr>
+        <td className="w-[170px] border border-black px-2 py-1">
+          Nama
+        </td>
+
+        <td className="w-[20px] border border-black text-center">
+          :
+        </td>
+
+        <td className="border border-black px-2 py-1">
+          <input
+            value={form.asesi.nama}
+            onChange={(e)=>
+              setForm(prev=>({
+                ...prev,
+                asesi:{
+                  ...prev.asesi,
+                  nama:e.target.value
+                }
+              }))
+            }
+            className="w-full bg-transparent outline-none"
+          />
+        </td>
+      </tr>
+
+      <tr>
+        <td className="border border-black px-2 py-2">
+          Tanda tangan dan Tanggal
+        </td>
+
+        <td className="border border-black text-center">
+          :
+        </td>
+
+        <td className="border border-black px-2 py-2">
+          <input
+            value={form.asesi.ttd}
+            onChange={(e)=>
+              setForm(prev=>({
+                ...prev,
+                asesi:{
+                  ...prev.asesi,
+                  ttd:e.target.value
+                }
+              }))
+            }
+            className="w-full bg-transparent outline-none"
+          />
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+
+
+  {/* ================= ASESOR ================= */}
+
+  <table className="mt-4 w-full border-collapse border border-black text-[13px]">
+
+    <tbody>
+
+      <tr>
+        <td
+          colSpan={3}
+          className="border border-black px-2 py-1 font-bold"
+        >
+          ASESOR :
+        </td>
+      </tr>
+
+      <tr>
+        <td className="w-[170px] border border-black px-2 py-1">
+          Nama
+        </td>
+
+        <td className="w-[20px] border border-black text-center">
+          :
+        </td>
+
+        <td className="border border-black px-2 py-1">
+
+          <select
+            value={form.asesor.nama}
+            onChange={(e)=>
+              setForm(prev=>({
+                ...prev,
+                asesor:{
+                  ...prev.asesor,
+                  nama:e.target.value
+                }
+              }))
+            }
+            className="w-full bg-transparent outline-none"
+          >
+
+            <option value="">
+              Pilih Asesor
+            </option>
+
+            {listAsesor.map((item)=>(
+              <option
+                key={item.id_user}
+                value={item.nama_lengkap}
+              >
+                {item.nama_lengkap}
+              </option>
+            ))}
+
+          </select>
+
+        </td>
+      </tr>
+
+      <tr>
+
+        <td className="border border-black px-2 py-1">
+          No. Reg
+        </td>
+
+        <td className="border border-black text-center">
+          :
+        </td>
+
+        <td className="border border-black px-2 py-1">
+
+          <input
+            value={form.asesor.no_reg}
+            onChange={(e)=>
+              setForm(prev=>({
+                ...prev,
+                asesor:{
+                  ...prev.asesor,
+                  no_reg:e.target.value
+                }
+              }))
+            }
+            className="w-full bg-transparent outline-none"
+          />
+
+        </td>
+
+      </tr>
+
+      <tr>
+
+        <td className="border border-black px-2 py-2">
+          Tanda tangan dan Tanggal
+        </td>
+
+        <td className="border border-black text-center">
+          :
+        </td>
+
+        <td className="border border-black px-2 py-2">
+
+          <input
+            value={form.asesor.ttd}
+            onChange={(e)=>
+              setForm(prev=>({
+                ...prev,
+                asesor:{
+                  ...prev.asesor,
+                  ttd:e.target.value
+                }
+              }))
+            }
+            className="w-full bg-transparent outline-none"
+          />
+
+        </td>
+
+      </tr>
+
+    </tbody>
+
+  </table>
+
+</section>
         </section>
+
+        {/* ================= PENYUSUN & VALIDATOR ================= */}
+
+<table className="mt-5 w-full border-collapse border border-black text-[13px]">
+  <thead>
+    <tr className="bg-slate-100">
+      <th className="border border-black px-2 py-2 w-[140px]">
+        STATUS
+      </th>
+
+      <th className="border border-black px-2 py-2 w-[60px]">
+        NO
+      </th>
+
+      <th className="border border-black px-2 py-2">
+        NAMA
+      </th>
+
+      <th className="border border-black px-2 py-2 w-[180px]">
+        NOMOR MET
+      </th>
+
+      <th className="border border-black px-2 py-2 w-[220px]">
+        TANDA TANGAN DAN TANGGAL
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+
+    {/* ================= PENYUSUN ================= */}
+
+    {form.penyusun.map((item,index)=>(
+
+      <tr key={`penyusun-${index}`}>
+        {index===0 && (
+          <td
+            rowSpan={form.penyusun.length}
+            className="border border-black px-2 py-2 font-semibold align-middle"
+          > Penyusun </td>
+        )}
+
+        <td className="border border-black text-center">
+          {index+1}
+        </td>
+
+        <td className="border border-black px-2">
+
+          <select
+            value={item.nama}
+            onChange={(e)=>
+              updatePenyusun(
+                index,
+                "nama",
+                e.target.value
+              )
+            }
+            className="w-full bg-transparent outline-none"
+          >
+
+            <option value="">
+              Pilih Asesor
+            </option>
+
+            {listAsesor.map((asesor)=>(
+              <option
+                key={asesor.id_user}
+                value={asesor.nama_lengkap}
+              >
+                {asesor.nama_lengkap}
+              </option>
+            ))}
+
+          </select>
+
+        </td>
+
+        <td className="border border-black px-2">
+
+          <input
+            value={item.nomor_met}
+            onChange={(e)=>
+              updatePenyusun(
+                index,
+                "nomor_met",
+                e.target.value
+              )
+            }
+            className="w-full bg-transparent outline-none"
+          />
+
+        </td>
+
+        <td className="border border-black px-2">
+
+          <input
+            value={item.ttd}
+            onChange={(e)=>
+              updatePenyusun(
+                index,
+                "ttd",
+                e.target.value
+              )
+            }
+            className="w-full bg-transparent outline-none"
+          />
+
+        </td>
+
+      </tr>
+
+    ))}
+
+    {/* ================= VALIDATOR ================= */}
+
+    {form.validator.map((item,index)=>(
+      <tr key={`validator-${index}`}>
+        {index===0 && (
+        <td
+            rowSpan={form.validator.length}
+            className="border border-black px-2 py-2 font-semibold align-middle"
+        > Validator</td>
+        )}
+
+        <td className="border border-black text-center">
+          {index+1}
+        </td>
+
+        <td className="border border-black px-2">
+
+          <select
+            value={item.nama}
+            onChange={(e)=>
+              updateValidator(
+                index,
+                "nama",
+                e.target.value
+              )
+            }
+            className="w-full bg-transparent outline-none"
+          >
+
+            <option value="">
+              Pilih Asesor
+            </option>
+
+            {listAsesor.map((asesor)=>(
+              <option
+                key={asesor.id_user}
+                value={asesor.nama_lengkap}
+              >
+                {asesor.nama_lengkap}
+              </option>
+            ))}
+
+          </select>
+
+        </td>
+
+        <td className="border border-black px-2">
+
+          <input
+            value={item.nomor_met}
+            onChange={(e)=>
+              updateValidator(
+                index,
+                "nomor_met",
+                e.target.value
+              )
+            }
+            className="w-full bg-transparent outline-none"
+          />
+
+        </td>
+
+        <td className="border border-black px-2">
+
+          <input
+            value={item.ttd}
+            onChange={(e)=>
+              updateValidator(
+                index,
+                "ttd",
+                e.target.value
+              )
+            }
+            className="w-full bg-transparent outline-none"
+          />
+
+        </td>
+
+      </tr>
+
+    ))}
+
+  </tbody>
+
+</table>
+
+<div className="mt-3 flex gap-3 print:hidden">
+
+  <button
+    type="button"
+    onClick={addPenyusun}
+    className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white hover:bg-slate-900"
+  >
+    <Plus size={16}/>
+    Tambah Penyusun
+  </button>
+
+  <button
+    type="button"
+    onClick={addValidator}
+    className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white hover:bg-slate-900"
+  >
+    <Plus size={16}/>
+    Tambah Validator
+  </button>
+
+</div>
 
         <div className="mt-10 text-center text-[11px] italic">
           Hal. 1 dari 2

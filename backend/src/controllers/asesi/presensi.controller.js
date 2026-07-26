@@ -156,41 +156,29 @@ const cekStatusWaktuPresensi = (jadwal) => {
 };
 
 const getPesertaByUser = async (id_user, id_skema = null) => {
-  const jadwalInclude = {
-    model: Jadwal,
-    as: "jadwal",
-    include: [
-      {
-        model: Skema,
-        as: "skema",
-      },
-      {
-        model: Tuk,
-        as: "tuk",
-      },
-    ],
-  };
+  const whereJadwal = {};
 
   if (id_skema) {
-    jadwalInclude.where = {
-      id_skema,
-    };
-    jadwalInclude.required = true;
+    whereJadwal.id_skema = id_skema;
   }
 
-  return PesertaJadwal.findOne({
-    where: {
-      id_user,
-    },
-    include: [
-      jadwalInclude,
-      {
-        model: ProfileAsesi,
-        as: "profileAsesi",
-        attributes: ["id_user", "nama_lengkap", "nik", "ttd_path"],
-      },
-    ],
-    order: [["id_peserta", "DESC"]],
+  return await PesertaJadwal.findOne({
+    where: { id_user },
+    include: [{
+      model: Jadwal,
+      as: "jadwal",
+      where: whereJadwal,
+      required: true,
+      include: [
+        { model: Skema, as: "skema" },
+        { model: Tuk, as: "tuk" }
+      ]
+    }, {
+      model: ProfileAsesi,
+      as: "profileAsesi",
+      attributes: ["id_user", "nama_lengkap", "nik", "ttd_path"]
+    }],
+    order: [["created_at", "DESC"]]
   });
 };
 

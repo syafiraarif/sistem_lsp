@@ -38,11 +38,17 @@ const pilihJadwal = async (req, res) => {
     if (sudahTerdaftar) return res.status(400).json({ message: "Anda sudah terdaftar pada jadwal ini" });
 
     const peserta = await PesertaJadwal.create({
-      id_user,
-      id_jadwal,
-      status_asesmen: "terdaftar",
-      created_at: new Date(),
-    });
+    id_user,
+    id_jadwal,
+    id_asesor: null,
+    status_asesmen: "terdaftar",
+    nilai_akhir: null,
+    keterangan: null,
+    nomor_peserta: null,
+    waktu_mulai: null,
+    waktu_selesai: null,
+    created_at: new Date()
+  });
 
     return res.status(201).json({ message: "Jadwal berhasil dipilih", data: peserta });
   } catch (err) {

@@ -28,7 +28,7 @@ import {
 const API_BASE = import.meta.env.VITE_API_BASE;
 
 const JENIS_TUGAS = "komite_teknis";
-const MIN_KOMITE = 3;
+const MIN_KOMITE = 1;
 const MAX_KOMITE = 3;
 
 export default function KomiteTeknis() {
@@ -423,7 +423,7 @@ export default function KomiteTeknis() {
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base font-medium leading-relaxed text-slate-500">
-                  Pilih 3 asesor sebagai komite teknis untuk jadwal uji kompetensi{" "}
+                   Pilih 1 sampai 3 asesor sebagai komite teknis untuk jadwal uji kompetensi{" "}
                   <span className="font-black text-[#071E3D]">
                     {jadwal.nama_kegiatan || "-"}
                   </span>
@@ -536,7 +536,7 @@ export default function KomiteTeknis() {
                   <EmptyState
                     icon={<Inbox size={38} />}
                     title="Belum ada komite teknis"
-                    desc="Tambahkan 3 asesor sebagai komite teknis untuk jadwal ini."
+                    desc="Tambahkan 1-3 asesor sebagai komite teknis untuk jadwal ini."
                   />
                 ) : (
                   <div className="space-y-3">

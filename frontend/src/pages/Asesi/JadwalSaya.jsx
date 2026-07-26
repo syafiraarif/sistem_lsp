@@ -362,6 +362,8 @@ export default function JadwalSaya() {
 
         try {
 
+          console.log("ID PESERTA APL02 =", idPeserta);
+
             const res = await axios.get(
                 `${API}/asesi/apl02/${idPeserta}`,
                 {
@@ -369,7 +371,7 @@ export default function JadwalSaya() {
                 }
             );
 
-            const apl02 = res.data?.data?.apl02;
+            const apl02 = res.data?.data;
 
             result[idPeserta] = {
                 exists: !!apl02,
@@ -512,6 +514,8 @@ const loadStatusHasilAsesmen = async (selectedData) => {
 
         try {
 
+          console.log("ID PESERTA APL02 =", idPeserta);
+
             const res = await axios.get(
                 `${API}/asesi/hasil-saya/detail?id_peserta=${idPeserta}`,
                 {
@@ -643,16 +647,9 @@ const loadStatusHasilAsesmen = async (selectedData) => {
     });
   };
 
-  const pergiPresensi = (item) => {
-    const idSkema = getIdSkema(item);
-
-    if (!idSkema) {
-      alert("ID skema tidak ditemukan.");
-      return;
-    }
-
-    navigate(`/asesi/pra-asesmen/${idSkema}`);
-  };
+  const pergiPresensi = () => {
+    navigate("/asesi/pra-asesmen");
+};
 
   const pergiFRIA05 = (item) => {
     setSelectedFRIA05Item(item);
@@ -1043,9 +1040,13 @@ const isApl02Done = apl02Data?.submitted === true;
 const isPresensiDone = presensiData?.hadir === true;
 
 // cek tanggal ujian
-const mulai = new Date(item.tgl_awal);
+const tglAwal = item.tgl_awal || item.jadwal?.tgl_awal;
+const tglAkhir = item.tgl_akhir || item.jadwal?.tgl_akhir;
 
-const selesai = new Date(item.tgl_akhir);
+const mulai = new Date(tglAwal);
+const selesai = new Date(tglAkhir);
+
+selesai.setHours(23, 59, 59, 999);
 
 selesai.setHours(23, 59, 59, 999);
 
@@ -1056,6 +1057,21 @@ const isHariH =
   hariIni <= selesai;
 
 const unlockApl02 = sudahPaid && isApl01Done;
+
+console.log(
+  "ScheduleCard",
+  JSON.stringify({
+    idJadwal,
+    idPeserta,
+    sudahPaid,
+    isApl01Done,
+    isApl02Done,
+    isHariH,
+    tglAwal,
+    tglAkhir,
+    presensi: presensiData,
+  }, null, 2)
+);
 
 const unlockPresensi =
     sudahPaid &&
@@ -1248,6 +1264,8 @@ const unlockHasilAkhir =
               ) : (
                 <LockedMessage text="APL02 akan tersedia setelah APL01 selesai disubmit." />
               )}
+
+              {console.log("RENDER", unlockPresensi)}
 
               {/* Syarat Presensi: APL01 dan APL02 harus Valid + Wajib Hari H */}
               {unlockPresensi ? (

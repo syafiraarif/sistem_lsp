@@ -9,14 +9,18 @@ import {
   BookOpen,
   CheckCircle,
   Download,
+  Eye,
   FileCheck2,
+  FilePlus2,
   FileText,
   Loader2,
   PenLine,
   RefreshCcw,
   Save,
   Send,
-  ShieldCheck
+  ShieldCheck,
+  Trash2,
+  Upload
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
@@ -316,6 +320,10 @@ const loadPage = async () => {
 
   const savePenilaian = async (id_elemen) => {
   const answer = answers[id_elemen] || {};
+  if (!answer.fileBukti) {
+    alert("Upload bukti terlebih dahulu.");
+    return;
+}
 
   if (!answer.kompeten) {
     alert("Pilih K atau BK dulu.");
@@ -357,12 +365,32 @@ const loadPage = async () => {
 
     const detail = res.data.data;
 
+    if (answer.fileBukti) {
+        const formData = new FormData();
+
+        formData.append("id_detail", detail.id_detail);
+        formData.append("file_bukti", answer.fileBukti);
+
+        await axios.post(
+            `${API}/asesi/apl02/upload`,
+            formData,
+            {
+                headers: {
+                    ...headers,
+                    "Content-Type": "multipart/form-data"
+                }
+            }
+        );
+
+        await loadExistingApl02();
+    }
+
     setAnswers((prev) => ({
-      ...prev,
-      [id_elemen]: {
-        ...prev[id_elemen],
-        id_detail: detail.id_detail
-      }
+        ...prev,
+        [id_elemen]: {
+            ...prev[id_elemen],
+            id_detail: detail.id_detail
+        }
     }));
 
     alert("Penilaian berhasil disimpan.");
@@ -375,6 +403,30 @@ const loadPage = async () => {
     );
   } finally {
     setSavingKey("");
+  }
+};
+
+const hapusBukti = async (id_bukti) => {
+  if (!window.confirm("Yakin ingin menghapus bukti ini?")) return;
+
+  try {
+    await axios.delete(
+      `${API}/asesi/apl02/bukti/${id_bukti}`,
+      {
+        headers,
+      }
+    );
+
+    await loadExistingApl02();
+
+    alert("Bukti berhasil dihapus.");
+  } catch (err) {
+    console.error("HAPUS BUKTI ERROR:", err);
+
+    alert(
+      err.response?.data?.message ||
+      "Gagal menghapus bukti."
+    );
   }
 };
 
@@ -426,62 +478,6 @@ const saveRekomendasi = async (silent = false) => {
     return false;
   } finally {
     setSavingKey("");
-  }
-};
-
-const uploadBukti = async (idElemen, file) => {
-  const answer = answers[idElemen];
-
-  if (!answer?.id_detail) {
-    alert("Simpan penilaian terlebih dahulu.");
-    return;
-  }
-
-  try {
-    const formData = new FormData();
-
-    formData.append("id_detail", answer.id_detail);
-    formData.append("file_bukti", file);
-
-    await axios.post(
-      `${API}/asesi/apl02/upload`,
-      formData,
-      {
-        headers: {
-          ...headers,
-          "Content-Type": "multipart/form-data"
-        }
-      }
-    );
-
-    await loadExistingApl02();
-  } catch (err) {
-    console.error("UPLOAD BUKTI ERROR:", err);
-
-    alert(
-      err.response?.data?.message ||
-      "Gagal upload bukti."
-    );
-  }
-};
-
-const hapusBukti = async (id_bukti) => {
-  try {
-    await axios.delete(
-      `${API}/asesi/apl02/bukti/${id_bukti}`,
-      {
-        headers
-      }
-    );
-
-    await loadExistingApl02();
-  } catch (err) {
-    console.error("HAPUS BUKTI ERROR:", err);
-
-    alert(
-      err.response?.data?.message ||
-      "Gagal menghapus bukti."
-    );
   }
 };
 
@@ -877,50 +873,113 @@ const hapusBukti = async (id_bukti) => {
                                 
 
                                 <td className="border border-slate-200 px-3 py-4 align-top">
-                                <input
-                                  type="file"
-                                  disabled={isLocked || !answer.id_detail}
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
 
-                                    if (file) {
-                                      uploadBukti(idElemen, file);
-                                    }
-
-                                    e.target.value = "";
-                                  }}
-                                  className="mb-3 block w-full text-sm"
-                                />
+                                {answer.fileBukti && (
+                                <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <FileCheck2 size={20} className="text-green-500" />
+                                      <div>
+                                        <p className="font-semibold text-[#071E3D]">
+                                          {answer.fileBukti.name}
+                                        </p>
+                                        <p className="text-xs text-blue-600">
+                                          Siap disimpan
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <CheckCircle size={18} className="text-green-500" />
+                                  </div>
+                                </div>
+                              )}
 
                                 {answer.buktiTambahan?.length > 0 && (
-                                  <div className="mb-3 space-y-2">
-                                    {answer.buktiTambahan.map((file) => (
-                                      <div
-                                        key={file.id_bukti}
-                                        className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2"
-                                      >
-                                        <a
-                                          href={getImageSrc(file.file_path)}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="text-sm font-semibold text-blue-600 hover:underline"
-                                        >
-                                          {file.nama_file}
-                                        </a>
+                                  <div className="mt-4 space-y-3">
+                                    <p className="text-sm font-bold text-[#071E3D]">Bukti yang sudah diupload</p>
 
-                                        {!isLocked && (
+                                    {answer.buktiTambahan.map((file) => (
+                                      <div key={file.id_bukti} className="rounded-xl border border-slate-200 bg-white p-3">
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <div className="flex items-center gap-2">
+                                            <FileCheck2 size={18} className="text-green-500" />
+                                            <p className="font-semibold text-[#071E3D]">
+                                              {file.nama_file}
+                                            </p>
+                                          </div>
+                                            <p className="text-xs text-green-600">✔ Berhasil diupload</p>
+                                          </div>
+
+                                          <div className="flex items-center gap-2">
+                                          <a
+                                            href={getImageSrc(file.file_path)}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200"
+                                          >
+                                            <Eye size={18} />
+                                          </a>
+
+                                          {!isLocked && (
                                           <button
                                             type="button"
                                             onClick={() => hapusBukti(file.id_bukti)}
-                                            className="text-red-500 text-sm font-bold"
+                                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 text-red-600 hover:bg-red-200"
                                           >
-                                            Hapus
+                                            <Trash2 size={18}/>
                                           </button>
-                                        )}
+                                          )}
+
+                                          </div>
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
                                 )}
+
+                                                                {!isLocked && (
+                                <label className="block cursor-pointer rounded-xl border-2 border-dashed border-orange-300 bg-orange-50 p-4 hover:bg-orange-100 transition">
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  disabled={isLocked}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+
+                                    setAnswers(prev => ({
+                                      ...prev,
+                                      [idElemen]: {
+                                        ...prev[idElemen],
+                                        fileBukti: file
+                                      }
+                                    }));
+                                  }}
+                                />
+
+                                <div className="flex flex-col items-center gap-2">
+                                  <Upload size={34} className="text-orange-500" />
+                                  <p className="font-bold text-[#071E3D]">
+                                  {answer.fileBukti
+                                    ? "File berhasil dipilih"
+                                    : answer.buktiTambahan?.length > 0
+                                    ? "Tambah Bukti"
+                                    : "Klik untuk memilih file"}
+                                </p>
+                                  <p className="text-xs text-slate-500">
+                                    {answer.fileBukti
+                                      ? answer.fileBukti.name
+                                      : answer.buktiTambahan?.length > 0
+                                      ? "Tambahkan bukti pendukung lainnya"
+                                      : "PDF, JPG, PNG"}
+                                  </p>
+                                </div>
+                              </label>
+                              )}
+
+                                <label className="mb-2 mt-4 block text-sm font-bold text-[#071E3D]">
+                                  Catatan / Bukti Pendukung
+                                </label>
 
                                 <textarea
                                   value={answer.catatan || ""}

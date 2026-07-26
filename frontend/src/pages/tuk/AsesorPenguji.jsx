@@ -357,38 +357,40 @@ const AsesorPenguji = () => {
                 ) : (
                   <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
                     {asesorJadwal.map((a) => (
-                      <div
-                        key={`${a.id}-${a.id_user}-${a.jenis_tugas}`}
-                        className="rounded-[24px] bg-emerald-50/60 border border-emerald-100 p-4 group"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h4
-                              className="font-black text-[#071E3D] truncate"
-                              title={a.nama_lengkap}
-                            >
-                              {a.nama_lengkap}
-                            </h4>
+                    <div
+                      key={`${a.id_jadwal}-${a.id_user}-${a.jenis_tugas}`}
+                      className="rounded-[24px] bg-emerald-50/60 border border-emerald-100 p-4 group"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h4
+                            className="font-black text-[#071E3D] truncate"
+                            title={a.profileAsesor?.nama_lengkap}
+                          >
+                            {a.profileAsesor?.nama_lengkap || "-"}
+                          </h4>
 
-                            <div className="mt-3 space-y-2 text-xs text-slate-500 font-medium">
-                              {a.no_reg_asesor && (
-                                <MiniInfo
-                                  icon={<Hash size={13} />}
-                                  value={`Reg: ${a.no_reg_asesor}`}
-                                />
-                              )}
-                              {a.no_hp && (
-                                <MiniInfo
-                                  icon={<Phone size={13} />}
-                                  value={a.no_hp}
-                                />
-                              )}
-                              {a.username && (
-                                <MiniInfo
-                                  icon={<User size={13} />}
-                                  value={a.username}
-                                />
-                              )}
+                          <div className="mt-3 space-y-2 text-xs text-slate-500 font-medium">
+                            {a.profileAsesor?.no_reg_asesor && (
+                              <MiniInfo
+                                icon={<Hash size={13} />}
+                                value={`Reg: ${a.profileAsesor.no_reg_asesor}`}
+                              />
+                            )}
+
+                            {a.asesor?.no_hp && (
+                              <MiniInfo
+                                icon={<Phone size={13} />}
+                                value={a.asesor.no_hp}
+                              />
+                            )}
+
+                            {a.asesor?.username && (
+                              <MiniInfo
+                                icon={<User size={13} />}
+                                value={a.asesor.username}
+                              />
+                            )}
                             </div>
                           </div>
 
@@ -460,9 +462,9 @@ const AsesorPenguji = () => {
                             <div className="min-w-0">
                               <h4
                                 className="font-black text-[#071E3D] text-lg leading-snug truncate"
-                                title={a.nama_lengkap}
+                                title={a.profileAsesor?.nama_lengkap}
                               >
-                                {a.nama_lengkap}
+                                {a.profileAsesor?.nama_lengkap || "-"}
                               </h4>
 
                               {a.bidang_keahlian && (

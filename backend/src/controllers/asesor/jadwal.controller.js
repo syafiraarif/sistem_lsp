@@ -72,9 +72,59 @@ const getJadwalKomiteTeknis = async (req, res) => {
   return getJadwalByJenisTugas(req, res, "komite_teknis");
 };
 
+const { ProfileAsesor, User } = models;
+
+const getListAsesor = async (req, res) => {
+  try {
+    const data = await ProfileAsesor.findAll({
+      where: {
+        status_asesor: "aktif",
+      },
+      include: [
+        {
+          model: User,
+          as: "user",
+          required: true,
+          where: {
+            status_user: "aktif",
+          },
+          attributes: [
+            "id_user",
+            "username",
+            "email",
+            "no_hp",
+          ],
+        },
+      ],
+      attributes: [
+        "id_user",
+        "nama_lengkap",
+        "gelar_depan",
+        "gelar_belakang",
+        "no_reg_asesor",
+        "no_lisensi",
+      ],
+      order: [["nama_lengkap", "ASC"]],
+    });
+
+    return res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 module.exports = {
   getJadwalSaya,
   getJadwalUjiKompetensi,
   getJadwalVerifikasiTuk,
   getJadwalKomiteTeknis,
+  getListAsesor,
 };
