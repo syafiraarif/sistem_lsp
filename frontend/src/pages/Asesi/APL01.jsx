@@ -166,14 +166,18 @@ if (existingApl01) {
         setTanggalDokumen({});
       }
     } catch (err) {
-      console.error("GET APL01 ERROR:", err);
 
-      setApl01(null);
-      setSelectedPersyaratan([]);
-      setDokumenTambahan({});
-      setNomorDokumen({});
-      setTanggalDokumen({});
-    }
+  // 404 = APL01 memang belum dibuat, jadi tidak perlu dianggap error
+  if (err.response?.status !== 404) {
+    console.error("GET APL01 ERROR:", err);
+  }
+
+  setApl01(null);
+  setSelectedPersyaratan([]);
+  setDokumenTambahan({});
+  setNomorDokumen({});
+  setTanggalDokumen({});
+}
   } catch (err) {
     console.error("GET FORM APL01 ERROR:", err);
 
@@ -459,24 +463,24 @@ if (existingApl01) {
   };
 
   const createAPL01 = async () => {
-    const payload = {
-        id_peserta: Number(id_peserta),
-        tujuan_asesmen: tujuan,
-        tujuan_lainnya: tujuan === "lainnya" ? tujuanLainnya : null,
-    };
+  const payload = {
+    id_peserta: Number(id_peserta),
+    tujuan_asesmen: tujuan,
+    tujuan_lainnya: tujuan === "lainnya" ? tujuanLainnya : null,
+  };
 
-    const res = await axios.post(
-        ENDPOINT.createApl01,
-        payload,
-        {
-            headers:getHeaders()
-        }
-    );
+  const res = await axios.post(
+    ENDPOINT.createApl01,
+    payload,
+    {
+      headers: getHeaders(),
+    }
+  );
 
-    console.log("RES DATA =", res.data);
+  console.log("RES DATA =", res.data);
 
-    return res.data;
-}
+  return res.data.data;
+};
 
   const uploadDokumen = async (id_apl01) => { 
 

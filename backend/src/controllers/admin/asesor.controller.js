@@ -86,7 +86,7 @@ exports.downloadTemplate = async (req, res) => {
       kota: "Yogyakarta",
       kecamatan: "Gondokusuman",
       kelurahan: "Terban",
-      kode_pos_domisili: "55223",
+      kode_pos: "55223",
       bidang_keahlian: "Informatika",
       no_reg_asesor: "REG123456",
       no_lisensi: "LSI789012",
