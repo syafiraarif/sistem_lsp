@@ -305,9 +305,15 @@ router.delete(
   frIa03KomiteController.deletePertanyaan
 );
 
-router.get("/fr-ia03/komite/:id", frIa03KomiteController.getByFr);
+router.get(
+  "/fr-ia03/komite/:id_jadwal",
+  frIa03KomiteController.getByFr
+);
 
-router.get("/fr-ia03/komite/:id/pdf", frIa03KomiteController.downloadPdf);
+router.get(
+  "/fr-ia03/komite/:id_jadwal/pdf",
+  frIa03KomiteController.downloadPdf
+);
 
 /* ===================================================
    FR.IA.03 - ASESOR PENGUJI

@@ -21,6 +21,7 @@ const defaultPetunjuk = [
 
 const defaultKelompok = [
   {
+    id_kelompok:null,
     kelompok_pekerjaan: "Kelompok Pekerjaan",
     units: [
       {
@@ -33,10 +34,12 @@ const defaultKelompok = [
       },
     ],
     skenario_tugas: "",
+    langkah_kerja:"",
     perlengkapan_peralatan: "",
     waktu: "",
   },
   {
+    id_kelompok:null,
     kelompok_pekerjaan: "Kelompok Pekerjaan Instalasi Jaringan",
     units: [
       {
@@ -49,6 +52,7 @@ const defaultKelompok = [
       },
     ],
     skenario_tugas: "",
+    langkah_kerja:"",
     perlengkapan_peralatan: "",
     waktu: "",
   },
@@ -68,6 +72,7 @@ export default function FRIA02() {
   const [form, setForm] = useState({
   nama_asesor: getDisplayName(),
   nama_asesi: "",
+  id_asesi: null,
   tanggal: "",
 
   petunjuk: defaultPetunjuk,
@@ -85,15 +90,17 @@ export default function FRIA02() {
   },
 
   penyusun: [
-    {
-      nama: "",
-      nomor_met: "",
-      ttd: "",
-    },
-  ],
+  {
+    id_user: "",
+    nama: "",
+    nomor_met: "",
+    ttd: "",
+  },
+],
 
   validator: [
     {
+      id_user: "",
       nama: "",
       nomor_met: "",
       ttd: "",
@@ -137,14 +144,55 @@ export default function FRIA02() {
         });
 
         setJadwal(found?.jadwal || found || null);
-        const asesorRes = await api.get("/asesor/list-asesor");
 
-        setListAsesor(
-          Array.isArray(asesorRes.data?.data)
-            ? asesorRes.data.data
-            : []
-        );
-        console.log("ASESOR", asesorRes.data);
+const asesorRes = await api.get("/asesor/list-asesor");
+
+setListAsesor(
+  Array.isArray(asesorRes.data?.data)
+    ? asesorRes.data.data
+    : []
+);
+
+console.log("ASESOR", asesorRes.data);
+
+// =============================
+// Ambil data FR.IA.02
+// =============================
+const fria02Res = await api.get("/asesor/fr-ia02", {
+  params: {
+    id_jadwal: jadwalId,
+  },
+});
+
+console.log("FRIA02", fria02Res.data);
+
+if (fria02Res.data.generated) {
+  const kelompok = fria02Res.data.detail.map((item) => ({
+    id_kelompok: item.id_kelompok,
+    kelompok_pekerjaan: item.nama_kelompok,
+
+    // pakai unit dari backend kalau ada
+    units: item.units?.length
+      ? item.units
+      : [
+          {
+            kode_unit: item.kode_unit || "",
+            judul_unit: item.judul_unit || "",
+          },
+        ],
+
+    skenario_tugas: item.skenario || "",
+    langkah_kerja: item.langkah_kerja || "",
+    perlengkapan_peralatan: item.peralatan || "",
+    waktu: item.durasi || "",
+  }));
+
+  setForm((prev) => ({
+    ...prev,
+    kelompok,
+  }));
+}
+
       } catch (err) {
         console.error(err);
         alert(err.response?.data?.message || "Gagal memuat data FR.IA.02");
@@ -159,10 +207,64 @@ export default function FRIA02() {
   const skema = getSkema(jadwal);
   const tuk = getTuk(jadwal);
 
-  const handleSave = () => {
-    localStorage.setItem(localStorageKey, JSON.stringify(form));
-    alert("FR.IA.02 berhasil disimpan sementara di browser");
-  };
+  const handleSave = async () => {
+  try {
+    console.log("FORM KELOMPOK", JSON.stringify(form.kelompok, null, 2));
+    const payload = {
+      id_jadwal: Number(jadwalId),
+      id_asesi: form.id_asesi,
+      tanggal: form.tanggal,
+      details: form.kelompok.flatMap((kelompok) =>
+  kelompok.units.map((unit, index) => ({
+    id_kelompok: kelompok.id_kelompok,
+
+    kode_unit: unit.kode_unit,
+
+    judul_unit: unit.judul_unit,
+
+    urutan: index + 1,
+
+    skenario: kelompok.skenario_tugas,
+
+    langkah_kerja: kelompok.langkah_kerja,
+
+    peralatan: kelompok.perlengkapan_peralatan,
+
+    durasi: kelompok.waktu,
+  }))
+),
+      validators: [
+    ...form.penyusun.map((item, index) => ({
+        id_asesor: item.id_user,
+        peran: "penyusun",
+        urutan: index + 1,
+    })),
+
+    ...form.validator.map((item, index) => ({
+        id_asesor: item.id_user,
+        peran: "validator",
+        urutan: index + 1,
+    })),
+],
+    };
+
+    console.log(payload);
+    console.log("PAYLOAD", payload);
+    await api.post("/asesor/fr-ia02", payload);
+
+    alert("FR.IA.02 berhasil disimpan");
+  } catch (err) {
+  console.error(err);
+
+  console.log("ERROR BACKEND", err.response?.data);
+
+  alert(
+    err.response?.data?.error ||
+    err.response?.data?.message ||
+    "Gagal menyimpan"
+  );
+}
+};
 
   const handlePrint = () => {
     window.print();
@@ -259,6 +361,7 @@ export default function FRIA02() {
       kelompok: [
         ...prev.kelompok,
         {
+          id_kelompok:null,
           kelompok_pekerjaan: "Kelompok Pekerjaan",
           units: [
             {
@@ -267,6 +370,7 @@ export default function FRIA02() {
             },
           ],
           skenario_tugas: "",
+          langkah_kerja:"",
           perlengkapan_peralatan: "",
           waktu: "",
         },
@@ -315,6 +419,7 @@ const addPenyusun = () => {
     penyusun: [
       ...prev.penyusun,
       {
+        id_user: "",
         nama: "",
         nomor_met: "",
         ttd: "",
@@ -329,6 +434,7 @@ const addValidator = () => {
     validator: [
       ...prev.validator,
       {
+        id_user: "",
         nama: "",
         nomor_met: "",
         ttd: "",
@@ -676,6 +782,15 @@ const removeValidator = (index) => {
                 />
 
                 <InputTable
+                    title="Langkah Kerja"
+                    value={kelompok.langkah_kerja || ""}
+                    onChange={(value) =>
+                      updateKelompok(kelompokIndex, "langkah_kerja", value)
+                    }
+                    placeholder="Tuliskan langkah kerja..."
+                  />
+
+                <InputTable
                   title="Perlengkapan dan Peralatan"
                   value={kelompok.perlengkapan_peralatan}
                   onChange={(value) =>
@@ -959,14 +1074,16 @@ const removeValidator = (index) => {
         <td className="border border-black px-2">
 
           <select
-            value={item.nama}
-            onChange={(e)=>
-              updatePenyusun(
-                index,
-                "nama",
-                e.target.value
-              )
-            }
+            value={item.id_user}
+            onChange={(e) => {
+    const asesor = listAsesor.find(
+        (a) => String(a.id_user) === e.target.value
+    );
+
+    updatePenyusun(index, "id_user", e.target.value);
+    updatePenyusun(index, "nama", asesor?.nama_lengkap || "");
+    updatePenyusun(index, "nomor_met", asesor?.nomor_met || "");
+}}
             className="w-full bg-transparent outline-none"
           >
 
@@ -976,11 +1093,11 @@ const removeValidator = (index) => {
 
             {listAsesor.map((asesor)=>(
               <option
-                key={asesor.id_user}
-                value={asesor.nama_lengkap}
-              >
-                {asesor.nama_lengkap}
-              </option>
+    key={asesor.id_user}
+    value={asesor.id_user}
+>
+    {asesor.nama_lengkap}
+</option>
             ))}
 
           </select>
@@ -1041,14 +1158,16 @@ const removeValidator = (index) => {
         <td className="border border-black px-2">
 
           <select
-            value={item.nama}
-            onChange={(e)=>
-              updateValidator(
-                index,
-                "nama",
-                e.target.value
-              )
-            }
+            value={item.id_user}
+            onChange={(e) => {
+    const asesor = listAsesor.find(
+        (a) => String(a.id_user) === e.target.value
+    );
+
+    updateValidator(index, "id_user", e.target.value);
+    updateValidator(index, "nama", asesor?.nama_lengkap || "");
+    updateValidator(index, "nomor_met", asesor?.nomor_met || "");
+}}
             className="w-full bg-transparent outline-none"
           >
 
@@ -1058,11 +1177,11 @@ const removeValidator = (index) => {
 
             {listAsesor.map((asesor)=>(
               <option
-                key={asesor.id_user}
-                value={asesor.nama_lengkap}
-              >
-                {asesor.nama_lengkap}
-              </option>
+    key={asesor.id_user}
+    value={asesor.id_user}
+>
+    {asesor.nama_lengkap}
+</option>
             ))}
 
           </select>

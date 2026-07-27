@@ -2,6 +2,7 @@ const {
 FrIa02,
 FrIa02Detail,
 FrIa02Validator,
+FrIa03,   
 Jadwal,
 JadwalAsesor,
 Skema,
@@ -216,41 +217,62 @@ created_by:assessorId
 if(details.length){
 
 await FrIa02Detail.bulkCreate(
-details.map(d=>({
+  details.map((d) => ({
+    id_fr_ia_02: fr.id_fr_ia_02,
+    id_kelompok: d.id_kelompok,
 
-id_fr_ia_02:fr.id_fr_ia_02,
+    kode_unit: d.kode_unit,
+    judul_unit: d.judul_unit,
+    urutan: d.urutan,
 
-id_kelompok:d.id_kelompok,
-
-skenario:d.skenario,
-
-langkah_kerja:d.langkah_kerja,
-
-peralatan:d.peralatan,
-
-durasi:d.durasi
-
-}))
+    skenario: d.skenario,
+    langkah_kerja: d.langkah_kerja,   // tetap ada
+    peralatan: d.peralatan,
+    durasi: d.durasi,
+  }))
 );
 
 }
 
-if(validators.length){
+if (validators.length) {
 
-await FrIa02Validator.bulkCreate(
-validators.map(v=>({
+    await FrIa02Validator.bulkCreate(
+        validators.map(v => ({
+            id_fr_ia_02: fr.id_fr_ia_02,
+            id_asesor: v.id_asesor,
+            peran: v.peran,
+            urutan: v.urutan
+        }))
+    );
 
-id_fr_ia_02:fr.id_fr_ia_02,
+}
 
-id_asesor:v.id_asesor,
+// =============================
+// Buat Header FR.IA.03 Otomatis
+// =============================
 
-peran:v.peran,
+const existingFrIa03 = await FrIa03.findOne({
+    where: {
+        id_jadwal
+    }
+});
 
-urutan:v.urutan
+if (!existingFrIa03) {
+    try {
+        await FrIa03.create({
+            id_jadwal,
+            id_skema: jadwal.id_skema,
+            id_tuk: jadwal.id_tuk,
+            id_asesor: assessorId,
+            tanggal,
+            created_by: assessorId
+        });
 
-}))
-);
-
+        console.log("FRIA03 BERHASIL DIBUAT");
+    } catch (err) {
+        console.error("GAGAL CREATE FRIA03");
+        console.error(err);
+    }
 }
 
 res.json(fr);

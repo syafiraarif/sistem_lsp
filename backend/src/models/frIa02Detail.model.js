@@ -5,27 +5,41 @@ const FrIa02Detail = sequelize.define("fr_ia_02_detail", {
   id_detail: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true
+    autoIncrement: true,
   },
 
   id_fr_ia_02: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
   },
 
   id_kelompok: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+  },
+
+  kode_unit: {
+    type: DataTypes.STRING,
+  },
+
+  judul_unit: {
+    type: DataTypes.TEXT,
+  },
+
+  urutan: {
+    type: DataTypes.INTEGER,
   },
 
   skenario: DataTypes.TEXT,
-  langkah_kerja: DataTypes.TEXT,
-  peralatan: DataTypes.TEXT,
-  durasi: DataTypes.INTEGER
 
+  langkah_kerja: DataTypes.TEXT,
+
+  peralatan: DataTypes.TEXT,
+
+  durasi: DataTypes.INTEGER,
 }, {
   tableName: "fr_ia_02_detail",
-  timestamps: false
+  timestamps: false,
 });
 
 module.exports = FrIa02Detail;

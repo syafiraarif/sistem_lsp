@@ -19,23 +19,28 @@ exports.getForm = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const data = await FrIa03.findOne({
-      where: { id_fr_ia_03: id },
-      include: [
+const data = await FrIa03.findByPk(id, {
+    include: [
         {
-          model: FrIa03Pertanyaan,
-          as: "pertanyaan",
-          include: [
-            { model: UnitKompetensi, as: "unit" },
-            { model: FrIa03Jawaban, as: "jawaban" }
-          ]
+            model: FrIa03Pertanyaan,
+            as: "pertanyaan",
+            include: [
+                {
+                    model: UnitKompetensi,
+                    as: "unit"
+                },
+                {
+                    model: FrIa03Jawaban,
+                    as: "jawaban"
+                }
+            ]
         },
         { model: ProfileAsesor, as: "asesor" },
         { model: ProfileAsesi, as: "asesi" },
         { model: Skema, as: "skema" },
         { model: Tuk, as: "tuk" }
-      ]
-    });
+    ]
+});
 
     if (!data) {
       return res.status(404).json({ message: "Data FR.IA.03 tidak ditemukan" });
@@ -101,16 +106,20 @@ exports.downloadPdf = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Ambil data FR.IA.03 beserta pertanyaan dan jawaban
-    const data = await FrIa03.findOne({
-      where: { id_fr_ia_03: id },
+    const data = await FrIa03.findByPk(id, {
       include: [
         {
           model: FrIa03Pertanyaan,
           as: "pertanyaan",
           include: [
-            { model: UnitKompetensi, as: "unit" },
-            { model: FrIa03Jawaban, as: "jawaban" }
+            {
+              model: UnitKompetensi,
+              as: "unit"
+            },
+            {
+              model: FrIa03Jawaban,
+              as: "jawaban"
+            }
           ]
         },
         { model: ProfileAsesor, as: "asesor" },

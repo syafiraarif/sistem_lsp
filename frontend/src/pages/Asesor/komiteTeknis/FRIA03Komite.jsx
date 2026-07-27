@@ -19,12 +19,7 @@ export default function FRIA03Komite() {
   const params = useParams();
   const navigate = useNavigate();
 
-  const idFrIa03 =
-    params.id_fr_ia_03 ||
-    params.idFrIa03 ||
-    params.id ||
-    params.id_jadwal ||
-    params.idJadwal;
+  const { id_jadwal } = useParams();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,19 +38,18 @@ export default function FRIA03Komite() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idFrIa03]);
+}, [id_jadwal]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      if (!idFrIa03) {
-        Swal.fire("Gagal", "ID FR.IA.03 tidak ditemukan di URL", "error");
+      if (!id_jadwal) {
+        Swal.fire("Gagal", "ID Jadwal tidak ditemukan di URL", "error");
         return;
       }
 
-      const res = await api.get(`/asesor/fr-ia03/komite/${idFrIa03}`);
+      const res = await api.get(`/asesor/fr-ia03/komite/${id_jadwal}`);
       const payload = res.data?.data || res.data || null;
 
       setData(payload);
@@ -152,10 +146,10 @@ export default function FRIA03Komite() {
       setSaving(true);
 
       const payload = {
-        id_fr_ia_03: idFrIa03,
+        id_jadwal,
         id_unit: Number(form.id_unit),
         pertanyaan: form.pertanyaan,
-        urutan: Number(form.urutan || pertanyaanList.length + 1),
+        urutan: Number(form.urutan)
       };
 
       if (editingPertanyaan) {
@@ -235,8 +229,7 @@ export default function FRIA03Komite() {
     if (!idFrIa03) return;
 
     window.open(
-      `${api.defaults.baseURL}/asesor/fr-ia03/komite/${idFrIa03}/pdf`,
-      "_blank"
+    `${api.defaults.baseURL}/asesor/fr-ia03/komite/${id_jadwal}/pdf`
     );
   };
 

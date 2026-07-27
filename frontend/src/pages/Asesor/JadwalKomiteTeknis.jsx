@@ -397,7 +397,7 @@ function JadwalKomiteCard({ item, index }) {
             <ActionButton
               icon={<FileQuestion size={16} />}
               label="FR.IA.03"
-              onClick={() => goTo(`/asesor/komite-teknis/${idJadwal}/fr-ia03`)}
+              onClick={() =>  goTo(`/asesor/komite-teknis/${idJadwal}/fr-ia03`)}
               disabled={!idJadwal}
             />
 

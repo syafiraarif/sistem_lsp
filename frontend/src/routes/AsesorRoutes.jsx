@@ -16,6 +16,9 @@ import PesertaJadwalAsesor from "../pages/Asesor/PesertaJadwalAsesor";
 import FRIA02 from "../pages/Asesor/komiteTeknis/FRIA02";
 import FRIA05 from "../pages/Asesor/komiteTeknis/FRIA05";
 
+import FRIA03Komite from "../pages/Asesor/komiteTeknis/FRIA03Komite";
+import FRIA03Asesor from "../pages/Asesor/FRIA03Asesor";
+
 export default function AsesorRoutes() {
   return (
     <Routes>
@@ -59,6 +62,10 @@ export default function AsesorRoutes() {
       {/* Route cadangan kalau tombol mengarah ke /asesor/mkva/jadwal/:id_jadwal */}
       <Route path="mkva/jadwal/:id_jadwal" element={<IsiMKVA />} />
 
+      <Route path="komite-teknis/:id_jadwal/fr-ia03" element={<FRIA03Komite />}/>
+
+      <Route path="fr-ia03/asesor/:id" element={<FRIA03Asesor />}/>
+      
       {/* Route cadangan kalau URL /asesor/mkva/jadwal/:id_jadwal/isi */}
       <Route path="mkva/jadwal/:id_jadwal/isi" element={<IsiMKVA />} />
 

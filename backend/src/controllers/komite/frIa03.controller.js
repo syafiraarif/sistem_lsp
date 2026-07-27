@@ -1,7 +1,10 @@
+
+
 const FrIa03 = require("../../models/frIa03.model");
 const FrIa03Pertanyaan = require("../../models/frIa03Pertanyaan.model");
 const UnitKompetensi = require("../../models/unitKompetensi.model");
 const PDFDocument = require("pdfkit");
+const Skema = require("../../models/skema.model");
 
 // ===============================
 // CREATE HEADER (OPTIONAL)
@@ -13,14 +16,26 @@ exports.createHeader = async (req, res) => {
       id_skema,
       id_tuk,
       id_asesor,
-      id_asesi,
       tanggal
     } = req.body;
 
     // Validasi data inputan
-    if (!id_jadwal || !id_skema || !id_tuk || !id_asesor || !id_asesi || !tanggal) {
+    if (!id_jadwal || !id_skema || !id_tuk || !id_asesor || !tanggal) {
       return res.status(400).json({ message: "Semua field wajib diisi" });
     }
+
+    const existing = await FrIa03.findOne({
+    where:{
+        id_jadwal,
+    }
+});
+
+      if (existing) {
+        return res.status(200).json({
+          message: "Header sudah ada",
+          data: existing,
+        });
+      }
 
     // Membuat header FR.IA.03
     const data = await FrIa03.create({
@@ -28,7 +43,6 @@ exports.createHeader = async (req, res) => {
       id_skema,
       id_tuk,
       id_asesor,
-      id_asesi,
       tanggal
     });
 
@@ -45,24 +59,51 @@ exports.createHeader = async (req, res) => {
 // ===============================
 exports.createPertanyaan = async (req, res) => {
   try {
-    const { id_fr_ia_03, id_unit, pertanyaan, urutan } = req.body;
 
-    // Validasi data inputan
-    if (!id_fr_ia_03 || !id_unit || !pertanyaan || !urutan) {
-      return res.status(400).json({ message: "Semua field wajib diisi" });
-    }
-
-    const data = await FrIa03Pertanyaan.create({
-      id_fr_ia_03,
+    const {
+      id_jadwal,
       id_unit,
       pertanyaan,
       urutan
+    } = req.body;
+
+    if (!id_jadwal || !id_unit || !pertanyaan || !urutan) {
+      return res.status(400).json({
+        message: "Semua field wajib diisi",
+      });
+    }
+
+    const header = await FrIa03.findOne({
+      where: {
+        id_jadwal,
+      },
     });
 
-    res.status(201).json({ message: "Pertanyaan berhasil dibuat", data });
+    if (!header) {
+      return res.status(404).json({
+        message: "Header FR.IA.03 belum dibuat",
+      });
+    }
+
+    const data = await FrIa03Pertanyaan.create({
+      id_fr_ia_03: header.id_fr_ia_03,
+      id_unit,
+      pertanyaan,
+      urutan,
+    });
+
+    res.status(201).json({
+      message: "Pertanyaan berhasil dibuat",
+      data,
+    });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Gagal membuat pertanyaan", error: err.message });
+
+    res.status(500).json({
+      message: "Gagal membuat pertanyaan",
+      error: err.message,
+    });
   }
 };
 
@@ -73,27 +114,34 @@ exports.createPertanyaan = async (req, res) => {
 exports.updatePertanyaan = async (req, res) => {
   try {
     const { id } = req.params;
-    const { pertanyaan } = req.body;
+    const { id_unit, pertanyaan, urutan } = req.body;
 
-    // Validasi inputan
-    if (!pertanyaan) {
-      return res.status(400).json({ message: "Pertanyaan tidak boleh kosong" });
+    const soal = await FrIa03Pertanyaan.findByPk(id);
+
+    if (!soal) {
+      return res.status(404).json({
+        message: "Pertanyaan tidak ditemukan",
+      });
     }
 
-    // Update pertanyaan berdasarkan ID
-    const updated = await FrIa03Pertanyaan.update(
-      { pertanyaan },
-      { where: { id_pertanyaan: id } }
-    );
+    await soal.update({
+      id_unit,
+      pertanyaan,
+      urutan,
+    });
 
-    if (updated[0] === 0) {
-      return res.status(404).json({ message: "Pertanyaan tidak ditemukan" });
-    }
+    res.json({
+      message: "Pertanyaan berhasil diperbarui",
+      data: soal,
+    });
 
-    res.json({ message: "Pertanyaan berhasil diupdate" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Gagal mengupdate pertanyaan", error: err.message });
+
+    res.status(500).json({
+      message: "Gagal mengupdate pertanyaan",
+      error: err.message,
+    });
   }
 };
 
@@ -126,21 +174,33 @@ exports.deletePertanyaan = async (req, res) => {
 // GET PERTANYAAN (UNTUK EDIT)
 // ===============================
 exports.getByFr = async (req, res) => {
+  console.log("GET FRIA03 KOMITE");
+  console.log(req.params);
   try {
-    const { id } = req.params;
+    const { id_jadwal } = req.params;
+    const header = await FrIa03.findAll({
+    raw: true
+});
+
+console.table(header);
 
     const data = await FrIa03.findOne({
-      where: { id_fr_ia_03: id },
+  where: {
+    id_jadwal,
+  },
+  include: [
+    {
+      model: FrIa03Pertanyaan,
+      as: "pertanyaan",
       include: [
         {
-          model: FrIa03Pertanyaan,
-          as: "pertanyaan",
-          include: [
-            { model: UnitKompetensi, as: "unit" }
-          ]
-        }
-      ]
-    });
+          model: UnitKompetensi,
+          as: "unit",
+        },
+      ],
+    },
+  ],
+});
 
     if (!data) {
       return res.status(404).json({ message: "Data FR.IA.03 tidak ditemukan" });
@@ -159,21 +219,29 @@ exports.getByFr = async (req, res) => {
 // ===============================
 exports.downloadPdf = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id_jadwal } = req.params;
 
     const data = await FrIa03.findOne({
-      where: { id_fr_ia_03: id },
+  where: {
+    id_jadwal,
+  },
+  include: [
+    {
+      model: FrIa03Pertanyaan,
+      as: "pertanyaan",
       include: [
         {
-          model: FrIa03Pertanyaan,
-          as: "pertanyaan",
-          include: [
-            { model: UnitKompetensi, as: "unit" }
-          ]
+          model: UnitKompetensi,
+          as: "unit",
         },
-        { model: Skema, as: "skema" }
-      ]
-    });
+      ],
+    },
+    {
+      model: Skema,
+      as: "skema",
+    },
+  ],
+});
 
     if (!data) {
       return res.status(404).json({ message: "Data FR.IA.03 tidak ditemukan" });
@@ -184,7 +252,7 @@ exports.downloadPdf = async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=FR-IA-03-Komite-${id}.pdf`
+      `attachment; filename=FR-IA-03-Komite-${id_jadwal}.pdf`
     );
 
     doc.pipe(res);

@@ -40,8 +40,8 @@ export default function FRIA03Asesor() {
     try {
       setLoading(true);
 
-      if (!idFrIa03) {
-        Swal.fire("Gagal", "ID FR.IA.03 tidak ditemukan di URL", "error");
+      if (!id_jadwal) {
+        Swal.fire("Gagal", "ID Jadwal tidak ditemukan di URL", "error");
         return;
       }
 
