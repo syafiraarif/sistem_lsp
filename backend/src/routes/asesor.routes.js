@@ -286,6 +286,11 @@ router.get("/fr-ia02/:id/pdf", frIa02Controller.downloadPdf);
 
 router.delete("/fr-ia02/:id", frIa02Controller.deleteFrIa02);
 
+router.get(
+  "/fr-ia02/unit/:id_jadwal",
+  frIa02Controller.getUnitBySkema
+);
+
 /* ===================================================
    FR.IA.03 - KOMITE TEKNIS
 =================================================== */

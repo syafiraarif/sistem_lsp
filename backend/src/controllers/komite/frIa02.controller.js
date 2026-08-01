@@ -12,7 +12,11 @@ ProfileAsesor,
 ProfileAsesi
 }=require("../../models");
 
-const PDFDocument=require("pdfkit");
+const PDFDocument = require("pdfkit");
+const {
+  UnitKompetensi,
+  SkemaUnit,
+} = require("../../models");
 
 exports.getTugasKomite=async(req,res)=>{
 try{
@@ -68,33 +72,63 @@ id_asesor:assessorId
 },
 
 include:[
+    {
+        model:FrIa02Detail,
+        as:"detail",
+        include:[
+            {
+                model:KelompokPekerjaan,
+                as:"kelompok"
+            }
+        ]
+    },
 
-{
-model:FrIa02Detail,
-as:"detail",
-include:[{
-model:KelompokPekerjaan,
-as:"kelompok"
-}]
-},
+    {
+        model:FrIa02Validator,
+        as:"validator",
+        include:[
+            {
+                model:ProfileAsesor,
+                as:"asesor"
+            }
+        ]
+    },
 
-{
-model:FrIa02Validator,
-as:"validator",
-include:[{
-model:ProfileAsesor,
-as:"asesor"
-}]
-}
+    {
+        model:ProfileAsesor,
+        as:"asesor",
+        attributes:[
+            "id_user",
+            "nama_lengkap",
+            "no_reg_asesor",
+            "ttd_path"
+        ]
+    },
 
+    {
+        model:ProfileAsesi,
+        as:"asesi",
+        attributes:[
+            "id_user",
+            "nama_lengkap",
+            "ttd_path"
+        ]
+    }
 ]
 
 });
 
-if(existing){
+if (existing) {
+  return res.json({
+    ...existing.toJSON(),
 
-return res.json(existing);
+    nama_asesor: existing.asesor?.nama_lengkap,
+    no_reg_asesor: existing.asesor?.no_reg_asesor,
+    ttd_asesor: existing.asesor?.ttd_path,
 
+    nama_asesi: existing.asesi?.nama_lengkap,
+    ttd_asesi: existing.asesi?.ttd_path,
+  });
 }
 
 const jadwal=
@@ -111,6 +145,7 @@ message:"jadwal tidak ditemukan"
 const kelompok=
 await KelompokPekerjaan.findAll({
 
+
 where:{
 id_skema:jadwal.id_skema
 },
@@ -120,6 +155,13 @@ order:[
 ]
 
 });
+
+console.log("ID SKEMA :", jadwal.id_skema);
+
+console.log(
+    "KELOMPOK",
+    kelompok.map(x => x.toJSON())
+);
 
 res.json({
 
@@ -153,7 +195,49 @@ res.status(500).json({error:err.message});
 
 };
 
+exports.getUnitBySkema = async (req, res) => {
+  try {
+    const { id_jadwal } = req.params;
 
+    const jadwal = await Jadwal.findByPk(id_jadwal);
+
+    if (!jadwal) {
+      return res.status(404).json({
+        message: "Jadwal tidak ditemukan",
+      });
+    }
+
+    const mapping = await SkemaUnit.findAll({
+      where: {
+        id_skema: jadwal.id_skema,
+      },
+      include: [
+        {
+          model: UnitKompetensi,
+          as: "unit",
+        },
+      ],
+      order: [["urutan", "ASC"]],
+    });
+
+    const unit = mapping.map((item) => ({
+      id_unit: item.unit.id_unit,
+      kode_unit: item.unit.kode_unit,
+      judul_unit: item.unit.judul_unit,
+      id_kelompok: item.id_kelompok,
+      urutan: item.urutan,
+    }));
+
+    res.json(unit);
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      error: err.message,
+    });
+  }
+};
 
 exports.createFrIa02=async(req,res)=>{
 try{
@@ -247,6 +331,7 @@ if (validators.length) {
 
 }
 
+
 // =============================
 // Buat Header FR.IA.03 Otomatis
 // =============================
@@ -264,6 +349,7 @@ if (!existingFrIa03) {
             id_skema: jadwal.id_skema,
             id_tuk: jadwal.id_tuk,
             id_asesor: assessorId,
+            id_asesi,
             tanggal,
             created_by: assessorId
         });
@@ -292,6 +378,7 @@ try{
 
 const id=req.params.id;
 
+console.log("UPDATE BODY", req.body);
 await FrIa02.update({
 
 id_asesi:req.body.id_asesi,
@@ -312,6 +399,11 @@ id_fr_ia_02:id
 
 );
 
+const cek = await FrIa02.findByPk(id);
+
+console.log("SETELAH UPDATE");
+console.log(cek.toJSON());
+
 await FrIa02Detail.destroy({
 
 where:{
@@ -331,21 +423,17 @@ id_fr_ia_02:id
 if(req.body.details?.length){
 
 await FrIa02Detail.bulkCreate(
-req.body.details.map(x=>({
-
-id_fr_ia_02:id,
-
-id_kelompok:x.id_kelompok,
-
-skenario:x.skenario,
-
-langkah_kerja:x.langkah_kerja,
-
-peralatan:x.peralatan,
-
-durasi:x.durasi
-
-}))
+  req.body.details.map((x) => ({
+    id_fr_ia_02: id,
+    id_kelompok: x.id_kelompok,
+    kode_unit: x.kode_unit,
+    judul_unit: x.judul_unit,
+    urutan: x.urutan,
+    skenario: x.skenario,
+    langkah_kerja: x.langkah_kerja,
+    peralatan: x.peralatan,
+    durasi: x.durasi,
+  }))
 );
 
 }

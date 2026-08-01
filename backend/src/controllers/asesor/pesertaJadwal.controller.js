@@ -253,6 +253,8 @@ const getPesertaByJadwal = async (req, res) => {
 
         user: plain.user || {},
         profileAsesi: plain.profileAsesi || {},
+
+ttd_path: plain.profileAsesi?.ttd_path || null,
       });
     }
 

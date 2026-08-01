@@ -96,14 +96,15 @@ const getListAsesor = async (req, res) => {
           ],
         },
       ],
-      attributes: [
-        "id_user",
-        "nama_lengkap",
-        "gelar_depan",
-        "gelar_belakang",
-        "no_reg_asesor",
-        "no_lisensi",
-      ],
+      attributes:[
+    "id_user",
+    "nama_lengkap",
+    "gelar_depan",
+    "gelar_belakang",
+    "no_reg_asesor",
+    "no_lisensi",
+    "ttd_path"
+],
       order: [["nama_lengkap", "ASC"]],
     });
 

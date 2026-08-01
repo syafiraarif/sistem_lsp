@@ -133,6 +133,12 @@ FrIa02.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
 Skema.hasMany(FrIa02, { foreignKey: "id_skema", as: "frIa02" });
 FrIa02.belongsTo(Tuk, { foreignKey: "id_tuk", as: "tuk" });
 Tuk.hasMany(FrIa02, { foreignKey: "id_tuk", as: "frIa02" });
+FrIa02.belongsTo(ProfileAsesor,{
+    foreignKey:"id_asesor",
+    targetKey:"id_user",
+    as:"asesor"
+});
+
 ProfileAsesor.hasMany(FrIa02, { foreignKey: "id_asesor", sourceKey: "id_user", as: "frIa02" });
 FrIa02.belongsTo(
 ProfileAsesi,
