@@ -171,6 +171,10 @@ FrIa03Pertanyaan.hasOne(FrIa03Jawaban, { foreignKey: "id_pertanyaan", as: "jawab
 FrIa03Jawaban.belongsTo(FrIa03Pertanyaan, { foreignKey: "id_pertanyaan", as: "pertanyaan" });
 FrIa03Pertanyaan.belongsTo(UnitKompetensi, { foreignKey: "id_unit", as: "unit" });
 UnitKompetensi.hasMany(FrIa03Pertanyaan, { foreignKey: "id_unit", as: "frIa03Pertanyaan" });
+KelompokPekerjaan.hasMany(SkemaUnit, {
+  foreignKey: "id_kelompok",
+  as: "skemaUnit"
+});
 FrIa03.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
 Jadwal.hasMany(FrIa03, { foreignKey: "id_jadwal", as: "frIa03" });
 FrIa03.belongsTo(Skema, { foreignKey: "id_skema", as: "skema" });
@@ -368,7 +372,13 @@ SkemaUnit.belongsTo(Skema, {
   as: "skema"
 });
 SkemaUnit.belongsTo(UnitKompetensi, { foreignKey: "id_unit", as: "unit" });
+
 UnitKompetensi.hasMany(SkemaUnit, { foreignKey: "id_unit", as: "skemaUnit" });
+
+SkemaUnit.belongsTo(KelompokPekerjaan, {
+  foreignKey: "id_kelompok",
+  as: "kelompok"
+});
 
 // 🔥 PERBAIKAN PENTING: Hubungkan Skema dan UnitKompetensi secara Many-to-Many
 Skema.belongsToMany(UnitKompetensi, { through: SkemaUnit, foreignKey: "id_skema", as: "unitKompetensiList" });

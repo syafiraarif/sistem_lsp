@@ -1,10 +1,14 @@
-
-
 const FrIa03 = require("../../models/frIa03.model");
 const FrIa03Pertanyaan = require("../../models/frIa03Pertanyaan.model");
 const UnitKompetensi = require("../../models/unitKompetensi.model");
-const PDFDocument = require("pdfkit");
+const puppeteer = require("puppeteer");
+
 const Skema = require("../../models/skema.model");
+const Tuk = require("../../models/tuk.model");
+const ProfileAsesor = require("../../models/profileAsesor.model");
+const ProfileAsesi = require("../../models/profileAsesi.model");
+const SkemaUnit = require("../../models/skemaUnit.model");
+const KelompokPekerjaan = require("../../models/kelompokPekerjaan.model");
 
 // ===============================
 // CREATE HEADER (OPTIONAL)
@@ -174,115 +178,115 @@ exports.deletePertanyaan = async (req, res) => {
 // GET PERTANYAAN (UNTUK EDIT)
 // ===============================
 exports.getByFr = async (req, res) => {
-  console.log("GET FRIA03 KOMITE");
-  console.log(req.params);
   try {
-    const { id_jadwal } = req.params;
-    const header = await FrIa03.findAll({
-    raw: true
-});
 
-console.table(header);
+    const { id_jadwal } = req.params;
 
     const data = await FrIa03.findOne({
-  where: {
-    id_jadwal,
-  },
+
+      where: {
+        id_jadwal,
+      },
+
+      include: [
+
+        {
+  model: FrIa03Pertanyaan,
+  as: "pertanyaan",
   include: [
     {
-      model: FrIa03Pertanyaan,
-      as: "pertanyaan",
+      model: UnitKompetensi,
+      as: "unit",
       include: [
         {
-          model: UnitKompetensi,
-          as: "unit",
+          model: SkemaUnit,
+          as: "skemaUnit",
+          include: [
+            {
+              model: KelompokPekerjaan,
+              as: "kelompok"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+},
+
+        {
+          model: Skema,
+          as: "skema",
         },
+
+        {
+          model: Tuk,
+          as: "tuk",
+        },
+
+        {
+          model: ProfileAsesor,
+          as: "asesor",
+          attributes: [
+            "id_user",
+            "nama_lengkap",
+            "no_reg_asesor",
+            "ttd_path",
+          ],
+        },
+
+        {
+          model: ProfileAsesi,
+          as: "asesi",
+          attributes: [
+            "id_user",
+            "nama_lengkap",
+            "ttd_path",
+          ],
+        },
+
       ],
-    },
-  ],
-});
+
+    });
+  
+    console.log(
+    JSON.stringify(data, null, 2)
+);
 
     if (!data) {
-      return res.status(404).json({ message: "Data FR.IA.03 tidak ditemukan" });
+      return res.status(404).json({
+        message: "Data FR.IA.03 tidak ditemukan",
+      });
     }
 
-    res.json(data);
+    return res.json({
+
+      ...data.toJSON(),
+
+      nama_asesor: data.asesor?.nama_lengkap,
+      no_reg_asesor: data.asesor?.no_reg_asesor,
+      ttd_asesor: data.asesor?.ttd_path,
+
+      nama_asesi: data.asesi?.nama_lengkap,
+      ttd_asesi: data.asesi?.ttd_path,
+
+    });
+
   } catch (err) {
+
     console.error(err);
-    res.status(500).json({ message: "Gagal mendapatkan pertanyaan", error: err.message });
+
+    res.status(500).json({
+      message: "Gagal mendapatkan data FR.IA.03",
+      error: err.message,
+    });
   }
 };
-
 
 // ===============================
 // DOWNLOAD PDF
 // ===============================
 exports.downloadPdf = async (req, res) => {
-  try {
-    const { id_jadwal } = req.params;
-
-    const data = await FrIa03.findOne({
-  where: {
-    id_jadwal,
-  },
-  include: [
-    {
-      model: FrIa03Pertanyaan,
-      as: "pertanyaan",
-      include: [
-        {
-          model: UnitKompetensi,
-          as: "unit",
-        },
-      ],
-    },
-    {
-      model: Skema,
-      as: "skema",
-    },
-  ],
-});
-
-    if (!data) {
-      return res.status(404).json({ message: "Data FR.IA.03 tidak ditemukan" });
-    }
-
-    const doc = new PDFDocument({ margin: 40 });
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=FR-IA-03-Komite-${id_jadwal}.pdf`
-    );
-
-    doc.pipe(res);
-
-    doc.fontSize(14).text("FR.IA.03 (KOMITE)", { align: "center" });
-    doc.text("PERTANYAAN OBSERVASI", { align: "center" });
-
-    doc.moveDown();
-    doc.text(`Skema: ${data?.skema?.judul_skema || "-"}`);
-
-    doc.moveDown();
-
-    let no = 1;
-
-    // Menambahkan pertanyaan
-    for (const p of data.pertanyaan) {
-      doc.moveDown();
-      doc.text(`${no}. ${p.pertanyaan}`);
-
-      if (p.unit) {
-        doc.text(`Unit: ${p.unit.kode_unit}`);
-      }
-
-      no++;
-    }
-
-    doc.end();
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Gagal mendownload PDF", error: err.message });
-  }
+  res.json({
+    message: "Download PDF berhasil dipanggil"
+  });
 };

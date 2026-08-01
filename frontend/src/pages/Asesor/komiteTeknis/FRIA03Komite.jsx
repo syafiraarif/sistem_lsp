@@ -1,6 +1,7 @@
 // frontend/src/pages/Asesor/komiteTeknis/FRIA03Komite.jsx
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useReactToPrint } from "react-to-print";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -20,12 +21,14 @@ export default function FRIA03Komite() {
   const navigate = useNavigate();
 
   const { id_jadwal } = useParams();
+  const printRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [data, setData] = useState(null);
   const [pertanyaanList, setPertanyaanList] = useState([]);
+  const [unitOptions, setUnitOptions] = useState([]);
 
   const [showModal, setShowModal] = useState(false);
   const [editingPertanyaan, setEditingPertanyaan] = useState(null);
@@ -51,9 +54,11 @@ export default function FRIA03Komite() {
 
       const res = await api.get(`/asesor/fr-ia03/komite/${id_jadwal}`);
       const payload = res.data?.data || res.data || null;
-
       setData(payload);
       setPertanyaanList(normalizePertanyaan(payload));
+      const unitRes = await api.get(`/asesor/fr-ia02/unit/${id_jadwal}`);
+      console.log(unitRes.data);
+      setUnitOptions(unitRes.data || []);
     } catch (err) {
       console.error(err);
       Swal.fire(
@@ -71,33 +76,11 @@ export default function FRIA03Komite() {
   const asesor = getAsesor(data);
   const asesi = getAsesi(data);
 
-  const unitOptions = useMemo(() => {
-    const list = [];
-
-    pertanyaanList.forEach((item) => {
-      const unit = item.unit || {};
-      const idUnit = item.id_unit || unit.id_unit;
-
-      if (!idUnit) return;
-
-      const exists = list.some((x) => Number(x.id_unit) === Number(idUnit));
-
-      if (!exists) {
-        list.push({
-          id_unit: idUnit,
-          kode_unit: getUnitKode(unit),
-          judul_unit: getUnitJudul(unit),
-        });
-      }
-    });
-
-    return list;
-  }, [pertanyaanList]);
 
   const openAdd = () => {
     setEditingPertanyaan(null);
     setForm({
-      id_unit: unitOptions[0]?.id_unit || "",
+      id_unit: unitOptions.length ? unitOptions[0].id_unit : "",
       pertanyaan: "",
       urutan: pertanyaanList.length + 1,
     });
@@ -225,44 +208,54 @@ export default function FRIA03Komite() {
     }
   };
 
-  const downloadPdf = () => {
-    if (!idFrIa03) return;
+const downloadPdf = useReactToPrint({
+  contentRef: printRef,
+  documentTitle: `FR-IA-03-${id_jadwal}`,
+  pageStyle: `
+    @page {
+      size:A4;
+      margin:10mm;
+    }
 
-    window.open(
-    `${api.defaults.baseURL}/asesor/fr-ia03/komite/${id_jadwal}/pdf`
-    );
-  };
+    body{
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  `,
+});
 
-  const printPage = () => {
-    window.print();
-  };
 
-  const kelompokMap = useMemo(() => {
-    const groups = {};
+const kelompokMap = useMemo(() => {
+  const groups = {};
 
-    pertanyaanList.forEach((item) => {
-      const kelompok =
-        item.unit?.kelompok_pekerjaan?.nama_kelompok ||
-        item.unit?.kelompok?.nama_kelompok ||
-        item.kelompok_pekerjaan ||
-        "Kelompok Pekerjaan";
+  unitOptions.forEach((unit) => {
+    const namaKelompok = unit.nama_kelompok || "Kelompok Pekerjaan";
 
-      if (!groups[kelompok]) {
-        groups[kelompok] = [];
-      }
+    if (!groups[namaKelompok]) {
+      groups[namaKelompok] = [];
+    }
 
-      groups[kelompok].push(item);
-    });
+    groups[namaKelompok].push(unit);
+  });
 
-    return groups;
-  }, [pertanyaanList]);
+  return groups;
+}, [unitOptions]);
 
   if (loading) {
     return <LoadingScreen title="Memuat FR.IA.03 Komite Teknis..." />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 py-6 print:bg-white print:py-0">
+    <div className="min-h-screen bg-slate-100 py-6">
+      <style>{`
+        @media print {
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; }
+          section { page-break-inside: avoid; }
+          thead { display: table-header-group; }
+          tfoot { display: table-footer-group; }
+        }
+      `}</style>
       <div className="mx-auto mb-5 flex w-[900px] justify-between print:hidden">
         <button
           type="button"
@@ -291,23 +284,32 @@ export default function FRIA03Komite() {
             <Download size={18} />
             Download PDF
           </button>
-
-          <button
-            type="button"
-            onClick={printPage}
-            className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50"
-          >
-            Cetak
-          </button>
         </div>
       </div>
 
-      <main className="mx-auto w-[900px] bg-white px-10 py-8 text-[14px] text-black shadow-lg print:w-full print:shadow-none print:px-8 print:py-6">
-        <h1 className="mb-6 text-[18px] font-bold">
-          FR.IA.03. PERTANYAAN UNTUK MENDUKUNG OBSERVASI
-        </h1>
+      <main
+      ref={printRef}
+      className="mx-auto w-[900px] bg-white px-10 py-8 shadow-lg text-[14px] text-black"
+      >
+        <div className="mb-5 border border-black">
+        <div className="border-b border-black py-2 text-center">
+          <h1 className="text-[18px] font-bold">
+            FR.IA.03
+          </h1>
 
-        <HeaderTable skema={skema} tuk={tuk} asesor={asesor} asesi={asesi} />
+          <p className="text-[15px] font-bold uppercase">
+            PERTANYAAN UNTUK MENDUKUNG OBSERVASI
+          </p>
+        </div>
+      </div>
+
+        <HeaderTable
+          skema={skema}
+          tuk={tuk}
+          asesor={asesor}
+          asesi={asesi}
+          tanggal={data?.tanggal}
+        />
 
         <section className="mt-5 border border-black">
           <div className="border-b border-black bg-gray-300 px-2 py-1 font-bold">
@@ -315,72 +317,80 @@ export default function FRIA03Komite() {
           </div>
 
           <ul className="list-disc space-y-1 px-8 py-3 text-[13px] leading-relaxed">
-            <li>
-              Formulir ini diisi oleh asesor kompetensi dapat sebelum, pada saat
-              atau setelah melakukan asesmen dengan metode observasi demonstrasi.
-            </li>
-            <li>
-              Pertanyaan dibuat untuk menggali dimensi kompetensi, batasan
-              variabel, dan aspek kritis sesuai skenario tugas praktik
-              demonstrasi.
-            </li>
-            <li>
-              Tanggapan dan pencapaian Ya/Tdk hanya diisi oleh asesor penguji.
-            </li>
+            <li>Formulir ini diisi oleh asesor kompetensi dapat sebelum, pada saat atau setelah melakukan asesmen dengan metode observasi demonstrasi.</li>
+
+            <li>Pertanyaan dibuat dengan tujuan untuk menggali, dapat berisi pertanyaan yang berkaitan dengan dimensi kompetensi, batasan variabel dan aspek kritis yang relevan dengan skenario tugas dan praktik demonstrasi.</li>
+
+            <li>Jika pertanyaan disampaikan sebelum asesmen dilakukan praktik demonstrasi, maka pertanyaan dibuat berkaitan dengan aspek K3L, SOP, penggunaan peralatan dan perlengkapan.</li>
+
+            <li>Jika setelah asesi melakukan praktik demonstrasi terdapat item pertanyaan pendukung observasi telah terpenuhi, maka pertanyaan tersebut tidak perlu ditanyakan lagi dan cukup memberi catatan bahwa sudah terpenuhi pada saat tugas praktik demonstrasi pada kolom tanggapan.</li>
+
+            <li>Jika pada saat observasi ada hal yang perlu dikonfirmasi sedang dalam instrumen daftar pertanyaan pendukung observasi tidak ada, maka asesor dapat memberikan pertanyaan dengan syarat pertanyaan harus berkaitan dengan tugas praktik demonstrasi. Jika dilakukan, asesor harus mencatat dalam instrumen pertanyaan pendukung observasi.</li>
+
+            <li>Tanggapan asesi ditulis pada kolom tanggapan.</li>
           </ul>
         </section>
 
-        <div className="my-5 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700 print:hidden">
-          Mode Komite Teknis: Anda hanya dapat menambah, mengubah, dan menghapus
-          pertanyaan. Kolom tanggapan dan pencapaian dikunci untuk asesor
-          penguji.
+        <div className="my-5 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
+          Mode Komite Teknis: Anda hanya dapat menambah, mengubah, dan menghapus pertanyaan. Kolom tanggapan dan pencapaian dikunci untuk asesor penguji.
         </div>
 
-        {Object.keys(kelompokMap).length === 0 ? (
+        {unitOptions.length === 0 ? (
           <EmptyState text="Belum ada pertanyaan FR.IA.03. Klik Tambah Pertanyaan untuk membuat pertanyaan." />
         ) : (
           Object.entries(kelompokMap).map(([kelompok, list], groupIndex) => (
-            <section key={kelompok} className="mb-5">
-              <UnitTable kelompok={kelompok} list={list} />
+            <section key={kelompok} className="mb-8">
+              <UnitTable
+                kelompok={kelompok}
+                list={list}
+              />
 
-              <table className="mt-4 w-full border-collapse border border-black">
+              <table className="w-full border-collapse border border-black text-[13px]">
                 <thead>
-                  <tr>
-                    <th className="border border-black px-2 py-2 text-center">
+                  <tr className="bg-gray-100 print:bg-white">
+                    <th className="border border-black px-3 py-2 text-center font-bold uppercase">
                       Pertanyaan
                     </th>
-                    <th
-                      colSpan="2"
-                      className="w-[120px] border border-black px-2 py-1 text-center"
-                    >
+
+                    <th colSpan="2" className="w-[120px] border border-black px-3 py-2 text-center font-bold">
                       Pencapaian
                     </th>
                   </tr>
 
-                  <tr>
-                    <th className="border border-black px-2 py-1"></th>
-                    <th className="w-[60px] border border-black px-2 py-1">
+                  <tr className="bg-gray-100 print:bg-white">
+                    <th className="border border-black"></th>
+
+                    <th className="border border-black py-2 text-center font-bold uppercase">
                       Ya
                     </th>
-                    <th className="w-[60px] border border-black px-2 py-1">
-                      Tdk
+
+                    <th className="border border-black py-2 text-center font-bold uppercase">
+                      Tidak
                     </th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {list.map((item, index) => (
+                  {pertanyaanList
+                    .filter(
+                      (item) =>
+                        item.unit?.skemaUnit?.[0]?.kelompok?.nama_kelompok === kelompok ||
+                        unitOptions.find(x => x.id_unit === item.id_unit)?.nama_kelompok === kelompok
+                    )
+                    .map((item, index) => (
                     <React.Fragment key={item.id_pertanyaan || index}>
-                      <tr>
-                        <td className="border border-black px-2 py-2 align-top">
+                      <tr className="print:bg-white hover:bg-gray-50">
+                        <td className="border border-black px-3 py-2">
                           <div className="flex items-start gap-2">
-                            <span className="font-bold">
-                              {index + 1 + groupIndex}.
+                            <span className="w-8 text-center font-bold">
+                              {index + 1}.
                             </span>
 
-                            <span className="flex-1">{item.pertanyaan}</span>
+                            <span className="flex-1 leading-6">
+                              {item.pertanyaan}
+                            </span>
 
-                            <div className="flex gap-2 print:hidden">
+                            <div className="ml-3 flex gap-2 print:hidden">
                               <button
                                 type="button"
                                 onClick={() => openEdit(item)}
@@ -400,25 +410,23 @@ export default function FRIA03Komite() {
                           </div>
                         </td>
 
-                        <td className="border border-black px-2 py-2 text-center">
-                          <input type="checkbox" disabled />
+                        <td className="border border-black py-3 text-center">
+                          <div className="mx-auto h-6 w-6 border border-black"></div>
                         </td>
 
-                        <td className="border border-black px-2 py-2 text-center">
-                          <input type="checkbox" disabled />
+                        <td className="border border-black py-3 text-center">
+                          <div className="mx-auto h-6 w-6 border border-black"></div>
                         </td>
                       </tr>
 
                       <tr>
-                        <td
-                          colSpan="3"
-                          className="h-[70px] border border-black px-2 py-2 align-top"
-                        >
-                          <b>Tanggapan:</b>
-                          <div className="mt-2 text-xs italic text-slate-500 print:hidden">
-                            Tanggapan hanya dapat diisi oleh asesor penguji.
-                          </div>
-                        </td>
+                        <td colSpan="3" className="h-[140px] border border-black px-3 py-3 align-top">
+                        <div className="font-bold">Tanggapan :</div>
+
+                        <p className="mt-2 text-xs italic text-slate-500 print:hidden">
+                          Diisi oleh asesor penguji.
+                        </p>
+                      </td>
                       </tr>
                     </React.Fragment>
                   ))}
@@ -454,15 +462,12 @@ export default function FRIA03Komite() {
 COMPONENTS
 ========================= */
 
-function HeaderTable({ skema, tuk, asesor, asesi }) {
+function HeaderTable({ skema, tuk, asesor, asesi, tanggal }) {
   return (
-    <table className="w-full border-collapse border border-black">
+    <table className="w-full border-collapse border border-black text-[13px]">
       <tbody>
         <tr>
-          <td
-            rowSpan="2"
-            className="w-[220px] border border-black px-2 py-2 align-middle font-bold leading-tight"
-          >
+          <td rowSpan="2" className="w-[240px] border border-black px-2 py-2 align-middle font-bold">
             Skema Sertifikasi
             <br />
             (KKNI/Okupasi/Klaster)
@@ -472,19 +477,25 @@ function HeaderTable({ skema, tuk, asesor, asesi }) {
             Judul
           </td>
 
-          <td className="w-[20px] border border-black px-2 py-1 text-center">
+          <td className="w-[20px] border border-black text-center">
             :
           </td>
 
-          <td className="border border-black px-2 py-1 font-bold">
+          <td className="border border-black px-2 py-1">
             {skema.judul_skema}
           </td>
         </tr>
 
         <tr>
-          <td className="border border-black px-2 py-1 font-bold">Nomor</td>
-          <td className="border border-black px-2 py-1 text-center">:</td>
           <td className="border border-black px-2 py-1 font-bold">
+            Nomor
+          </td>
+
+          <td className="border border-black text-center">
+            :
+          </td>
+
+          <td className="border border-black px-2 py-1">
             {skema.kode_skema}
           </td>
         </tr>
@@ -493,15 +504,25 @@ function HeaderTable({ skema, tuk, asesor, asesi }) {
           <td colSpan="2" className="border border-black px-2 py-1 font-bold">
             TUK
           </td>
-          <td className="border border-black px-2 py-1 text-center">:</td>
-          <td className="border border-black px-2 py-1">{tuk}</td>
+
+          <td className="border border-black text-center">
+            :
+          </td>
+
+          <td className="border border-black px-2 py-1">
+            {tuk}
+          </td>
         </tr>
 
         <tr>
           <td colSpan="2" className="border border-black px-2 py-1 font-bold">
             Nama Asesor
           </td>
-          <td className="border border-black px-2 py-1 text-center">:</td>
+
+          <td className="border border-black text-center">
+            :
+          </td>
+
           <td className="border border-black px-2 py-1">
             {getNama(asesor)}
           </td>
@@ -511,16 +532,28 @@ function HeaderTable({ skema, tuk, asesor, asesi }) {
           <td colSpan="2" className="border border-black px-2 py-1 font-bold">
             Nama Asesi
           </td>
-          <td className="border border-black px-2 py-1 text-center">:</td>
-          <td className="border border-black px-2 py-1">{getNama(asesi)}</td>
+
+          <td className="border border-black text-center">
+            :
+          </td>
+
+          <td className="border border-black px-2 py-1">
+            {getNama(asesi)}
+          </td>
         </tr>
 
         <tr>
           <td colSpan="2" className="border border-black px-2 py-1 font-bold">
             Tanggal
           </td>
-          <td className="border border-black px-2 py-1 text-center">:</td>
-          <td className="border border-black px-2 py-1">{getTodayDate()}</td>
+
+          <td className="border border-black text-center">
+            :
+          </td>
+
+          <td className="border border-black px-2 py-1">
+            {formatTanggal(tanggal)}
+          </td>
         </tr>
       </tbody>
     </table>
@@ -529,39 +562,44 @@ function HeaderTable({ skema, tuk, asesor, asesi }) {
 
 function UnitTable({ kelompok, list }) {
   return (
-    <table className="w-full border-collapse border border-black">
-      <tbody>
-        <tr>
-          <td
-            rowSpan={Math.max(list.length + 1, 2)}
-            className="w-[170px] border border-black px-2 py-1 align-middle"
-          >
+    <table className="mb-4 w-full border-collapse border border-black text-[13px]">
+      <thead>
+        <tr className="bg-gray-100 print:bg-white">
+          <th className="w-[220px] border border-black px-2 py-2 text-left">
             Kelompok Pekerjaan
-            <br />
-            {kelompok}
-          </td>
+          </th>
 
-          <td className="w-[45px] border border-black px-2 py-1 font-bold">
+          <th className="w-[60px] border border-black px-2 py-2">
             No.
-          </td>
+          </th>
 
-          <td className="w-[170px] border border-black px-2 py-1 font-bold">
+          <th className="w-[180px] border border-black px-2 py-2">
             Kode Unit
-          </td>
+          </th>
 
-          <td className="border border-black px-2 py-1 font-bold">
+          <th className="border border-black px-2 py-2">
             Judul Unit
-          </td>
+          </th>
         </tr>
+      </thead>
 
-        {list.map((item, index) => (
-          <tr key={`${item.id_pertanyaan}-${index}`}>
-            <td className="border border-black px-2 py-1">{index + 1}.</td>
-            <td className="border border-black px-2 py-1">
-              {getUnitKode(item.unit)}
+      <tbody>
+        {list.map((unit, index) => (
+          <tr key={unit.id_unit}>
+            <td className="border border-black px-2 py-2">
+              {index === 0 ? kelompok : ""}
             </td>
-            <td className="border border-black px-2 py-1">
-              {getUnitJudul(item.unit)}
+
+            <td className="border border-black py-2 text-center">
+              {index + 1}
+            </td>
+
+            <td className="border border-black px-2 py-2">
+              {unit.kode_unit}
+            </td>
+
+            <td className="border border-black px-2 py-2">
+              {unit.judul_unit}
             </td>
           </tr>
         ))}
@@ -602,10 +640,37 @@ function SignatureBlock({ asesi, asesor, labelAsesor = "ASESOR" }) {
 
         <tr>
           <td className="border border-black px-2 py-1 font-bold">
+            No. Reg
+          </td>
+
+          <td className="border border-black px-2 py-1 text-center">
+            :
+          </td>
+
+          <td className="border border-black px-2 py-1">
+            {asesor?.no_reg_asesor || "-"}
+          </td>
+        </tr>
+
+        <tr>
+          <td className="border border-black px-2 py-1 font-bold">
             Tanda tangan dan Tanggal
           </td>
           <td className="border border-black px-2 py-1 text-center">:</td>
-          <td className="h-[70px] border border-black px-2 py-1"></td>
+          <td className="h-[90px] border border-black px-2 py-1 text-center">
+          {asesi?.ttd_path ? (
+            <>
+              <img
+                src={`${import.meta.env.VITE_API_BASE.replace("/api","")}/${asesi.ttd_path}`}
+                alt="TTD Asesi"
+                className="mx-auto h-16 object-contain"
+              />
+              <p className="mt-1 text-xs">
+                {formatTanggal(new Date())}
+              </p>
+            </>
+          ) : null}
+        </td>
         </tr>
 
         <tr>
@@ -621,10 +686,27 @@ function SignatureBlock({ asesi, asesor, labelAsesor = "ASESOR" }) {
         </tr>
 
         <tr>
-          <td className="border border-black px-2 py-1 font-bold">No. Reg</td>
-          <td className="border border-black px-2 py-1 text-center">:</td>
-          <td className="border border-black px-2 py-1">
-            {asesor?.no_reg || asesor?.nomor_registrasi || "-"}
+          <td className="border border-black px-2 py-1 font-bold">
+            Tanda tangan dan Tanggal
+          </td>
+
+          <td className="border border-black px-2 py-1 text-center">
+            :
+          </td>
+
+          <td className="h-[90px] border border-black px-2 py-1 text-center">
+            {asesor?.ttd_path ? (
+              <>
+                <img
+                  src={`${import.meta.env.VITE_API_BASE.replace("/api","")}/${asesor.ttd_path}`}
+                  alt="TTD Asesor"
+                  className="mx-auto h-16 object-contain"
+                />
+                <p className="mt-1 text-xs">
+                  {formatTanggal(new Date())}
+                </p>
+              </>
+            ) : null}
           </td>
         </tr>
       </tbody>
@@ -671,9 +753,11 @@ function QuestionModal({
               onChange={onChange}
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-orange-500"
             >
-              <option value="">Pilih Unit</option>
               {unitOptions.map((unit) => (
-                <option key={unit.id_unit} value={unit.id_unit}>
+                <option
+                  key={unit.id_unit}
+                  value={unit.id_unit}
+                >
                   {unit.kode_unit} - {unit.judul_unit}
                 </option>
               ))}
@@ -842,4 +926,14 @@ function getUnitJudul(unit) {
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function formatTanggal(value) {
+  if (!value) return "-";
+
+  return new Date(value).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }

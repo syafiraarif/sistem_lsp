@@ -212,11 +212,15 @@ exports.getUnitBySkema = async (req, res) => {
         id_skema: jadwal.id_skema,
       },
       include: [
-        {
-          model: UnitKompetensi,
-          as: "unit",
-        },
-      ],
+      {
+        model: UnitKompetensi,
+        as: "unit",
+      },
+      {
+        model: KelompokPekerjaan,
+        as: "kelompok",
+      },
+    ],
       order: [["urutan", "ASC"]],
     });
 
@@ -225,6 +229,7 @@ exports.getUnitBySkema = async (req, res) => {
       kode_unit: item.unit.kode_unit,
       judul_unit: item.unit.judul_unit,
       id_kelompok: item.id_kelompok,
+      nama_kelompok: item.kelompok?.nama_kelompok,
       urutan: item.urutan,
     }));
 
