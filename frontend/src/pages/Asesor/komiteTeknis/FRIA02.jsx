@@ -672,7 +672,7 @@ const removeValidator = (index) => {
 
               <td className="border border-black px-2 py-1">
                 <p className="font-medium">
-                  {form.nama_asesor}
+                  {form.asesor.nama || "-"}
                 </p>
               </td>
             </tr>
@@ -685,35 +685,41 @@ const removeValidator = (index) => {
               <td className="border border-black px-2 py-1 text-center">:</td>
 
               <td className="border border-black px-2 py-1">
-  <select
-    value={form.id_asesi || ""}
-    onChange={(e) => {
-      const asesi = listAsesi.find(
-        (x) => String(x.id_user) === e.target.value
-      );
+              <div className="print:hidden">
+              <select
+                value={form.id_asesi || ""}
+                onChange={(e) => {
+                  const asesi = listAsesi.find(
+                    (x) => String(x.id_user) === e.target.value
+                  );
 
-      setForm((prev) => ({
-  ...prev,
-  id_asesi: asesi?.id_user || null,
-  nama_asesi: asesi?.nama_lengkap || "",
-  asesi: {
-    nama: asesi?.nama_lengkap || "",
-    ttd: asesi?.ttd_path || "",
-    tanggal: new Date().toISOString().slice(0, 10),
-  },
-}));
-    }}
-    className="w-full bg-transparent outline-none"
-  >
-    <option value="">Pilih Asesi</option>
+                  setForm((prev) => ({
+                    ...prev,
+                    id_asesi: asesi?.id_user || null,
+                    nama_asesi: asesi?.nama_lengkap || "",
+                    asesi: {
+                      nama: asesi?.nama_lengkap || "",
+                      ttd: asesi?.ttd_path || "",
+                      tanggal: new Date().toISOString().slice(0, 10),
+                    },
+                  }));
+                }}
+                className="w-full bg-transparent outline-none"
+              >
+                <option value="">Pilih Asesi</option>
 
-    {listAsesi.map((item) => (
-      <option key={item.id_user} value={item.id_user}>
-        {item.nama_lengkap}
-      </option>
-    ))}
-  </select>
-</td>
+                {listAsesi.map((item) => (
+                  <option key={item.id_user} value={item.id_user}>
+                    {item.nama_lengkap}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <p className="hidden print:block font-medium">
+              {form.nama_asesi || "-"}
+            </p>
+            </td>
             </tr>
 
             <tr>
@@ -826,46 +832,56 @@ const removeValidator = (index) => {
       </td>
 
       <td className="border border-black px-2 py-1">
-        <select
-  value={unit.kode_unit}
-  onChange={(e) => {
-    const selected = listUnit.find(
-      (x) => x.kode_unit === e.target.value
-    );
-
-    updateUnit(
-      kelompokIndex,
-      unitIndex,
-      "kode_unit",
-      selected?.kode_unit || ""
-    );
-
-    updateUnit(
-      kelompokIndex,
-      unitIndex,
-      "judul_unit",
-      selected?.judul_unit || ""
-    );
-  }}
-  className="w-full bg-transparent outline-none"
->
-  <option value="">Pilih Unit</option>
-
-  {listUnit.map((item) => (
-    <option
-      key={item.id_unit}
-      value={item.kode_unit}
-    >
-      {item.kode_unit}
-    </option>
-  ))}
-</select>
+        <div className="print:hidden">
+          <select
+            value={unit.kode_unit}
+            onChange={(e) => {
+              const selected = listUnit.find(
+                (x) => x.kode_unit === e.target.value
+              );
+              updateUnit(
+                kelompokIndex,
+                unitIndex,
+                "kode_unit",
+                selected?.kode_unit || ""
+              );
+              updateUnit(
+                kelompokIndex,
+                unitIndex,
+                "judul_unit",
+                selected?.judul_unit || ""
+              );
+            }}
+            className="w-full bg-transparent outline-none"
+          >
+            <option value="">Pilih Unit</option>
+            {listUnit.map((item) => (
+              <option
+                key={item.id_unit}
+                value={item.kode_unit}
+              >
+                {item.kode_unit}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="hidden print:block">
+          {unit.kode_unit || "-"}
+        </p>
       </td>
 
       <td className="border border-black px-2 py-1">
-      <p className="leading-6">
-        {unit.judul_unit || "-"}
-      </p>
+
+        <div className="print:hidden">
+          <p className="leading-6">
+            {unit.judul_unit || "-"}
+          </p>
+        </div>
+
+        <p className="hidden print:block leading-6">
+          {unit.judul_unit || "-"}
+        </p>
+
       </td>
 
       <td className="border border-black text-center print:hidden">
@@ -932,20 +948,26 @@ const removeValidator = (index) => {
 
       <td className="border border-black px-3 py-2">
         <div className="flex items-center gap-2">
+        <div className="print:hidden">
         <input
           type="number"
           min="1"
           value={kelompok.waktu}
-          onChange={(e) =>
-            updateKelompok(kelompokIndex, "waktu", e.target.value)
+          onChange={(e)=>
+            updateKelompok(kelompokIndex,"waktu",e.target.value)
           }
           placeholder="120"
           className="w-24 bg-transparent outline-none"
         />
+      </div>
 
-        <span className="text-sm text-gray-600">
-          Menit
-        </span>
+      <span className="hidden print:inline">
+        {kelompok.waktu || "-"}
+      </span>
+
+      <span className="ml-2">
+        Menit
+      </span>
       </div>
       </td>
     </tr>
@@ -1064,41 +1086,40 @@ const removeValidator = (index) => {
 
         <td className="border border-black px-2 py-1">
 
+          <div className="print:hidden">
           <select
-value={form.asesor.id_user || ""}
-  onChange={(e) => {
-    const asesor = listAsesor.find(
-item => String(item.id_user) === e.target.value
-);
+            value={form.asesor.id_user || ""}
+            onChange={(e) => {
+              const asesor = listAsesor.find(
+                item => String(item.id_user) === e.target.value
+              );
 
-    setForm((prev) => ({
-      ...prev,
-      asesor: {
-        id_user: asesor?.id_user || "",
-        nama: asesor?.nama_lengkap || "",
-        no_reg: asesor?.no_reg_asesor || "",
-        ttd: asesor?.ttd_path || "",
-        tanggal: new Date().toISOString().slice(0, 10),
-      },
-    }));
-  }}
+              setForm((prev) => ({
+                ...prev,
+                asesor: {
+                  id_user: asesor?.id_user || "",
+                  nama: asesor?.nama_lengkap || "",
+                  no_reg: asesor?.no_reg_asesor || "",
+                  ttd: asesor?.ttd_path || "",
+                  tanggal: new Date().toISOString().slice(0, 10),
+                },
+              }));
+            }}
             className="w-full bg-transparent outline-none"
           >
-
-            <option value="">
-              Pilih Asesor
-            </option>
+            <option value="">Pilih Asesor</option>
 
             {listAsesor.map((item) => (
-              <option
-                key={item.id_user}
-                value={item.id_user}
-              >
+              <option key={item.id_user} value={item.id_user}>
                 {item.nama_lengkap}
               </option>
             ))}
-
           </select>
+        </div>
+
+        <p className="hidden print:block font-medium">
+          {form.asesor.nama || "-"}
+        </p>
 
         </td>
       </tr>
@@ -1181,7 +1202,7 @@ item => String(item.id_user) === e.target.value
         NO
       </th>
 
-      <th className="border border-black px-3 py-2 text-left">
+      <th className="border border-black px-3 py-2 text-left w-[230px]">
         NAMA
       </th>
 
@@ -1215,40 +1236,40 @@ item => String(item.id_user) === e.target.value
 
         <td className="border border-black px-2">
 
-          <select
-            value={item.id_user}
-            onChange={(e) => {
-    const asesor = listAsesor.find(
-        (a) => String(a.id_user) === e.target.value
-    );
+          <div className="print:hidden">
 
-    updatePenyusun(index, "id_user", e.target.value);
-updatePenyusun(index, "nama", asesor?.nama_lengkap || "");
-updatePenyusun(index, "nomor_met", asesor?.no_lisensi || "");
-updatePenyusun(index, "ttd", asesor?.ttd_path || "");
-updatePenyusun(
-  index,
-  "tanggal",
-  new Date().toISOString().slice(0, 10)
-);
-}}
-            className="w-full bg-transparent outline-none"
-          >
+            <select
+              value={item.id_user}
+              onChange={(e) => {
+                const asesor = listAsesor.find(
+                  (a) => String(a.id_user) === e.target.value
+                );
 
-            <option value="">
-              Pilih Asesor
-            </option>
+                updatePenyusun(index, "id_user", e.target.value);
+                updatePenyusun(index, "nama", asesor?.nama_lengkap || "");
+                updatePenyusun(index, "nomor_met", asesor?.no_lisensi || "");
+                updatePenyusun(index, "ttd", asesor?.ttd_path || "");
+                updatePenyusun(index, "tanggal", new Date().toISOString().slice(0, 10));
+              }}
+              className="w-full bg-transparent outline-none"
+            >
+              <option value="">Pilih Asesor</option>
 
-            {listAsesor.map((asesor)=>(
-              <option
-    key={asesor.id_user}
-    value={asesor.id_user}
->
-    {asesor.nama_lengkap}
-</option>
-            ))}
+              {listAsesor.map((asesor) => (
+                <option
+                  key={asesor.id_user}
+                  value={asesor.id_user}
+                >
+                  {asesor.nama_lengkap}
+                </option>
+              ))}
+            </select>
 
-          </select>
+          </div>
+
+          <p className="hidden print:block whitespace-nowrap">
+            {item.nama || "-"}
+          </p>
 
         </td>
 
@@ -1261,28 +1282,35 @@ updatePenyusun(
         </td>
 
         <td className="border border-black px-2">
-
-<div className="flex flex-col items-center justify-center py-3">
-
-  {item.ttd && (
-    <img
-      src={
-        item.ttd.startsWith("http")
-          ? item.ttd
-          : `${import.meta.env.VITE_API_BASE.replace("/api", "")}/${item.ttd.replace(/^\/+/, "")}`
-      }
-      alt="TTD Penyusun"
-      className="max-h-20 max-w-[220px] object-contain"
-    />
-  )}
-
-  <div className="mt-2 w-[150px] border-b border-black"></div>
-
-  <p className="mt-2 text-center text-[12px]">
-    {formatTanggal(item.tanggal)}
-  </p>
-
-</div>
+          <div className="print:hidden">
+            <select
+              value={item.id_user}
+              onChange={(e) => {
+                const asesor = listAsesor.find(
+                  (a) => String(a.id_user) === e.target.value
+                );
+                updateValidator(index, "id_user", e.target.value);
+                updateValidator(index, "nama", asesor?.nama_lengkap || "");
+                updateValidator(index, "nomor_met", asesor?.no_lisensi || "");
+                updateValidator(index, "ttd", asesor?.ttd_path || "");
+                updateValidator(index, "tanggal", new Date().toISOString().slice(0, 10));
+              }}
+              className="w-full bg-transparent outline-none"
+            >
+              <option value="">Pilih Asesor</option>
+              {listAsesor.map((asesor) => (
+                <option
+                  key={asesor.id_user}
+                  value={asesor.id_user}
+                >
+                  {asesor.nama_lengkap}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="hidden print:block whitespace-nowrap">
+            {item.nama || "-"}
+          </p>
 
         </td>
 
@@ -1305,44 +1333,37 @@ updatePenyusun(
           {index+1}
         </td>
 
-        <td className="border border-black px-2">
-
+      <td className="border border-black px-2">
+        <div className="print:hidden">
           <select
             value={item.id_user}
             onChange={(e) => {
-    const asesor = listAsesor.find(
-        (a) => String(a.id_user) === e.target.value
-    );
-
-    updateValidator(index, "id_user", e.target.value);
-updateValidator(index, "nama", asesor?.nama_lengkap || "");
-updateValidator(index, "nomor_met", asesor?.no_lisensi || "");
-updateValidator(index, "ttd", asesor?.ttd_path || "");
-updateValidator(
-  index,
-  "tanggal",
-  new Date().toISOString().slice(0, 10)
-);
-}}
+              const asesor = listAsesor.find(
+                (a) => String(a.id_user) === e.target.value
+              );
+              updateValidator(index, "id_user", e.target.value);
+              updateValidator(index, "nama", asesor?.nama_lengkap || "");
+              updateValidator(index, "nomor_met", asesor?.no_lisensi || "");
+              updateValidator(index, "ttd", asesor?.ttd_path || "");
+              updateValidator(index, "tanggal", new Date().toISOString().slice(0, 10));
+            }}
             className="w-full bg-transparent outline-none"
           >
-
-            <option value="">
-              Pilih Asesor
-            </option>
-
-            {listAsesor.map((asesor)=>(
+            <option value="">Pilih Asesor</option>
+            {listAsesor.map((asesor) => (
               <option
-    key={asesor.id_user}
-    value={asesor.id_user}
->
-    {asesor.nama_lengkap}
-</option>
+                key={asesor.id_user}
+                value={asesor.id_user}
+              >
+                {asesor.nama_lengkap}
+              </option>
             ))}
-
           </select>
-
-        </td>
+        </div>
+        <p className="hidden print:block whitespace-nowrap">
+          {item.nama || "-"}
+        </p>
+      </td>
 
         <td className="border border-black px-2">
 
@@ -1408,9 +1429,7 @@ updateValidator(
 
 </div>
 
-        <div className="mt-10 text-center text-[11px] italic">
-          Hal. 1 dari 2
-        </div>
+        <div className="mt-10 print:hidden"></div>
       </main>
 
       <style>{`
@@ -1445,14 +1464,20 @@ function InputTable({ title, value, onChange, placeholder, small = false }) {
           </td>
 
           <td className="border border-black px-3 py-2">
-            <textarea
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={placeholder}
-              className={`w-full resize-none bg-transparent p-2 leading-7 outline-none ${
+            <>
+          <textarea
+            value={value}
+            onChange={(e)=>onChange(e.target.value)}
+            placeholder={placeholder}
+            className={`w-full resize-none bg-transparent p-2 leading-7 outline-none print:hidden ${
               small ? "min-h-[50px]" : "min-h-[110px]"
             }`}
-            />
+          />
+
+          <div className="hidden whitespace-pre-wrap p-2 leading-7 print:block">
+            {value || "-"}
+          </div>
+        </>
           </td>
         </tr>
       </tbody>
