@@ -401,6 +401,45 @@ id_fr_ia_02:id
 
 const cek = await FrIa02.findByPk(id);
 
+// =============================
+// AUTO CREATE HEADER FRIA03
+// =============================
+
+const existingFrIa03 = await FrIa03.findOne({
+    where: {
+        id_jadwal: cek.id_jadwal
+    }
+});
+
+if (!existingFrIa03) {
+
+    try {
+
+        console.log("CREATE HEADER FRIA03 DARI UPDATE");
+
+        await FrIa03.create({
+
+            id_jadwal: cek.id_jadwal,
+            id_skema: cek.id_skema,
+            id_tuk: cek.id_tuk,
+            id_asesor: cek.id_asesor,
+            id_asesi: cek.id_asesi,
+            tanggal: cek.tanggal,
+            created_by: cek.created_by
+
+        });
+
+        console.log("HEADER FRIA03 BERHASIL");
+
+    } catch (err) {
+
+        console.error("GAGAL CREATE HEADER FRIA03");
+        console.error(err);
+
+    }
+
+}
+
 console.log("SETELAH UPDATE");
 console.log(cek.toJSON());
 
