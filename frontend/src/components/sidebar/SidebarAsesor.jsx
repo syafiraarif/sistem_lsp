@@ -70,7 +70,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
       },
       {
         id: "jadwal-uji-kompetensi",
-        name: "Jadwal Uji Kompetensi",
+        name: "Jadwal Asesor Penguji",
         path: "/asesor/jadwal-saya",
         icon: <CalendarDays size={21} />,
       },
