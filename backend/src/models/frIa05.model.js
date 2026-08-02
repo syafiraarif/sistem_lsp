@@ -24,6 +24,20 @@ const FrIa05 = sequelize.define("fr_ia_05", {
     type: DataTypes.INTEGER,
     defaultValue: 70
   },
+  nama_asesi: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+
+  tanggal: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  },
+
+  waktu: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
   created_by: DataTypes.INTEGER,
   created_at: DataTypes.DATE
 }, {

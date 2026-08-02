@@ -9,6 +9,7 @@ const {
   FrIa05,
   FrIa05Soal,
   FrIa05Opsi,
+  FrIa05Validator,
   Jadwal,
   Skema,
   Tuk,
@@ -414,6 +415,11 @@ exports.createPaket = async (req, res) => {
       kode_paket,
       judul_paket,
       passing_grade,
+      nama_asesi,
+      tanggal,
+      waktu,
+      soal = [],
+      validators = []
     } = req.body;
 
     if (!id_jadwal) {
@@ -451,6 +457,9 @@ exports.createPaket = async (req, res) => {
       kode_paket: kode_paket || `FRIA05-${id_jadwal}`,
       judul_paket: judul_paket || "Paket Soal FR.IA.05",
       passing_grade: safeNumber(passing_grade) || 70,
+      nama_asesi: safeNumber(nama_asesi),
+      tanggal: tanggal || null,
+      waktu: safeNumber(waktu),
       created_by: id_user,
       created_at: paket?.created_at || new Date(),
     };
@@ -465,6 +474,32 @@ exports.createPaket = async (req, res) => {
       });
     }
 
+    await FrIa05Validator.destroy({
+  where: {
+    id_fr_ia_05: paket.id_fr_ia_05
+  },
+  transaction: t
+});
+
+if (validators.length) {
+  console.log("BODY");
+  console.log(req.body);
+
+  console.log("VALIDATOR");
+  console.log(validators);
+  await FrIa05Validator.bulkCreate(
+    validators.map((v, i) => ({
+      id_fr_ia_05: paket.id_fr_ia_05,
+      id_asesor: v.id_asesor,
+      peran: v.peran,
+      urutan: i + 1
+    })),
+    {
+      transaction: t
+    }
+  );
+}
+
     await t.commit();
 
     const fullData = await getPaketFullById(paket.id_fr_ia_05);
@@ -474,6 +509,29 @@ exports.createPaket = async (req, res) => {
     await t.rollback();
     console.error("ERROR CREATE PAKET FRIA05:", err);
     return error(res, err.message, 500);
+  }
+};
+
+/* ===============================
+GET LIST ASESOR
+================================ */
+
+exports.getAsesor = async (req, res) => {
+  try {
+    const data = await ProfileAsesor.findAll({
+      attributes: [
+        "id_user",
+        "nama_lengkap",
+        "no_reg_asesor",
+        "ttd_path"
+      ],
+      order: [["nama_lengkap", "ASC"]]
+    });
+
+    return success(res, "Data asesor berhasil diambil", data);
+  } catch (err) {
+    console.error(err);
+    return error(res, err.message);
   }
 };
 
@@ -493,15 +551,52 @@ exports.getByJadwal = async (req, res) => {
     }
 
     const paket = await getPaketFullByJadwal(id_jadwal);
-    const signature = await getSignaturePeople(req, id_jadwal);
+
+    const asesor = await getCurrentAsesorProfile(req);
+
+    let penyusun = [];
+    let validator = [];
+
+    if (paket) {
+      const validators = await FrIa05Validator.findAll({
+        where: {
+          id_fr_ia_05: paket.id_fr_ia_05,
+        },
+        include: [
+          {
+            model: ProfileAsesor,
+            as: "asesor",
+          },
+        ],
+        order: [["urutan", "ASC"]],
+      });
+
+      penyusun = validators
+        .filter((item) => item.peran === "penyusun")
+        .map((item) => ({
+          id_asesor: item.id_asesor,
+          nama_lengkap: item.asesor?.nama_lengkap || "",
+          no_reg_asesor: item.asesor?.no_reg_asesor || "",
+          ttd_path: item.asesor?.ttd_path || "",
+        }));
+
+      validator = validators
+        .filter((item) => item.peran === "validator")
+        .map((item) => ({
+          id_asesor: item.id_asesor,
+          nama_lengkap: item.asesor?.nama_lengkap || "",
+          no_reg_asesor: item.asesor?.no_reg_asesor || "",
+          ttd_path: item.asesor?.ttd_path || "",
+        }));
+    }
 
     return success(res, "Data FR.IA.05 berhasil dimuat", {
       jadwal,
-      asesor: signature.penyusun,
-      penyusun: signature.penyusun,
-      validator: signature.validator,
-      tanggal: getTodayDate(),
+      asesor,
       paket,
+      penyusun,
+      validator,
+      tanggal: getTodayDate(),
     });
   } catch (err) {
     console.error("ERROR GET FRIA05 BY JADWAL:", err);
@@ -520,6 +615,37 @@ exports.getDetail = async (req, res) => {
 
     const paket = await getPaketFullById(id);
 
+const validators = await FrIa05Validator.findAll({
+  where: {
+    id_fr_ia_05: paket.id_fr_ia_05
+  },
+  include: [
+    {
+      model: ProfileAsesor,
+      as: "asesor"
+    }
+  ],
+  order: [["urutan", "ASC"]]
+});
+
+const penyusun = validators
+  .filter(x => x.peran === "penyusun")
+  .map(x => ({
+    id_asesor: x.id_asesor,
+    nama_lengkap: x.asesor?.nama_lengkap || "",
+    no_reg_asesor: x.asesor?.no_reg_asesor || "",
+    ttd_path: x.asesor?.ttd_path || ""
+  }));
+
+const validator = validators
+  .filter(x => x.peran === "validator")
+  .map(x => ({
+    id_asesor: x.id_asesor,
+    nama_lengkap: x.asesor?.nama_lengkap || "",
+    no_reg_asesor: x.asesor?.no_reg_asesor || "",
+    ttd_path: x.asesor?.ttd_path || ""
+  }));
+
     if (!paket) {
       return error(res, "Paket tidak ditemukan", 404);
     }
@@ -528,8 +654,8 @@ exports.getDetail = async (req, res) => {
 
     return success(res, "Detail paket FR.IA.05", {
       ...paket,
-      penyusun: signature.penyusun,
-      validator: signature.validator,
+      penyusun,
+      validator
     });
   } catch (err) {
     console.error("ERROR GET DETAIL FRIA05:", err);

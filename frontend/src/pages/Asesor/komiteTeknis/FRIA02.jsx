@@ -1234,44 +1234,40 @@ const removeValidator = (index) => {
           {index+1}
         </td>
 
-        <td className="border border-black px-2">
+<td className="border border-black px-2">
+  <div className="print:hidden">
+    <select
+      value={item.id_user}
+      onChange={(e) => {
+        const asesor = listAsesor.find(
+          (a) => String(a.id_user) === e.target.value
+        );
 
-          <div className="print:hidden">
+        updatePenyusun(index, "id_user", e.target.value);
+        updatePenyusun(index, "nama", asesor?.nama_lengkap || "");
+        updatePenyusun(index, "nomor_met", asesor?.no_lisensi || "");
+        updatePenyusun(index, "ttd", asesor?.ttd_path || "");
+        updatePenyusun(index, "tanggal", new Date().toISOString().slice(0, 10));
+      }}
+      className="w-full bg-transparent outline-none"
+    >
+      <option value="">Pilih Asesor</option>
 
-            <select
-              value={item.id_user}
-              onChange={(e) => {
-                const asesor = listAsesor.find(
-                  (a) => String(a.id_user) === e.target.value
-                );
+      {listAsesor.map((asesor) => (
+        <option
+          key={asesor.id_user}
+          value={asesor.id_user}
+        >
+          {asesor.nama_lengkap}
+        </option>
+      ))}
+    </select>
+  </div>
 
-                updatePenyusun(index, "id_user", e.target.value);
-                updatePenyusun(index, "nama", asesor?.nama_lengkap || "");
-                updatePenyusun(index, "nomor_met", asesor?.no_lisensi || "");
-                updatePenyusun(index, "ttd", asesor?.ttd_path || "");
-                updatePenyusun(index, "tanggal", new Date().toISOString().slice(0, 10));
-              }}
-              className="w-full bg-transparent outline-none"
-            >
-              <option value="">Pilih Asesor</option>
-
-              {listAsesor.map((asesor) => (
-                <option
-                  key={asesor.id_user}
-                  value={asesor.id_user}
-                >
-                  {asesor.nama_lengkap}
-                </option>
-              ))}
-            </select>
-
-          </div>
-
-          <p className="hidden print:block whitespace-nowrap">
-            {item.nama || "-"}
-          </p>
-
-        </td>
+  <p className="hidden print:block whitespace-nowrap">
+    {item.nama || "-"}
+  </p>
+</td>
 
         <td className="border border-black px-2">
 
@@ -1281,38 +1277,29 @@ const removeValidator = (index) => {
 
         </td>
 
-        <td className="border border-black px-2">
-          <div className="print:hidden">
-            <select
-              value={item.id_user}
-              onChange={(e) => {
-                const asesor = listAsesor.find(
-                  (a) => String(a.id_user) === e.target.value
-                );
-                updateValidator(index, "id_user", e.target.value);
-                updateValidator(index, "nama", asesor?.nama_lengkap || "");
-                updateValidator(index, "nomor_met", asesor?.no_lisensi || "");
-                updateValidator(index, "ttd", asesor?.ttd_path || "");
-                updateValidator(index, "tanggal", new Date().toISOString().slice(0, 10));
-              }}
-              className="w-full bg-transparent outline-none"
-            >
-              <option value="">Pilih Asesor</option>
-              {listAsesor.map((asesor) => (
-                <option
-                  key={asesor.id_user}
-                  value={asesor.id_user}
-                >
-                  {asesor.nama_lengkap}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p className="hidden print:block whitespace-nowrap">
-            {item.nama || "-"}
-          </p>
+<td className="border border-black px-2">
+  <div className="flex flex-col items-center justify-center py-3">
 
-        </td>
+    {item.ttd && (
+      <img
+        src={
+          item.ttd.startsWith("http")
+            ? item.ttd
+            : `${import.meta.env.VITE_API_BASE.replace("/api", "")}/${item.ttd.replace(/^\/+/, "")}`
+        }
+        alt="TTD Penyusun"
+        className="max-h-20 max-w-[220px] object-contain"
+      />
+    )}
+
+    <div className="mt-2 w-[150px] border-b border-black"></div>
+
+    <p className="mt-2 text-center text-[12px]">
+      {formatTanggal(item.tanggal)}
+    </p>
+
+  </div>
+</td>
 
       </tr>
 
@@ -1373,31 +1360,29 @@ const removeValidator = (index) => {
 
         </td>
 
-        <td className="border border-black px-2">
+<td className="border border-black px-2">
+  <div className="flex flex-col items-center justify-center py-3">
 
-<div className="flex flex-col items-center justify-center py-3">
+    {item.ttd && (
+      <img
+        src={
+          item.ttd.startsWith("http")
+            ? item.ttd
+            : `${import.meta.env.VITE_API_BASE.replace("/api", "")}/${item.ttd.replace(/^\/+/, "")}`
+        }
+        alt="TTD Penyusun"
+        className="max-h-20 max-w-[220px] object-contain"
+      />
+    )}
 
-  {item.ttd && (
-    <img
-      src={
-        item.ttd.startsWith("http")
-          ? item.ttd
-          : `${import.meta.env.VITE_API_BASE.replace("/api", "")}/${item.ttd.replace(/^\/+/, "")}`
-      }
-      alt="TTD Validator"
-      className="max-h-20 max-w-[220px] object-contain"
-    />
-  )}
+    <div className="mt-2 w-[150px] border-b border-black"></div>
 
-  <div className="mt-2 w-[150px] border-b border-black"></div>
+    <p className="mt-2 text-center text-[12px]">
+      {formatTanggal(item.tanggal)}
+    </p>
 
-  <p className="mt-2 text-center text-[12px]">
-    {formatTanggal(item.tanggal)}
-  </p>
-
-</div>
-
-        </td>
+  </div>
+</td>
 
       </tr>
 

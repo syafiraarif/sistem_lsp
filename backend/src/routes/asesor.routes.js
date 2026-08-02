@@ -355,6 +355,11 @@ router.get(
   frIa05KomiteController.getByJadwal
 );
 
+router.get(
+  "/fr-ia05/komite/asesor",
+  frIa05KomiteController.getAsesor
+);
+
 router.post(
   "/fr-ia05/komite",
   frIa05KomiteController.createPaket

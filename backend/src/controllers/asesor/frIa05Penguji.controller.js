@@ -1,9 +1,12 @@
 const PDFDocument=require("pdfkit");
 
 const Jawaban=require("../../models/frIa05Jawaban.model");
-const Penilaian=require("../../models/frIa05Penilaian.model");
-const Soal=require("../../models/frIa05Soal.model");
-const Opsi=require("../../models/frIa05Opsi.model");
+const Penilaian = require("../../models/frIa05Penilaian.model");
+const Soal = require("../../models/frIa05Soal.model");
+const Opsi = require("../../models/frIa05Opsi.model");
+const FrIa05 = require("../../models/frIa05.model");
+const FrIa05Validator = require("../../models/frIa05Validator.model");
+const ProfileAsesor = require("../../models/profileAsesor.model");
 
 
 
@@ -265,33 +268,27 @@ req.params.id_peserta
 
 },
 
-include:[
-
-{
-
-model:Soal,
-as:"soal",
-
-include:[
-
-{
-
-model:Opsi,
-as:"opsi"
-
-}
-
-]
-
-},
-
-{
-
-model:Opsi,
-as:"opsi"
-
-}
-
+include: [
+  {
+    model: Soal,
+    as: "soal",
+    include: [
+      {
+        model: Opsi,
+        as: "opsi"
+      }
+    ]
+  },
+  {
+    model: FrIa05Validator,
+    as: "validator",
+    include: [
+      {
+        model: ProfileAsesor,
+        as: "asesor"
+      }
+    ]
+  }
 ],
 
 order:[

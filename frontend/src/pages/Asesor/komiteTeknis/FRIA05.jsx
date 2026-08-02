@@ -35,9 +35,11 @@ export default function FRIA05() {
 
   const [jadwal, setJadwal] = useState(null);
   const [asesor, setAsesor] = useState(null);
-  const [penyusun, setPenyusun] = useState(null);
-  const [validator, setValidator] = useState(null);
+  const [asesorList, setAsesorList] = useState([]);
+  const [penyusun, setPenyusun] = useState([]);
+  const [validator, setValidator] = useState([]); 
   const [paket, setPaket] = useState(null);
+  const [pesertaList, setPesertaList] = useState([]);
 
   const [formPaket, setFormPaket] = useState({
     kode_paket: "",
@@ -71,12 +73,32 @@ export default function FRIA05() {
 
       const res = await api.get(`/asesor/fr-ia05/komite/jadwal/${idJadwal}`);
       const data = res.data?.data || {};
+      const asesorRes = await api.get("/asesor/fr-ia05/komite/asesor");
+      setAsesorList(asesorRes.data.data || []);
 
       setJadwal(data.jadwal || null);
       setAsesor(data.asesor || null);
-      setPenyusun(data.penyusun || data.asesor || null);
-      setValidator(data.validator || null);
+      setPenyusun(
+        data.penyusun?.length
+          ? data.penyusun
+          : [
+              {
+                id_asesor: data.asesor?.id_user,
+                nama_lengkap: data.asesor?.nama_lengkap,
+                no_reg_asesor: data.asesor?.no_reg_asesor,
+                ttd_path: data.asesor?.ttd_path,
+              },
+            ]
+      );
+
+      setValidator(data.validator || []);
       setPaket(data.paket || null);
+
+      const pesertaRes = await api.get(
+        `/asesor/jadwal/${idJadwal}/peserta`
+      );
+
+      setPesertaList(pesertaRes.data?.data || []);
 
       if (data.paket) {
         setFormPaket((prev) => ({
@@ -84,6 +106,9 @@ export default function FRIA05() {
           kode_paket: data.paket.kode_paket || `FRIA05-${idJadwal}`,
           judul_paket: data.paket.judul_paket || "Paket Soal FR.IA.05",
           passing_grade: data.paket.passing_grade || 70,
+          nama_asesi: data.paket.nama_asesi || "",
+          tanggal: data.paket.tanggal || getTodayDate(),
+          waktu: data.paket.waktu || "",
         }));
       } else {
         setFormPaket((prev) => ({
@@ -98,6 +123,12 @@ export default function FRIA05() {
         err.response?.data?.message || "Gagal memuat data FR.IA.05",
         "error"
       );
+
+      const pesertaRes = await api.get(`/asesor/jadwal/${idJadwal}/peserta`);
+      setPesertaList(pesertaRes.data?.data || []);
+
+      const asesorRes = await api.get("/asesor/fr-ia05/komite/asesor");
+      setAsesorList(asesorRes.data?.data || []);
     } finally {
       setLoading(false);
     }
@@ -105,8 +136,64 @@ export default function FRIA05() {
 
   const skema = getSkema(jadwal, paket);
   const tuk = getTuk(jadwal);
-  const namaAsesor = getNamaAsesor(penyusun || asesor);
+  const namaAsesor = asesor?.nama_lengkap || "";
   const soalList = Array.isArray(paket?.soal) ? paket.soal : [];
+
+  const tambahPenyusun = () => {
+  setPenyusun((prev) => [
+    ...prev,
+    {
+      id_asesor: "",
+      nama_lengkap: "",
+      no_reg_asesor: "",
+      ttd_path: ""
+    }
+  ]);
+};
+
+const tambahValidator = () => {
+  setValidator((prev) => [
+    ...prev,
+    {
+      id_asesor: "",
+      nama_lengkap: "",
+      no_reg_asesor: "",
+      ttd_path: ""
+    }
+  ]);
+};
+
+const handleAsesorChange = (jenis, index, id) => {
+  const data = asesorList.find(
+    (x) => String(x.id_user) === String(id)
+  );
+
+  if (!data) return;
+
+  if (jenis === "penyusun") {
+    const arr = [...penyusun];
+
+    arr[index] = {
+      id_asesor: data.id_user,
+      nama_lengkap: data.nama_lengkap,
+      no_reg_asesor: data.no_reg_asesor,
+      ttd_path: data.ttd_path
+    };
+
+    setPenyusun(arr);
+  } else {
+    const arr = [...validator];
+
+    arr[index] = {
+      id_asesor: data.id_user,
+      nama_lengkap: data.nama_lengkap,
+      no_reg_asesor: data.no_reg_asesor,
+      ttd_path: data.ttd_path
+    };
+
+    setValidator(arr);
+  }
+};
 
   const handlePaketChange = (e) => {
     setFormPaket((prev) => ({
@@ -122,9 +209,31 @@ export default function FRIA05() {
       const res = await api.post("/asesor/fr-ia05/komite", {
         id_jadwal: idJadwal,
         id_skema: skema.id_skema,
-        kode_paket: formPaket.kode_paket || `FRIA05-${idJadwal}`,
-        judul_paket: formPaket.judul_paket || "Paket Soal FR.IA.05",
-        passing_grade: formPaket.passing_grade || 70,
+        kode_paket: formPaket.kode_paket,
+        judul_paket: formPaket.judul_paket,
+        passing_grade: formPaket.passing_grade,
+
+        nama_asesi: formPaket.nama_asesi,
+        tanggal: formPaket.tanggal,
+        waktu: formPaket.waktu,
+
+        validators: [
+          ...penyusun
+            .filter((x) => x.id_asesor)
+            .map((x, i) => ({
+              id_asesor: x.id_asesor,
+              peran: "penyusun",
+              urutan: i + 1,
+            })),
+
+          ...validator
+            .filter((x) => x.id_asesor)
+            .map((x, i) => ({
+              id_asesor: x.id_asesor,
+              peran: "validator",
+              urutan: i + 1,
+            })),
+        ],
       });
 
       setPaket(res.data?.data || null);
@@ -152,7 +261,8 @@ export default function FRIA05() {
 
   const ensurePaket = async () => {
     if (paket?.id_fr_ia_05) return paket;
-
+    console.log("PENYUSUN", penyusun);
+    console.log("VALIDATOR", validator);
     const res = await api.post("/asesor/fr-ia05/komite", {
       id_jadwal: idJadwal,
       id_skema: skema.id_skema,
@@ -430,18 +540,6 @@ export default function FRIA05() {
     }
   };
 
-  const downloadPdf = async () => {
-    if (!paket?.id_fr_ia_05) {
-      await savePaket();
-      return;
-    }
-
-    window.open(
-      `${api.defaults.baseURL}/asesor/fr-ia05/komite/${paket.id_fr_ia_05}/pdf`,
-      "_blank"
-    );
-  };
-
   const printPage = () => {
     window.print();
   };
@@ -502,55 +600,52 @@ export default function FRIA05() {
             <Download size={18} />
             Cetak
           </button>
-
-          <button
-            type="button"
-            onClick={downloadPdf}
-            className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50"
-          >
-            PDF Backend
-          </button>
         </div>
       </div>
 
-      <main className="mx-auto w-[900px] bg-white px-10 py-8 text-[14px] text-black shadow-lg print:w-full print:shadow-none print:px-8 print:py-6">
-        <h1 className="mb-6 text-[18px] font-bold">
-          FR.IA.05A. DPT - PERTANYAAN TERTULIS PILIHAN GANDA
-        </h1>
+      <main className="mx-auto w-[794px] bg-white px-6 py-6 text-[11px] text-black shadow-lg print:w-full print:shadow-none print:px-4 print:py-4">
+        <div className="mb-6 text-center">
+          <h1 className="text-[18px] font-bold">
+              FR.IA.05A. DPT
+          </h1>
+          <p className="text-[15px] font-semibold">
+              PERTANYAAN TERTULIS PILIHAN GANDA
+          </p>
+      </div>
 
-        <table className="w-full border-collapse border border-black">
+        <table className="w-full border-collapse border border-black text-[11px]">
           <tbody>
             <tr>
               <td
                 rowSpan="2"
-                className="w-[240px] border border-black px-2 py-1 align-middle text-[16px] font-bold leading-tight"
+                className="w-[240px] border border-black px-1 py-[2px] align-middle text-[16px] font-bold leading-tight"
               >
                 Skema Sertifikasi
                 <br />
                 (KKNI/Okupasi/Klaster)
               </td>
 
-              <td className="w-[90px] border border-black px-2 py-1 font-bold">
+              <td className="w-[90px] border border-black px-1 py-[2px] font-bold">
                 Judul
               </td>
 
-              <td className="w-[20px] border border-black px-2 py-1 text-center">
+              <td className="w-[20px] border border-black px-1 py-[2px] text-center">
                 :
               </td>
 
-              <td className="border border-black px-2 py-1 font-bold">
+              <td className="border border-black px-1 py-[2px] font-bold">
                 {skema.judul_skema}
               </td>
             </tr>
 
             <tr>
-              <td className="border border-black px-2 py-1 font-bold">
+              <td className="border border-black px-1 py-[2px] font-bold">
                 Nomor
               </td>
 
-              <td className="border border-black px-2 py-1 text-center">:</td>
+              <td className="border border-black px-1 py-[2px] text-center">:</td>
 
-              <td className="border border-black px-2 py-1 font-bold">
+              <td className="border border-black px-1 py-[2px] font-bold">
                 {skema.kode_skema}
               </td>
             </tr>
@@ -559,32 +654,51 @@ export default function FRIA05() {
             <InfoRow label="Nama Asesor" value={namaAsesor} />
 
             <tr>
-              <td colSpan="2" className="border border-black px-2 py-1 font-bold">
+              <td colSpan="2" className="border border-black px-1 py-[2px] font-bold">
                 Nama Asesi
               </td>
 
-              <td className="border border-black px-2 py-1 text-center">:</td>
+              <td className="border border-black px-1 py-[2px] text-center">:</td>
 
-              <td className="border border-black px-2 py-1">
-                <input
+              <td className="border border-black px-1 py-[2px]">
+                <select
                   name="nama_asesi"
                   value={formPaket.nama_asesi}
                   onChange={handlePaketChange}
-                  className="w-full bg-transparent outline-none print:hidden"
-                />
+                  className="w-full border-none bg-transparent outline-none print:hidden"
+                >
+                  <option value="">Pilih Asesi</option>
 
-                <span className="hidden print:inline">{formPaket.nama_asesi}</span>
+                  {pesertaList.map((item) => (
+                    <option
+                      key={item.id_peserta || item.id_user}
+                      value={item.id_user || item.id_peserta}
+                    >
+                      {item.nama_lengkap}
+                    </option>
+                  ))}
+                </select>
+
+              <span className="hidden print:inline-block">
+              {
+                pesertaList.find(
+                  (x) =>
+                    String(x.id_user || x.id_peserta) ===
+                    String(formPaket.nama_asesi)
+                )?.nama_lengkap || ""
+              }
+            </span>
               </td>
             </tr>
 
             <tr>
-              <td colSpan="2" className="border border-black px-2 py-1 font-bold">
+              <td colSpan="2" className="border border-black px-1 py-[2px] font-bold">
                 Tanggal
               </td>
 
-              <td className="border border-black px-2 py-1 text-center">:</td>
+              <td className="border border-black px-1 py-[2px] text-center">:</td>
 
-              <td className="border border-black px-2 py-1">
+              <td className="border border-black px-1 py-[2px]">
                 <input
                   type="date"
                   name="tanggal"
@@ -600,41 +714,49 @@ export default function FRIA05() {
             </tr>
 
             <tr>
-              <td colSpan="2" className="border border-black px-2 py-1 font-bold">
+              <td colSpan="2" className="border border-black px-1 py-[2px] font-bold">
                 Waktu
               </td>
 
-              <td className="border border-black px-2 py-1 text-center">:</td>
+              <td className="border border-black px-1 py-[2px] text-center">:</td>
 
-              <td className="border border-black px-2 py-1">
+              <td className="border border-black px-2 py-[2px]">
+              <div className="flex items-center gap-1 print:hidden">
                 <input
+                  type="number"
                   name="waktu"
                   value={formPaket.waktu}
                   onChange={handlePaketChange}
-                  placeholder="Contoh: 60 menit"
-                  className="w-full bg-transparent outline-none print:hidden"
+                  className="w-14 border-none bg-transparent outline-none"
                 />
+                <span className="font-medium">menit</span>
+              </div>
 
-                <span className="hidden print:inline">{formPaket.waktu}</span>
-              </td>
+              <span className="hidden print:inline">
+                {formPaket.waktu} menit
+              </span>
+            </td>
             </tr>
           </tbody>
         </table>
 
-        <div className="mt-6 flex items-center justify-between print:block">
-          <p>Jawab semua pertanyaan berikut:</p>
-
-          <button
-            type="button"
-            onClick={openAddSoal}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#071E3D] px-4 py-2 text-xs font-bold text-white print:hidden"
-          >
-            <Plus size={15} />
-            Tambah Pertanyaan
-          </button>
-        </div>
-
-        <table className="mt-2 w-full border-collapse border border-black">
+        <div className="mt-3">
+          <p className="italic text-[11px]">
+              *Coret yang tidak perlu
+          </p>
+          <div className="mt-2 flex items-center justify-between">
+              <p>Jawab semua pertanyaan berikut:</p>
+              <button
+                  type="button"
+                  onClick={openAddSoal}
+                  className="print:hidden inline-flex items-center gap-2 rounded-lg bg-[#071E3D] px-4 py-2 text-xs font-bold text-white"
+              >
+                  <Plus size={15} />
+                  Tambah Pertanyaan
+              </button>
+          </div>
+      </div>
+        <table className="mt-2 w-full border-collapse border border-black text-[13px]">
           <tbody>
             {soalList.length === 0 ? (
               <tr>
@@ -651,7 +773,7 @@ export default function FRIA05() {
 
                   <td className="border border-black px-2 py-2 align-top">
                     <div className="flex justify-between gap-3">
-                      <p className="font-medium">{soal.pertanyaan}</p>
+                      <p className="font-semibold leading-6">{soal.pertanyaan}</p>
 
                       <div className="flex gap-2 print:hidden">
                         <button
@@ -673,25 +795,25 @@ export default function FRIA05() {
                     </div>
 
                     {soal.gambar && (
-                      <div className="my-3">
-                        <img
-                          src={normalizeImageUrl(soal.gambar)}
-                          alt="Gambar soal"
-                          className="max-h-[180px] max-w-[320px] border border-slate-300 object-contain"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                      </div>
-                    )}
+                    <div className="my-3 flex justify-center">
+                      <img
+                        src={normalizeImageUrl(soal.gambar)}
+                        alt="Gambar soal"
+                        className="max-h-[220px] max-w-full border object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    </div>
+                  )}
 
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-3 space-y-2 pl-5">
                       {(soal.opsi || []).map((opsi) => (
                         <div
                           key={opsi.id_opsi || opsi.kode_opsi}
                           className="flex"
                         >
-                          <span className="w-[35px]">
+                          <span className="inline-block w-6 font-semibold">
                             {String(opsi.kode_opsi).toLowerCase()}.
                           </span>
 
@@ -706,13 +828,181 @@ export default function FRIA05() {
           </tbody>
         </table>
 
-        <section className="mt-14 flex justify-end">
-          <div className="w-[280px] text-center">
-            <SignatureBlock title="Penyusun / Komite Teknis" person={penyusun} />
-            <div className="h-12" />
-            <SignatureBlock title="Validator / Asesor Penguji" person={validator} />
-          </div>
-        </section>
+<section className="mt-8">
+  <p className="mb-2 text-center text-[11px] font-bold uppercase">
+    Penyusun dan Validator
+  </p>
+
+  <table className="w-full border-collapse border border-black text-[11px]">
+    <thead>
+      <tr>
+        <th className="border border-black py-1">STATUS</th>
+        <th className="w-[45px] border border-black py-1">NO</th>
+        <th className="border border-black py-1">NAMA</th>
+        <th className="w-[140px] border border-black py-1">NOMOR MET</th>
+        <th className="w-[180px] border border-black py-1">
+          TANDA TANGAN DAN TANGGAL
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+
+      {penyusun.map((item, index) => (
+        <tr key={`penyusun-${index}`}>
+          {index === 0 && (
+            <td
+              rowSpan={penyusun.length}
+              className="border border-black text-center align-middle"
+            >
+              Penyusun
+            </td>
+          )}
+
+          <td className="border border-black text-center">
+            {index + 1}
+          </td>
+
+          <td className="border border-black px-2">
+            <div className="print:hidden">
+              <select
+                value={item.id_asesor || ""}
+                onChange={(e) =>
+                  handleAsesorChange("penyusun", index, e.target.value)
+                }
+                className="w-full bg-transparent outline-none"
+              >
+                <option value="">Pilih Asesor</option>
+
+                {asesorList.map((a) => (
+                  <option
+                    key={a.id_user}
+                    value={a.id_user}
+                  >
+                    {a.nama_lengkap}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <p className="hidden print:block">
+              {item.nama_lengkap || "-"}
+            </p>
+          </td>
+
+          <td className="border border-black px-2">
+            {item.no_reg_asesor || "-"}
+          </td>
+
+          <td className="border border-black">
+            <div className="flex flex-col items-center justify-center py-2">
+              {item.ttd_path && (
+                <img
+                  src={normalizeImageUrl(item.ttd_path)}
+                  className="max-h-16 object-contain"
+                  alt=""
+                />
+              )}
+
+              <div className="mt-2 w-[140px] border-b border-black"></div>
+
+              <p className="mt-2">
+                {formatTanggal(formPaket.tanggal)}
+              </p>
+            </div>
+          </td>
+        </tr>
+      ))}
+
+      {validator.map((item, index) => (
+        <tr key={`validator-${index}`}>
+          {index === 0 && (
+            <td
+              rowSpan={validator.length}
+              className="border border-black text-center align-middle"
+            >
+              Validator
+            </td>
+          )}
+
+          <td className="border border-black text-center">
+            {index + 1}
+          </td>
+
+          <td className="border border-black px-2">
+            <div className="print:hidden">
+              <select
+                value={item.id_asesor || ""}
+                onChange={(e) =>
+                  handleAsesorChange("validator", index, e.target.value)
+                }
+                className="w-full bg-transparent outline-none"
+              >
+                <option value="">Pilih Asesor</option>
+
+                {asesorList.map((a) => (
+                  <option
+                    key={a.id_user}
+                    value={a.id_user}
+                  >
+                    {a.nama_lengkap}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <p className="hidden print:block">
+              {item.nama_lengkap || "-"}
+            </p>
+          </td>
+
+          <td className="border border-black px-2">
+            {item.no_reg_asesor || "-"}
+          </td>
+
+          <td className="border border-black">
+            <div className="flex flex-col items-center justify-center py-2">
+              {item.ttd_path && (
+                <img
+                  src={normalizeImageUrl(item.ttd_path)}
+                  className="max-h-16 object-contain"
+                  alt=""
+                />
+              )}
+
+              <div className="mt-2 w-[140px] border-b border-black"></div>
+
+              <p className="mt-2">
+                {formatTanggal(formPaket.tanggal)}
+              </p>
+            </div>
+          </td>
+        </tr>
+      ))}
+
+    </tbody>
+  </table>
+
+  <div className="mt-3 flex gap-3 print:hidden">
+    <button
+      type="button"
+      onClick={tambahPenyusun}
+      className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white"
+    >
+      <Plus size={16} />
+      Tambah Penyusun
+    </button>
+
+    <button
+      type="button"
+      onClick={tambahValidator}
+      className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white"
+    >
+      <Plus size={16} />
+      Tambah Validator
+    </button>
+  </div>
+</section>
       </main>
 
       {showSoalModal && (
@@ -892,13 +1182,13 @@ export default function FRIA05() {
 function InfoRow({ label, value }) {
   return (
     <tr>
-      <td colSpan="2" className="border border-black px-2 py-1 font-bold">
+      <td colSpan="2" className="border border-black px-1 py-[2px] font-bold">
         {label}
       </td>
 
-      <td className="border border-black px-2 py-1 text-center">:</td>
+      <td className="border border-black px-1 py-[2px] text-center">:</td>
 
-      <td className="border border-black px-2 py-1">{value || ""}</td>
+      <td className="border border-black px-1 py-[2px]">{value || ""}</td>
     </tr>
   );
 }

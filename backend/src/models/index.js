@@ -64,6 +64,7 @@ const FrIa03Jawaban = require("./frIa03Jawaban.model");
 const FrIa01 = require("./frIa01.model");
 const FrIa01Detail = require("./frIa01Detail.model");
 const FrIa05 = require("./frIa05.model");
+const FrIa05Validator = require("./frIa05Validator.model");
 const FrIa05Soal = require("./frIa05Soal.model");
 const FrIa05Opsi = require("./frIa05Opsi.model");
 const FrIa05Jawaban = require("./frIa05Jawaban.model");
@@ -200,6 +201,23 @@ FrIa03,
 FrIa05Soal.hasMany(FrIa05Jawaban, { foreignKey: "id_soal", as: "jawaban" });
 FrIa05Opsi.hasMany(FrIa05Jawaban, { foreignKey: "id_opsi", as: "jawabanAsesi" });
 FrIa05.hasMany(FrIa05Soal, { foreignKey: "id_fr_ia_05", as: "soal", onDelete: "CASCADE" });
+FrIa05.hasMany(FrIa05Validator, {
+  foreignKey: "id_fr_ia_05",
+  as: "validator",
+});
+
+FrIa05Validator.belongsTo(FrIa05, {
+  foreignKey: "id_fr_ia_05",
+});
+
+ProfileAsesor.hasMany(FrIa05Validator, {
+  foreignKey: "id_asesor",
+});
+
+FrIa05Validator.belongsTo(ProfileAsesor, {
+  foreignKey: "id_asesor",
+  as: "asesor",
+});
 FrIa05Soal.belongsTo(FrIa05, { foreignKey: "id_fr_ia_05", as: "frIa05" });
 FrIa05Soal.hasMany(FrIa05Opsi, { foreignKey: "id_soal", as: "opsi", onDelete: "CASCADE" });
 FrIa05Opsi.belongsTo(FrIa05Soal, { foreignKey: "id_soal", as: "soal" });
@@ -629,6 +647,7 @@ FrIa03Pertanyaan,
 FrIa03Jawaban,
 
 FrIa05,
+FrIa05Validator,
 FrIa05Soal,
 FrIa05Opsi,
 FrIa05Jawaban,
