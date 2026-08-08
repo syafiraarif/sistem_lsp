@@ -81,6 +81,15 @@ FrMapa01.hasMany(FrMapa01Detail, { foreignKey: "id_mapa01", as: "detail", onDele
 FrMapa01Detail.belongsTo(FrMapa01, { foreignKey: "id_mapa01" });
 FrMapa01.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
 Jadwal.hasMany(FrMapa01, { foreignKey: "id_jadwal", as: "frMapa01" });
+FrMapa01.belongsTo(Skema, {
+  foreignKey: "id_skema",
+  as: "skema"
+});
+
+Skema.hasMany(FrMapa01, {
+  foreignKey: "id_skema",
+  as: "frMapa01"
+});
 FrMapa01.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", as: "asesor" });
 ProfileAsesor.hasMany(FrMapa01, { foreignKey: "id_asesor", as: "frMapa01" });
 FrMapa01Detail.belongsTo(UnitKompetensi, { foreignKey: "id_unit", as: "unit" });

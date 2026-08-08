@@ -13,6 +13,7 @@ import IsiMKVA from "../pages/Asesor/IsiMKVA";
 import UbahSandiAsesor from "../pages/Asesor/UbahSandiAsesor";
 import PesertaJadwalAsesor from "../pages/Asesor/PesertaJadwalAsesor";
 import DetailPesertaAsesor from "../pages/Asesor/DetailPesertaAsesor";
+import MAPA01Asesor from "../pages/Asesor/MAPA01Asesor";
 
 import FRIA02 from "../pages/Asesor/komiteTeknis/FRIA02";
 import FRIA05 from "../pages/Asesor/komiteTeknis/FRIA05";
@@ -41,6 +42,11 @@ export default function AsesorRoutes() {
       <Route
         path="jadwal-saya/:id_jadwal/peserta/:id_peserta"
         element={<DetailPesertaAsesor />}
+      />
+
+      <Route
+        path="mapa01/:id_jadwal/:id_peserta"
+        element={<MAPA01Asesor />}
       />
 
       {/* VERIFIKASI TUK */}
