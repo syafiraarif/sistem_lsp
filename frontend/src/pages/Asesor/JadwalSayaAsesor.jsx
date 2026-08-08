@@ -376,26 +376,6 @@ function JadwalCard({ item, index }) {
     navigate(`/asesor/presensi/${idJadwal}`);
   };
 
-  const handleFormAsesmen = () => {
-    if (!idJadwal) {
-      alert("ID jadwal tidak ditemukan.");
-      return;
-    }
-
-    navigate(`/asesor/jadwal-saya/${idJadwal}/form-asesmen`);
-  };
-
-  const handleFRIA03 = () => {
-    if (!idFrIa03) {
-      alert(
-        "ID FR.IA.03 belum dikirim dari backend. Pastikan endpoint jadwal-uji-kompetensi mengirim id_fr_ia_03 atau object frIa03."
-      );
-      return;
-    }
-
-    navigate(`/asesor/fr-ia03/asesor/${idFrIa03}`);
-  };
-
   return (
     <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px]">
@@ -412,16 +392,6 @@ function JadwalCard({ item, index }) {
                 <span className="inline-flex items-center rounded-full bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#071E3D]">
                   Asesor Penguji
                 </span>
-
-                {idFrIa03 ? (
-                  <span className="inline-flex items-center rounded-full bg-green-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-600">
-                    FR.IA.03 Ada
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center rounded-full bg-red-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500">
-                    FR.IA.03 Belum Ada
-                  </span>
-                )}
               </div>
 
               <h3 className="text-2xl font-black text-[#071E3D] leading-tight">
@@ -472,7 +442,7 @@ function JadwalCard({ item, index }) {
             </h4>
 
             <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
-              Buka peserta, presensi, dan formulir asesmen untuk jadwal ini.
+              Kelola peserta asesmen dan presensi pada jadwal uji kompetensi ini.
             </p>
           </div>
 
@@ -495,26 +465,6 @@ function JadwalCard({ item, index }) {
             >
               <ClipboardCheck size={16} />
               Presensi
-            </button>
-
-            <button
-              type="button"
-              onClick={handleFormAsesmen}
-              disabled={!idJadwal}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200"
-            >
-              <FileText size={16} />
-              Form Asesmen
-            </button>
-
-            <button
-              type="button"
-              onClick={handleFRIA03}
-              disabled={!idFrIa03}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-orange-100 bg-orange-50 px-5 py-4 text-xs font-black uppercase tracking-widest text-orange-600 transition-all hover:bg-orange-500 hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
-            >
-              <FileText size={16} />
-              FR.IA.03
             </button>
           </div>
         </div>

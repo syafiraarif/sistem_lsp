@@ -7,6 +7,11 @@ const {
   Presensi,
   Apl01Asesmen,
   Apl02,
+  FrIa01,
+  FrIa02,
+  FrIa03,
+  FrMapa01,
+  FrMapa02,
   FrIa05Penilaian,
   HasilKeputusanAsesmen,
 } = require("../../models");
@@ -91,62 +96,117 @@ const getKelengkapanPeserta = async (id_peserta) => {
     };
   }
 
-  const [presensi, apl01, apl02, fria05, keputusan] = await Promise.all([
-    Presensi.findOne({
-      where: {
-        id_peserta,
-      },
-    }),
+const [
+  presensi,
+  apl01,
+  apl02,
+  fria01,
+  fria02,
+  fria03,
+  mapa01,
+  mapa02,
+  fria05,
+  keputusan
+] = await Promise.all([
 
-    Apl01Asesmen.findOne({
-      where: {
-        id_peserta,
-      },
-    }),
+  Presensi.findOne({
+    where: {
+      id_peserta
+    }
+  }),
 
-    Apl02.findOne({
-      where: {
-        id_peserta,
-      },
-    }),
+  Apl01Asesmen.findOne({
+    where: {
+      id_peserta
+    }
+  }),
 
-    FrIa05Penilaian.findOne({
-      where: {
-        id_peserta,
-      },
-      order: [["tanggal_penilaian", "DESC"], ["id_penilaian", "DESC"]],
-    }),
+  Apl02.findOne({
+    where: {
+      id_peserta
+    }
+  }),
 
-    HasilKeputusanAsesmen.findOne({
-      where: {
-        id_peserta,
-      },
-      order: [["tanggal_keputusan", "DESC"], ["id_keputusan", "DESC"]],
-    }),
-  ]);
+  FrIa01.findOne({
+    where: {
+      id_peserta
+    }
+  }),
+
+  Promise.resolve(null),
+
+  Promise.resolve(null),
+
+  Promise.resolve(null),
+
+  Promise.resolve(null),
+
+  FrIa05Penilaian.findOne({
+    where: {
+      id_peserta
+    },
+    order: [
+      ["tanggal_penilaian", "DESC"],
+      ["id_penilaian", "DESC"]
+    ]
+  }),
+
+  HasilKeputusanAsesmen.findOne({
+    where: {
+      id_peserta
+    },
+    order: [
+      ["tanggal_keputusan", "DESC"],
+      ["id_keputusan", "DESC"]
+    ]
+  })
+
+]);
 
   return {
-    presensi: Boolean(presensi),
-    apl01: Boolean(apl01),
-    apl02: Boolean(apl02),
-    fria05: Boolean(fria05),
-    keputusan: Boolean(keputusan),
+  presensi: Boolean(presensi),
+  apl01: Boolean(apl01),
+  apl02: Boolean(apl02),
+  fria01: Boolean(fria01),
+  fria02: Boolean(fria02),
+  fria03: Boolean(fria03),
+  mapa01: Boolean(mapa01),
+  mapa02: Boolean(mapa02),
+  fria05: Boolean(fria05),
+  keputusan: Boolean(keputusan),
+  presensi_data: presensi,
+  apl01_data: apl01,
+  apl02_data: apl02,
+  fria01_data: fria01,
+  fria02_data: fria02,
+  fria03_data: fria03,
+  formId: {
+  mapa01: mapa01?.id_fr_mapa_01 || null,
+  mapa02: mapa02?.id_fr_mapa_02 || null,
 
-    presensi_data: presensi,
-    apl01_data: apl01,
-    apl02_data: apl02,
-    fria05_data: fria05,
-    keputusan_data: keputusan,
+  fria01: fria01?.id_fr_ia_01 || null,
+  fria02: fria02?.id_fr_ia_02 || null,
+  fria03: fria03?.id_fr_ia_03 || null
+},
+  mapa01_data: mapa01,
+  mapa02_data: mapa02,
+  fria05_data: fria05,
+  keputusan_data: keputusan,
 
-    total_lengkap: [
-      Boolean(presensi),
-      Boolean(apl01),
-      Boolean(apl02),
-      Boolean(fria05),
-    ].filter(Boolean).length,
+  total_lengkap: [
+    Boolean(presensi),
+    Boolean(apl01),
+    Boolean(apl02),
+    Boolean(fria01),
+    Boolean(fria02),
+    Boolean(fria03),
+    Boolean(mapa01),
+    Boolean(mapa02),
+    Boolean(fria05)
+  ].filter(Boolean).length,
 
-    total_wajib: 4,
-  };
+  total_wajib: 9
+};
 };
 
 /* =========================
@@ -350,7 +410,98 @@ const updateNilaiPeserta = async (req, res) => {
   }
 };
 
+/* =========================
+GET DETAIL PESERTA
+GET /api/asesor/peserta/:id_peserta
+========================= */
+
+const getDetailPeserta = async (req, res) => {
+  try {
+    const { id_peserta } = req.params;
+    const id_user = req.user.id_user;
+
+    const peserta = await PesertaJadwal.findOne({
+      where: {
+        id_peserta
+      },
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: {
+            exclude: ["password", "password_hash"]
+          }
+        },
+        {
+          model: ProfileAsesi,
+          as: "profileAsesi"
+        },
+        {
+          model: Jadwal,
+          as: "jadwal"
+        }
+      ]
+    });
+
+    if (!peserta) {
+      return res.status(404).json({
+        status: "error",
+        message: "Peserta tidak ditemukan"
+      });
+    }
+
+    const cekAkses = await JadwalAsesor.findOne({
+      where: {
+        id_jadwal: peserta.id_jadwal,
+        id_user
+      }
+    });
+
+    if (!cekAkses) {
+      return res.status(403).json({
+        status: "error",
+        message: "Anda tidak memiliki akses ke peserta ini"
+      });
+    }
+
+    const plain = peserta.toJSON();
+
+    const kelengkapan = await getKelengkapanPeserta(
+      plain.id_peserta
+    );
+
+    return res.json({
+      status: "success",
+      data: {
+        ...plain,
+
+        nama_lengkap: getNamaAsesi(plain),
+        nik: getNikAsesi(plain),
+        email: getEmailAsesi(plain),
+        no_hp: getNoHpAsesi(plain),
+
+        status_asesmen: normalizeStatusAsesmen(
+          plain.status_asesmen
+        ),
+
+        kelengkapan
+      }
+    });
+
+  } catch (err) {
+
+    console.error("GET DETAIL PESERTA ERROR :", err);
+
+    return res.status(500).json({
+      status: "error",
+      message: err.message
+    });
+
+  }
+};
+
 module.exports = {
   getPesertaByJadwal,
+  getDetailPeserta,
   updateNilaiPeserta,
 };

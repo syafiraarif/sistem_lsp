@@ -12,11 +12,14 @@ import JadwalMkva from "../pages/Asesor/JadwalMkva";
 import IsiMKVA from "../pages/Asesor/IsiMKVA";
 import UbahSandiAsesor from "../pages/Asesor/UbahSandiAsesor";
 import PesertaJadwalAsesor from "../pages/Asesor/PesertaJadwalAsesor";
+import DetailPesertaAsesor from "../pages/Asesor/DetailPesertaAsesor";
 
 import FRIA02 from "../pages/Asesor/komiteTeknis/FRIA02";
 import FRIA05 from "../pages/Asesor/komiteTeknis/FRIA05";
 
 import FRIA03Komite from "../pages/Asesor/komiteTeknis/FRIA03Komite";
+import FRIA01Asesor from "../pages/Asesor/FRIA01Asesor";
+import FRIA02Asesor from "../pages/Asesor/FRIA02Asesor";
 import FRIA03Asesor from "../pages/Asesor/FRIA03Asesor";
 
 export default function AsesorRoutes() {
@@ -33,6 +36,11 @@ export default function AsesorRoutes() {
       <Route
         path="jadwal-saya/:id_jadwal/peserta"
         element={<PesertaJadwalAsesor />}
+      />
+
+      <Route
+        path="jadwal-saya/:id_jadwal/peserta/:id_peserta"
+        element={<DetailPesertaAsesor />}
       />
 
       {/* VERIFIKASI TUK */}
@@ -65,7 +73,8 @@ export default function AsesorRoutes() {
       <Route path="komite-teknis/:id_jadwal/fr-ia03" element={<FRIA03Komite />}/>
 
       <Route path="fr-ia03/asesor/:id" element={<FRIA03Asesor />}/>
-      
+      <Route path="fr-ia01/:id_jadwal/:id_peserta" element={<FRIA01Asesor />} />
+      <Route path="fr-ia03/asesor/:id" element={<FRIA03Asesor />} />
       {/* Route cadangan kalau URL /asesor/mkva/jadwal/:id_jadwal/isi */}
       <Route path="mkva/jadwal/:id_jadwal/isi" element={<IsiMKVA />} />
 

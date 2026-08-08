@@ -105,6 +105,11 @@ router.get(
   pesertaJadwalController.getPesertaByJadwal
 );
 
+router.get(
+  "/peserta/:id_peserta",
+  pesertaJadwalController.getDetailPeserta
+);
+
 router.put(
   "/peserta/:id/nilai",
   pesertaJadwalController.updateNilaiPeserta
@@ -334,17 +339,50 @@ router.get("/fr-ia03/asesor/:id/pdf", frIa03AsesorController.downloadPdf);
    FR.IA.01 - ASESOR PENGUJI
 =================================================== */
 
-router.get("/fr-ia01/tugas", frIa01Controller.getTugasAsesor);
+router.get(
+  "/fr-ia01/tugas",
+  frIa01Controller.getTugasAsesor
+);
 
-router.post("/fr-ia01", frIa01Controller.create);
+// router.get(
+//   "/fr-ia01/asesor/:id",
+//   frIa01Controller.getForm
+// );
 
-router.get("/fr-ia01/:id", frIa01Controller.getById);
+// router.post(
+//   "/fr-ia01/asesor/jawaban",
+//   frIa01Controller.saveJawaban
+// );
 
-router.put("/fr-ia01/:id", frIa01Controller.update);
+router.get(
+  "/fr-ia01/asesor/:id/pdf",
+  frIa01Controller.downloadPdf
+);
 
-router.get("/fr-ia01", frIa01Controller.getByPeserta);
+router.post(
+  "/fr-ia01",
+  frIa01Controller.create
+);
 
-router.get("/fr-ia01/:id/pdf", frIa01Controller.downloadPdf);
+router.get(
+  "/fr-ia01/:id",
+  frIa01Controller.getById
+);
+
+router.put(
+  "/fr-ia01/:id",
+  frIa01Controller.update
+);
+
+router.get(
+  "/fr-ia01",
+  frIa01Controller.getByPeserta
+);
+
+router.get(
+  "/fr-ia01/:id/pdf",
+  frIa01Controller.downloadPdf
+);
 
 /* ===================================================
    FR.IA.05 - KOMITE TEKNIS
