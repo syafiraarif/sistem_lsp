@@ -31,7 +31,6 @@ const pelakuAsesmenOptions = [
   { value: "asesor_perusahaan", label: "Asesor Perusahaan" }
 ];
 
-
 const konfirmasiOptions = [
   "Manajer sertifikasi LSP",
   "Master Asesor / Master Trainer / Lead Asesor Kompetensi",
@@ -101,7 +100,6 @@ const metodeOptions = [
   }
 ];
 
-
 const defaultForm = {
   jenis_asesi: "",
   tujuan_asesmen: "",
@@ -159,360 +157,237 @@ export default function MAPA01Asesor() {
   }, [id_jadwal, id_peserta]);
 
   const fetchData = async () => {
-  try {
-    setLoading(true);
-
-    const token = localStorage.getItem("token");
-
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    };
-
-    // =========================================================
-    // REQUEST UTAMA
-    // =========================================================
-    const responses = await Promise.allSettled([
-      // Peserta
-      api.get(
-        `/asesor/peserta/${id_peserta}`,
-        config
-      ),
-
-      // Unit kompetensi berdasarkan jadwal
-      api.get(
-        `/asesor/fr-ia02/unit/${id_jadwal}`,
-        config
-      ),
-
-      // MAPA.01 yang sudah tersimpan
-      api.get(
-        `/asesor/fr-mapa01`,
-        {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+      const responses = await Promise.allSettled([
+        api.get(`/asesor/peserta/${id_peserta}`, config),
+        api.get(`/asesor/fr-ia02/unit/${id_jadwal}`, config),
+        api.get(`/asesor/fr-mapa01`, {
           ...config,
           params: {
             id_jadwal,
             id_peserta
           }
-        }
-      ),
-
-      // Daftar asesor
-      api.get(
-        `/asesor/list-asesor`,
-        config
-      )
-    ]);
-
-    // =========================================================
-    // PESERTA
-    // =========================================================
-    const pesertaResponse =
-      responses[0].status === "fulfilled"
-        ? getResponseData(responses[0].value)
-        : {};
-
-    const pesertaData =
-      pesertaResponse?.peserta ||
-      pesertaResponse?.profile ||
-      pesertaResponse ||
-      {};
-
-    // =========================================================
-    // UNIT KOMPETENSI
-    // =========================================================
-    const unitResponse =
-      responses[1].status === "fulfilled"
-        ? getResponseData(responses[1].value)
-        : [];
-
-    const rawUnits = Array.isArray(unitResponse)
-      ? unitResponse
-      : (
-          unitResponse?.data ||
-          unitResponse?.units ||
-          unitResponse?.unitKompetensi ||
-          unitResponse?.unit_kompetensi ||
-          []
-        );
-
-    const normalizedUnits = deduplicateUnits(
-      rawUnits
-        .map(normalizeUnitKompetensi)
-        .filter((item) => item.id_unit)
-    );
-
-    // =========================================================
-    // MAPA.01
-    // =========================================================
-    const mapaResponse =
-      responses[2].status === "fulfilled"
-        ? getResponseData(responses[2].value)
-        : {};
-
-    const mapaData =
-      mapaResponse?.data ||
-      mapaResponse ||
-      {};
-
-    // =========================================================
-    // ASESOR
-    // =========================================================
-    const asesorResponse =
-      responses[3].status === "fulfilled"
-        ? getResponseData(responses[3].value)
-        : [];
-
-    const daftarAsesor = Array.isArray(asesorResponse)
-      ? asesorResponse
-      : (
-          asesorResponse?.data ||
-          asesorResponse?.rows ||
-          asesorResponse?.asesor ||
-          []
-        );
-
-    // =========================================================
-    // JADWAL
-    // =========================================================
-    //
-    // Karena /jadwal-saya/:id memang tidak tersedia,
-    // ambil informasi jadwal dari response MAPA jika tersedia.
-    //
-    const jadwalData =
-      mapaData?.jadwal ||
-      mapaResponse?.jadwal ||
-      pesertaData?.jadwal ||
-      {
-        id_jadwal
-      };
-
-    // =========================================================
-    // SKEMA
-    // =========================================================
-    const skemaData =
-      mapaData?.skema ||
-      mapaResponse?.skema ||
-      pesertaData?.skema ||
-      {};
-
-    // =========================================================
-    // GABUNG UNIT DENGAN DATA MAPA LAMA
-    // =========================================================
-    const detailData =
-      Array.isArray(mapaData?.detail)
-        ? mapaData.detail
-        : Array.isArray(mapaData?.details)
-          ? mapaData.details
+        }),
+        api.get(`/asesor/list-asesor`, config)
+      ]);
+      const pesertaResponse =
+        responses[0].status === "fulfilled"
+          ? getResponseData(responses[0].value)
+          : {};
+      const pesertaData =
+        pesertaResponse?.peserta ||
+        pesertaResponse?.profile ||
+        pesertaResponse ||
+        {};
+      const unitResponse =
+        responses[1].status === "fulfilled"
+          ? getResponseData(responses[1].value)
           : [];
-
-    const savedDetailMap = new Map(
-      detailData
-        .map((item) => {
-          const normalized = normalizeDetail(item);
-
-          if (!normalized.id_unit) {
-            return null;
-          }
-
-          return [
-            String(normalized.id_unit),
-            normalized
-          ];
-        })
-        .filter(Boolean)
-    );
-
-    const detailFromSkema = normalizedUnits.map((unit) => ({
-      ...normalizeDetail(unit),
-
-      ...(savedDetailMap.get(
-        String(unit.id_unit)
-      ) || {}),
-
-      id_unit: unit.id_unit,
-      kode_unit: unit.kode_unit,
-      judul_unit: unit.judul_unit,
-      kelompok: unit.kelompok,
-
-      // pastikan field metode tetap ada
-      metode_observasi:
-        savedDetailMap.get(String(unit.id_unit))
-          ?.metode_observasi || "",
-
-      metode_portofolio:
-        savedDetailMap.get(String(unit.id_unit))
-          ?.metode_portofolio || "",
-
-      metode_tanya:
-        savedDetailMap.get(String(unit.id_unit))
-          ?.metode_tanya || "",
-
-      metode_verifikasi:
-        savedDetailMap.get(String(unit.id_unit))
-          ?.metode_verifikasi || "",
-
-      bukti:
-        savedDetailMap.get(String(unit.id_unit))
-          ?.bukti || "",
-
-      l:
-        savedDetailMap.get(String(unit.id_unit))
-          ?.l || "",
-
-      tl:
-        savedDetailMap.get(String(unit.id_unit))
-          ?.tl || "",
-
-      t:
-        savedDetailMap.get(String(unit.id_unit))
-          ?.t || ""
-    }));
-
-    // =========================================================
-    // SET STATE
-    // =========================================================
-    setPeserta(pesertaData);
-
-    setJadwal(jadwalData);
-
-    setSkema(skemaData);
-
-    setUnitKompetensiList(normalizedUnits);
-
-    setAsesorList(daftarAsesor);
-
-    window.__asesorList = daftarAsesor;
-
-    // =========================================================
-    // ID MAPA
-    // =========================================================
-    setMapaId(
-      mapaData?.id_mapa01 ||
-      mapaData?.id ||
-      null
-    );
-
-    // =========================================================
-    // FORM
-    // =========================================================
-    const konfirmasiValue =
+      const mapaResponse =
+        responses[2].status === "fulfilled"
+          ? responses[2].value?.data || {}
+          : {};
+      const mapaData =
+        mapaResponse?.data || {};
+      const asesorResponse =
+        responses[3].status === "fulfilled"
+          ? getResponseData(responses[3].value)
+          : [];
+      const daftarAsesor =
+        Array.isArray(asesorResponse)
+          ? asesorResponse
+          : (
+              asesorResponse?.data ||
+              asesorResponse?.rows ||
+              asesorResponse?.asesor ||
+              []
+            );
+      const rawUnitsFromEndpoint =
+        Array.isArray(unitResponse)
+          ? unitResponse
+          : (
+              unitResponse?.data ||
+              unitResponse?.units ||
+              unitResponse?.unitKompetensi ||
+              unitResponse?.unit_kompetensi ||
+              []
+            );
+      const rawUnits =
+        rawUnitsFromEndpoint.length > 0
+          ? rawUnitsFromEndpoint
+          : Array.isArray(mapaResponse?.unitKompetensi)
+            ? mapaResponse.unitKompetensi
+            : [];
+      const normalizedUnits = deduplicateUnits(
+        rawUnits
+          .map(normalizeUnitKompetensi)
+          .filter((item) => item.id_unit)
+      );
+      const jadwalData =
+        mapaResponse?.jadwal ||
+        pesertaData?.jadwal ||
+        {
+          id_jadwal: Number(id_jadwal)
+        };
+      const skemaData =
+        mapaResponse?.skema ||
+        pesertaData?.skema ||
+        {};
+      const detailData =
+        Array.isArray(mapaData?.detail)
+          ? mapaData.detail
+          : Array.isArray(mapaData?.details)
+            ? mapaData.details
+            : [];
+      const savedDetailMap = new Map(
+        detailData
+          .map((item) => {
+            const normalized = normalizeDetail(item);
+            if (!normalized.id_unit) {
+              return null;
+            }
+            return [
+              String(normalized.id_unit),
+              normalized
+            ];
+          })
+          .filter(Boolean)
+      );
+      const detailFromSkema = normalizedUnits.map((unit) => ({
+        ...normalizeDetail(unit),
+        ...(savedDetailMap.get(String(unit.id_unit)) || {}),
+        id_unit: unit.id_unit,
+        kode_unit: unit.kode_unit,
+        judul_unit: unit.judul_unit,
+        kelompok: unit.kelompok,
+        metode_observasi:
+          savedDetailMap.get(String(unit.id_unit))
+            ?.metode_observasi || "",
+        metode_portofolio:
+          savedDetailMap.get(String(unit.id_unit))
+            ?.metode_portofolio || "",
+        metode_tanya:
+          savedDetailMap.get(String(unit.id_unit))
+            ?.metode_tanya || "",
+        metode_verifikasi:
+          savedDetailMap.get(String(unit.id_unit))
+            ?.metode_verifikasi || "",
+        bukti:
+          savedDetailMap.get(String(unit.id_unit))
+            ?.bukti || "",
+        l:
+          savedDetailMap.get(String(unit.id_unit))
+            ?.l || "",
+        tl:
+          savedDetailMap.get(String(unit.id_unit))
+            ?.tl || "",
+        t:
+          savedDetailMap.get(String(unit.id_unit))
+            ?.t || ""
+      }));
+      setPeserta(pesertaData);
+      setJadwal(jadwalData);
+      setSkema(skemaData);
+      setUnitKompetensiList(normalizedUnits);
+      setAsesorList(daftarAsesor);
+      window.__asesorList = daftarAsesor;
+      setMapaId(
+        mapaData?.id_mapa01 ||
+        mapaData?.id ||
+        null
+      );
+      const konfirmasiValue =
         mapaData?.konfirmasi_orang_relevan ||
         mapaData?.konfirmasi ||
         "";
-
-        const standarValue =
+      const standarValue =
         mapaData?.standar_kompetensi
-            ? "skkni"
-            : mapaData?.kurikulum_pelatihan
+          ? "skkni"
+          : mapaData?.kurikulum_pelatihan
             ? "kurikulum"
             : mapaData?.spesifikasi_kinerja
-                ? "industri"
-                : mapaData?.spesifikasi_produk
+              ? "industri"
+              : mapaData?.spesifikasi_produk
                 ? "produk"
                 : mapaData?.pedoman_khusus
-                    ? "khusus"
-                    : "";
-
-        const penyusunData =
+                  ? "khusus"
+                  : "";
+      const penyusunData =
         Array.isArray(mapaData?.penyusun) &&
         mapaData.penyusun.length
-            ? mapaData.penyusun
-            : defaultForm.penyusun;
-
-    const validatorData =
-      Array.isArray(mapaData?.validator) &&
-      mapaData.validator.length
-        ? mapaData.validator
-        : defaultForm.validator;
-
-    setForm({
-      ...defaultForm,
-
-      jenis_asesi:
-        mapaData?.jenis_asesi || "",
-
-      tujuan_asesmen:
-        mapaData?.tujuan_asesmen || "",
-
-      lingkungan:
-        mapaData?.lingkungan || "",
-
-      peluang_bukti:
-        mapaData?.peluang_bukti || "",
-
-      hubungan_standar:
-        Array.isArray(mapaData?.hubungan_standar)
-          ? mapaData.hubungan_standar
-          : [],
-
-      siapa_melakukan_asesmen:
-        mapaData?.siapa_melakukan_asesmen || "",
-
-      konfirmasi_orang_relevan:
-        konfirmasiValue,
-
-      standar_kompetensi:
-        standarValue,
-
-      potensi_asesi:
-        mapaData?.potensi_asesi || "",
-
-      detail:
-        detailFromSkema,
-
-      modifikasi: {
-        karakteristik_kandidat:
+          ? mapaData.penyusun
+          : defaultForm.penyusun;
+      const validatorData =
+        Array.isArray(mapaData?.validator) &&
+        mapaData.validator.length
+          ? mapaData.validator
+          : defaultForm.validator;
+      setForm({
+        ...defaultForm,
+        jenis_asesi:
+          mapaData?.jenis_asesi || "",
+        tujuan_asesmen:
+          mapaData?.tujuan_asesmen || "",
+        lingkungan:
+          mapaData?.lingkungan || "",
+        peluang_bukti:
+          mapaData?.peluang_bukti || "",
+        hubungan_standar:
+          Array.isArray(mapaData?.hubungan_standar)
+            ? mapaData.hubungan_standar
+            : [],
+        siapa_melakukan_asesmen:
+          mapaData?.siapa_melakukan_asesmen || "",
+        konfirmasi_orang_relevan:
+          konfirmasiValue,
+        standar_kompetensi:
+          standarValue,
+        potensi_asesi:
+          mapaData?.potensi_asesi || "",
+        detail:
+          detailFromSkema,
+        modifikasi: {
+          karakteristik_kandidat:
             mapaData?.karakteristik_asesi ||
             mapaData?.karakteristik_kandidat ||
             "",
-
-        kebutuhan_kontekstualisasi:
+          kebutuhan_kontekstualisasi:
             mapaData?.kebutuhan_kontekstual ||
             mapaData?.kebutuhan_kontekstualisasi ||
             "",
-
-        saran_pelatihan:
+          saran_pelatihan:
             mapaData?.saran_pelatihan || "",
-
-        penyesuaian_perangkat:
+          penyesuaian_perangkat:
             mapaData?.penyesuaian_perangkat || "",
-
-        peluang_integrasi:
+          peluang_integrasi:
             mapaData?.peluang_integrasi || ""
         },
-
-      penyusun:
-        normalizePeople(penyusunData),
-
-      validator:
-        normalizePeople(validatorData)
-    });
-
-  } catch (error) {
-
-    console.error(
-      "❌ Fetch MAPA01 Error:",
-      error
-    );
-
-    Swal.fire({
-      icon: "error",
-      title: "Gagal memuat MAPA.01",
-      text:
-        error.response?.data?.message ||
-        "Data MAPA.01 gagal dimuat.",
-      confirmButtonColor: "#071E3D"
-    });
-
-  } finally {
-
-    setLoading(false);
-
-  }
-};
-
+        penyusun:
+          normalizePeople(penyusunData),
+        validator:
+          normalizePeople(validatorData)
+      });
+    } catch (error) {
+      console.error("Fetch MAPA01 Error:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal memuat MAPA.01",
+        text:
+          error.response?.data?.message ||
+          "Data MAPA.01 gagal dimuat.",
+        confirmButtonColor: "#071E3D"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   const updateField = (field, value) => {
     setForm((prev) => ({
       ...prev,
@@ -625,197 +500,97 @@ export default function MAPA01Asesor() {
     }));
   };
 
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-
-      const idSkema = Number(
-        skema?.id_skema ||
-        jadwal?.id_skema ||
-        peserta?.id_skema ||
-        0
-      );
-
-      const header = {
-        id_peserta: Number(id_peserta),
-
-        // =========================
-        // PENDEKATAN
-        // =========================
-        jenis_asesi: form.jenis_asesi,
-        tujuan_asesmen: form.tujuan_asesmen,
-
-        // =========================
-        // KONTEKS
-        // =========================
-        lingkungan: form.lingkungan,
-        peluang_bukti: form.peluang_bukti,
-
-        // =========================
-        // HUBUNGAN STANDAR
-        // =========================
-        hubungan_standar: form.hubungan_standar,
-
-        siapa_melakukan_asesmen:
-            form.siapa_melakukan_asesmen,
-
-        // =========================
-        // KONFIRMASI
-        // =========================
-        manajer_lsp:
-            form.konfirmasi_orang_relevan ===
-            "Manajer sertifikasi LSP",
-
-        master_asesor:
-            form.konfirmasi_orang_relevan ===
-            "Master Asesor / Master Trainer / Lead Asesor Kompetensi",
-
-        manajer_pelatihan:
-            form.konfirmasi_orang_relevan ===
-            "Manajer pelatihan Lembaga Training terakreditasi / Lembaga Training terdaftar",
-
-        supervisor:
-            form.konfirmasi_orang_relevan ===
-            "Manajer atau supervisor ditempat kerja",
-
-        // =========================
-        // STANDAR KOMPETENSI
-        // =========================
-        standar_kompetensi:
-            form.standar_kompetensi === "skkni",
-
-        kurikulum_pelatihan:
-            form.standar_kompetensi === "kurikulum",
-
-        spesifikasi_kinerja:
-            form.standar_kompetensi === "industri",
-
-        spesifikasi_produk:
-            form.standar_kompetensi === "produk",
-
-        pedoman_khusus:
-            form.standar_kompetensi === "khusus",
-
-        // =========================
-        // POTENSI ASESI
-        // =========================
-        potensi_asesi:
-            form.potensi_asesi,
-
-        // =========================
-        // MODIFIKASI
-        // =========================
-        karakteristik_asesi:
-            form.modifikasi?.karakteristik_kandidat || "",
-
-        kebutuhan_kontekstual:
-            form.modifikasi?.kebutuhan_kontekstualisasi || "",
-
-        saran_pelatihan:
-            form.modifikasi?.saran_pelatihan || "",
-
-        penyesuaian_perangkat:
-            form.modifikasi?.penyesuaian_perangkat || "",
-
-        peluang_integrasi:
-            form.modifikasi?.peluang_integrasi || ""
-        };
-
-      const detail = form.detail
-        .filter((item) => item?.id_unit)
-        .map((item) => {
-            const metode = Array.isArray(item.metode)
-            ? item.metode
-            : [];
-
-            return {
-            id_unit: Number(item.id_unit),
-
-            bukti: item.bukti || "",
-
-            l: Boolean(item.l),
-            tl: Boolean(item.t),
-
-            // =========================
-            // METODE ASESMEN
-            // =========================
-
-            metode_observasi:
-                metode.includes("CL")
-                ? "CL"
-                : null,
-
-            metode_portofolio:
-                metode.includes("CVP")
-                ? "CVP"
-                : null,
-
-            metode_tanya:
-                metode.includes("DPT")
-                ? "DPT"
-                : metode.includes("PW")
-                    ? "PW"
-                    : null,
-
-            metode_verifikasi:
-                metode.includes("VPK")
-                ? "VPK"
-                : metode.includes("CRP")
-                    ? "CRP"
-                    : null
-            };
-        });
-
-      const payload = {
-        id_jadwal: Number(id_jadwal),
-        id_skema: idSkema,
-        header,
-        detail
-      };
-
-      let response;
-
-      if (mapaId) {
-        response = await api.put(
-          `/asesor/fr-mapa01/${mapaId}`,
-          payload
-        );
-      } else {
-        response = await api.post(
-          "/asesor/fr-mapa01",
-          payload
-        );
-
-        setMapaId(
-          response.data?.data?.id_mapa01 ||
-          response.data?.id_mapa01 ||
-          null
-        );
-      }
-
-      Swal.fire({
-        icon: "success",
-        title: "Berhasil",
-        text:
-          response.data?.message ||
-          "MAPA.01 berhasil disimpan.",
-        confirmButtonColor: "#071E3D"
-      });
-    } catch (error) {
-      console.error(error);
-
-      Swal.fire({
+const handleSave = async () => {
+  try {
+    setSaving(true);
+    const idJadwal = Number(id_jadwal);
+    const idPeserta = Number(id_peserta);
+    const idSkema = Number(
+      skema?.id_skema ||
+      jadwal?.id_skema ||
+      peserta?.id_skema ||
+      0
+    );
+    if (!idJadwal || !idPeserta || !idSkema) {
+      await Swal.fire({
         icon: "error",
         title: "Gagal menyimpan",
-        text:
-          error.response?.data?.message ||
-          "MAPA.01 gagal disimpan.",
+        text: `Data tidak lengkap. Jadwal: ${idJadwal}, Peserta: ${idPeserta}, Skema: ${idSkema}`,
         confirmButtonColor: "#071E3D"
       });
-    } finally {
-      setSaving(false);
+      return;
     }
-  };
+    const header = {
+      jenis_asesi: form.jenis_asesi,
+      tujuan_asesmen: form.tujuan_asesmen,
+      lingkungan: form.lingkungan,
+      peluang_bukti: form.peluang_bukti,
+      hubungan_standar: form.hubungan_standar,
+      siapa_melakukan_asesmen: form.siapa_melakukan_asesmen,
+      manajer_lsp: form.konfirmasi_orang_relevan === "Manajer sertifikasi LSP",
+      master_asesor: form.konfirmasi_orang_relevan === "Master Asesor / Master Trainer / Lead Asesor Kompetensi",
+      manajer_pelatihan: form.konfirmasi_orang_relevan === "Manajer pelatihan Lembaga Training terakreditasi / Lembaga Training terdaftar",
+      supervisor: form.konfirmasi_orang_relevan === "Manajer atau supervisor ditempat kerja",
+      standar_kompetensi: form.standar_kompetensi === "skkni",
+      kurikulum_pelatihan: form.standar_kompetensi === "kurikulum",
+      spesifikasi_kinerja: form.standar_kompetensi === "industri",
+      spesifikasi_produk: form.standar_kompetensi === "produk",
+      pedoman_khusus: form.standar_kompetensi === "khusus",
+      potensi_asesi: form.potensi_asesi,
+      karakteristik_asesi: form.modifikasi?.karakteristik_kandidat || "",
+      kebutuhan_kontekstual: form.modifikasi?.kebutuhan_kontekstualisasi || "",
+      saran_pelatihan: form.modifikasi?.saran_pelatihan || "",
+      penyesuaian_perangkat: form.modifikasi?.penyesuaian_perangkat || "",
+      peluang_integrasi: form.modifikasi?.peluang_integrasi || ""
+    };
+    const detail = form.detail
+      .filter((item) => item?.id_unit)
+      .map((item) => {
+        const metode = Array.isArray(item.metode) ? item.metode : [];
+        return {
+          id_unit: Number(item.id_unit),
+          bukti: item.bukti || "",
+          l: Boolean(item.l),
+          tl: Boolean(item.tl),
+          t: Boolean(item.t),
+          metode_observasi: metode.includes("CL") ? "CL" : null,
+          metode_portofolio: metode.includes("CVP") ? "CVP" : null,
+          metode_tanya: metode.includes("DPT") ? "DPT" : metode.includes("PW") ? "PW" : null,
+          metode_verifikasi: metode.includes("VPK") ? "VPK" : metode.includes("CRP") ? "CRP" : null
+        };
+      });
+    const payload = {
+      id_jadwal: idJadwal,
+      id_skema: idSkema,
+      id_peserta: idPeserta,
+      header,
+      detail
+    };
+    let response;
+    if (mapaId) {
+      response = await api.put(`/asesor/fr-mapa01/${mapaId}`, payload);
+    } else {
+      response = await api.post("/asesor/fr-mapa01", payload);
+      setMapaId(response.data?.data?.id_mapa01 || response.data?.id_mapa01 || null);
+    }
+    await Swal.fire({
+      icon: "success",
+      title: "Berhasil",
+      text: response.data?.message || "MAPA.01 berhasil disimpan.",
+      confirmButtonColor: "#071E3D"
+    });
+  } catch (error) {
+    console.error(error);
+    await Swal.fire({
+      icon: "error",
+      title: "Gagal menyimpan",
+      text: error.response?.data?.message || "MAPA.01 gagal disimpan.",
+      confirmButtonColor: "#071E3D"
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
   const namaAsesi =
     peserta?.nama_lengkap ||
