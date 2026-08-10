@@ -269,8 +269,11 @@ const submitFrMapa01 = async (req, res) => {
       : [];
 
     const konfirmasi = konfirmasi_orang_relevan || "";
-
     const modifikasiData = modifikasi || {};
+    const standarValid = ["skkni", "kurikulum", "industri", "produk", "khusus"];
+    const standarDipilih = standarValid.includes(standar_kompetensi)
+      ? standar_kompetensi
+      : null;
 
     t = await sequelize.transaction();
 
@@ -291,11 +294,11 @@ const submitFrMapa01 = async (req, res) => {
       aktivitas_kerja: hubungan.includes("aktivitas"),
       kegiatan_pembelajaran: hubungan.includes("pembelajaran") ? "dipilih" : null,
       pelaksana: siapa_melakukan_asesmen || null,
-      standar_kompetensi: standar_kompetensi || null,
-      kurikulum_pelatihan: standar_kompetensi === "kurikulum" ? "dipilih" : null,
-      spesifikasi_kinerja: standar_kompetensi === "industri" ? "dipilih" : null,
-      spesifikasi_produk: standar_kompetensi === "produk" ? "dipilih" : null,
-      pedoman_khusus: standar_kompetensi === "khusus" ? "dipilih" : null,
+      standar_kompetensi: standarDipilih,
+      kurikulum_pelatihan: standarDipilih === "kurikulum" ? "dipilih" : null,
+      spesifikasi_kinerja: standarDipilih === "industri" ? "dipilih" : null,
+      spesifikasi_produk: standarDipilih === "produk" ? "dipilih" : null,
+      pedoman_khusus: standarDipilih === "khusus" ? "dipilih" : null,
       manajer_lsp: konfirmasi === "Manajer sertifikasi LSP",
       master_asesor: konfirmasi === "Master Asesor / Master Trainer / Lead Asesor Kompetensi",
       manajer_pelatihan: konfirmasi === "Manajer pelatihan Lembaga Training terakreditasi / Lembaga Training terdaftar",
@@ -545,7 +548,7 @@ const getFrMapa01 = async (req, res) => {
         konfirmasi_orang_relevan = "Manajer atau supervisor ditempat kerja";
       }
 
-      let standar_kompetensi = data.standar_kompetensi || "";
+      let standar_kompetensi = data.standar_kompetensi || null;
 
       if (!standar_kompetensi) {
         if (data.kurikulum_pelatihan) {
@@ -557,7 +560,7 @@ const getFrMapa01 = async (req, res) => {
         } else if (data.pedoman_khusus) {
           standar_kompetensi = "khusus";
         } else {
-          standar_kompetensi = "skkni";
+          standar_kompetensi = "";
         }
       }
 
@@ -695,6 +698,10 @@ const updateFrMapa01 = async (req, res) => {
 
     const konfirmasi = konfirmasi_orang_relevan || "";
     const modifikasiData = modifikasi || {};
+    const standarValid = ["skkni", "kurikulum", "industri", "produk", "khusus"];
+    const standarDipilih = standarValid.includes(standar_kompetensi)
+      ? standar_kompetensi
+      : null;
 
     t = await sequelize.transaction();
 
@@ -710,11 +717,11 @@ const updateFrMapa01 = async (req, res) => {
       aktivitas_kerja: hubungan.includes("aktivitas"),
       kegiatan_pembelajaran: hubungan.includes("pembelajaran") ? "dipilih" : null,
       pelaksana: siapa_melakukan_asesmen || null,
-      standar_kompetensi: standar_kompetensi || null,
-      kurikulum_pelatihan: standar_kompetensi === "kurikulum" ? "dipilih" : null,
-      spesifikasi_kinerja: standar_kompetensi === "industri" ? "dipilih" : null,
-      spesifikasi_produk: standar_kompetensi === "produk" ? "dipilih" : null,
-      pedoman_khusus: standar_kompetensi === "khusus" ? "dipilih" : null,
+      standar_kompetensi: standarDipilih,
+      kurikulum_pelatihan: standarDipilih === "kurikulum" ? "dipilih" : null,
+      spesifikasi_kinerja: standarDipilih === "industri" ? "dipilih" : null,
+      spesifikasi_produk: standarDipilih === "produk" ? "dipilih" : null,
+      pedoman_khusus: standarDipilih === "khusus" ? "dipilih" : null,
       manajer_lsp: konfirmasi === "Manajer sertifikasi LSP",
       master_asesor: konfirmasi === "Master Asesor / Master Trainer / Lead Asesor Kompetensi",
       manajer_pelatihan: konfirmasi === "Manajer pelatihan Lembaga Training terakreditasi / Lembaga Training terdaftar",

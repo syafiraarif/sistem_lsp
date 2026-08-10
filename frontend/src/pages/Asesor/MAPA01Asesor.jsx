@@ -350,8 +350,10 @@ const konfirmasiValue =
             mapaData?.konfirmasi ||
             "";
       const standarValue =
-        mapaData?.standar_kompetensi
-          ? "skkni"
+        ["skkni", "kurikulum", "industri", "produk", "khusus"].includes(
+          mapaData?.standar_kompetensi
+        )
+          ? mapaData.standar_kompetensi
           : mapaData?.kurikulum_pelatihan
             ? "kurikulum"
             : mapaData?.spesifikasi_kinerja
@@ -360,7 +362,9 @@ const konfirmasiValue =
                 ? "produk"
                 : mapaData?.pedoman_khusus
                   ? "khusus"
-                  : "";
+                  : mapaData?.standar_kompetensi
+                    ? "skkni"
+                    : "";
       const jenisAsesiValue =
         mapaData?.jenis_asesi ||
         "";
@@ -553,6 +557,7 @@ const handleSave = async () => {
       profil_asesi: profilAsesi,
       jenis_asesi: form.jenis_asesi,
       tujuan_asesmen: form.tujuan_asesmen,
+      tujuan_lainnya: form.tujuan_lainnya || null,
       lingkungan: form.lingkungan,
       peluang_bukti: form.peluang_bukti,
       hubungan_standar: form.hubungan_standar,
@@ -564,20 +569,47 @@ const handleSave = async () => {
       kebutuhan_kontekstual: form.modifikasi.kebutuhan_kontekstualisasi,
       saran_pelatihan: form.modifikasi.saran_pelatihan,
       penyesuaian_perangkat: form.modifikasi.penyesuaian_perangkat,
-      peluang_integrasi: form.modifikasi.peluang_integrasi
+      peluang_integrasi: form.modifikasi.peluang_integrasi,
+      penyusun: form.penyusun,
+      validator: form.validator
     };
 
-    const detail = form.detail.map((item) => ({
+    const detail = form.detail.map((item) => {
+    const metode = [];
+
+    if (item.metode_observasi) {
+      metode.push("CL");
+    }
+
+    if (item.metode_portofolio) {
+      metode.push("CVP");
+    }
+
+    if (item.metode_tanya) {
+      metode.push("DPT");
+    }
+
+    if (item.metode_verifikasi) {
+      metode.push("VPK");
+    }
+
+    if (item.metode_crp) {
+      metode.push("CRP");
+    }
+
+    if (item.metode_pw) {
+      metode.push("PW");
+    }
+
+    return {
       id_unit: Number(item.id_unit),
       bukti: item.bukti || null,
       l: Boolean(item.l),
       tl: Boolean(item.tl),
       t: Boolean(item.t),
-      metode_observasi: Boolean(item.metode?.includes("CL")),
-      metode_portofolio: Boolean(item.metode?.includes("CVP")),
-      metode_tanya: Boolean(item.metode?.includes("DPT") || item.metode?.includes("PW")),
-      metode_verifikasi: Boolean(item.metode?.includes("VPK") || item.metode?.includes("CRP"))
-    }));
+      metode
+    };
+  });
 
     const payload = {
       id_jadwal: Number(id_jadwal),
@@ -588,7 +620,26 @@ const handleSave = async () => {
         peserta?.id_skema ||
         0
       ),
-      header,
+      profil_asesi: header.profil_asesi,
+      jenis_asesi: header.jenis_asesi,
+      tujuan_asesmen: header.tujuan_asesmen,
+      tujuan_lainnya: header.tujuan_lainnya || null,
+      lingkungan: header.lingkungan,
+      peluang_bukti: header.peluang_bukti,
+      hubungan_standar: header.hubungan_standar,
+      siapa_melakukan_asesmen: header.siapa_melakukan_asesmen,
+      konfirmasi_orang_relevan: header.konfirmasi_orang_relevan,
+      standar_kompetensi: header.standar_kompetensi,
+      potensi_asesi: header.potensi_asesi,
+      modifikasi: {
+        karakteristik_kandidat: header.karakteristik_asesi,
+        kebutuhan_kontekstualisasi: header.kebutuhan_kontekstual,
+        saran_pelatihan: header.saran_pelatihan,
+        penyesuaian_perangkat: header.penyesuaian_perangkat,
+        peluang_integrasi: header.peluang_integrasi
+      },
+      penyusun: header.penyusun || form.penyusun,
+      validator: header.validator || form.validator,
       detail
     };
 
@@ -1835,7 +1886,6 @@ function normalizeDetail(item) {
     item?.metode_portofolio === true ||
     item?.metode_portofolio === 1 ||
     item?.metode_portofolio === "1" ||
-    item?.metode_portofolio === "CVP" ||
     item?.metode_portofolio === "CVP"
   ) {
     metode.push("CVP");
@@ -1925,12 +1975,30 @@ function normalizeDetail(item) {
     l: Boolean(item?.l),
     tl: Boolean(item?.tl),
     t: Boolean(item?.t),
-    metode_observasi: Boolean(item?.metode_observasi),
-    metode_portofolio: Boolean(item?.metode_portofolio),
-    metode_tanya: Boolean(item?.metode_tanya),
-    metode_verifikasi: Boolean(item?.metode_verifikasi),
-    metode_crp: Boolean(item?.metode_crp),
-    metode_pw: Boolean(item?.metode_pw)
+    metode_observasi:
+  item?.metode_observasi === "CL" ||
+  item?.metode_observasi === true ||
+  item?.metode_observasi === 1,
+metode_portofolio:
+  item?.metode_portofolio === "CVP" ||
+  item?.metode_portofolio === true ||
+  item?.metode_portofolio === 1,
+metode_tanya:
+  item?.metode_tanya === "DPT" ||
+  item?.metode_tanya === true ||
+  item?.metode_tanya === 1,
+metode_verifikasi:
+  item?.metode_verifikasi === "VPK" ||
+  item?.metode_verifikasi === true ||
+  item?.metode_verifikasi === 1,
+metode_crp:
+  item?.metode_crp === true ||
+  item?.metode_crp === 1 ||
+  item?.metode_crp === "1",
+metode_pw:
+  item?.metode_pw === true ||
+  item?.metode_pw === 1 ||
+  item?.metode_pw === "1"
   };
 }
 
