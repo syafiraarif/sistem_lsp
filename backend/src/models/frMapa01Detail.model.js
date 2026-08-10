@@ -43,6 +43,16 @@ const FrMapa01Detail = sequelize.define(
       defaultValue: false,
     },
 
+    metode_crp: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    
+    metode_pw: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+
     metode_observasi: {
       type: DataTypes.ENUM(
         "CL",

@@ -105,34 +105,110 @@ message:
 cek peserta asesor
 */
 
-const totalPeserta =
-await PesertaJadwal.count({
+const validatePresensi = async (
+  id_jadwal,
+  id_user
+) => {
 
-where:{
+  try {
 
-id_jadwal,
+    const jadwal = await Jadwal.findByPk(
+      id_jadwal,
+      {
+        include: [
+          {
+            model: Skema,
+            as: "skema"
+          },
+          {
+            model: Tuk,
+            as: "tuk"
+          }
+        ]
+      }
+    );
 
-id_asesor:
-id_user
+    // =====================================================
+    // JADWAL
+    // =====================================================
 
-}
+    if (!jadwal) {
+      return {
+        valid: false,
+        message: "Jadwal tidak ditemukan"
+      };
+    }
 
-});
+    // =====================================================
+    // CEK ASESOR PENGUJI PADA JADWAL
+    // =====================================================
 
+    const tugas = await JadwalAsesor.findOne({
+      where: {
+        id_jadwal: id_jadwal,
+        id_user: id_user,
+        jenis_tugas: "asesor_penguji",
+        status: "aktif"
+      }
+    });
 
-if(totalPeserta===0){
+    if (!tugas) {
+      return {
+        valid: false,
+        message: "Anda bukan asesor penguji pada jadwal ini"
+      };
+    }
 
-return{
+    // =====================================================
+    // CEK STATUS JADWAL
+    // =====================================================
 
-valid:false,
+    if (
+      !["open", "ongoing"].includes(jadwal.status)
+    ) {
+      return {
+        valid: false,
+        message: "Jadwal belum dibuka"
+      };
+    }
 
-message:
-"Belum ada peserta yang ditugaskan"
+    // =====================================================
+    // CEK TANGGAL
+    // =====================================================
+
+    const today = new Date()
+      .toISOString()
+      .split("T")[0];
+
+    if (
+      today < jadwal.tgl_awal ||
+      today > jadwal.tgl_akhir
+    ) {
+      return {
+        valid: false,
+        message: "Diluar tanggal pelaksanaan"
+      };
+    }
+
+    // =====================================================
+    // VALID
+    // =====================================================
+
+    return {
+      valid: true,
+      jadwal
+    };
+
+  } catch (err) {
+
+    return {
+      valid: false,
+      message: err.message
+    };
+
+  }
 
 };
-
-}
-
 
 
 /*

@@ -37,8 +37,18 @@ id_asesor: {
 },
 
 potensi_default: {
-  type: DataTypes.INTEGER,
-  allowNull: true,
+    type: DataTypes.INTEGER,
+    allowNull: true,
+},
+
+potensi_asesi: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+},
+
+profil_asesi: {
+    type: DataTypes.TEXT,
+    allowNull: true,
 },
 
     // ========================
@@ -193,6 +203,21 @@ potensi_default: {
     peluang_integrasi: {
       type: DataTypes.TEXT,
       allowNull: true,
+    },
+
+    penyusun: {
+        type: DataTypes.TEXT("long"),
+        allowNull: true,
+    },
+
+    validator: {
+        type: DataTypes.TEXT("long"),
+        allowNull: true,
+    },
+
+    created_at: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
     },
 
     // ========================

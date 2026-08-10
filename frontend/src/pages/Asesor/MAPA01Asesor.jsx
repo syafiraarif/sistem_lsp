@@ -5,11 +5,26 @@ import Swal from "sweetalert2";
 import api from "../../services/api";
 
 const jenisAsesiOptions = [
-  "Hasil pelatihan dan / atau pendidikan, dimana Kurikulum dan fasilitas praktek mampu telusur terhadap standar kompetensi",
-  "Hasil pelatihan dan / atau pendidikan, dimana kurikulum belum berbasis kompetensi.",
-  "Pekerja berpengalaman, dimana berasal dari industri/tempat kerja yang pengalaman operasionalnya mampu telusur dengan standar kompetensi",
-  "Pekerja berpengalaman, dimana berasal dari industri/tempat kerja yang dalam operasionalnya belum berbasis kompetensi.",
-  "Pelatihan / belajar mandiri atau otodidak."
+  {
+    value: "pelatihan_kompeten",
+    label: "Hasil pelatihan dan / atau pendidikan, dimana Kurikulum dan fasilitas praktek mampu telusur terhadap standar kompetensi"
+  },
+  {
+    value: "pelatihan_belum_kompeten",
+    label: "Hasil pelatihan dan / atau pendidikan, dimana kurikulum belum berbasis kompetensi."
+  },
+  {
+    value: "pengalaman_kompeten",
+    label: "Pekerja berpengalaman, dimana berasal dari industri/tempat kerja yang pengalaman operasionalnya mampu telusur dengan standar kompetensi"
+  },
+  {
+    value: "pengalaman_belum_kompeten",
+    label: "Pekerja berpengalaman, dimana berasal dari industri/tempat kerja yang dalam operasionalnya belum berbasis kompetensi."
+  },
+  {
+    value: "mandiri",
+    label: "Pelatihan / belajar mandiri atau otodidak."
+  }
 ];
 
 const tujuanOptions = [
@@ -26,7 +41,7 @@ const hubunganOptions = [
 ];
 
 const pelakuAsesmenOptions = [
-  { value: "lembaga_sertifikasi", label: "Lembaga Sertifikasi" },
+  { value: "lsp", label: "Lembaga Sertifikasi" },
   { value: "organisasi_pelatihan", label: "Organisasi Pelatihan" },
   { value: "asesor_perusahaan", label: "Asesor Perusahaan" }
 ];
@@ -303,10 +318,37 @@ export default function MAPA01Asesor() {
         mapaData?.id ||
         null
       );
-      const konfirmasiValue =
-        mapaData?.konfirmasi_orang_relevan ||
-        mapaData?.konfirmasi ||
-        "";
+      const hubunganStandarValue = [
+  mapaData?.bukti_langsung
+    ? "bukti"
+    : null,
+
+  mapaData?.aktivitas_kerja
+    ? "aktivitas"
+    : null,
+
+  mapaData?.kegiatan_pembelajaran
+    ? "pembelajaran"
+    : null
+].filter(Boolean);
+
+const siapaMelakukanValue =
+  mapaData?.pelaksana ||
+  mapaData?.siapa_melakukan_asesmen ||
+  "";
+
+const konfirmasiValue =
+  mapaData?.manajer_lsp
+    ? "Manajer sertifikasi LSP"
+    : mapaData?.master_asesor
+      ? "Master Asesor / Master Trainer / Lead Asesor Kompetensi"
+      : mapaData?.manajer_pelatihan
+        ? "Manajer pelatihan Lembaga Training terakreditasi / Lembaga Training terdaftar"
+        : mapaData?.supervisor
+          ? "Manajer atau supervisor ditempat kerja"
+          : mapaData?.konfirmasi_orang_relevan ||
+            mapaData?.konfirmasi ||
+            "";
       const standarValue =
         mapaData?.standar_kompetensi
           ? "skkni"
@@ -319,6 +361,9 @@ export default function MAPA01Asesor() {
                 : mapaData?.pedoman_khusus
                   ? "khusus"
                   : "";
+      const jenisAsesiValue =
+        mapaData?.jenis_asesi ||
+        "";
       const penyusunData =
         Array.isArray(mapaData?.penyusun) &&
         mapaData.penyusun.length
@@ -331,22 +376,16 @@ export default function MAPA01Asesor() {
           : defaultForm.validator;
       setForm({
         ...defaultForm,
-        jenis_asesi:
-          mapaData?.jenis_asesi || "",
+        jenis_asesi: jenisAsesiValue,
         tujuan_asesmen:
           mapaData?.tujuan_asesmen || "",
         lingkungan:
           mapaData?.lingkungan || "",
         peluang_bukti:
           mapaData?.peluang_bukti || "",
-        hubungan_standar:
-          Array.isArray(mapaData?.hubungan_standar)
-            ? mapaData.hubungan_standar
-            : [],
-        siapa_melakukan_asesmen:
-          mapaData?.siapa_melakukan_asesmen || "",
-        konfirmasi_orang_relevan:
-          konfirmasiValue,
+        hubungan_standar: hubunganStandarValue,
+        siapa_melakukan_asesmen: siapaMelakukanValue,
+        konfirmasi_orang_relevan: konfirmasiValue,
         standar_kompetensi:
           standarValue,
         potensi_asesi:
@@ -418,26 +457,32 @@ export default function MAPA01Asesor() {
     }));
   };
 
-  const toggleMetode = (index, key) => {
-    setForm((prev) => ({
-      ...prev,
-      detail: prev.detail.map((item, itemIndex) => {
-        if (itemIndex !== index) {
-          return item;
-        }
+const toggleMetode = (index, key) => {
+  setForm((prev) => ({
+    ...prev,
+    detail: prev.detail.map((item, itemIndex) => {
+      if (itemIndex !== index) {
+        return item;
+      }
 
-        const metode = Array.isArray(item.metode) ? item.metode : [];
-        const updated = metode.includes(key)
-          ? metode.filter((item) => item !== key)
-          : [...metode, key];
+      const fieldMap = {
+        CL: "metode_observasi",
+        DPT: "metode_tanya",
+        VPK: "metode_verifikasi",
+        CVP: "metode_portofolio",
+        CRP: "metode_crp",
+        PW: "metode_pw"
+      };
 
-        return {
-          ...item,
-          metode: updated
-        };
-      })
-    }));
-  };
+      const field = fieldMap[key];
+
+      return {
+        ...item,
+        [field]: !Boolean(item[field])
+      };
+    })
+  }));
+};
 
   const selectPerson = (type, index, idUser) => {
     const person = findPerson(idUser);
@@ -503,88 +548,88 @@ export default function MAPA01Asesor() {
 const handleSave = async () => {
   try {
     setSaving(true);
-    const idJadwal = Number(id_jadwal);
-    const idPeserta = Number(id_peserta);
-    const idSkema = Number(
-      skema?.id_skema ||
-      jadwal?.id_skema ||
-      peserta?.id_skema ||
-      0
-    );
-    if (!idJadwal || !idPeserta || !idSkema) {
-      await Swal.fire({
-        icon: "error",
-        title: "Gagal menyimpan",
-        text: `Data tidak lengkap. Jadwal: ${idJadwal}, Peserta: ${idPeserta}, Skema: ${idSkema}`,
-        confirmButtonColor: "#071E3D"
-      });
-      return;
-    }
+
     const header = {
+      profil_asesi: profilAsesi,
       jenis_asesi: form.jenis_asesi,
       tujuan_asesmen: form.tujuan_asesmen,
       lingkungan: form.lingkungan,
       peluang_bukti: form.peluang_bukti,
       hubungan_standar: form.hubungan_standar,
       siapa_melakukan_asesmen: form.siapa_melakukan_asesmen,
-      manajer_lsp: form.konfirmasi_orang_relevan === "Manajer sertifikasi LSP",
-      master_asesor: form.konfirmasi_orang_relevan === "Master Asesor / Master Trainer / Lead Asesor Kompetensi",
-      manajer_pelatihan: form.konfirmasi_orang_relevan === "Manajer pelatihan Lembaga Training terakreditasi / Lembaga Training terdaftar",
-      supervisor: form.konfirmasi_orang_relevan === "Manajer atau supervisor ditempat kerja",
-      standar_kompetensi: form.standar_kompetensi === "skkni",
-      kurikulum_pelatihan: form.standar_kompetensi === "kurikulum",
-      spesifikasi_kinerja: form.standar_kompetensi === "industri",
-      spesifikasi_produk: form.standar_kompetensi === "produk",
-      pedoman_khusus: form.standar_kompetensi === "khusus",
+      konfirmasi_orang_relevan: form.konfirmasi_orang_relevan,
+      standar_kompetensi: form.standar_kompetensi,
       potensi_asesi: form.potensi_asesi,
-      karakteristik_asesi: form.modifikasi?.karakteristik_kandidat || "",
-      kebutuhan_kontekstual: form.modifikasi?.kebutuhan_kontekstualisasi || "",
-      saran_pelatihan: form.modifikasi?.saran_pelatihan || "",
-      penyesuaian_perangkat: form.modifikasi?.penyesuaian_perangkat || "",
-      peluang_integrasi: form.modifikasi?.peluang_integrasi || ""
+      karakteristik_asesi: form.modifikasi.karakteristik_kandidat,
+      kebutuhan_kontekstual: form.modifikasi.kebutuhan_kontekstualisasi,
+      saran_pelatihan: form.modifikasi.saran_pelatihan,
+      penyesuaian_perangkat: form.modifikasi.penyesuaian_perangkat,
+      peluang_integrasi: form.modifikasi.peluang_integrasi
     };
-    const detail = form.detail
-      .filter((item) => item?.id_unit)
-      .map((item) => {
-        const metode = Array.isArray(item.metode) ? item.metode : [];
-        return {
-          id_unit: Number(item.id_unit),
-          bukti: item.bukti || "",
-          l: Boolean(item.l),
-          tl: Boolean(item.tl),
-          t: Boolean(item.t),
-          metode_observasi: metode.includes("CL") ? "CL" : null,
-          metode_portofolio: metode.includes("CVP") ? "CVP" : null,
-          metode_tanya: metode.includes("DPT") ? "DPT" : metode.includes("PW") ? "PW" : null,
-          metode_verifikasi: metode.includes("VPK") ? "VPK" : metode.includes("CRP") ? "CRP" : null
-        };
-      });
+
+    const detail = form.detail.map((item) => ({
+      id_unit: Number(item.id_unit),
+      bukti: item.bukti || null,
+      l: Boolean(item.l),
+      tl: Boolean(item.tl),
+      t: Boolean(item.t),
+      metode_observasi: Boolean(item.metode?.includes("CL")),
+      metode_portofolio: Boolean(item.metode?.includes("CVP")),
+      metode_tanya: Boolean(item.metode?.includes("DPT") || item.metode?.includes("PW")),
+      metode_verifikasi: Boolean(item.metode?.includes("VPK") || item.metode?.includes("CRP"))
+    }));
+
     const payload = {
-      id_jadwal: idJadwal,
-      id_skema: idSkema,
-      id_peserta: idPeserta,
+      id_jadwal: Number(id_jadwal),
+      id_peserta: Number(id_peserta),
+      id_skema: Number(
+        skema?.id_skema ||
+        jadwal?.id_skema ||
+        peserta?.id_skema ||
+        0
+      ),
       header,
       detail
     };
+
     let response;
+
     if (mapaId) {
-      response = await api.put(`/asesor/fr-mapa01/${mapaId}`, payload);
+      response = await api.put(
+        `/asesor/fr-mapa01/${mapaId}`,
+        payload
+      );
     } else {
-      response = await api.post("/asesor/fr-mapa01", payload);
-      setMapaId(response.data?.data?.id_mapa01 || response.data?.id_mapa01 || null);
+      response = await api.post(
+        "/asesor/fr-mapa01",
+        payload
+      );
+
+      setMapaId(
+        response.data?.data?.id_mapa01 ||
+        response.data?.id_mapa01 ||
+        null
+      );
     }
+
     await Swal.fire({
       icon: "success",
       title: "Berhasil",
-      text: response.data?.message || "MAPA.01 berhasil disimpan.",
+      text:
+        response.data?.message ||
+        "MAPA.01 berhasil disimpan.",
       confirmButtonColor: "#071E3D"
     });
   } catch (error) {
-    console.error(error);
+    console.error("Submit MAPA01 Error:", error);
+
     await Swal.fire({
       icon: "error",
       title: "Gagal menyimpan",
-      text: error.response?.data?.message || "MAPA.01 gagal disimpan.",
+      text:
+        error.response?.data?.message ||
+        error.message ||
+        "MAPA.01 gagal disimpan.",
       confirmButtonColor: "#071E3D"
     });
   } finally {
@@ -760,12 +805,12 @@ const handleSave = async () => {
                 <td className="p-0">
                   {jenisAsesiOptions.map((item) => (
                     <CheckLine
-                      key={item}
-                      checked={form.jenis_asesi === item}
+                      key={item.value}
+                      checked={form.jenis_asesi === item.value}
                       onChange={() =>
-                        updateField("jenis_asesi", item)
+                        updateField("jenis_asesi", item.value)
                       }
-                      text={item}
+                      text={item.label}
                     />
                   ))}
                 </td>
@@ -808,16 +853,8 @@ const handleSave = async () => {
                         <td className="w-[10mm] p-2 text-center">
                           <input
                             type="checkbox"
-                            checked={
-                              form.lingkungan ===
-                              "tempat_kerja_nyata"
-                            }
-                            onChange={() =>
-                              updateField(
-                                "lingkungan",
-                                "tempat_kerja_nyata"
-                              )
-                            }
+                            checked={form.lingkungan === "nyata"}
+                            onChange={() => updateField("lingkungan", "nyata")}
                           />
                         </td>
                         <td className="p-2">
@@ -826,16 +863,8 @@ const handleSave = async () => {
                         <td className="w-[10mm] p-2 text-center">
                           <input
                             type="checkbox"
-                            checked={
-                              form.lingkungan ===
-                              "tempat_kerja_simulasi"
-                            }
-                            onChange={() =>
-                              updateField(
-                                "lingkungan",
-                                "tempat_kerja_simulasi"
-                              )
-                            }
+                            checked={form.lingkungan === "simulasi"}
+                            onChange={() => updateField("lingkungan", "simulasi")}
                           />
                         </td>
                         <td className="p-2">
@@ -1138,20 +1167,35 @@ const handleSave = async () => {
                         />
                       </td>
 
-                      {metodeOptions.map((metode) => (
-                        <td
-                          key={metode.key}
-                          className="p-1 text-center align-middle"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={item.metode?.includes(metode.key)}
-                            onChange={() =>
-                              toggleMetode(index, metode.key)
-                            }
-                          />
-                        </td>
-                      ))}
+                      {metodeOptions.map((metode) => {
+                        const fieldMap = {
+                          CL: "metode_observasi",
+                          DPT: "metode_tanya",
+                          VPK: "metode_verifikasi",
+                          CVP: "metode_portofolio",
+                          CRP: "metode_crp",
+                          PW: "metode_pw"
+                        };
+
+                        const field = fieldMap[metode.key];
+
+                        return (
+                          <td
+                            key={metode.key}
+                            className="p-1 text-center align-middle"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={Boolean(item[field])}
+                              onChange={() =>
+                                toggleMetode(index, metode.key)
+                              }
+                            />
+                          </td>
+                        );
+                      })}
+
+
                     </tr>
                   ))
                 ) : (
@@ -1779,32 +1823,33 @@ function renderUnitSummaryRows(details) {
 
 function normalizeDetail(item) {
   const metode = [];
-
   if (
     item?.metode_observasi === true ||
     item?.metode_observasi === 1 ||
-    item?.metode_observasi === "1"
+    item?.metode_observasi === "1" ||
+    item?.metode_observasi === "CL"
   ) {
     metode.push("CL");
   }
-
   if (
-  item?.metode_portofolio === true ||
-  item?.metode_portofolio === 1 ||
-  item?.metode_portofolio === "1"
-    ) {
+    item?.metode_portofolio === true ||
+    item?.metode_portofolio === 1 ||
+    item?.metode_portofolio === "1" ||
+    item?.metode_portofolio === "CVP" ||
+    item?.metode_portofolio === "CVP"
+  ) {
     metode.push("CVP");
-    } else if (
-    typeof item?.metode_portofolio === "string" &&
-    item.metode_portofolio
-    ) {
-    metode.push(
-        item.metode_portofolio === "CVP"
-        ? "CVP"
-        : item.metode_portofolio
-    );
-    }
-
+  }
+  if (
+    item?.metode_tanya === "DPT"
+  ) {
+    metode.push("DPT");
+  }
+  if (
+    item?.metode_tanya === "PW"
+  ) {
+    metode.push("PW");
+  }
   if (
     item?.metode_tanya === true ||
     item?.metode_tanya === 1 ||
@@ -1812,7 +1857,31 @@ function normalizeDetail(item) {
   ) {
     metode.push("DPT");
   }
+  if (
+    item?.metode_verifikasi === "VPK"
+  ) {
+    metode.push("VPK");
+  }
+  if (
+    item?.metode_crp === true ||
+    item?.metode_crp === 1 ||
+    item?.metode_crp === "1"
+  ) {
+    metode.push("CRP");
+  }
 
+  if (
+    item?.metode_pw === true ||
+    item?.metode_pw === 1 ||
+    item?.metode_pw === "1"
+  ) {
+    metode.push("PW");
+  }
+  if (
+    item?.metode_verifikasi === "CRP"
+  ) {
+    metode.push("CRP");
+  }
   if (
     item?.metode_verifikasi === true ||
     item?.metode_verifikasi === 1 ||
@@ -1820,7 +1889,6 @@ function normalizeDetail(item) {
   ) {
     metode.push("VPK");
   }
-
   if (Array.isArray(item?.metode)) {
     item.metode.forEach((value) => {
       if (!metode.includes(value)) {
@@ -1828,12 +1896,10 @@ function normalizeDetail(item) {
       }
     });
   }
-
   const unit =
     item?.unit ||
     item?.UnitKompetensi ||
     {};
-
   const kelompok =
     item?.kelompok ||
     item?.KelompokPekerjaan ||
@@ -1841,46 +1907,30 @@ function normalizeDetail(item) {
     item?.SkemaUnit?.kelompok ||
     unit?.kelompok ||
     "";
-
+    
   return {
-    id_unit:
+     id_unit:
       item?.id_unit ||
-      unit?.id_unit ||
+      item?.unit?.id_unit ||
       "",
-
     kode_unit:
       item?.kode_unit ||
-      unit?.kode_unit ||
-      unit?.kode ||
+      item?.unit?.kode_unit ||
       "",
-
     judul_unit:
       item?.judul_unit ||
-      unit?.judul_unit ||
-      unit?.nama_unit ||
-      unit?.judul ||
-      unit?.nama ||
+      item?.unit?.judul_unit ||
       "",
-
     bukti: item?.bukti || "",
-
-    l:
-      Boolean(item?.l),
-
-    tl:
-      Boolean(item?.tl),
-
-    t:
-      Boolean(item?.t),
-
-    metode,
-
+    l: Boolean(item?.l),
+    tl: Boolean(item?.tl),
+    t: Boolean(item?.t),
     metode_observasi: Boolean(item?.metode_observasi),
     metode_portofolio: Boolean(item?.metode_portofolio),
     metode_tanya: Boolean(item?.metode_tanya),
     metode_verifikasi: Boolean(item?.metode_verifikasi),
-
-    kelompok
+    metode_crp: Boolean(item?.metode_crp),
+    metode_pw: Boolean(item?.metode_pw)
   };
 }
 
@@ -1927,7 +1977,8 @@ function normalizePeople(data) {
 }
 
 function findPerson(idUser) {
-  return window.__asesorList?.find(
+  const list = window.__asesorList || [];
+  return list.find(
     (item) =>
       String(item?.id_user || item?.id_asesor) ===
       String(idUser)

@@ -22,6 +22,7 @@ import FRIA03Komite from "../pages/Asesor/komiteTeknis/FRIA03Komite";
 import FRIA01Asesor from "../pages/Asesor/FRIA01Asesor";
 import FRIA02Asesor from "../pages/Asesor/FRIA02Asesor";
 import FRIA03Asesor from "../pages/Asesor/FRIA03Asesor";
+import PresensiAsesor from "../pages/Asesor/PresensiAsesor";
 
 export default function AsesorRoutes() {
   return (
@@ -40,6 +41,11 @@ export default function AsesorRoutes() {
       />
 
       <Route
+        path="presensi/:id_jadwal"
+        element={<PresensiAsesor />}
+      />
+
+      <Route
         path="jadwal-saya/:id_jadwal/peserta/:id_peserta"
         element={<DetailPesertaAsesor />}
       />
@@ -47,6 +53,11 @@ export default function AsesorRoutes() {
       <Route
         path="mapa01/:id_jadwal/:id_peserta"
         element={<MAPA01Asesor />}
+      />
+
+      <Route
+        path="presensi/:id_jadwal"
+        element={<PresensiAsesor />}
       />
 
       {/* VERIFIKASI TUK */}
@@ -60,6 +71,7 @@ export default function AsesorRoutes() {
         path="komite-teknis/:id_jadwal/fr-ia02"
         element={<FRIA02 />}
       />
+      
 
       {/* FR.IA.05 Paket Soal */}
       <Route
