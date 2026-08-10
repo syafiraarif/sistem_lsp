@@ -308,26 +308,6 @@ export default function MAPA02Asesor() {
         }
     };
 
-    const loadUnits = async () => {
-        const targetPeserta = getIdPeserta();
-
-        if (!targetPeserta) {
-            return [];
-        }
-
-        const response = await api.get(
-            `/asesor/fr-mapa02?id_peserta=${Number(targetPeserta)}`
-        );
-
-        const data = getData(response);
-
-        return Array.isArray(data?.unit)
-            ? data.unit
-            : Array.isArray(data?.data?.unit)
-            ? data.data.unit
-            : [];
-    };
-
     const normalizeSavedInstrumen = (data) => {
         const result = createInitialInstrumen();
 
@@ -497,13 +477,15 @@ export default function MAPA02Asesor() {
                 setAsesorList(list);
             }
             if (!jadwalData) throw new Error("Data jadwal tidak ditemukan.");
-            const [unitResult, mapaResult] = await Promise.allSettled([loadUnits(),loadMapa02()]);
-            if (unitResult.status === "fulfilled") setUnits(normalizeUnits(unitResult.value));
-            if (mapaResult.status === "fulfilled" && mapaResult.value) {
-                const saved = mapaResult.value;
+            // MAPA.02 cukup diambil satu kali. Endpoint ini juga mengembalikan
+            // unit kompetensi dari skema apabila MAPA.02 belum pernah dibuat.
+            const mapaResult = await Promise.allSettled([loadMapa02()]);
+            if (mapaResult[0].status === "fulfilled" && mapaResult[0].value) {
+                const saved = mapaResult[0].value;
                 setMapa02Data(saved);
                 setInstrumen(normalizeSavedInstrumen(saved));
                 normalizeSavedPerson(saved);
+
                 const savedUnits = normalizeUnits(
                     saved?.unit ||
                     saved?.units ||
@@ -514,9 +496,10 @@ export default function MAPA02Asesor() {
                     saved?.skema_unit ||
                     []
                 );
-                if (savedUnits.length) {
-                    setUnits(savedUnits);
-                }
+
+                setUnits(savedUnits);
+            } else {
+                setUnits([]);
             }
         } catch (loadError) {
             console.error("LOAD MAPA02 ERROR:", loadError);
@@ -618,25 +601,18 @@ export default function MAPA02Asesor() {
 
             let response;
 
-            try {
-                response = await api.post(
-                    "/asesor/mapa02",
-                    payload
-                );
-            } catch (postError) {
-                if (
-                    postError.response?.status !==
-                    404
-                ) {
-                    throw postError;
-                }
+            if (mapa02Data?.id_mapa02 || mapa02Data?.id) {
+                const idMapa02 =
+                    mapa02Data.id_mapa02 ||
+                    mapa02Data.id;
 
                 response = await api.put(
-                    `/asesor/mapa02/${targetJadwal}${
-                        targetPeserta
-                            ? `/${targetPeserta}`
-                            : ""
-                    }`,
+                    `/asesor/fr-mapa02/${idMapa02}`,
+                    payload
+                );
+            } else {
+                response = await api.post(
+                    "/asesor/fr-mapa02/generate",
                     payload
                 );
             }

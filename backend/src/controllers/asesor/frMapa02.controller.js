@@ -1,5 +1,4 @@
 const {
-  sequelize,
 
   // FR MAPA
   FrMapa01,
@@ -105,10 +104,10 @@ GENERATE MAPA02
 ===================================== */
 
 const generateMapa02 = async (req, res) => {
-
-  const t = await sequelize.transaction();
+  let t;
 
   try {
+    t = await FrMapa02.sequelize.transaction();
 
     const id_user = req.user.id_user;
     const { id_peserta } = req.body;
@@ -237,23 +236,25 @@ const generateMapa02 = async (req, res) => {
 
     for (const u of units) {
 
-      let id_kelompok = null;
+    // id_kelompok berasal dari tabel skema_unit
+    const id_kelompok = u.id_kelompok;
 
-      // kalau memang ada relasi kelompok
-      if (u.unit && u.unit.id_kelompok) {
-        id_kelompok = u.unit.id_kelompok;
-      }
+    if (!id_kelompok) {
+      throw new Error(
+        `Kelompok pekerjaan untuk unit ${u.id_unit} tidak ditemukan pada skema.`
+      );
+    }
 
-      const unit = await FrMapa02Unit.create({
+    const unit = await FrMapa02Unit.create({
 
-        id_mapa02: mapa02.id_mapa02,
-        id_unit: u.id_unit,
-        id_kelompok,
-        urutan: u.urutan
+      id_mapa02: mapa02.id_mapa02,
+      id_unit: u.id_unit,
+      id_kelompok,
+      urutan: u.urutan
 
-      }, {
-        transaction: t
-      });
+    }, {
+      transaction: t
+    });
 
       // ==========================
       // INSERT MASTER MUK
@@ -294,20 +295,18 @@ const generateMapa02 = async (req, res) => {
 
     });
 
-  } catch (err) {
+   } catch (err) {
 
-    await t.rollback();
+    if (t) {
+      await t.rollback();
+    }
 
     console.error("Generate MAPA02 Error :", err);
 
     return res.status(500).json({
-
       success: false,
-
       message: err.message
-
     });
-
   }
 
 };
@@ -405,11 +404,47 @@ const getMapa02 = async (req, res) => {
     });
 
     if (!data) {
-      return res.status(404).json({
-        success: false,
-        message: "FR.MAPA.02 belum dibuat."
-      });
-    }
+  const skemaUnits = await SkemaUnit.findAll({
+    where: {
+      id_skema: mapa01.id_skema
+    },
+    include: [
+      {
+        model: UnitKompetensi,
+        as: "unit"
+      },
+      {
+        model: KelompokPekerjaan,
+        as: "kelompok"
+      }
+    ],
+    order: [
+      ["urutan", "ASC"]
+    ]
+  });
+
+  const preview = {
+    id_mapa02: null,
+    id_jadwal: mapa01.id_jadwal,
+    id_skema: mapa01.id_skema,
+    id_peserta: mapa01.id_peserta,
+    id_asesor: mapa01.id_asesor,
+    unit: skemaUnits.map((item) => ({
+      id_unit: item.id_unit,
+      id_kelompok: item.id_kelompok,
+      urutan: item.urutan,
+      unitDetail: item.unit,
+      kelompok: item.kelompok,
+      muk: []
+    }))
+  };
+
+  return res.status(200).json({
+    success: true,
+    message: "Unit kompetensi MAPA.02 berhasil diambil dari skema.",
+    data: preview
+  });
+}
 
     return res.status(200).json({
 
@@ -442,10 +477,10 @@ UPDATE CHECKBOX MUK
 ===================================== */
 
 const updateMapa02 = async (req, res) => {
-
-  const t = await sequelize.transaction();
+  let t;
 
   try {
+    t = await FrMapa02.sequelize.transaction();
 
     const { muk } = req.body;
 
@@ -510,20 +545,18 @@ const updateMapa02 = async (req, res) => {
 
     });
 
-  } catch (err) {
+    } catch (err) {
 
-    await t.rollback();
+    if (t) {
+      await t.rollback();
+    }
 
     console.error("Update MAPA02 Error :", err);
 
     return res.status(500).json({
-
       success: false,
-
       message: err.message
-
     });
-
   }
 
 };
@@ -674,9 +707,78 @@ const downloadPdfMapa02 = async (req, res) => {
 
 };
 
+const getMapa02ByJadwalPeserta = async (req, res) => {
+  try {
+
+    const { id_jadwal, id_peserta } = req.params;
+
+    const data = await FrMapa02.findOne({
+      where: {
+        id_jadwal,
+        id_peserta
+      },
+
+      include: [
+        {
+          model: FrMapa02Unit,
+          as: "unit",
+
+          include: [
+            {
+              model: UnitKompetensi,
+              as: "unitDetail"
+            },
+            {
+              model: KelompokPekerjaan,
+              as: "kelompok"
+            },
+            {
+              model: FrMapa02Muk,
+              as: "muk",
+              separate: true,
+              order: [["id_muk", "ASC"]]
+            }
+          ],
+
+          separate: true,
+          order: [["urutan", "ASC"]]
+        }
+      ]
+    });
+
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        message: "Data FR.MAPA.02 belum tersedia."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Data FR.MAPA.02 berhasil diambil.",
+      data
+    });
+
+  } catch (error) {
+
+    console.error(
+      "GET MAPA02 BY JADWAL PESERTA ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data FR.MAPA.02.",
+      error: error.message
+    });
+
+  }
+};
+
 module.exports = {
   generateMapa02,
   getMapa02,
+  getMapa02ByJadwalPeserta,
   updateMapa02,
   downloadPdfMapa02
 };
