@@ -266,11 +266,8 @@ router.get("/fr-mapa01/:id/pdf", frMapa01Controller.downloadPdfFrMapa01);
 =================================================== */
 
 router.post("/fr-mapa02/generate", frMapa02Controller.generateMapa02);
-
 router.get("/fr-mapa02", frMapa02Controller.getMapa02);
-
 router.put("/fr-mapa02/:id", frMapa02Controller.updateMapa02);
-
 router.get("/fr-mapa02/:id/pdf", frMapa02Controller.downloadPdfMapa02);
 
 /* ===================================================

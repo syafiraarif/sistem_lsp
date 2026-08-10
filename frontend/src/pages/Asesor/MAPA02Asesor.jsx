@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { ArrowLeft, Download, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Save, Loader2, Plus, Trash2 } from "lucide-react";
 
 const API_BASE =
     import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
@@ -41,55 +41,55 @@ const INSTRUMEN = [
         nama: "Pertanyaan Untuk Mendukung Observasi",
     },
     {
-        no: "4",
+        no: "4a",
         kode: "FR.IA.04A",
         singkat: "DIT",
         nama: "Daftar Instruksi Terstruktur (Penjelasan Singkat Proyek Terkait Pekerjaan / Kegiatan Terstruktur Lainnya)",
     },
     {
-        no: "5",
+        no: "4b",
         kode: "FR.IA.04B",
         singkat: "DIT",
         nama: "Penilaian Proyek Singkat atau Kegiatan Terstruktur Lainnya",
     },
     {
-        no: "6",
+        no: "5",
         kode: "FR.IA.05",
         singkat: "DPT",
         nama: "Daftar Pertanyaan Tertulis Pilihan Ganda",
     },
     {
-        no: "7",
+        no: "6",
         kode: "FR.IA.06",
         singkat: "DPT",
         nama: "Daftar Pertanyaan Tertulis Pilihan Esai",
     },
     {
-        no: "8",
+        no: "7",
         kode: "FR.IA.07",
         singkat: "DPL",
         nama: "Daftar Pertanyaan Lisan",
     },
     {
-        no: "9",
+        no: "8",
         kode: "FR.IA.08",
         singkat: "CVP",
         nama: "Ceklis Verifikasi Portofolio",
     },
     {
-        no: "10",
+        no: "9",
         kode: "FR.IA.09",
         singkat: "PW",
         nama: "Pertanyaan Wawancara",
     },
     {
-        no: "11",
+        no: "10",
         kode: "FR.IA.10",
         singkat: "VPK",
         nama: "Verifikasi Pihak Ketiga",
     },
     {
-        no: "12",
+        no: "11",
         kode: "FR.IA.11",
         singkat: "CRP",
         nama: "Ceklis Reviu Produk",
@@ -180,19 +180,16 @@ export default function MAPA02Asesor() {
         createInitialInstrumen()
     );
 
-    const [penyusun, setPenyusun] = useState({
-        nama: "",
-        nomor: "",
-        tanda_tangan: "",
-        tanggal: "",
-    });
+    const [penyusun, setPenyusun] = useState([
+        { id_user: "", nama: "", nomor: "", tanda_tangan: "", tanggal: "" },
+    ]);
 
-    const [validator, setValidator] = useState({
-        nama: "",
-        nomor: "",
-        tanda_tangan: "",
-        tanggal: "",
-    });
+    const [validator, setValidator] = useState([
+        { id_user: "", nama: "", nomor: "", tanda_tangan: "", tanggal: "" },
+    ]);
+
+    const [asesorList, setAsesorList] = useState([]);
+    const [mapa02Data, setMapa02Data] = useState(null);
 
     const [error, setError] = useState("");
 
@@ -290,85 +287,45 @@ export default function MAPA02Asesor() {
     };
 
     const loadMapa02 = async () => {
-        const targetJadwal = getIdJadwal();
         const targetPeserta = getIdPeserta();
 
-        if (!targetJadwal) {
+        if (!targetPeserta) {
             return null;
         }
 
-        const urls = [];
-
-        if (targetPeserta) {
-            urls.push(
-                `/asesor/mapa02/${targetJadwal}/${targetPeserta}`
+        try {
+            const response = await api.get(
+                `/asesor/fr-mapa02?id_peserta=${targetPeserta}`
             );
-        }
 
-        urls.push(
-            `/asesor/mapa02/${targetJadwal}`
-        );
-
-        for (const url of urls) {
-            try {
-                const response = await api.get(url);
-
-                if (response.status === 200) {
-                    return getData(response);
-                }
-            } catch (requestError) {
-                if (
-                    requestError.response?.status === 404
-                ) {
-                    continue;
-                }
-
-                throw requestError;
+            return getData(response);
+        } catch (requestError) {
+            if (requestError.response?.status === 404) {
+                return null;
             }
-        }
 
-        return null;
+            throw requestError;
+        }
     };
 
-    const loadUnits = async (jadwalData) => {
-        const idSkema =
-            jadwalData?.id_skema ??
-            jadwalData?.skema?.id_skema;
+    const loadUnits = async () => {
+        const targetPeserta = getIdPeserta();
 
-        if (!idSkema) {
+        if (!targetPeserta) {
             return [];
         }
 
-        const urls = [
-            `/asesor/skema/${idSkema}/unit`,
-            `/skema/${idSkema}/unit`,
-            `/asesor/unit-kompetensi/${idSkema}`,
-        ];
+        const response = await api.get(
+            `/asesor/fr-mapa02?id_peserta=${Number(targetPeserta)}`
+        );
 
-        for (const url of urls) {
-            try {
-                const response = await api.get(url);
-                const data = getData(response);
+        const data = getData(response);
 
-                const list = Array.isArray(data)
-                    ? data
-                    : Array.isArray(data?.data)
-                    ? data.data
-                    : [];
-
-                if (list.length) {
-                    return list;
-                }
-            } catch (requestError) {
-                if (
-                    requestError.response?.status === 404
-                ) {
-                    continue;
-                }
-            }
-        }
-
-        return [];
+        return Array.isArray(data?.unit)
+            ? data.unit
+            : Array.isArray(data?.data?.unit)
+            ? data.data.unit
+            : [];
     };
 
     const normalizeSavedInstrumen = (data) => {
@@ -435,144 +392,135 @@ export default function MAPA02Asesor() {
         return result;
     };
 
+    const normalizeImageUrl = (value) => {
+        if (!value) return "";
+        const text = String(value);
+        if (text.startsWith("http://") || text.startsWith("https://") || text.startsWith("data:image")) return text;
+        const root = API_BASE.replace(/\/api\/?$/, "");
+        return text.startsWith("/") ? `${root}${text}` : `${root}/${text}`;
+    };
+
+    const normalizeUnits = (data) => {
+        const source = Array.isArray(data) ? data : [];
+        const result = [];
+        const pushUnit = (item, index, groupOverride = null) => {
+            const unit = item?.unitDetail || item?.unit || item?.UnitKompetensi || item?.unitKompetensi || item || {};
+            const pivot = item?.SkemaUnit || item?.skemaUnit || item?.skema_unit || item?.pivot || {};
+            const kelompok = groupOverride || item?.kelompok || item?.KelompokPekerjaan || pivot?.kelompok || pivot?.KelompokPekerjaan || unit?.kelompok || {};
+            const idUnit = item?.id_unit || unit?.id_unit || pivot?.id_unit;
+            const kodeUnit = unit?.kode_unit || unit?.kode || unit?.kode_unit_kompetensi || item?.kode_unit || item?.kode || "";
+            const judulUnit = unit?.judul_unit || unit?.nama_unit || unit?.judul || unit?.nama || item?.judul_unit || item?.nama_unit || item?.judul || item?.nama || "";
+            const namaKelompok = kelompok?.nama_kelompok || kelompok?.nama_kelompok_pekerjaan || kelompok?.nama || kelompok?.judul || item?.nama_kelompok || item?.nama_kelompok_pekerjaan || item?.kelompok_pekerjaan || "";
+            if (idUnit || kodeUnit || judulUnit) {
+                result.push({
+                    id_unit: idUnit || `unit-${index}`,
+                    kode_unit: kodeUnit || "-",
+                    judul_unit: judulUnit || "-",
+                    kelompok: namaKelompok || "Kelompok Pekerjaan 1",
+                    urutan: Number(item?.urutan || pivot?.urutan || unit?.urutan || index + 1),
+                });
+            }
+        };
+        source.forEach((item, index) => {
+            pushUnit(item, index);
+            const groups = item?.kelompokPekerjaan || item?.kelompok_pekerjaan || item?.kelompok?.units;
+            if (Array.isArray(groups)) {
+                groups.forEach((group, groupIndex) => {
+                    const groupUnits = group?.unitKompetensi || group?.unitKompetensiList || group?.units || group?.unit_kompetensi || group?.SkemaUnit || group?.skemaUnit || [];
+                    if (Array.isArray(groupUnits)) groupUnits.forEach((unit, unitIndex) => pushUnit(unit, `${index}-${groupIndex}-${unitIndex}`, group));
+                });
+            }
+        });
+        const unique = result.filter((item, index, array) => index === array.findIndex((value) => String(value.id_unit) === String(item.id_unit)));
+        return unique.sort((a, b) => {
+            const group = String(a.kelompok).localeCompare(String(b.kelompok), "id");
+            return group || Number(a.urutan) - Number(b.urutan);
+        });
+    };
+
+    const normalizePersonList = (data, fallback) => {
+        const source = Array.isArray(data) ? data : data ? [data] : [];
+        if (!source.length) return fallback;
+        return source.map((item) => ({
+            id_user: item?.id_user || item?.id_asesor || "",
+            nama: item?.nama || item?.nama_lengkap || "",
+            nomor: item?.nomor || item?.nomor_met || item?.no_reg_asesor || item?.no_reg || "",
+            tanda_tangan: item?.tanda_tangan || item?.ttd || item?.ttd_path || "",
+            tanggal: item?.tanggal || "",
+        }));
+    };
+
     const normalizeSavedPerson = (data) => {
-        if (!data) {
-            return;
-        }
+        if (!data) return;
+        const penyusunData = data?.penyusun || (data?.nama_penyusun ? { nama: data.nama_penyusun, nomor: data.nomor_penyusun, tanda_tangan: data.tanda_tangan_penyusun, tanggal: data.tanggal_penyusun } : null);
+        const validatorData = data?.validator || (data?.nama_validator ? { nama: data.nama_validator, nomor: data.nomor_validator, tanda_tangan: data.tanda_tangan_validator, tanggal: data.tanggal_validator } : null);
+        setPenyusun(normalizePersonList(penyusunData, [{ id_user: "", nama: "", nomor: "", tanda_tangan: "", tanggal: "" }]));
+        setValidator(normalizePersonList(validatorData, [{ id_user: "", nama: "", nomor: "", tanda_tangan: "", tanggal: "" }]));
+    };
 
-        const penyusunData =
-            data?.penyusun &&
-            typeof data.penyusun === "object"
-                ? data.penyusun
-                : null;
+    const selectPerson = (type, index, idUser) => {
+        const person = asesorList.find((item) => String(item?.id_user) === String(idUser));
+        const setter = type === "penyusun" ? setPenyusun : setValidator;
+        setter((previous) => previous.map((item, itemIndex) => itemIndex === index ? { ...item, id_user: idUser, nama: person?.nama_lengkap || person?.nama || "", nomor: person?.no_reg_asesor || person?.nomor_met || person?.no_reg || "", tanda_tangan: person?.ttd_path || person?.ttd || person?.tanda_tangan || "", tanggal: person ? new Date().toISOString().slice(0, 10) : "" } : item));
+    };
 
-        const validatorData =
-            data?.validator &&
-            typeof data.validator === "object"
-                ? data.validator
-                : null;
+    const addPerson = (type) => {
+        const setter = type === "penyusun" ? setPenyusun : setValidator;
+        setter((previous) => [...previous, { id_user: "", nama: "", nomor: "", tanda_tangan: "", tanggal: "" }]);
+    };
 
-        if (penyusunData) {
-            setPenyusun({
-                nama: penyusunData.nama || "",
-                nomor: penyusunData.nomor || "",
-                tanda_tangan:
-                    penyusunData.tanda_tangan || "",
-                tanggal: penyusunData.tanggal || "",
-            });
-        } else {
-            setPenyusun({
-                nama: data?.nama_penyusun || "",
-                nomor: data?.nomor_penyusun || "",
-                tanda_tangan:
-                    data?.tanda_tangan_penyusun || "",
-                tanggal: data?.tanggal_penyusun || "",
-            });
-        }
-
-        if (validatorData) {
-            setValidator({
-                nama: validatorData.nama || "",
-                nomor: validatorData.nomor || "",
-                tanda_tangan:
-                    validatorData.tanda_tangan || "",
-                tanggal: validatorData.tanggal || "",
-            });
-        } else {
-            setValidator({
-                nama: data?.nama_validator || "",
-                nomor: data?.nomor_validator || "",
-                tanda_tangan:
-                    data?.tanda_tangan_validator || "",
-                tanggal: data?.tanggal_validator || "",
-            });
-        }
+    const removePerson = (type, index) => {
+        const setter = type === "penyusun" ? setPenyusun : setValidator;
+        setter((previous) => previous.length > 1 ? previous.filter((_, itemIndex) => itemIndex !== index) : previous);
     };
 
     const loadData = async () => {
         try {
             setLoading(true);
             setError("");
-
             const token = localStorage.getItem("token");
-
             if (!token) {
                 navigate("/login");
                 return;
             }
-
-            const [jadwalResult, pesertaResult] =
-                await Promise.allSettled([
-                    loadJadwal(),
-                    loadPeserta(),
-                ]);
-
+            const [jadwalResult, pesertaResult, asesorResult] = await Promise.allSettled([loadJadwal(), loadPeserta(), api.get("/asesor/list-asesor")]);
             let jadwalData = null;
-            let pesertaData = null;
-
-            if (
-                jadwalResult.status === "fulfilled"
-            ) {
+            if (jadwalResult.status === "fulfilled") {
                 jadwalData = jadwalResult.value;
                 setJadwal(jadwalData);
-
-                setSkema(
-                    jadwalData?.skema ||
-                        null
-                );
+                setSkema(jadwalData?.skema || null);
             }
-
-            if (
-                pesertaResult.status === "fulfilled"
-            ) {
-                pesertaData = pesertaResult.value;
-                setPeserta(pesertaData);
+            if (pesertaResult.status === "fulfilled") setPeserta(pesertaResult.value);
+            if (asesorResult.status === "fulfilled") {
+                const data = getData(asesorResult.value);
+                const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : Array.isArray(data?.rows) ? data.rows : Array.isArray(data?.asesor) ? data.asesor : [];
+                setAsesorList(list);
             }
-
-            if (!jadwalData) {
-                throw new Error(
-                    "Data jadwal tidak ditemukan."
-                );
-            }
-
-            const [unitResult, mapaResult] =
-                await Promise.allSettled([
-                    loadUnits(jadwalData),
-                    loadMapa02(),
-                ]);
-
-            if (
-                unitResult.status === "fulfilled"
-            ) {
-                setUnits(unitResult.value || []);
-            }
-
-            if (
-                mapaResult.status === "fulfilled" &&
-                mapaResult.value
-            ) {
-                const saved =
-                    mapaResult.value;
-
-                setInstrumen(
-                    normalizeSavedInstrumen(
-                        saved
-                    )
-                );
-
+            if (!jadwalData) throw new Error("Data jadwal tidak ditemukan.");
+            const [unitResult, mapaResult] = await Promise.allSettled([loadUnits(),loadMapa02()]);
+            if (unitResult.status === "fulfilled") setUnits(normalizeUnits(unitResult.value));
+            if (mapaResult.status === "fulfilled" && mapaResult.value) {
+                const saved = mapaResult.value;
+                setMapa02Data(saved);
+                setInstrumen(normalizeSavedInstrumen(saved));
                 normalizeSavedPerson(saved);
+                const savedUnits = normalizeUnits(
+                    saved?.unit ||
+                    saved?.units ||
+                    saved?.data?.unit ||
+                    saved?.unitKompetensi ||
+                    saved?.unitKompetensiList ||
+                    saved?.skemaUnit ||
+                    saved?.skema_unit ||
+                    []
+                );
+                if (savedUnits.length) {
+                    setUnits(savedUnits);
+                }
             }
         } catch (loadError) {
-            console.error(
-                "LOAD MAPA02 ERROR:",
-                loadError
-            );
-
-            setError(
-                loadError.response?.data?.message ||
-                    loadError.message ||
-                    "Data MAPA.02 tidak dapat dimuat."
-            );
+            console.error("LOAD MAPA02 ERROR:", loadError);
+            setError(loadError.response?.data?.message || loadError.message || "Data MAPA.02 tidak dapat dimuat.");
         } finally {
             setLoading(false);
         }
@@ -644,21 +592,11 @@ export default function MAPA02Asesor() {
                     singkat: item.singkat,
                     nama: item.nama,
                     potensi: {
-                        1: Boolean(
-                            instrumen[item.kode]?.[1]
-                        ),
-                        2: Boolean(
-                            instrumen[item.kode]?.[2]
-                        ),
-                        3: Boolean(
-                            instrumen[item.kode]?.[3]
-                        ),
-                        4: Boolean(
-                            instrumen[item.kode]?.[4]
-                        ),
-                        5: Boolean(
-                            instrumen[item.kode]?.[5]
-                        ),
+                        1: Boolean(instrumen[item.kode]?.[1]),
+                        2: Boolean(instrumen[item.kode]?.[2]),
+                        3: Boolean(instrumen[item.kode]?.[3]),
+                        4: Boolean(instrumen[item.kode]?.[4]),
+                        5: Boolean(instrumen[item.kode]?.[5]),
                     },
                 }));
 
@@ -674,20 +612,8 @@ export default function MAPA02Asesor() {
                             jadwal?.skema?.id_skema
                     ) || null,
                 instrumen: payloadInstrumen,
-                penyusun: {
-                    nama: penyusun.nama,
-                    nomor: penyusun.nomor,
-                    tanda_tangan:
-                        penyusun.tanda_tangan,
-                    tanggal: penyusun.tanggal,
-                },
-                validator: {
-                    nama: validator.nama,
-                    nomor: validator.nomor,
-                    tanda_tangan:
-                        validator.tanda_tangan,
-                    tanggal: validator.tanggal,
-                },
+                penyusun,
+                validator,
             };
 
             let response;
@@ -922,71 +848,11 @@ export default function MAPA02Asesor() {
 
                         <div className="mt-5 overflow-hidden border border-black">
                             <table className="w-full border-collapse text-[10px] text-black md:text-xs">
-                                <thead>
-                                    <tr>
-                                        <th
-                                            colSpan="3"
-                                            className="border border-black bg-slate-50 p-2 text-center font-bold"
-                                        >
-                                            Kelompok Pekerjaan 1
-                                        </th>
-                                    </tr>
-                                    <tr>
-                                        <th className="w-[8%] border border-black p-2">
-                                            No.
-                                        </th>
-                                        <th className="w-[28%] border border-black p-2">
-                                            Kode Unit
-                                        </th>
-                                        <th className="border border-black p-2">
-                                            Judul Unit
-                                        </th>
-                                    </tr>
-                                </thead>
-
+                                <thead><tr><th className="w-[8%] border border-black p-2">No.</th><th className="w-[28%] border border-black p-2">Kode Unit</th><th className="border border-black p-2">Judul Unit</th></tr></thead>
                                 <tbody>
-                                    {units.length > 0 ? (
-                                        units.map(
-                                            (
-                                                unit,
-                                                index
-                                            ) => (
-                                                <tr
-                                                    key={
-                                                        unit?.id_unit ??
-                                                        index
-                                                    }
-                                                >
-                                                    <td className="border border-black p-2 text-center">
-                                                        {index +
-                                                            1}
-                                                        .
-                                                    </td>
-                                                    <td className="border border-black p-2 font-semibold">
-                                                        {unit?.kode_unit ||
-                                                            unit?.kode ||
-                                                            "-"}
-                                                    </td>
-                                                    <td className="border border-black p-2">
-                                                        {unit?.judul_unit ||
-                                                            unit?.nama_unit ||
-                                                            unit?.judul ||
-                                                            "-"}
-                                                    </td>
-                                                </tr>
-                                            )
-                                        )
-                                    ) : (
-                                        <tr>
-                                            <td
-                                                colSpan="3"
-                                                className="border border-black p-3 text-center text-slate-500"
-                                            >
-                                                Unit kompetensi
-                                                belum tersedia.
-                                            </td>
-                                        </tr>
-                                    )}
+                                    {units.length ? Object.entries(units.reduce((groups, unit) => { const key = unit.kelompok || "Kelompok Pekerjaan 1"; if (!groups[key]) groups[key] = []; groups[key].push(unit); return groups; }, {})).map(([group, groupUnits]) => (
+                                        <React.Fragment key={group}><tr><th colSpan="3" className="border border-black bg-slate-50 p-2 text-left font-bold">{group}</th></tr>{groupUnits.map((unit, index) => <tr key={`${unit.id_unit}-${index}`}><td className="border border-black p-2 text-center">{index + 1}.</td><td className="border border-black p-2 font-semibold">{unit.kode_unit}</td><td className="border border-black p-2">{unit.judul_unit}</td></tr>)}</React.Fragment>
+                                    )) : <tr><td colSpan="3" className="border border-black p-3 text-center text-slate-500">Unit kompetensi belum tersedia.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -1034,19 +900,9 @@ export default function MAPA02Asesor() {
                                 </thead>
 
                                 <tbody>
-                                    {INSTRUMEN.map(
-                                        (item) => (
-                                            <tr
-                                                key={
-                                                    item.kode
-                                                }
-                                            >
-                                                <td className="border border-black p-2 text-center align-middle">
-                                                    {
-                                                        item.no
-                                                    }
-                                                    .
-                                                </td>
+                                    {INSTRUMEN.map((item) => (
+                                            <tr key={item.kode}>
+                                                {item.no === "4a" ? <td rowSpan="2" className="border border-black p-2 text-center align-middle">4.</td> : item.no === "4b" ? null : <td className="border border-black p-2 text-center align-middle">{item.no}.</td>}
 
                                                 <td className="border border-black p-2 align-middle">
                                                     <span className="font-bold">
@@ -1077,15 +933,7 @@ export default function MAPA02Asesor() {
                                                             <label className="flex min-h-[45px] cursor-pointer items-center justify-center">
                                                                 <input
                                                                     type="checkbox"
-                                                                    checked={Boolean(
-                                                                        instrumen[
-                                                                            item
-                                                                                .kode
-                                                                        ]?.[
-                                                                            potensi
-                                                                                .no
-                                                                        ]
-                                                                    )}
+                                                                    checked={Boolean(instrumen[item.kode]?.[potensi.no])}
                                                                     onChange={() =>
                                                                         toggleInstrumen(
                                                                             item.kode,
@@ -1133,213 +981,67 @@ export default function MAPA02Asesor() {
                         </div>
 
                         <div className="mt-7 overflow-hidden border border-black">
-                            <div className="border-b border-black p-2 text-sm font-bold text-black">
-                                Penyusun dan Validator
+                            <div className="border-b border-black p-2 text-sm font-bold text-black">Penyusun dan Validator</div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[850px] border-collapse text-[10px] text-black md:text-xs">
+                                    <thead>
+                                        <tr>
+                                            <th className="w-[8%] border border-black p-2">NO</th>
+                                            <th className="border border-black p-2">NAMA</th>
+                                            <th className="w-[16%] border border-black p-2">STATUS</th>
+                                            <th className="w-[22%] border border-black p-2">NOMOR MET</th>
+                                            <th className="w-[28%] border border-black p-2">TANDA TANGAN DAN TANGGAL</th>
+                                            <th className="no-print w-[9%] border border-black p-2">AKSI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {penyusun.map((item, index) => (
+                                            <tr key={`penyusun-${index}`}>
+                                                <td className="border border-black p-2 text-center">{index + 1}</td>
+                                                <td className="border border-black p-1">
+                                                    <select value={item.id_user} onChange={(event) => selectPerson("penyusun", index, event.target.value)} className="w-full border-0 bg-transparent px-1 py-1 outline-none">
+                                                        <option value="">Pilih penyusun</option>
+                                                        {asesorList.map((asesor) => <option key={asesor.id_user} value={asesor.id_user}>{asesor.nama_lengkap || asesor.nama || "-"}</option>)}
+                                                    </select>
+                                                </td>
+                                                {index === 0 && <td rowSpan={penyusun.length} className="border border-black p-2 text-center align-middle font-bold">Penyusun</td>}
+                                                <td className="border border-black p-2">{item.nomor || "-"}</td>
+                                                <td className="border border-black p-2 text-center">
+                                                    {item.tanda_tangan ? <img src={normalizeImageUrl(item.tanda_tangan)} alt="Tanda tangan" className="mx-auto max-h-12 max-w-[150px] object-contain" /> : "-"}
+                                                    <div className="mt-1">{item.tanggal || "-"}</div>
+                                                </td>
+                                                <td className="no-print border border-black p-2 text-center">
+                                                    <button type="button" onClick={() => removePerson("penyusun", index)} className="inline-flex items-center justify-center rounded-lg border border-red-200 px-2 py-1 text-red-600"><Trash2 size={14} /></button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {validator.map((item, index) => (
+                                            <tr key={`validator-${index}`}>
+                                                <td className="border border-black p-2 text-center">{index + 1}</td>
+                                                <td className="border border-black p-1">
+                                                    <select value={item.id_user} onChange={(event) => selectPerson("validator", index, event.target.value)} className="w-full border-0 bg-transparent px-1 py-1 outline-none">
+                                                        <option value="">Pilih validator</option>
+                                                        {asesorList.map((asesor) => <option key={asesor.id_user} value={asesor.id_user}>{asesor.nama_lengkap || asesor.nama || "-"}</option>)}
+                                                    </select>
+                                                </td>
+                                                {index === 0 && <td rowSpan={validator.length} className="border border-black p-2 text-center align-middle font-bold">Validator</td>}
+                                                <td className="border border-black p-2">{item.nomor || "-"}</td>
+                                                <td className="border border-black p-2 text-center">
+                                                    {item.tanda_tangan ? <img src={normalizeImageUrl(item.tanda_tangan)} alt="Tanda tangan" className="mx-auto max-h-12 max-w-[150px] object-contain" /> : "-"}
+                                                    <div className="mt-1">{item.tanggal || "-"}</div>
+                                                </td>
+                                                <td className="no-print border border-black p-2 text-center">
+                                                    <button type="button" onClick={() => removePerson("validator", index)} className="inline-flex items-center justify-center rounded-lg border border-red-200 px-2 py-1 text-red-600"><Trash2 size={14} /></button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-
-                            <table className="w-full border-collapse text-[10px] text-black md:text-xs">
-                                <tbody>
-                                    <tr>
-                                        <td className="w-[24%] border border-black p-2 font-semibold">
-                                            Nama Penyusun
-                                        </td>
-                                        <td className="w-[5%] border border-black p-2 text-center">
-                                            :
-                                        </td>
-                                        <td className="border border-black p-1">
-                                            <input
-                                                type="text"
-                                                value={
-                                                    penyusun.nama
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setPenyusun(
-                                                        (
-                                                            previous
-                                                        ) => ({
-                                                            ...previous,
-                                                            nama: event
-                                                                .target
-                                                                .value,
-                                                        })
-                                                    )
-                                                }
-                                                className="w-full border-0 bg-transparent px-1 py-1 outline-none"
-                                                placeholder="Nama penyusun"
-                                            />
-                                        </td>
-                                    </tr>
-
-                                    <tr>
-                                        <td className="border border-black p-2 font-semibold">
-                                            No. Reg
-                                        </td>
-                                        <td className="border border-black p-2 text-center">
-                                            :
-                                        </td>
-                                        <td className="border border-black p-1">
-                                            <input
-                                                type="text"
-                                                value={
-                                                    penyusun.nomor
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setPenyusun(
-                                                        (
-                                                            previous
-                                                        ) => ({
-                                                            ...previous,
-                                                            nomor: event
-                                                                .target
-                                                                .value,
-                                                        })
-                                                    )
-                                                }
-                                                className="w-full border-0 bg-transparent px-1 py-1 outline-none"
-                                                placeholder="Nomor registrasi"
-                                            />
-                                        </td>
-                                    </tr>
-
-                                    <tr>
-                                        <td className="border border-black p-2 font-semibold">
-                                            Tandatangan dan Tanggal
-                                        </td>
-                                        <td className="border border-black p-2 text-center">
-                                            :
-                                        </td>
-                                        <td className="border border-black p-1">
-                                            <input
-                                                type="text"
-                                                value={
-                                                    penyusun.tanda_tangan
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setPenyusun(
-                                                        (
-                                                            previous
-                                                        ) => ({
-                                                            ...previous,
-                                                            tanda_tangan:
-                                                                event
-                                                                    .target
-                                                                    .value,
-                                                        })
-                                                    )
-                                                }
-                                                className="w-full border-0 bg-transparent px-1 py-1 outline-none"
-                                                placeholder="Tanda tangan / tanggal"
-                                            />
-                                        </td>
-                                    </tr>
-
-                                    <tr>
-                                        <td className="border border-black p-2 font-semibold">
-                                            Nama Validator
-                                        </td>
-                                        <td className="border border-black p-2 text-center">
-                                            :
-                                        </td>
-                                        <td className="border border-black p-1">
-                                            <input
-                                                type="text"
-                                                value={
-                                                    validator.nama
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setValidator(
-                                                        (
-                                                            previous
-                                                        ) => ({
-                                                            ...previous,
-                                                            nama: event
-                                                                .target
-                                                                .value,
-                                                        })
-                                                    )
-                                                }
-                                                className="w-full border-0 bg-transparent px-1 py-1 outline-none"
-                                                placeholder="Nama validator"
-                                            />
-                                        </td>
-                                    </tr>
-
-                                    <tr>
-                                        <td className="border border-black p-2 font-semibold">
-                                            No. Reg. MET
-                                        </td>
-                                        <td className="border border-black p-2 text-center">
-                                            :
-                                        </td>
-                                        <td className="border border-black p-1">
-                                            <input
-                                                type="text"
-                                                value={
-                                                    validator.nomor
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setValidator(
-                                                        (
-                                                            previous
-                                                        ) => ({
-                                                            ...previous,
-                                                            nomor: event
-                                                                .target
-                                                                .value,
-                                                        })
-                                                    )
-                                                }
-                                                className="w-full border-0 bg-transparent px-1 py-1 outline-none"
-                                                placeholder="Nomor registrasi"
-                                            />
-                                        </td>
-                                    </tr>
-
-                                    <tr>
-                                        <td className="border border-black p-2 font-semibold">
-                                            Tandatangan dan Tanggal
-                                        </td>
-                                        <td className="border border-black p-2 text-center">
-                                            :
-                                        </td>
-                                        <td className="border border-black p-1">
-                                            <input
-                                                type="text"
-                                                value={
-                                                    validator.tanda_tangan
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setValidator(
-                                                        (
-                                                            previous
-                                                        ) => ({
-                                                            ...previous,
-                                                            tanda_tangan:
-                                                                event
-                                                                    .target
-                                                                    .value,
-                                                        })
-                                                    )
-                                                }
-                                                className="w-full border-0 bg-transparent px-1 py-1 outline-none"
-                                                placeholder="Tanda tangan / tanggal"
-                                            />
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        </div>
+                        <div className="no-print flex gap-3 mt-3">
+                            <button type="button" onClick={() => addPerson("penyusun")} className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-2 text-[9px] font-bold text-white"><Plus size={14} />Tambah Penyusun</button>
+                            <button type="button" onClick={() => addPerson("validator")} className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-2 text-[9px] font-bold text-white"><Plus size={14} />Tambah Validator</button>
                         </div>
 
                         <div className="mt-5 border-t border-slate-300 pt-4 text-[10px] text-slate-500">

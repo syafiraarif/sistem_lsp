@@ -102,7 +102,9 @@ FrMapa02.hasMany(FrMapa02Unit, { foreignKey: "id_mapa02", as: "unit", onDelete: 
 FrMapa02Unit.belongsTo(FrMapa02, { foreignKey: "id_mapa02" });
 FrMapa02Unit.hasMany(FrMapa02Muk, { foreignKey: "id_mapa02_unit", as: "muk", onDelete: "CASCADE" });
 FrMapa02Muk.belongsTo(FrMapa02Unit, { foreignKey: "id_mapa02_unit" });
-FrMapa02.belongsTo(FrMapa01, { foreignKey: "id_mapa01", as: "mapa01" });
+FrMapa02.belongsTo(FrMapa01, {foreignKey: "id_mapa01",as: "mapa01"});
+FrMapa02.belongsTo(Skema, {foreignKey: "id_skema",as: "skema"});
+Skema.hasMany(FrMapa02, {foreignKey: "id_skema",as: "frMapa02"});
 FrMapa02.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
 Jadwal.hasMany(FrMapa02, { foreignKey: "id_jadwal", as: "frMapa02" });
 FrMapa02.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", as: "asesor" });
