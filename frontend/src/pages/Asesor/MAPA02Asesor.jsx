@@ -315,43 +315,38 @@ export default function MAPA02Asesor() {
             return result;
         }
 
-        if (Array.isArray(data)) {
-            data.forEach((item) => {
-                const kode =
-                    item?.kode_instrumen ||
-                    item?.kode ||
-                    item?.kode_muk;
+        const applyArray = (items) => {
+            if (!Array.isArray(items)) {
+                return;
+            }
 
-                if (!kode || !result[kode]) {
-                    return;
-                }
-
-                POTENSI.forEach((potensi) => {
-                    const key = String(potensi.no);
-
-                    result[kode][key] = normalizeBoolean(
-                        item?.[key] ??
-                            item?.[`potensi_${key}`] ??
-                            item?.potensi?.[key]
-                    );
-                });
+            items.forEach((item) => {
+                applySavedInstrumenItem(result, item);
             });
+        };
 
+        if (Array.isArray(data)) {
+            applyArray(data);
             return result;
         }
 
         if (data?.instrumen) {
-            return normalizeSavedInstrumen(
-                data.instrumen
-            );
+            applyArray(data.instrumen);
         }
 
         if (data?.details) {
-            return normalizeSavedInstrumen(
-                data.details
-            );
+            applyArray(data.details);
         }
 
+        // Data aktual MAPA02 disimpan sebagai:
+        // unit[] -> muk[] -> { kode_muk, potensi_asesi, dipilih }.
+        if (Array.isArray(data?.unit)) {
+            data.unit.forEach((unit) => {
+                applyArray(unit?.muk);
+            });
+        }
+
+        // Backward compatibility untuk bentuk object lama.
         Object.keys(result).forEach((kode) => {
             const saved = data[kode];
 
@@ -370,6 +365,95 @@ export default function MAPA02Asesor() {
         });
 
         return result;
+    };
+
+
+    const normalizeKodeInstrumen = (value) => {
+        return String(value || "")
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "");
+    };
+
+    const applySavedInstrumenItem = (result, item) => {
+        const kode = item?.kode_instrumen || item?.kode || item?.kode_muk;
+
+        if (!kode) {
+            return;
+        }
+
+        const normalizedKode = normalizeKodeInstrumen(kode);
+
+        const targetKode = Object.keys(result).find(
+            (key) =>
+                normalizeKodeInstrumen(key) === normalizedKode
+        );
+
+        if (!targetKode) {
+            return;
+        }
+
+        const selectedPotensi =
+            item?.dipilih === true ||
+            item?.dipilih === 1 ||
+            item?.dipilih === "1"
+                ? Number(item?.potensi_asesi)
+                : null;
+
+        if (
+            selectedPotensi >= 1 &&
+            selectedPotensi <= 5
+        ) {
+            result[targetKode][String(selectedPotensi)] = true;
+        }
+    };
+
+    const buildMukPayload = (data) => {
+        const rows = [];
+
+        const sourceUnits = Array.isArray(data?.unit)
+            ? data.unit
+            : [];
+
+        sourceUnits.forEach((unit) => {
+            const mukList = Array.isArray(unit?.muk)
+                ? unit.muk
+                : [];
+
+            mukList.forEach((item) => {
+                const normalizedKode = normalizeKodeInstrumen(
+                    item?.kode_muk
+                );
+
+                const kodeInstrumen = INSTRUMEN.find(
+                    (instrumenItem) =>
+                        normalizeKodeInstrumen(
+                            instrumenItem.kode
+                        ) === normalizedKode
+                )?.kode;
+
+                const selectedPotensi = kodeInstrumen
+                    ? POTENSI.map((potensi) => potensi.no).find(
+                          (potensiNo) =>
+                              Boolean(
+                                  instrumen[
+                                      kodeInstrumen
+                                  ]?.[potensiNo]
+                              )
+                      )
+                    : null;
+
+                rows.push({
+                    id_muk: Number(item.id_muk),
+                    dipilih: Boolean(selectedPotensi),
+                    potensi_asesi:
+                        selectedPotensi ||
+                        Number(item.potensi_asesi) ||
+                        1,
+                });
+            });
+        });
+
+        return rows.filter((item) => item.id_muk);
     };
 
     const normalizeImageUrl = (value) => {
@@ -430,10 +514,51 @@ export default function MAPA02Asesor() {
         }));
     };
 
+    const parsePersonData = (value) => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === "string") {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+            } catch {
+                return [];
+            }
+        }
+        return value ? [value] : [];
+    };
+
     const normalizeSavedPerson = (data) => {
         if (!data) return;
-        const penyusunData = data?.penyusun || (data?.nama_penyusun ? { nama: data.nama_penyusun, nomor: data.nomor_penyusun, tanda_tangan: data.tanda_tangan_penyusun, tanggal: data.tanggal_penyusun } : null);
-        const validatorData = data?.validator || (data?.nama_validator ? { nama: data.nama_validator, nomor: data.nomor_validator, tanda_tangan: data.tanda_tangan_validator, tanggal: data.tanggal_validator } : null);
+
+        const source = data?.mapa01 || {};
+        const penyusunData =
+            parsePersonData(data?.penyusun).length
+                ? parsePersonData(data?.penyusun)
+                : parsePersonData(source?.penyusun).length
+                    ? parsePersonData(source?.penyusun)
+                    : data?.nama_penyusun
+                        ? [{
+                            nama: data.nama_penyusun,
+                            nomor: data.nomor_penyusun,
+                            tanda_tangan: data.tanda_tangan_penyusun,
+                            tanggal: data.tanggal_penyusun,
+                        }]
+                        : [];
+
+        const validatorData =
+            parsePersonData(data?.validator).length
+                ? parsePersonData(data?.validator)
+                : parsePersonData(source?.validator).length
+                    ? parsePersonData(source?.validator)
+                    : data?.nama_validator
+                        ? [{
+                            nama: data.nama_validator,
+                            nomor: data.nomor_validator,
+                            tanda_tangan: data.tanda_tangan_validator,
+                            tanggal: data.tanggal_validator,
+                        }]
+                        : [];
+
         setPenyusun(normalizePersonList(penyusunData, [{ id_user: "", nama: "", nomor: "", tanda_tangan: "", tanggal: "" }]));
         setValidator(normalizePersonList(validatorData, [{ id_user: "", nama: "", nomor: "", tanda_tangan: "", tanggal: "" }]));
     };
@@ -542,17 +667,13 @@ export default function MAPA02Asesor() {
         );
     }, [peserta]);
 
-    const toggleInstrumen = (
-        kode,
-        potensi
-    ) => {
+    const toggleInstrumen = (kode, potensi) => {
         setInstrumen((previous) => ({
             ...previous,
-            [kode]: {
-                ...previous[kode],
-                [potensi]:
-                    !previous[kode][potensi],
-            },
+            [kode]: POTENSI.reduce((selection, item) => {
+                selection[item.no] = item.no === potensi;
+                return selection;
+            }, {}),
         }));
     };
 
@@ -564,79 +685,145 @@ export default function MAPA02Asesor() {
             const targetPeserta = getIdPeserta();
 
             if (!targetJadwal) {
-                throw new Error(
-                    "ID jadwal tidak ditemukan."
-                );
+                throw new Error("ID jadwal tidak ditemukan.");
             }
 
-            const payloadInstrumen =
-                INSTRUMEN.map((item) => ({
-                    kode_instrumen: item.kode,
-                    singkat: item.singkat,
-                    nama: item.nama,
-                    potensi: {
-                        1: Boolean(instrumen[item.kode]?.[1]),
-                        2: Boolean(instrumen[item.kode]?.[2]),
-                        3: Boolean(instrumen[item.kode]?.[3]),
-                        4: Boolean(instrumen[item.kode]?.[4]),
-                        5: Boolean(instrumen[item.kode]?.[5]),
-                    },
-                }));
+            if (!targetPeserta) {
+                throw new Error("ID peserta tidak ditemukan.");
+            }
 
-            const payload = {
-                id_jadwal: Number(targetJadwal),
-                id_peserta: targetPeserta
-                    ? Number(targetPeserta)
-                    : null,
-                id_skema:
-                    Number(
-                        jadwal?.id_skema ??
-                            skema?.id_skema ??
-                            jadwal?.skema?.id_skema
-                    ) || null,
-                instrumen: payloadInstrumen,
-                penyusun,
-                validator,
-            };
+            let currentMapa02Data = mapa02Data;
 
-            let response;
+            let idMapa02 =
+                currentMapa02Data?.id_mapa02 ||
+                currentMapa02Data?.id ||
+                null;
 
-            if (mapa02Data?.id_mapa02 || mapa02Data?.id) {
-                const idMapa02 =
-                    mapa02Data.id_mapa02 ||
-                    mapa02Data.id;
+            // MAPA.02 belum ada -> buat header + unit + MUK terlebih dahulu.
+            if (!idMapa02) {
+                const generateResponse = await api.post(
+                    "/asesor/fr-mapa02/generate",
+                    {
+                        id_peserta: Number(targetPeserta),
+                    }
+                );
 
-                response = await api.put(
+                if (generateResponse.data?.success === false) {
+                    throw new Error(
+                        generateResponse.data?.message ||
+                            "MAPA.02 gagal dibuat."
+                    );
+                }
+
+                const generatedData = getData(generateResponse);
+
+                idMapa02 =
+                    generatedData?.id_mapa02 ||
+                    generatedData?.id ||
+                    null;
+
+                // Endpoint generate hanya mengembalikan header.
+                // Ambil lagi data lengkap agar id_muk tersedia untuk update.
+                const latestResponse = await api.get(
+                    `/asesor/fr-mapa02?id_peserta=${targetPeserta}`
+                );
+
+                const latestData = getData(latestResponse);
+
+                if (!idMapa02) {
+                    idMapa02 =
+                        latestData?.id_mapa02 ||
+                        latestData?.id ||
+                        null;
+                }
+
+                if (!idMapa02) {
+                    throw new Error(
+                        "ID MAPA.02 tidak ditemukan setelah proses generate."
+                    );
+                }
+
+                setMapa02Data(latestData);
+                currentMapa02Data = latestData;
+            }
+
+            // Backend update membutuhkan `muk` berupa array.
+            // Array dibentuk dari MUK yang sudah dibuat di setiap unit.
+            const mukPayload = buildMukPayload(
+                currentMapa02Data
+            );
+
+            if (!mukPayload.length) {
+                // Fallback: refresh data satu kali lagi apabila state lama
+                // belum sempat menerima MUK hasil generate.
+                const latestResponse = await api.get(
+                    `/asesor/fr-mapa02?id_peserta=${targetPeserta}`
+                );
+
+                const latestData = getData(latestResponse);
+                setMapa02Data(latestData);
+
+                const refreshedPayload =
+                    buildMukPayload(latestData);
+
+                if (!refreshedPayload.length) {
+                    throw new Error(
+                        "Data MUK tidak ditemukan pada MAPA.02."
+                    );
+                }
+
+                await api.put(
                     `/asesor/fr-mapa02/${idMapa02}`,
-                    payload
+                    {
+                        muk: refreshedPayload,
+                        penyusun,
+                        validator,
+                    }
                 );
             } else {
-                response = await api.post(
-                    "/asesor/fr-mapa02/generate",
-                    payload
+                await api.put(
+                    `/asesor/fr-mapa02/${idMapa02}`,
+                    {
+                        muk: mukPayload,
+                        penyusun,
+                        validator,
+                    }
                 );
             }
 
-            if (
-                response.data?.success === false
-            ) {
-                throw new Error(
-                    response.data?.message ||
-                        "MAPA.02 gagal disimpan."
-                );
-            }
+            // Ambil ulang setelah save agar state dan checkbox mengikuti
+            // data yang benar-benar tersimpan di database.
+            const savedResponse = await api.get(
+                `/asesor/fr-mapa02?id_peserta=${targetPeserta}`
+            );
+
+            const savedData = getData(savedResponse);
+
+            setMapa02Data(savedData);
+            setInstrumen(
+                normalizeSavedInstrumen(savedData)
+            );
+            normalizeSavedPerson(savedData);
+
+            const savedUnits = normalizeUnits(
+                savedData?.unit ||
+                    savedData?.units ||
+                    savedData?.data?.unit ||
+                    savedData?.unitKompetensi ||
+                    savedData?.unitKompetensiList ||
+                    savedData?.skemaUnit ||
+                    savedData?.skema_unit ||
+                    []
+            );
+
+            setUnits(savedUnits);
 
             await Swal.fire({
                 icon: "success",
                 title: "Berhasil",
-                text:
-                    response.data?.message ||
-                    "MAPA.02 berhasil disimpan.",
-                confirmButtonColor:
-                    "#071E3D",
+                text: "MAPA.02 berhasil disimpan.",
+                confirmButtonColor: "#071E3D",
             });
-
-            await loadData();
         } catch (saveError) {
             console.error(
                 "SAVE MAPA02 ERROR:",
@@ -651,8 +838,7 @@ export default function MAPA02Asesor() {
                         ?.message ||
                     saveError.message ||
                     "MAPA.02 gagal disimpan.",
-                confirmButtonColor:
-                    "#071E3D",
+                confirmButtonColor: "#071E3D",
             });
         } finally {
             setSaving(false);
@@ -701,8 +887,18 @@ export default function MAPA02Asesor() {
     return (
         <>
             <style>{`
+                @page {
+                    size: A4 landscape;
+                    margin: 10mm 8mm;
+                }
+
                 @media print {
+                    html,
                     body {
+                        width: 100% !important;
+                        min-width: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                         background: white !important;
                     }
 
@@ -713,13 +909,55 @@ export default function MAPA02Asesor() {
                     .mapa02-page {
                         width: 100% !important;
                         max-width: none !important;
+                        min-width: 0 !important;
                         margin: 0 !important;
                         padding: 0 !important;
                     }
 
                     .mapa02-paper {
+                        width: 100% !important;
+                        max-width: none !important;
+                        min-width: 0 !important;
+                        padding: 0 !important;
                         box-shadow: none !important;
                         border: none !important;
+                        overflow: visible !important;
+                    }
+
+                    .mapa02-paper > div {
+                        overflow: visible !important;
+                    }
+
+                    .mapa02-paper table,
+                    .mapa02-paper .min-w-\[900px\],
+                    .mapa02-paper .min-w-\[850px\] {
+                        width: 100% !important;
+                        min-width: 0 !important;
+                        max-width: none !important;
+                        table-layout: fixed !important;
+                    }
+
+                    .mapa02-paper table {
+                        page-break-inside: auto;
+                    }
+
+                    .mapa02-paper thead {
+                        display: table-header-group;
+                    }
+
+                    .mapa02-paper tr {
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                    }
+
+                    .mapa02-paper th,
+                    .mapa02-paper td {
+                        word-break: normal;
+                        overflow-wrap: anywhere;
+                    }
+
+                    .mapa02-paper img {
+                        max-width: 100% !important;
                     }
                 }
             `}</style>

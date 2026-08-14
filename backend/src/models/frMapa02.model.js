@@ -15,6 +15,10 @@ const FrMapa02 = sequelize.define("fr_mapa02", {
     type: DataTypes.INTEGER,
     allowNull: false
   },
+  id_peserta: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   id_asesor: {
     type: DataTypes.INTEGER,
     allowNull: false

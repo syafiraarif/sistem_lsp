@@ -476,77 +476,230 @@ const getMapa02 = async (req, res) => {
 UPDATE CHECKBOX MUK
 ===================================== */
 
+const normalizeKodeMuk = (value) => {
+  return String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+};
+
+/* =====================================
+UPDATE CHECKBOX MUK / INSTRUMEN
+===================================== */
+
 const updateMapa02 = async (req, res) => {
   let t;
 
   try {
     t = await FrMapa02.sequelize.transaction();
 
-    const { muk } = req.body;
+    const { muk, instrumen, penyusun, validator } = req.body;
 
-    if (!Array.isArray(muk) || muk.length === 0) {
+    // Endpoint lama menggunakan `muk` berupa array.
+    // Halaman MAPA02Asesor saat ini mengirim matriks `instrumen`,
+    // sehingga di sini kita konversi matriks tersebut menjadi
+    // record MUK yang memang tersimpan di database.
+    let mukItems = Array.isArray(muk) ? muk : [];
 
+    const mapa02 = await FrMapa02.findByPk(req.params.id, {
+      include: [
+        {
+          model: FrMapa01,
+          as: "mapa01"
+        },
+        {
+          model: FrMapa02Unit,
+          as: "unit",
+          include: [
+            {
+              model: FrMapa02Muk,
+              as: "muk"
+            }
+          ]
+        }
+      ],
+      transaction: t
+    });
+
+    if (!mapa02) {
+      await t.rollback();
+
+      return res.status(404).json({
+        success: false,
+        message: "FR.MAPA.02 tidak ditemukan."
+      });
+    }
+
+    // Validasi bahwa MAPA02 memang milik asesor yang sedang login.
+    if (
+      mapa02.id_asesor &&
+      req.user?.id_user &&
+      Number(mapa02.id_asesor) !== Number(req.user.id_user)
+    ) {
+      await t.rollback();
+
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak berhak mengubah FR.MAPA.02 ini."
+      });
+    }
+
+    // Data lama pada database bisa memiliki id_peserta = 0 karena
+    // model Sequelize sebelumnya belum mendefinisikan kolom id_peserta.
+    // Sinkronkan kembali dengan MAPA.01 agar record lama ikut benar.
+    if (
+      mapa02.mapa01?.id_peserta &&
+      Number(mapa02.id_peserta) !== Number(mapa02.mapa01.id_peserta)
+    ) {
+      await mapa02.update(
+        {
+          id_peserta: Number(mapa02.mapa01.id_peserta)
+        },
+        {
+          transaction: t
+        }
+      );
+    }
+
+    // Penyusun dan validator MAPA.02 menggunakan kolom JSON/TEXT
+    // yang memang sudah tersedia pada tabel fr_mapa01.
+    // Jadi tidak perlu menambah kolom baru ke fr_mapa02.
+    if (mapa02.mapa01) {
+      const personUpdate = {};
+
+      if (Array.isArray(penyusun)) {
+        personUpdate.penyusun = JSON.stringify(penyusun);
+      }
+
+      if (Array.isArray(validator)) {
+        personUpdate.validator = JSON.stringify(validator);
+      }
+
+      if (Object.keys(personUpdate).length) {
+        await mapa02.mapa01.update(personUpdate, {
+          transaction: t
+        });
+      }
+    }
+
+    // Jika frontend mengirim matriks instrumen, bentuk array MUK
+    // berdasarkan MUK yang sudah dibuat saat generate.
+    if (mukItems.length === 0 && Array.isArray(instrumen)) {
+      const rows = [];
+
+      for (const unit of mapa02.unit || []) {
+        for (const item of unit.muk || []) {
+          const formItem = instrumen.find(
+            (entry) =>
+              normalizeKodeMuk(entry?.kode_instrumen) ===
+              normalizeKodeMuk(item?.kode_muk)
+          );
+
+          const selectedPotensi = Object.entries(
+            formItem?.potensi || {}
+          )
+            .filter(([, selected]) => Boolean(selected))
+            .map(([key]) => Number(key))
+            .filter((value) => value >= 1 && value <= 5)
+            .sort((a, b) => a - b)[0];
+
+          rows.push({
+            id_muk: item.id_muk,
+            dipilih: Boolean(selectedPotensi),
+            // Kolom database `potensi_asesi` masih tinyint, jadi
+            // satu record MUK hanya menyimpan satu potensi.
+            // Jika user mencentang lebih dari satu, nilai pertama
+            // dipakai agar tidak terjadi data invalid.
+            potensi_asesi:
+              selectedPotensi ||
+              Number(item.potensi_asesi) ||
+              1
+          });
+        }
+      }
+
+      mukItems = rows;
+    }
+
+    if (!Array.isArray(mukItems) || mukItems.length === 0) {
       await t.rollback();
 
       return res.status(400).json({
         success: false,
-        message: "Data MUK harus berupa array."
+        message:
+          "Data MUK harus berupa array dan minimal ada satu data MUK."
       });
-
     }
 
-    for (const item of muk) {
+    const validMukIds = new Set(
+      (mapa02.unit || []).flatMap((unit) =>
+        (unit.muk || []).map((item) => Number(item.id_muk))
+      )
+    );
 
-      if (!item.id_muk) {
+    for (const item of mukItems) {
+      const idMuk = Number(item?.id_muk);
 
+      if (!idMuk) {
         await t.rollback();
 
         return res.status(400).json({
           success: false,
           message: "id_muk tidak boleh kosong."
         });
+      }
 
+      if (!validMukIds.has(idMuk)) {
+        await t.rollback();
+
+        return res.status(400).json({
+          success: false,
+          message: `MUK dengan id ${idMuk} bukan bagian dari MAPA.02 ini.`
+        });
+      }
+
+      const potensi =
+        item?.potensi_asesi !== undefined &&
+        item?.potensi_asesi !== null &&
+        item?.potensi_asesi !== ""
+          ? Number(item.potensi_asesi)
+          : null;
+
+      if (potensi !== null && ![1, 2, 3, 4, 5].includes(potensi)) {
+        await t.rollback();
+
+        return res.status(400).json({
+          success: false,
+          message: "potensi_asesi harus bernilai 1 sampai 5."
+        });
       }
 
       await FrMapa02Muk.update(
         {
-
           dipilih:
-            item.dipilih !== undefined
-              ? item.dipilih
+            item?.dipilih !== undefined
+              ? Boolean(item.dipilih)
               : false,
-
           potensi_asesi:
-            item.potensi_asesi !== undefined
-              ? item.potensi_asesi
-              : null
-
+            potensi !== null
+              ? potensi
+              : 1
         },
         {
-
           where: {
-            id_muk: item.id_muk
+            id_muk: idMuk
           },
-
           transaction: t
-
         }
       );
-
     }
 
     await t.commit();
 
     return res.status(200).json({
-
       success: true,
-
       message: "FR.MAPA.02 berhasil diperbarui."
-
     });
-
-    } catch (err) {
-
+  } catch (err) {
     if (t) {
       await t.rollback();
     }
@@ -558,7 +711,6 @@ const updateMapa02 = async (req, res) => {
       message: err.message
     });
   }
-
 };
 
 /* =====================================
