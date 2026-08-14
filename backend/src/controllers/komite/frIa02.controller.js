@@ -9,8 +9,9 @@ Skema,
 Tuk,
 KelompokPekerjaan,
 ProfileAsesor,
-ProfileAsesi
-}=require("../../models");
+ProfileAsesi,
+PesertaJadwal
+} = require("../../models");
 
 const PDFDocument = require("pdfkit");
 const {
@@ -687,3 +688,317 @@ error:err.message
 }
 
 };
+
+const getPengujiContext = async (req, idJadwal, idPeserta) => {
+  const assessorId = req.user.id_user || req.user.id;
+  const assignment = await JadwalAsesor.findOne({
+    where: {
+      id_jadwal: idJadwal,
+      id_user: assessorId,
+      jenis_tugas: "asesor_penguji",
+      status: "aktif"
+    }
+  });
+
+  if (!assignment) {
+    const error = new Error("Anda bukan asesor penguji pada jadwal ini");
+    error.status = 403;
+    throw error;
+  }
+
+  const peserta = await PesertaJadwal.findOne({
+    where: {
+      id_peserta: idPeserta,
+      id_jadwal: idJadwal
+    }
+  });
+
+  if (!peserta) {
+    const error = new Error("Peserta tidak ditemukan pada jadwal ini");
+    error.status = 404;
+    throw error;
+  }
+
+  return { assessorId, peserta };
+};
+
+const findCommitteeSource = async (idJadwal, idUserAsesi) => {
+  const committeeAssignments = await JadwalAsesor.findAll({
+    where: {
+      id_jadwal: idJadwal,
+      jenis_tugas: "komite_teknis",
+      status: "aktif"
+    },
+    attributes: ["id_user"]
+  });
+
+  const committeeIds = committeeAssignments.map((item) => item.id_user);
+
+  if (!committeeIds.length) {
+    return null;
+  }
+
+  return FrIa02.findOne({
+    where: {
+      id_jadwal: idJadwal,
+      id_asesi: idUserAsesi,
+      id_asesor: committeeIds
+    },
+    include: [
+      {
+        model: FrIa02Detail,
+        as: "detail",
+        include: [{ model: KelompokPekerjaan, as: "kelompok" }]
+      },
+      {
+        model: FrIa02Validator,
+        as: "validator",
+        include: [{
+          model: ProfileAsesor,
+          as: "asesor",
+          attributes: ["id_user", "nama_lengkap", "no_lisensi", "ttd_path"]
+        }]
+      }
+    ],
+    order: [["created_at", "DESC"]]
+  });
+};
+
+const findPengujiRecord = async (idJadwal, idUserAsesi, assessorId) => {
+  return FrIa02.findOne({
+    where: {
+      id_jadwal: idJadwal,
+      id_asesi: idUserAsesi,
+      id_asesor: assessorId
+    },
+    include: [
+      {
+        model: FrIa02Detail,
+        as: "detail",
+        include: [{ model: KelompokPekerjaan, as: "kelompok" }]
+      },
+      {
+        model: FrIa02Validator,
+        as: "validator",
+        include: [{
+          model: ProfileAsesor,
+          as: "asesor",
+          attributes: ["id_user", "nama_lengkap", "no_lisensi", "ttd_path"]
+        }]
+      }
+    ],
+    order: [["created_at", "DESC"]]
+  });
+};
+
+const formatFrIa02Penguji = async (record, idJadwal, idUserAsesi, assessorId, approved) => {
+  if (!record) {
+    return null;
+  }
+
+  const jadwal = await Jadwal.findByPk(idJadwal, {
+    include: [
+      { model: Skema, as: "skema" },
+      { model: Tuk, as: "tuk" }
+    ]
+  });
+
+  const asesor = await ProfileAsesor.findByPk(assessorId, {
+    attributes: ["id_user", "nama_lengkap", "no_reg_asesor", "ttd_path"]
+  });
+
+  const asesi = await ProfileAsesi.findByPk(idUserAsesi, {
+    attributes: ["id_user", "nama_lengkap", "ttd_path"]
+  });
+
+  const groups = [];
+  const groupIndex = new Map();
+
+  for (const item of record.detail || []) {
+    const key = String(item.id_kelompok);
+
+    if (!groupIndex.has(key)) {
+      const group = {
+        id_kelompok: item.id_kelompok,
+        kelompok_pekerjaan: item.kelompok?.nama_kelompok || "-",
+        units: [],
+        skenario_tugas: item.skenario || "",
+        langkah_kerja: item.langkah_kerja || "",
+        perlengkapan_peralatan: item.peralatan || "",
+        waktu: item.durasi || ""
+      };
+      groupIndex.set(key, groups.length);
+      groups.push(group);
+    }
+
+    const group = groups[groupIndex.get(key)];
+    group.units.push({
+      kode_unit: item.kode_unit || "",
+      judul_unit: item.judul_unit || "",
+      urutan: item.urutan || group.units.length + 1
+    });
+
+    if (!group.skenario_tugas) group.skenario_tugas = item.skenario || "";
+    if (!group.langkah_kerja) group.langkah_kerja = item.langkah_kerja || "";
+    if (!group.perlengkapan_peralatan) group.perlengkapan_peralatan = item.peralatan || "";
+    if (!group.waktu) group.waktu = item.durasi || "";
+  }
+
+  const penyusun = [];
+  const validator = [];
+
+  for (const item of record.validator || []) {
+    const reviewer = {
+      id_user: item.id_asesor,
+      nama: item.asesor?.nama_lengkap || "",
+      nomor_met: item.asesor?.no_lisensi || "",
+      ttd: item.asesor?.ttd_path || "",
+      tanggal: record.tanggal || ""
+    };
+
+    if (item.peran === "penyusun") {
+      penyusun.push(reviewer);
+    } else {
+      validator.push(reviewer);
+    }
+  }
+
+  return {
+    id_fr_ia_02: record.id_fr_ia_02,
+    approved,
+    tanggal: record.tanggal || "",
+    skema: jadwal?.skema || {},
+    tuk: jadwal?.tuk?.nama_tuk || jadwal?.tuk?.nama || "",
+    nama_asesor: asesor?.nama_lengkap || "",
+    no_reg_asesor: asesor?.no_reg_asesor || "",
+    ttd_asesor: asesor?.ttd_path || "",
+    nama_asesi: asesi?.nama_lengkap || "",
+    ttd_asesi: asesi?.ttd_path || "",
+    kelompok: groups,
+    penyusun,
+    validator
+  };
+};
+
+exports.getFrIa02Penguji = async (req, res) => {
+  try {
+    const { id_jadwal, id_peserta } = req.params;
+    const { assessorId, peserta } = await getPengujiContext(req, id_jadwal, id_peserta);
+
+    let record = await findPengujiRecord(id_jadwal, peserta.id_user, assessorId);
+    let approved = Boolean(record);
+
+    if (!record) {
+      record = await findCommitteeSource(id_jadwal, peserta.id_user);
+      approved = false;
+    }
+
+    if (!record) {
+      return res.status(404).json({
+        message: "FR.IA.02 dari Komite Teknis belum tersedia untuk peserta ini"
+      });
+    }
+
+    const result = await formatFrIa02Penguji(
+      record,
+      id_jadwal,
+      peserta.id_user,
+      assessorId,
+      approved
+    );
+
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({
+      message: err.message || "Gagal memuat FR.IA.02 Penguji"
+    });
+  }
+};
+
+exports.accFrIa02Penguji = async (req, res) => {
+  try {
+    const { id_jadwal, id_peserta } = req.params;
+    const { assessorId, peserta } = await getPengujiContext(req, id_jadwal, id_peserta);
+    const source = await findCommitteeSource(id_jadwal, peserta.id_user);
+
+    if (!source) {
+      return res.status(404).json({
+        message: "FR.IA.02 Komite Teknis belum tersedia untuk peserta ini"
+      });
+    }
+
+    let target = await findPengujiRecord(id_jadwal, peserta.id_user, assessorId);
+
+    if (!target) {
+      target = await FrIa02.create({
+        id_jadwal: Number(id_jadwal),
+        id_skema: source.id_skema,
+        id_tuk: source.id_tuk,
+        id_asesor: assessorId,
+        id_asesi: peserta.id_user,
+        tanggal: source.tanggal,
+        created_by: assessorId
+      });
+    } else {
+      await target.update({
+        id_skema: source.id_skema,
+        id_tuk: source.id_tuk,
+        tanggal: source.tanggal,
+        updated_at: new Date()
+      });
+    }
+
+    await FrIa02Detail.destroy({
+      where: { id_fr_ia_02: target.id_fr_ia_02 }
+    });
+
+    await FrIa02Validator.destroy({
+      where: { id_fr_ia_02: target.id_fr_ia_02 }
+    });
+
+    if ((source.detail || []).length) {
+      await FrIa02Detail.bulkCreate(
+        source.detail.map((item) => ({
+          id_fr_ia_02: target.id_fr_ia_02,
+          id_kelompok: item.id_kelompok,
+          kode_unit: item.kode_unit,
+          judul_unit: item.judul_unit,
+          urutan: item.urutan,
+          skenario: item.skenario,
+          langkah_kerja: item.langkah_kerja,
+          peralatan: item.peralatan,
+          durasi: item.durasi
+        }))
+      );
+    }
+
+    if ((source.validator || []).length) {
+      await FrIa02Validator.bulkCreate(
+        source.validator.map((item) => ({
+          id_fr_ia_02: target.id_fr_ia_02,
+          id_asesor: item.id_asesor,
+          peran: item.peran,
+          urutan: item.urutan
+        }))
+      );
+    }
+
+    const result = await formatFrIa02Penguji(
+      target,
+      id_jadwal,
+      peserta.id_user,
+      assessorId,
+      true
+    );
+
+    res.json({
+      message: "FR.IA.02 berhasil di-ACC",
+      data: result
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({
+      message: err.message || "Gagal melakukan ACC FR.IA.02"
+    });
+  }
+};
+

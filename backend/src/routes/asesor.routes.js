@@ -297,6 +297,8 @@ router.get(
 router.get("/fr-ia02/tugas", frIa02Controller.getTugasKomite);
 
 router.get("/fr-ia02", frIa02Controller.getDetail);
+router.get("/fr-ia02/penguji/:id_jadwal/:id_peserta", frIa02Controller.getFrIa02Penguji);
+router.post("/fr-ia02/penguji/:id_jadwal/:id_peserta/acc", frIa02Controller.accFrIa02Penguji);
 
 router.post("/fr-ia02", frIa02Controller.createFrIa02);
 

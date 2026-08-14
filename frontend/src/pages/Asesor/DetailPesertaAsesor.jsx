@@ -295,7 +295,7 @@ export default function DetailPesertaAsesor() {
 
       case "fria02":
         return () =>
-          openMenu(`/asesor/fr-ia02/${id_peserta}`);
+          openMenu(`/asesor/fr-ia02/${id_jadwal}/${id_peserta}`);
 
       case "fria03":
         return openFRIA03;
