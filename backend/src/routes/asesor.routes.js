@@ -179,13 +179,34 @@ router.get("/presensi/pdf/:id_jadwal", presensiController.downloadPdf);
    FR.AK.01
 =================================================== */
 
-router.get("/fr-ak01", frAk01Controller.getFrAk01);
+router.get(
+  "/fr-ak01",
+  frAk01Controller.getFrAk01
+);
 
-router.post("/fr-ak01", frAk01Controller.submitFrAk01);
+router.post(
+  "/fr-ak01",
+  frAk01Controller.submitFrAk01
+);
 
-router.put("/fr-ak01/:id", frAk01Controller.updateFrAk01);
+router.put(
+  "/fr-ak01/:id",
+  frAk01Controller.updateFrAk01
+);
 
-router.get("/fr-ak01/list/:id_jadwal", frAk01Controller.listFrAk01);
+router.get(
+  "/fr-ak01/list/:id_jadwal",
+  frAk01Controller.listFrAk01
+);
+
+/* ===================================================
+   FR.AK.01 - ASESOR PENGUJI
+=================================================== */
+
+router.get(
+  "/fr-ak01/asesor/:id_jadwal/:id_peserta",
+  frAk01Controller.getFrAk01Asesor
+);
 
 router.get(
   "/fr-ak01/:id/pdf",
