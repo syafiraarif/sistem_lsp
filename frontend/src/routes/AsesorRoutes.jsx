@@ -18,10 +18,12 @@ import FRIA01Asesor from "../pages/Asesor/FRIA01Asesor";
 import FRIA02Asesor from "../pages/Asesor/FRIA02Asesor";
 import FRIA03Asesor from "../pages/Asesor/FRIA03Asesor";
 import PresensiAsesor from "../pages/Asesor/PresensiAsesor";
+import FRIA05Asesor from "../pages/Asesor/FRIA05Asesor";
 
 import FRIA02 from "../pages/Asesor/komiteTeknis/FRIA02";
 import FRIA05 from "../pages/Asesor/komiteTeknis/FRIA05";
 import FRIA03Komite from "../pages/Asesor/komiteTeknis/FRIA03Komite";
+
 
 export default function AsesorRoutes() {
     return (
@@ -99,6 +101,11 @@ export default function AsesorRoutes() {
             <Route
                 path="fr-ia03/asesor/:id_jadwal/:id_peserta"
                 element={<FRIA03Asesor />}
+            />
+
+            <Route
+                path="fr-ia05/:id_jadwal/:id_peserta"
+                element={<FRIA05Asesor />}
             />
 
             <Route
