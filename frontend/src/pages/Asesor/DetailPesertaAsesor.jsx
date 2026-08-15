@@ -15,7 +15,7 @@ import {
   User,
   UserCheck,
   Users,
-  XCircle,
+  XCircle
 } from "lucide-react";
 
 export default function DetailPesertaAsesor() {
@@ -43,8 +43,8 @@ export default function DetailPesertaAsesor() {
         `http://localhost:3000/api/asesor/peserta/${id_peserta}`,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-          },
+            Authorization: `Bearer ${token}`
+          }
         }
       );
 
@@ -55,7 +55,10 @@ export default function DetailPesertaAsesor() {
       setNilaiAkhir(data?.nilai_akhir ?? "");
       setCatatanAsesor(data?.keterangan || "");
     } catch (err) {
-      console.error("Gagal mengambil detail peserta:", err);
+      console.error(
+        "Gagal mengambil detail peserta:",
+        err
+      );
 
       Swal.fire({
         icon: "error",
@@ -63,7 +66,7 @@ export default function DetailPesertaAsesor() {
         text:
           err.response?.data?.message ||
           "Data peserta tidak ditemukan.",
-        confirmButtonColor: "#CC6B27",
+        confirmButtonColor: "#CC6B27"
       });
     } finally {
       setLoading(false);
@@ -75,8 +78,9 @@ export default function DetailPesertaAsesor() {
       Swal.fire({
         icon: "warning",
         title: "Hasil belum dipilih",
-        text: "Silakan pilih hasil keputusan terlebih dahulu.",
-        confirmButtonColor: "#CC6B27",
+        text:
+          "Silakan pilih hasil keputusan terlebih dahulu.",
+        confirmButtonColor: "#CC6B27"
       });
       return;
     }
@@ -85,18 +89,23 @@ export default function DetailPesertaAsesor() {
       Swal.fire({
         icon: "warning",
         title: "Nilai belum diisi",
-        text: "Silakan masukkan nilai akhir peserta.",
-        confirmButtonColor: "#CC6B27",
+        text:
+          "Silakan masukkan nilai akhir peserta.",
+        confirmButtonColor: "#CC6B27"
       });
       return;
     }
 
-    if (Number(nilaiAkhir) < 0 || Number(nilaiAkhir) > 100) {
+    if (
+      Number(nilaiAkhir) < 0 ||
+      Number(nilaiAkhir) > 100
+    ) {
       Swal.fire({
         icon: "warning",
         title: "Nilai tidak valid",
-        text: "Nilai akhir harus berada di antara 0 sampai 100.",
-        confirmButtonColor: "#CC6B27",
+        text:
+          "Nilai akhir harus berada di antara 0 sampai 100.",
+        confirmButtonColor: "#CC6B27"
       });
       return;
     }
@@ -113,12 +122,12 @@ export default function DetailPesertaAsesor() {
           id_jadwal: Number(id_jadwal),
           hasil: hasilKeputusan,
           nilai_akhir: Number(nilaiAkhir),
-          catatan_asesor: catatanAsesor,
+          catatan_asesor: catatanAsesor
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-          },
+            Authorization: `Bearer ${token}`
+          }
         }
       );
 
@@ -126,7 +135,7 @@ export default function DetailPesertaAsesor() {
         ...prev,
         status_asesmen: hasilKeputusan,
         nilai_akhir: Number(nilaiAkhir),
-        keterangan: catatanAsesor,
+        keterangan: catatanAsesor
       }));
 
       Swal.fire({
@@ -135,10 +144,13 @@ export default function DetailPesertaAsesor() {
         text:
           res.data?.message ||
           "Hasil asesmen berhasil disimpan.",
-        confirmButtonColor: "#CC6B27",
+        confirmButtonColor: "#CC6B27"
       });
     } catch (err) {
-      console.error("Gagal menyimpan hasil asesmen:", err);
+      console.error(
+        "Gagal menyimpan hasil asesmen:",
+        err
+      );
 
       Swal.fire({
         icon: "error",
@@ -146,7 +158,7 @@ export default function DetailPesertaAsesor() {
         text:
           err.response?.data?.message ||
           "Hasil asesmen gagal disimpan.",
-        confirmButtonColor: "#CC6B27",
+        confirmButtonColor: "#CC6B27"
       });
     } finally {
       setSaving(false);
@@ -160,58 +172,58 @@ export default function DetailPesertaAsesor() {
       {
         key: "mapa01",
         label: "MAPA01",
-        group: "MAPA",
+        group: "MAPA"
       },
       {
         key: "mapa02",
         label: "MAPA02",
-        group: "MAPA",
+        group: "MAPA"
       },
       {
         key: "fria01",
         label: "FR.IA.01",
-        group: "FR.IA",
+        group: "FR.IA"
       },
       {
         key: "fria02",
         label: "FR.IA.02",
-        group: "FR.IA",
+        group: "FR.IA"
       },
       {
         key: "fria03",
         label: "FR.IA.03",
-        group: "FR.IA",
+        group: "FR.IA"
       },
       {
         key: "fria05",
         label: "FR.IA.05",
-        group: "FR.IA",
+        group: "FR.IA"
       },
       {
         key: "frak01",
         label: "FR.AK.01",
-        group: "FR.AK",
+        group: "FR.AK"
       },
       {
         key: "frak02",
         label: "FR.AK.02",
-        group: "FR.AK",
+        group: "FR.AK"
       },
       {
         key: "frak05",
         label: "FR.AK.05",
-        group: "FR.AK",
+        group: "FR.AK"
       },
       {
         key: "frak06",
         label: "FR.AK.06",
-        group: "FR.AK",
+        group: "FR.AK"
       },
       {
         key: "frak07",
         label: "FR.AK.07",
-        group: "FR.AK",
-      },
+        group: "FR.AK"
+      }
     ],
     []
   );
@@ -224,7 +236,9 @@ export default function DetailPesertaAsesor() {
 
   const persen =
     totalForm > 0
-      ? Math.round((selesai / totalForm) * 100)
+      ? Math.round(
+          (selesai / totalForm) * 100
+        )
       : 0;
 
   const getButtonClass = (status) => {
@@ -262,18 +276,15 @@ export default function DetailPesertaAsesor() {
   };
 
   const openFRIA01 = () => {
-    const idForm = peserta?.kelengkapan?.formId?.fria01;
-
-    if (idForm) {
-      navigate(`/asesor/fr-ia01/${idForm}`);
-      return;
-    }
-
-    navigate(`/asesor/fr-ia01/${id_jadwal}/${id_peserta}`);
+    navigate(
+      `/asesor/fr-ia01/${id_jadwal}/${id_peserta}`
+    );
   };
 
   const openFRIA03 = () => {
-    navigate(`/asesor/fr-ia03/asesor/${id_jadwal}/${id_peserta}`);
+    navigate(
+      `/asesor/fr-ia03/asesor/${id_jadwal}/${id_peserta}`
+    );
   };
 
   const getFormAction = (formKey) => {
@@ -295,7 +306,9 @@ export default function DetailPesertaAsesor() {
 
       case "fria02":
         return () =>
-          openMenu(`/asesor/fr-ia02/${id_jadwal}/${id_peserta}`);
+          openMenu(
+            `/asesor/fr-ia02/${id_jadwal}/${id_peserta}`
+          );
 
       case "fria03":
         return openFRIA03;
@@ -500,14 +513,18 @@ export default function DetailPesertaAsesor() {
             <div
               className="h-full rounded-full bg-[#CC6B27] transition-all duration-500"
               style={{
-                width: `${persen}%`,
+                width: `${persen}%`
               }}
             />
           </div>
 
           <div className="mt-4 flex items-center justify-between text-[11px] font-semibold text-[#182D4A]/60">
-            <span>{selesai} formulir selesai</span>
-            <span>{totalForm - selesai} formulir belum selesai</span>
+            <span>
+              {selesai} formulir selesai
+            </span>
+            <span>
+              {totalForm - selesai} formulir belum selesai
+            </span>
           </div>
         </section>
 
@@ -670,7 +687,7 @@ function FormSection({
   kelengkapan,
   getButtonClass,
   getIconClass,
-  getFormAction,
+  getFormAction
 }) {
   const jumlahSelesai = forms.filter(
     (item) => kelengkapan?.[item.key]
@@ -704,7 +721,8 @@ function FormSection({
             kelengkapan?.[form.key]
           );
 
-          const action = getFormAction(form.key);
+          const action =
+            getFormAction(form.key);
 
           return (
             <button
@@ -712,7 +730,9 @@ function FormSection({
               type="button"
               onClick={action}
               disabled={!action}
-              className={`${getButtonClass(status)} ${
+              className={`${getButtonClass(
+                status
+              )} ${
                 !action
                   ? "cursor-not-allowed opacity-60"
                   : ""
@@ -760,7 +780,7 @@ function FormSection({
 function InfoCard({
   icon,
   label,
-  value,
+  value
 }) {
   return (
     <div className="rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] p-4 transition-all hover:border-[#CC6B27]/20 hover:bg-white">
