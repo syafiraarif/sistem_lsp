@@ -273,7 +273,7 @@ export default function DetailPesertaAsesor() {
   };
 
   const openFRIA03 = () => {
-    navigate(`/asesor/fr-ia03/asesor/${id_peserta}`);
+    navigate(`/asesor/fr-ia03/asesor/${id_jadwal}/${id_peserta}`);
   };
 
   const getFormAction = (formKey) => {

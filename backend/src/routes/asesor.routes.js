@@ -347,12 +347,20 @@ router.get(
 /* ===================================================
    FR.IA.03 - ASESOR PENGUJI
 =================================================== */
+router.get(
+  "/fr-ia03/asesor/:id_jadwal/:id_peserta",
+  frIa03AsesorController.getForm
+);
 
-router.get("/fr-ia03/asesor/:id", frIa03AsesorController.getForm);
+router.post(
+  "/fr-ia03/asesor/jawaban",
+  frIa03AsesorController.saveJawaban
+);
 
-router.post("/fr-ia03/asesor/jawaban", frIa03AsesorController.saveJawaban);
-
-router.get("/fr-ia03/asesor/:id/pdf", frIa03AsesorController.downloadPdf);
+router.get(
+  "/fr-ia03/asesor/:id_jadwal/:id_peserta/pdf",
+  frIa03AsesorController.downloadPdf
+);
 
 /* ===================================================
    FR.IA.01 - ASESOR PENGUJI

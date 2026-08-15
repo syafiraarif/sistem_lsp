@@ -97,7 +97,7 @@ export default function AsesorRoutes() {
             />
 
             <Route
-                path="fr-ia03/asesor/:id"
+                path="fr-ia03/asesor/:id_jadwal/:id_peserta"
                 element={<FRIA03Asesor />}
             />
 
