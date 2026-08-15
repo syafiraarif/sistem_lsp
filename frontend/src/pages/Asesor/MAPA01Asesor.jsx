@@ -224,6 +224,9 @@ export default function MAPA01Asesor() {
               asesorResponse?.asesor ||
               []
             );
+
+            window.__asesorList = daftarAsesor;
+            setAsesorList(daftarAsesor);
       const rawUnitsFromEndpoint =
         Array.isArray(unitResponse)
           ? unitResponse
@@ -2003,6 +2006,8 @@ metode_pw:
 }
 
 function normalizePeople(data) {
+  const list = window.__asesorList || [];
+
   if (!Array.isArray(data) || !data.length) {
     return [
       {
@@ -2015,33 +2020,50 @@ function normalizePeople(data) {
     ];
   }
 
-  return data.map((item) => ({
-    id_user:
+  return data.map((item) => {
+    const idUser =
       item?.id_user ||
       item?.id_asesor ||
-      "",
+      "";
 
-    nama:
-      item?.nama ||
-      item?.nama_lengkap ||
-      "",
+    const master = list.find(
+      (person) =>
+        String(
+          person?.id_user ||
+          person?.id_asesor ||
+          ""
+        ) === String(idUser)
+    );
 
-    nomor_met:
-      item?.nomor_met ||
-      item?.no_reg_asesor ||
-      item?.no_reg ||
-      "",
-
-    ttd:
-      item?.ttd ||
-      item?.ttd_path ||
-      item?.tanda_tangan ||
-      "",
-
-    tanggal:
-      item?.tanggal ||
-      ""
-  }));
+    return {
+      id_user: idUser,
+      nama:
+        item?.nama ||
+        item?.nama_lengkap ||
+        master?.nama_lengkap ||
+        master?.nama ||
+        "",
+      nomor_met:
+        item?.nomor_met ||
+        item?.no_reg_asesor ||
+        item?.no_reg ||
+        master?.no_reg_asesor ||
+        master?.nomor_met ||
+        master?.no_reg ||
+        "",
+      ttd:
+        item?.ttd ||
+        item?.ttd_path ||
+        item?.tanda_tangan ||
+        master?.ttd_path ||
+        master?.ttd ||
+        master?.tanda_tangan ||
+        "",
+      tanggal:
+        item?.tanggal ||
+        ""
+    };
+  });
 }
 
 function findPerson(idUser) {
@@ -2085,6 +2107,7 @@ function getResponseData(response) {
     {}
   );
 }
+
 
 function getTodayDate() {
   const date = new Date();
