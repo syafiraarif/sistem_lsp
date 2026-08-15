@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
@@ -18,60 +18,163 @@ import {
   XCircle
 } from "lucide-react";
 
+const API_BASE_URL = "http://localhost:3000/api";
+const PROGRESS_INTERVAL = 2000;
+
 export default function DetailPesertaAsesor() {
   const navigate = useNavigate();
   const { id_jadwal, id_peserta } = useParams();
-
   const [loading, setLoading] = useState(true);
   const [peserta, setPeserta] = useState(null);
   const [hasilKeputusan, setHasilKeputusan] = useState("");
   const [nilaiAkhir, setNilaiAkhir] = useState("");
   const [catatanAsesor, setCatatanAsesor] = useState("");
   const [saving, setSaving] = useState(false);
+  const token = localStorage.getItem("token");
 
-  useEffect(() => {
-    fetchPeserta();
-  }, [id_peserta, id_jadwal]);
+  const fetchPeserta = useCallback(
+    async (showLoading = true) => {
+      try {
+        if (showLoading) {
+          setLoading(true);
+        }
 
-  const fetchPeserta = async () => {
+        const res = await axios.get(
+          `${API_BASE_URL}/asesor/peserta/${id_peserta}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            },
+            params: {
+              _t: Date.now()
+            }
+          }
+        );
+
+        const data = res?.data?.data || res?.data || {};
+
+        setPeserta(data);
+        setHasilKeputusan(
+          data?.status_asesmen || ""
+        );
+        setNilaiAkhir(
+          data?.nilai_akhir ?? ""
+        );
+        setCatatanAsesor(
+          data?.keterangan || ""
+        );
+      } catch (err) {
+        console.error(
+          "Gagal mengambil detail peserta:",
+          err
+        );
+
+        if (showLoading) {
+          Swal.fire({
+            icon: "error",
+            title: "Gagal",
+            text:
+              err?.response?.data?.message ||
+              "Data peserta tidak ditemukan.",
+            confirmButtonColor: "#CC6B27"
+          });
+        }
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
+      }
+    },
+    [id_peserta, token]
+  );
+
+  const refreshProgress = useCallback(async () => {
     try {
-      setLoading(true);
-
-      const token = localStorage.getItem("token");
-
       const res = await axios.get(
-        `http://localhost:3000/api/asesor/peserta/${id_peserta}`,
+        `${API_BASE_URL}/asesor/peserta/${id_peserta}`,
         {
           headers: {
             Authorization: `Bearer ${token}`
+          },
+          params: {
+            _t: Date.now()
           }
         }
       );
 
-      const data = res.data.data;
+      const data = res?.data?.data || res?.data || {};
 
-      setPeserta(data);
-      setHasilKeputusan(data?.status_asesmen || "");
-      setNilaiAkhir(data?.nilai_akhir ?? "");
-      setCatatanAsesor(data?.keterangan || "");
-    } catch (err) {
-      console.error(
-        "Gagal mengambil detail peserta:",
-        err
-      );
+      setPeserta((current) => {
+        if (!current) {
+          return data;
+        }
 
-      Swal.fire({
-        icon: "error",
-        title: "Gagal",
-        text:
-          err.response?.data?.message ||
-          "Data peserta tidak ditemukan.",
-        confirmButtonColor: "#CC6B27"
+        return {
+          ...current,
+          ...data,
+          kelengkapan:
+            data?.kelengkapan ||
+            current?.kelengkapan ||
+            {}
+        };
       });
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error(
+        "Gagal memperbarui progress asesmen:",
+        error
+      );
     }
-  };
+  }, [id_peserta, token]);
+
+  useEffect(() => {
+    fetchPeserta(true);
+  }, [fetchPeserta]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshProgress();
+    }, PROGRESS_INTERVAL);
+
+    const handleFocus = () => {
+      refreshProgress();
+    };
+
+    window.addEventListener(
+      "focus",
+      handleFocus
+    );
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(
+        "focus",
+        handleFocus
+      );
+    };
+  }, [refreshProgress]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        refreshProgress();
+      }
+    };
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
+    );
+
+    return () => {
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
+    };
+  }, [refreshProgress]);
 
   const handleSimpanHasil = async () => {
     if (!hasilKeputusan) {
@@ -113,36 +216,44 @@ export default function DetailPesertaAsesor() {
     try {
       setSaving(true);
 
-      const token = localStorage.getItem("token");
-
       const res = await axios.post(
-        "http://localhost:3000/api/asesor/hasil-keputusan",
+        `${API_BASE_URL}/asesor/hasil-keputusan`,
         {
-          id_peserta: Number(id_peserta),
-          id_jadwal: Number(id_jadwal),
+          id_peserta:
+            Number(id_peserta),
+          id_jadwal:
+            Number(id_jadwal),
           hasil: hasilKeputusan,
-          nilai_akhir: Number(nilaiAkhir),
-          catatan_asesor: catatanAsesor
+          nilai_akhir:
+            Number(nilaiAkhir),
+          catatan_asesor:
+            catatanAsesor
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization:
+              `Bearer ${token}`
           }
         }
       );
 
       setPeserta((prev) => ({
         ...prev,
-        status_asesmen: hasilKeputusan,
-        nilai_akhir: Number(nilaiAkhir),
-        keterangan: catatanAsesor
+        status_asesmen:
+          hasilKeputusan,
+        nilai_akhir:
+          Number(nilaiAkhir),
+        keterangan:
+          catatanAsesor
       }));
+
+      await refreshProgress();
 
       Swal.fire({
         icon: "success",
         title: "Berhasil",
         text:
-          res.data?.message ||
+          res?.data?.message ||
           "Hasil asesmen berhasil disimpan.",
         confirmButtonColor: "#CC6B27"
       });
@@ -156,7 +267,7 @@ export default function DetailPesertaAsesor() {
         icon: "error",
         title: "Gagal",
         text:
-          err.response?.data?.message ||
+          err?.response?.data?.message ||
           "Hasil asesmen gagal disimpan.",
         confirmButtonColor: "#CC6B27"
       });
@@ -165,7 +276,8 @@ export default function DetailPesertaAsesor() {
     }
   };
 
-  const kelengkapan = peserta?.kelengkapan || {};
+  const kelengkapan =
+    peserta?.kelengkapan || {};
 
   const daftarForm = useMemo(
     () => [
@@ -231,7 +343,10 @@ export default function DetailPesertaAsesor() {
   const totalForm = daftarForm.length;
 
   const selesai = daftarForm.filter(
-    (form) => kelengkapan?.[form.key]
+    (form) =>
+      isFormFilled(
+        kelengkapan?.[form.key]
+      )
   ).length;
 
   const persen =
@@ -246,14 +361,16 @@ export default function DetailPesertaAsesor() {
       return `
         group flex items-center gap-3 rounded-xl border
         border-green-200 bg-green-50 px-4 py-3 text-left
-        transition-all hover:border-green-300 hover:bg-green-100
+        transition-all duration-200
+        hover:border-green-300 hover:bg-green-100
       `;
     }
 
     return `
       group flex items-center gap-3 rounded-xl border
       border-[#071E3D]/10 bg-[#FAFAFA] px-4 py-3 text-left
-      transition-all hover:border-[#CC6B27]/40 hover:bg-[#CC6B27]/5
+      transition-all duration-200
+      hover:border-[#CC6B27]/40 hover:bg-[#CC6B27]/5
     `;
   };
 
@@ -364,9 +481,11 @@ export default function DetailPesertaAsesor() {
               className="animate-spin"
             />
           </div>
+
           <h2 className="text-[18px] font-black text-[#071E3D]">
             Memuat Detail Peserta
           </h2>
+
           <p className="mt-2 text-[13px] font-medium text-[#182D4A]/70">
             Sedang mengambil data peserta dan kelengkapan asesmen.
           </p>
@@ -382,12 +501,15 @@ export default function DetailPesertaAsesor() {
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-red-50 text-red-500">
             <XCircle size={28} />
           </div>
+
           <h2 className="text-[18px] font-black text-[#071E3D]">
             Data Peserta Tidak Ditemukan
           </h2>
+
           <p className="mt-2 text-[13px] font-medium text-[#182D4A]/70">
             Data peserta tidak dapat ditampilkan.
           </p>
+
           <button
             type="button"
             onClick={() =>
@@ -410,6 +532,7 @@ export default function DetailPesertaAsesor() {
       <div className="mx-auto flex max-w-[1500px] flex-col gap-6">
         <section className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
           <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
+
           <div className="relative z-10 flex flex-col gap-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
@@ -417,13 +540,16 @@ export default function DetailPesertaAsesor() {
                   <Sparkles size={14} />
                   Kelola Asesmen
                 </div>
+
                 <h1 className="m-0 text-[24px] font-black text-[#071E3D] md:text-[28px]">
                   Detail Asesmen Peserta
                 </h1>
+
                 <p className="mt-1 text-[14px] font-medium text-[#182D4A]/70">
                   Periksa kelengkapan dokumen dan formulir asesmen peserta.
                 </p>
               </div>
+
               <Link
                 to={`/asesor/jadwal-saya/${id_jadwal}/peserta`}
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-5 py-2.5 text-[13px] font-bold text-[#182D4A] transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27]/5 hover:text-[#CC6B27]"
@@ -440,10 +566,12 @@ export default function DetailPesertaAsesor() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
               <User size={19} />
             </div>
+
             <div>
               <h2 className="m-0 text-[16px] font-bold text-[#071E3D]">
                 Informasi Peserta
               </h2>
+
               <p className="m-0 mt-0.5 text-[11px] font-medium text-[#182D4A]/60">
                 Identitas peserta uji kompetensi
               </p>
@@ -456,26 +584,33 @@ export default function DetailPesertaAsesor() {
               label="Nama Peserta"
               value={peserta.nama_lengkap || "-"}
             />
+
             <InfoCard
               icon={<BadgeCheck size={18} />}
               label="NIK"
               value={peserta.nik || "-"}
             />
+
             <InfoCard
               icon={<FileText size={18} />}
               label="Email"
               value={peserta.email || "-"}
             />
+
             <InfoCard
               icon={<Users size={18} />}
               label="No. HP"
               value={peserta.no_hp || "-"}
             />
+
             <InfoCard
               icon={<ShieldCheck size={18} />}
               label="Status Asesmen"
-              value={formatStatus(peserta.status_asesmen)}
+              value={formatStatus(
+                peserta.status_asesmen
+              )}
             />
+
             <InfoCard
               icon={<ClipboardCheck size={18} />}
               label="ID Peserta"
@@ -491,18 +626,22 @@ export default function DetailPesertaAsesor() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
                   <ClipboardCheck size={18} />
                 </div>
+
                 <h2 className="m-0 text-[16px] font-bold text-[#071E3D]">
                   Progress Asesmen
                 </h2>
               </div>
+
               <p className="mt-2 text-[12px] font-medium text-[#182D4A]/60">
                 Kelengkapan seluruh formulir asesmen peserta.
               </p>
             </div>
+
             <div className="flex items-center gap-3">
               <span className="rounded-full bg-[#CC6B27]/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-[#CC6B27]">
                 {selesai} / {totalForm} Form
               </span>
+
               <span className="rounded-full bg-[#071E3D] px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-white">
                 {persen}%
               </span>
@@ -522,6 +661,7 @@ export default function DetailPesertaAsesor() {
             <span>
               {selesai} formulir selesai
             </span>
+
             <span>
               {totalForm - selesai} formulir belum selesai
             </span>
@@ -533,7 +673,8 @@ export default function DetailPesertaAsesor() {
           subtitle="Matriks Asesmen dan Perencanaan Asesmen"
           icon={<Map size={18} />}
           forms={daftarForm.filter(
-            (item) => item.group === "MAPA"
+            (item) =>
+              item.group === "MAPA"
           )}
           kelengkapan={kelengkapan}
           getButtonClass={getButtonClass}
@@ -546,7 +687,8 @@ export default function DetailPesertaAsesor() {
           subtitle="Formulir Instrumen Asesmen"
           icon={<FileText size={18} />}
           forms={daftarForm.filter(
-            (item) => item.group === "FR.IA"
+            (item) =>
+              item.group === "FR.IA"
           )}
           kelengkapan={kelengkapan}
           getButtonClass={getButtonClass}
@@ -559,7 +701,8 @@ export default function DetailPesertaAsesor() {
           subtitle="Formulir Rekaman Asesmen Kompetensi"
           icon={<ClipboardCheck size={18} />}
           forms={daftarForm.filter(
-            (item) => item.group === "FR.AK"
+            (item) =>
+              item.group === "FR.AK"
           )}
           kelengkapan={kelengkapan}
           getButtonClass={getButtonClass}
@@ -572,10 +715,12 @@ export default function DetailPesertaAsesor() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
               <BadgeCheck size={19} />
             </div>
+
             <div>
               <h2 className="m-0 text-[16px] font-bold text-[#071E3D]">
                 Hasil Asesmen
               </h2>
+
               <p className="m-0 mt-0.5 text-[11px] font-medium text-[#182D4A]/60">
                 Input dan ubah hasil penilaian peserta
               </p>
@@ -587,19 +732,24 @@ export default function DetailPesertaAsesor() {
               <label className="mb-2 block text-[11px] font-black uppercase tracking-wider text-[#182D4A]/60">
                 Hasil Keputusan
               </label>
+
               <select
                 value={hasilKeputusan}
                 onChange={(e) =>
-                  setHasilKeputusan(e.target.value)
+                  setHasilKeputusan(
+                    e.target.value
+                  )
                 }
                 className="w-full rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] px-4 py-3 text-[13px] font-bold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
               >
                 <option value="">
                   Pilih Hasil Keputusan
                 </option>
+
                 <option value="kompeten">
                   Kompeten
                 </option>
+
                 <option value="belum_kompeten">
                   Belum Kompeten
                 </option>
@@ -610,6 +760,7 @@ export default function DetailPesertaAsesor() {
               <label className="mb-2 block text-[11px] font-black uppercase tracking-wider text-[#182D4A]/60">
                 Nilai Akhir
               </label>
+
               <input
                 type="number"
                 min="0"
@@ -617,7 +768,9 @@ export default function DetailPesertaAsesor() {
                 step="0.01"
                 value={nilaiAkhir}
                 onChange={(e) =>
-                  setNilaiAkhir(e.target.value)
+                  setNilaiAkhir(
+                    e.target.value
+                  )
                 }
                 placeholder="Masukkan nilai 0 - 100"
                 className="w-full rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] px-4 py-3 text-[13px] font-bold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
@@ -628,10 +781,13 @@ export default function DetailPesertaAsesor() {
               <label className="mb-2 block text-[11px] font-black uppercase tracking-wider text-[#182D4A]/60">
                 Catatan Asesor
               </label>
+
               <textarea
                 value={catatanAsesor}
                 onChange={(e) =>
-                  setCatatanAsesor(e.target.value)
+                  setCatatanAsesor(
+                    e.target.value
+                  )
                 }
                 rows={5}
                 placeholder="Masukkan catatan hasil asesmen peserta..."
@@ -643,7 +799,9 @@ export default function DetailPesertaAsesor() {
           <div className="mt-5 flex justify-end">
             <button
               type="button"
-              onClick={handleSimpanHasil}
+              onClick={
+                handleSimpanHasil
+              }
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#CC6B27] px-6 py-3 text-[12px] font-black uppercase tracking-wider text-white transition-all hover:bg-[#a8561f] disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -689,9 +847,12 @@ function FormSection({
   getIconClass,
   getFormAction
 }) {
-  const jumlahSelesai = forms.filter(
-    (item) => kelengkapan?.[item.key]
-  ).length;
+  const jumlahSelesai =
+    forms.filter((item) =>
+      isFormFilled(
+        kelengkapan?.[item.key]
+      )
+    ).length;
 
   return (
     <section className="rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
@@ -700,10 +861,12 @@ function FormSection({
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
             {icon}
           </div>
+
           <div>
             <h2 className="m-0 text-[16px] font-bold text-[#071E3D]">
               {title}
             </h2>
+
             <p className="m-0 mt-0.5 text-[11px] font-medium text-[#182D4A]/60">
               {subtitle}
             </p>
@@ -717,7 +880,7 @@ function FormSection({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {forms.map((form) => {
-          const status = Boolean(
+          const status = isFormFilled(
             kelengkapan?.[form.key]
           );
 
@@ -738,7 +901,11 @@ function FormSection({
                   : ""
               }`}
             >
-              <div className={getIconClass(status)}>
+              <div
+                className={getIconClass(
+                  status
+                )}
+              >
                 {status ? (
                   <CheckCircle2 size={18} />
                 ) : (
@@ -777,6 +944,47 @@ function FormSection({
   );
 }
 
+function isFormFilled(value) {
+  if (
+    value === true ||
+    value === 1 ||
+    value === "1" ||
+    value === "true" ||
+    value === "aktif" ||
+    value === "selesai" ||
+    value === "sudah_diisi" ||
+    value === "sudah"
+  ) {
+    return true;
+  }
+
+  if (
+    value === false ||
+    value === 0 ||
+    value === "0" ||
+    value === "false" ||
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return false;
+  }
+
+  if (
+    Array.isArray(value)
+  ) {
+    return value.length > 0;
+  }
+
+  if (
+    typeof value === "object"
+  ) {
+    return Object.keys(value).length > 0;
+  }
+
+  return Boolean(value);
+}
+
 function InfoCard({
   icon,
   label,
@@ -787,9 +995,11 @@ function InfoCard({
       <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-white text-[#CC6B27] shadow-sm">
         {icon}
       </div>
+
       <p className="m-0 text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/55">
         {label}
       </p>
+
       <p className="m-0 mt-1.5 break-words text-[13px] font-bold text-[#071E3D]">
         {value || "-"}
       </p>
