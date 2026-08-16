@@ -8,24 +8,17 @@ const {
   Tuk,
   ProfileAsesor
 } = require("../../models");
-
 const PDFDocument = require("pdfkit");
-
-// ================= GET DETAIL =================
 exports.getFrAk06 = async (req, res) => {
   try {
-
     const { id_jadwal } = req.query;
-    const id_asesor = req.user.id_user;
-
+    const id_asesor = Number(req.user.id_user);
     if (!id_jadwal) {
       return res.status(400).json({
         success: false,
         message: "id_jadwal wajib diisi"
       });
     }
-
-    // cek apakah asesor bertugas
     const tugas = await JadwalAsesor.findOne({
       where: {
         id_jadwal,
@@ -33,15 +26,35 @@ exports.getFrAk06 = async (req, res) => {
         status: "aktif"
       }
     });
-
     if (!tugas) {
       return res.status(403).json({
         success: false,
         message: "Anda tidak memiliki akses pada jadwal ini"
       });
     }
-
+    const jadwal = await Jadwal.findByPk(id_jadwal);
+    if (!jadwal) {
+      return res.status(404).json({
+        success: false,
+        message: "Jadwal tidak ditemukan"
+      });
+    }
+    const [skema, tuk, asesor] = await Promise.all([
+      Skema.findByPk(jadwal.id_skema),
+      Tuk.findByPk(jadwal.id_tuk),
+      ProfileAsesor.findByPk(id_asesor)
+    ]);
     const data = await FrAk06.findOne({
+      attributes: [
+        "id",
+        "id_jadwal",
+        "id_asesor",
+        "rekomendasi_1",
+        "rekomendasi_2",
+        "komentar",
+        "ttd_asesor",
+        "created_at"
+      ],
       where: {
         id_jadwal,
         id_asesor
@@ -49,48 +62,66 @@ exports.getFrAk06 = async (req, res) => {
       include: [
         {
           model: FrAk06Detail,
-          as: "details",
+          as: "detail",
           separate: true,
-          order: [
-            ["id", "ASC"]
-          ]
+          order: [["id", "ASC"]]
         }
       ]
     });
-
-    if (!data) {
-      return res.status(404).json({
-        success: false,
-        message: "FR.AK.06 belum dibuat"
-      });
-    }
-
+    const baseData = {
+      id: data?.id || null,
+      id_jadwal: Number(id_jadwal),
+      id_asesor,
+      exists: Boolean(data),
+      rekomendasi_1: data?.rekomendasi_1 || "",
+      rekomendasi_2: data?.rekomendasi_2 || "",
+      komentar: data?.komentar || "",
+      ttd_asesor:
+        data?.ttd_asesor ||
+        asesor?.ttd_path ||
+        "",
+      created_at:
+        data?.created_at ||
+        null,
+      jadwal: jadwal.toJSON(),
+      skema:
+        skema?.toJSON?.() ||
+        skema ||
+        {},
+      tuk:
+        tuk?.toJSON?.() ||
+        tuk ||
+        {},
+      asesor: {
+        ...(asesor?.toJSON?.() || asesor || {}),
+        nama_lengkap:
+          asesor?.nama_lengkap ||
+          "",
+        no_reg_asesor:
+          asesor?.no_reg_asesor ||
+          "",
+        ttd_path:
+          asesor?.ttd_path ||
+          ""
+      },
+      details: data?.detail || []
+    };
     return res.status(200).json({
       success: true,
-      data
+      data: baseData
     });
-
   } catch (error) {
-
     console.error("GET FR.AK.06 ERROR :", error);
-
     return res.status(500).json({
       success: false,
       message: error.message
     });
-
   }
 };
-
-/// ================= SUBMIT =================
 exports.submitFrAk06 = async (req, res) => {
-
   const transaction = await FrAk06.sequelize.transaction();
-
   try {
-
-    const id_asesor = req.user.id_user;
-
+    const id_asesor = Number(req.user.id_user);
     const {
       id_jadwal,
       rekomendasi_1,
@@ -99,38 +130,27 @@ exports.submitFrAk06 = async (req, res) => {
       ttd_asesor,
       detail
     } = req.body;
-
-    // ================= VALIDASI =================
-
     if (!id_jadwal) {
       await transaction.rollback();
-
       return res.status(400).json({
         success: false,
         message: "ID Jadwal wajib diisi"
       });
     }
-
     if (!ttd_asesor) {
       await transaction.rollback();
-
       return res.status(400).json({
         success: false,
         message: "Tanda tangan asesor wajib diisi"
       });
     }
-
     if (!Array.isArray(detail) || detail.length === 0) {
       await transaction.rollback();
-
       return res.status(400).json({
         success: false,
         message: "Minimal harus terdapat satu detail asesmen"
       });
     }
-
-    // ================= CEK PRESENSI =================
-
     const presensi = await PresensiAsesor.findOne({
       where: {
         id_jadwal,
@@ -138,19 +158,13 @@ exports.submitFrAk06 = async (req, res) => {
       },
       transaction
     });
-
     if (!presensi) {
-
       await transaction.rollback();
-
       return res.status(403).json({
         success: false,
         message: "Harap melakukan presensi terlebih dahulu"
       });
     }
-
-    // ================= CEK PENUGASAN =================
-
     const tugas = await JadwalAsesor.findOne({
       where: {
         id_jadwal,
@@ -159,41 +173,30 @@ exports.submitFrAk06 = async (req, res) => {
       },
       transaction
     });
-
     if (!tugas) {
-
       await transaction.rollback();
-
       return res.status(403).json({
         success: false,
         message: "Anda tidak memiliki tugas pada jadwal ini"
       });
     }
-
-    // ================= CEK DUPLIKAT =================
-
     const existing = await FrAk06.findOne({
+      attributes: ["id"],
       where: {
         id_jadwal,
         id_asesor
       },
       transaction
     });
-
     if (existing) {
-
       await transaction.rollback();
-
       return res.status(400).json({
         success: false,
         message: "FR.AK.06 sudah pernah dibuat"
       });
     }
-
-    // ================= SIMPAN HEADER =================
-
     const fr = await FrAk06.create({
-      id_jadwal,
+      id_jadwal: Number(id_jadwal),
       id_asesor,
       rekomendasi_1: rekomendasi_1 || null,
       rekomendasi_2: rekomendasi_2 || null,
@@ -202,76 +205,56 @@ exports.submitFrAk06 = async (req, res) => {
     }, {
       transaction
     });
-
-    // ================= SIMPAN DETAIL =================
-
-    const detailData = detail.map(item => ({
+    const detailData = detail.map((item) => ({
       id_fr_ak06: fr.id,
-
       aspek: item.aspek || null,
-
       validitas: Boolean(item.validitas),
       reliabel: Boolean(item.reliabel),
       fleksibel: Boolean(item.fleksibel),
       adil: Boolean(item.adil),
-
       task_skills: Boolean(item.task_skills),
       task_management: Boolean(item.task_management),
       contingency_management: Boolean(item.contingency_management),
       job_role: Boolean(item.job_role),
       transfer_skills: Boolean(item.transfer_skills),
-
       bukti: item.bukti || null
     }));
-
     await FrAk06Detail.bulkCreate(
       detailData,
-      { transaction }
+      {
+        transaction
+      }
     );
-
     await transaction.commit();
-
     return res.status(201).json({
       success: true,
       message: "FR.AK.06 berhasil disimpan",
-      data: fr
+      data: {
+        id: fr.id,
+        id_jadwal: fr.id_jadwal,
+        id_asesor: fr.id_asesor
+      }
     });
-
   } catch (error) {
-
     await transaction.rollback();
-
     console.error("SUBMIT FR.AK.06 ERROR :", error);
-
     return res.status(500).json({
       success: false,
       message: "Terjadi kesalahan pada server",
       error: error.message
     });
-
   }
-
 };
-
-// ================= LIST =================
 exports.listFrAk06 = async (req, res) => {
-
   try {
-
-    const id_asesor = req.user.id_user;
+    const id_asesor = Number(req.user.id_user);
     const { id_jadwal } = req.params;
-
     if (!id_jadwal) {
       return res.status(400).json({
         success: false,
         message: "ID Jadwal wajib diisi"
       });
     }
-
-    // =====================
-    // CEK PENUGASAN ASESOR
-    // =====================
-
     const tugas = await JadwalAsesor.findOne({
       where: {
         id_jadwal,
@@ -279,36 +262,34 @@ exports.listFrAk06 = async (req, res) => {
         status: "aktif"
       }
     });
-
     if (!tugas) {
       return res.status(403).json({
         success: false,
         message: "Anda tidak memiliki akses pada jadwal ini"
       });
     }
-
-    // =====================
-    // AMBIL DATA
-    // =====================
-
     const data = await FrAk06.findAll({
-
+      attributes: [
+        "id",
+        "id_jadwal",
+        "id_asesor",
+        "rekomendasi_1",
+        "rekomendasi_2",
+        "komentar",
+        "ttd_asesor",
+        "created_at"
+      ],
       where: {
         id_jadwal,
         id_asesor
       },
-
       include: [
-
         {
           model: FrAk06Detail,
-          as: "details",
+          as: "detail",
           separate: true,
-          order: [
-            ["id", "ASC"]
-          ]
+          order: [["id", "ASC"]]
         },
-
         {
           model: Jadwal,
           as: "jadwal",
@@ -323,54 +304,37 @@ exports.listFrAk06 = async (req, res) => {
             }
           ]
         },
-
         {
           model: ProfileAsesor,
           as: "asesor",
           attributes: [
             "nama_lengkap",
+            "no_reg_asesor",
             "ttd_path"
           ]
         }
-
       ],
-
-      order: [
-        ["created_at", "DESC"]
-      ]
-
+      order: [["created_at", "DESC"]]
     });
-
     return res.status(200).json({
       success: true,
       total: data.length,
       data
     });
-
   } catch (error) {
-
     console.error("LIST FR.AK.06 ERROR :", error);
-
     return res.status(500).json({
       success: false,
       message: "Terjadi kesalahan pada server",
       error: error.message
     });
-
   }
-
 };
-
-// ================= UPDATE =================
 exports.updateFrAk06 = async (req, res) => {
-
   const transaction = await FrAk06.sequelize.transaction();
-
   try {
-
     const { id } = req.params;
-    const id_asesor = req.user.id_user;
-
+    const id_asesor = Number(req.user.id_user);
     const {
       rekomendasi_1,
       rekomendasi_2,
@@ -378,159 +342,127 @@ exports.updateFrAk06 = async (req, res) => {
       ttd_asesor,
       detail
     } = req.body;
-
     const fr = await FrAk06.findOne({
+      attributes: [
+        "id",
+        "id_jadwal",
+        "id_asesor",
+        "rekomendasi_1",
+        "rekomendasi_2",
+        "komentar",
+        "ttd_asesor",
+        "created_at"
+      ],
       where: {
         id,
         id_asesor
       },
       transaction
     });
-
     if (!fr) {
-
       await transaction.rollback();
-
       return res.status(404).json({
         success: false,
         message: "FR.AK.06 tidak ditemukan"
       });
-
     }
-
     if (!Array.isArray(detail)) {
-
       await transaction.rollback();
-
       return res.status(400).json({
         success: false,
         message: "Detail harus berupa array"
       });
-
     }
-
-    // ===========================
-    // UPDATE HEADER
-    // ===========================
-
     await fr.update({
-
       rekomendasi_1:
-        rekomendasi_1 ?? fr.rekomendasi_1,
-
+        rekomendasi_1 !== undefined
+          ? rekomendasi_1 || null
+          : fr.rekomendasi_1,
       rekomendasi_2:
-        rekomendasi_2 ?? fr.rekomendasi_2,
-
+        rekomendasi_2 !== undefined
+          ? rekomendasi_2 || null
+          : fr.rekomendasi_2,
       komentar:
-        komentar ?? fr.komentar,
-
+        komentar !== undefined
+          ? komentar || null
+          : fr.komentar,
       ttd_asesor:
-        ttd_asesor ?? fr.ttd_asesor
-
+        ttd_asesor ||
+        fr.ttd_asesor
     }, {
       transaction
     });
-
-    // ===========================
-    // HAPUS DETAIL LAMA
-    // ===========================
-
     await FrAk06Detail.destroy({
-
       where: {
         id_fr_ak06: fr.id
       },
-
       transaction
-
     });
-
-    // ===========================
-    // INSERT DETAIL BARU
-    // ===========================
-
-    const detailData = detail.map(item => ({
-
+    const detailData = detail.map((item) => ({
       id_fr_ak06: fr.id,
-
       aspek: item.aspek || null,
-
       validitas: Boolean(item.validitas),
       reliabel: Boolean(item.reliabel),
       fleksibel: Boolean(item.fleksibel),
       adil: Boolean(item.adil),
-
       task_skills: Boolean(item.task_skills),
       task_management: Boolean(item.task_management),
       contingency_management: Boolean(item.contingency_management),
       job_role: Boolean(item.job_role),
       transfer_skills: Boolean(item.transfer_skills),
-
       bukti: item.bukti || null
-
     }));
-
     await FrAk06Detail.bulkCreate(
       detailData,
       {
         transaction
       }
     );
-
     await transaction.commit();
-
     return res.status(200).json({
-
       success: true,
       message: "FR.AK.06 berhasil diperbarui",
-      data: fr
-
+      data: {
+        id: fr.id,
+        id_jadwal: fr.id_jadwal,
+        id_asesor: fr.id_asesor
+      }
     });
-
   } catch (error) {
-
     await transaction.rollback();
-
-    console.error(
-      "UPDATE FR.AK.06 ERROR :",
-      error
-    );
-
+    console.error("UPDATE FR.AK.06 ERROR :", error);
     return res.status(500).json({
-
       success: false,
       message: error.message
-
     });
-
   }
-
 };
-
-/// ================= DOWNLOAD PDF =================
 exports.downloadPdf = async (req, res) => {
-
   try {
-
     const { id } = req.params;
-    const id_asesor = req.user.id_user;
-
+    const id_asesor = Number(req.user.id_user);
     const data = await FrAk06.findOne({
-
+      attributes: [
+        "id",
+        "id_jadwal",
+        "id_asesor",
+        "rekomendasi_1",
+        "rekomendasi_2",
+        "komentar",
+        "ttd_asesor",
+        "created_at"
+      ],
       where: {
         id,
         id_asesor
       },
-
       include: [
-
         {
           model: FrAk06Detail,
-          as: "details",
+          as: "detail",
           separate: true,
           order: [["id", "ASC"]]
         },
-
         {
           model: Jadwal,
           as: "jadwal",
@@ -545,71 +477,50 @@ exports.downloadPdf = async (req, res) => {
             }
           ]
         },
-
         {
           model: ProfileAsesor,
           as: "asesor",
           attributes: [
             "nama_lengkap",
+            "no_reg_asesor",
             "ttd_path"
           ]
         }
-
       ]
-
     });
-
     if (!data) {
-
       return res.status(404).json({
         success: false,
         message: "FR.AK.06 tidak ditemukan"
       });
-
     }
-
     const doc = new PDFDocument({
       margin: 40,
       size: "A4"
     });
-
-    res.setHeader(
-      "Content-Type",
-      "application/pdf"
-    );
-
+    res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
       `inline; filename=FR-AK-06-${id}.pdf`
     );
-
     doc.pipe(res);
-
-    // =====================================
-    // HEADER
-    // =====================================
-
     doc
       .fontSize(16)
       .text("FR.AK.06", {
         align: "center"
       });
-
     doc
       .fontSize(13)
       .text("MENINJAU PROSES ASESMEN", {
         align: "center"
       });
-
     doc.moveDown();
-
     doc.fontSize(11);
-
     doc.text(`Nama Asesor : ${data.asesor?.nama_lengkap || "-"}`);
     doc.text(`ID Jadwal : ${data.id_jadwal}`);
     doc.text(`Skema : ${data.jadwal?.skema?.judul_skema || "-"}`);
+    doc.text(`Nomor : ${data.jadwal?.skema?.kode_skema || "-"}`);
     doc.text(`TUK : ${data.jadwal?.tuk?.nama_tuk || "-"}`);
-
     doc.text(
       `Tanggal : ${
         data.created_at
@@ -617,138 +528,70 @@ exports.downloadPdf = async (req, res) => {
           : "-"
       }`
     );
-
     doc.moveDown();
-
-    // =====================================
-    // DETAIL
-    // =====================================
-
-    doc
-      .fontSize(12)
-      .text("Detail Peninjauan", {
-        underline: true
-      });
-
-    doc.moveDown();
-
-    (data.details || []).forEach((item, index) => {
-
-      doc.fontSize(11);
-
-      doc.text(`${index + 1}. ${item.aspek || "-"}`);
-
-      doc.moveDown(0.2);
-
-      doc.text(
-        `Prinsip Asesmen :
-✓ Validitas : ${item.validitas ? "Ya" : "Tidak"}
-✓ Reliabel : ${item.reliabel ? "Ya" : "Tidak"}
-✓ Fleksibel : ${item.fleksibel ? "Ya" : "Tidak"}
-✓ Adil : ${item.adil ? "Ya" : "Tidak"}`
-      );
-
-      doc.moveDown(0.2);
-
-      doc.text(
-        `Dimensi Kompetensi :
-✓ Task Skills : ${item.task_skills ? "Ya" : "Tidak"}
-✓ Task Management Skills : ${item.task_management ? "Ya" : "Tidak"}
-✓ Contingency Management Skills : ${item.contingency_management ? "Ya" : "Tidak"}
-✓ Job Role / Environment Skills : ${item.job_role ? "Ya" : "Tidak"}
-✓ Transfer Skills : ${item.transfer_skills ? "Ya" : "Tidak"}`
-      );
-
-      doc.moveDown(0.2);
-
-      doc.text(`Bukti : ${item.bukti || "-"}`);
-
-      doc.moveDown();
-
+    doc.fontSize(12).text("Detail Peninjauan", {
+      underline: true
     });
-
-    // =====================================
-    // REKOMENDASI
-    // =====================================
-
-    doc
-      .fontSize(12)
-      .text("Rekomendasi", {
-        underline: true
-      });
-
-    doc.moveDown(0.5);
-
-    doc.text(`1. ${data.rekomendasi_1 || "-"}`);
-    doc.text(`2. ${data.rekomendasi_2 || "-"}`);
-
     doc.moveDown();
-
-    // =====================================
-    // KOMENTAR
-    // =====================================
-
-    doc
-      .fontSize(12)
-      .text("Komentar", {
-        underline: true
-      });
-
+    (data.detail || []).forEach((item, index) => {
+      doc.fontSize(10);
+      doc.text(`${index + 1}. ${item.aspek || "-"}`);
+      doc.moveDown(0.2);
+      doc.text(
+        `Validitas : ${item.validitas ? "Ya" : "Tidak"}    Reliabel : ${item.reliabel ? "Ya" : "Tidak"}    Fleksibel : ${item.fleksibel ? "Ya" : "Tidak"}    Adil : ${item.adil ? "Ya" : "Tidak"}`
+      );
+      doc.moveDown(0.2);
+      doc.text(
+        `Task Skills : ${item.task_skills ? "Ya" : "Tidak"}    Task Management Skills : ${item.task_management ? "Ya" : "Tidak"}    Contingency Management Skills : ${item.contingency_management ? "Ya" : "Tidak"}`
+      );
+      doc.text(
+        `Job Role / Environment Skills : ${item.job_role ? "Ya" : "Tidak"}    Transfer Skills : ${item.transfer_skills ? "Ya" : "Tidak"}`
+      );
+      doc.moveDown(0.2);
+      doc.text(`Bukti : ${item.bukti || "-"}`);
+      doc.moveDown();
+    });
+    doc.fontSize(12).text("Rekomendasi", {
+      underline: true
+    });
     doc.moveDown(0.5);
-
-    doc.text(data.komentar || "-");
-
+    doc.fontSize(10).text(`1. ${data.rekomendasi_1 || "-"}`);
+    doc.text(`2. ${data.rekomendasi_2 || "-"}`);
+    doc.moveDown();
+    doc.fontSize(12).text("Komentar", {
+      underline: true
+    });
+    doc.moveDown(0.5);
+    doc.fontSize(10).text(data.komentar || "-");
     doc.moveDown(2);
-
-    // =====================================
-    // TTD
-    // =====================================
-
     doc.text("Tanda Tangan Asesor");
-
     const ttdPath =
-      data.asesor?.ttd_path || data.ttd_asesor;
-
+      data.asesor?.ttd_path ||
+      data.ttd_asesor;
     if (ttdPath) {
-
       try {
-
         doc.image(ttdPath, {
           width: 120
         });
-
-      } catch (err) {
-
+      } catch (error) {
         doc.text("(Tanda tangan tidak ditemukan)");
-
       }
-
     } else {
-
       doc.text("-");
-
     }
-
     doc.moveDown();
-
     doc.text(
       data.asesor?.nama_lengkap || "-"
     );
-
     doc.end();
-
   } catch (error) {
-
     console.error(
       "DOWNLOAD PDF FR.AK.06 ERROR :",
       error
     );
-
     return res.status(500).json({
       success: false,
       message: error.message
     });
-
   }
-
 };
