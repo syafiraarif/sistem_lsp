@@ -8,39 +8,55 @@ const {
   ProfileAsesi,
   FrAk03,
   FrAk04,
+  FrAk06,
   Jadwal,
   Skema,
   Tuk,
 } = require("../../models");
-
-/* =========================
-HELPER
-========================= */
 
 const getIdUser = (req) => {
   return req.user?.id_user || req.user?.id || null;
 };
 
 const normalizeStatus = (status) => {
-  const value = String(status || "").toLowerCase().trim();
+  const value = String(status || "")
+    .toLowerCase()
+    .trim();
 
-  if (value === "kompeten") return "kompeten";
-  if (value === "belum kompeten") return "belum_kompeten";
-  if (value === "belum_kompeten") return "belum_kompeten";
+  if (value === "kompeten") {
+    return "kompeten";
+  }
+
+  if (
+    value === "belum kompeten" ||
+    value === "belum_kompeten"
+  ) {
+    return "belum_kompeten";
+  }
 
   return "belum_tersedia";
 };
 
 const toPlain = (data) => {
-  if (!data) return null;
-  return typeof data.toJSON === "function" ? data.toJSON() : data;
+  if (!data) {
+    return null;
+  }
+
+  return typeof data.toJSON === "function"
+    ? data.toJSON()
+    : data;
 };
 
 const findPesertaSaya = async (req) => {
   const id_user = getIdUser(req);
-  const id_peserta = req.query.id_peserta || req.params.id_peserta || null;
+  const id_peserta =
+    req.query.id_peserta ||
+    req.params.id_peserta ||
+    null;
 
-  if (!id_user) return null;
+  if (!id_user) {
+    return null;
+  }
 
   const where = {
     id_user,
@@ -92,14 +108,41 @@ const findKeputusan = async (id_peserta) => {
   });
 };
 
-const getKelengkapan = async (id_peserta) => {
-  const [presensi, apl01, apl02, fria05, frAk03, frAk04] = await Promise.all([
-    Presensi.findOne({ where: { id_peserta } }),
-    Apl01Asesmen.findOne({ where: { id_peserta } }),
-    Apl02.findOne({ where: { id_peserta } }),
+const getKelengkapan = async (
+  id_peserta,
+  id_jadwal
+) => {
+  const [
+    presensi,
+    apl01,
+    apl02,
+    fria05,
+    frAk03,
+    frAk04,
+    frAk06,
+  ] = await Promise.all([
+    Presensi.findOne({
+      where: {
+        id_peserta,
+      },
+    }),
+
+    Apl01Asesmen.findOne({
+      where: {
+        id_peserta,
+      },
+    }),
+
+    Apl02.findOne({
+      where: {
+        id_peserta,
+      },
+    }),
 
     FrIa05Penilaian.findOne({
-      where: { id_peserta },
+      where: {
+        id_peserta,
+      },
       order: [
         ["tanggal_penilaian", "DESC"],
         ["id_penilaian", "DESC"],
@@ -107,13 +150,30 @@ const getKelengkapan = async (id_peserta) => {
     }),
 
     FrAk03.findOne({
-      where: { id_peserta },
-      order: [["id_fr_ak03", "DESC"]],
+      where: {
+        id_peserta,
+      },
+      order: [
+        ["id_fr_ak03", "DESC"],
+      ],
     }),
 
     FrAk04.findOne({
-      where: { id_peserta },
-      order: [["id_fr_ak04", "DESC"]],
+      where: {
+        id_peserta,
+      },
+      order: [
+        ["id_fr_ak04", "DESC"],
+      ],
+    }),
+
+    FrAk06.findOne({
+      where: {
+        id_jadwal,
+      },
+      order: [
+        ["id", "DESC"],
+      ],
     }),
   ]);
 
@@ -124,7 +184,10 @@ const getKelengkapan = async (id_peserta) => {
     Boolean(fria05),
   ];
 
-  const tindakLanjut = [Boolean(frAk03), Boolean(frAk04)];
+  const tindakLanjut = [
+    Boolean(frAk03),
+    Boolean(frAk04),
+  ];
 
   return {
     presensi: Boolean(presensi),
@@ -133,12 +196,15 @@ const getKelengkapan = async (id_peserta) => {
     fria05: Boolean(fria05),
     fr_ak03: Boolean(frAk03),
     fr_ak04: Boolean(frAk04),
+    frak06: Boolean(frAk06),
 
     total_wajib_awal: 4,
-    total_lengkap_awal: wajibAwal.filter(Boolean).length,
+    total_lengkap_awal:
+      wajibAwal.filter(Boolean).length,
 
     total_tindak_lanjut: 2,
-    total_lengkap_tindak_lanjut: tindakLanjut.filter(Boolean).length,
+    total_lengkap_tindak_lanjut:
+      tindakLanjut.filter(Boolean).length,
 
     data: {
       presensi,
@@ -147,24 +213,45 @@ const getKelengkapan = async (id_peserta) => {
       fria05,
       fr_ak03: frAk03,
       fr_ak04: frAk04,
+      frak06: frAk06,
     },
   };
 };
 
-const buildBelumTersediaResponse = async (peserta) => {
+const buildBelumTersediaResponse = async (
+  peserta
+) => {
   const plainPeserta = toPlain(peserta);
-  const jadwal = plainPeserta?.jadwal || {};
-  const skema = jadwal?.skema || {};
-  const tuk = jadwal?.tuk || {};
-  const profile = plainPeserta?.profileAsesi || {};
-  const kelengkapan = await getKelengkapan(plainPeserta.id_peserta);
+  const jadwal =
+    plainPeserta?.jadwal || {};
+  const skema =
+    jadwal?.skema || {};
+  const tuk =
+    jadwal?.tuk || {};
+  const profile =
+    plainPeserta?.profileAsesi || {};
+
+  const kelengkapan =
+    await getKelengkapan(
+      plainPeserta.id_peserta,
+      plainPeserta.id_jadwal
+    );
 
   return {
-    id_peserta: plainPeserta.id_peserta,
-    id_jadwal: plainPeserta.id_jadwal,
-    id_user: plainPeserta.id_user,
+    id_peserta:
+      plainPeserta.id_peserta,
 
-    nama_asesi: profile.nama_lengkap || profile.nama || "-",
+    id_jadwal:
+      plainPeserta.id_jadwal,
+
+    id_user:
+      plainPeserta.id_user,
+
+    nama_asesi:
+      profile.nama_lengkap ||
+      profile.nama ||
+      "-",
+
     nik:
       profile.nik ||
       profile.no_ktp ||
@@ -172,88 +259,193 @@ const buildBelumTersediaResponse = async (peserta) => {
       profile.no_identitas ||
       "-",
 
-    status_asesmen: "belum_tersedia",
-    hasil: "belum_tersedia",
-    is_kompeten: false,
-    is_belum_kompeten: false,
+    status_asesmen:
+      "belum_tersedia",
+
+    hasil:
+      "belum_tersedia",
+
+    is_kompeten:
+      false,
+
+    is_belum_kompeten:
+      false,
 
     nilai_akhir:
       plainPeserta.nilai_akhir ||
       kelengkapan.data.fria05?.nilai ||
       null,
 
-    keterangan: plainPeserta.keterangan || "",
-    catatan_asesor: "",
-    tanggal_keputusan: null,
-    keputusan: null,
+    keterangan:
+      plainPeserta.keterangan || "",
+
+    catatan_asesor:
+      "",
+
+    tanggal_keputusan:
+      null,
+
+    keputusan:
+      null,
 
     jadwal: {
-      id_jadwal: jadwal.id_jadwal || plainPeserta.id_jadwal,
-      kode_jadwal: jadwal.kode_jadwal || "-",
-      nama_kegiatan: jadwal.nama_kegiatan || "Jadwal Uji Kompetensi",
-      tgl_pra_asesmen: jadwal.tgl_pra_asesmen || null,
-      tgl_awal: jadwal.tgl_awal || null,
-      tgl_akhir: jadwal.tgl_akhir || null,
-      jam: jadwal.jam || "-",
-      status: jadwal.status || "-",
+      id_jadwal:
+        jadwal.id_jadwal ||
+        plainPeserta.id_jadwal,
+
+      kode_jadwal:
+        jadwal.kode_jadwal ||
+        "-",
+
+      nama_kegiatan:
+        jadwal.nama_kegiatan ||
+        "Jadwal Uji Kompetensi",
+
+      tgl_pra_asesmen:
+        jadwal.tgl_pra_asesmen ||
+        null,
+
+      tgl_awal:
+        jadwal.tgl_awal ||
+        null,
+
+      tgl_akhir:
+        jadwal.tgl_akhir ||
+        null,
+
+      jam:
+        jadwal.jam ||
+        "-",
+
+      status:
+        jadwal.status ||
+        "-",
     },
 
     skema: {
-      id_skema: skema.id_skema || jadwal.id_skema || null,
-      kode_skema: skema.kode_skema || "-",
-      judul_skema: skema.judul_skema || skema.nama_skema || "-",
+      id_skema:
+        skema.id_skema ||
+        jadwal.id_skema ||
+        null,
+
+      kode_skema:
+        skema.kode_skema ||
+        "-",
+
+      judul_skema:
+        skema.judul_skema ||
+        skema.nama_skema ||
+        "-",
     },
 
     tuk: {
-      id_tuk: tuk.id_tuk || jadwal.id_tuk || null,
-      nama_tuk: tuk.nama_tuk || tuk.nama || "-",
-      alamat: tuk.alamat || "-",
+      id_tuk:
+        tuk.id_tuk ||
+        jadwal.id_tuk ||
+        null,
+
+      nama_tuk:
+        tuk.nama_tuk ||
+        tuk.nama ||
+        "-",
+
+      alamat:
+        tuk.alamat ||
+        "-",
     },
 
     kelengkapan,
+
     redirect: [],
 
-    can_fill_frak03: false,
-    can_fill_frak04: false,
-    can_view_frak03: false,
-    can_view_frak04: false,
-    tindak_lanjut_selesai: false,
+    can_fill_frak03:
+      false,
+
+    can_fill_frak04:
+      false,
+
+    can_view_frak03:
+      false,
+
+    can_view_frak04:
+      false,
+
+    can_view_frak06:
+      Boolean(kelengkapan.frak06),
+
+    tindak_lanjut_selesai:
+      false,
   };
 };
 
-const buildResponse = async ({ peserta, keputusan }) => {
-  const plainPeserta = toPlain(peserta);
-  const plainKeputusan = toPlain(keputusan);
+const buildResponse = async ({
+  peserta,
+  keputusan,
+}) => {
+  const plainPeserta =
+    toPlain(peserta);
 
-  const statusAkhir = normalizeStatus(
-    plainKeputusan?.hasil || plainPeserta?.status_asesmen
-  );
+  const plainKeputusan =
+    toPlain(keputusan);
 
-  const kelengkapan = await getKelengkapan(plainPeserta.id_peserta);
+  const statusAkhir =
+    normalizeStatus(
+      plainKeputusan?.hasil ||
+        plainPeserta?.status_asesmen
+    );
 
-  const isBelumKompeten = statusAkhir === "belum_kompeten";
-  const isKompeten = statusAkhir === "kompeten";
+  const kelengkapan =
+    await getKelengkapan(
+      plainPeserta.id_peserta,
+      plainPeserta.id_jadwal
+    );
 
-  const redirect = isBelumKompeten ? ["FRAK03", "FRAK04"] : [];
+  const isBelumKompeten =
+    statusAkhir === "belum_kompeten";
 
-  const jadwal = plainPeserta?.jadwal || {};
-  const skema = jadwal?.skema || {};
-  const tuk = jadwal?.tuk || {};
-  const profile = plainPeserta?.profileAsesi || {};
+  const isKompeten =
+    statusAkhir === "kompeten";
+
+  const redirect =
+    isBelumKompeten
+      ? ["FRAK03", "FRAK04"]
+      : [];
+
+  const jadwal =
+    plainPeserta?.jadwal || {};
+
+  const skema =
+    jadwal?.skema || {};
+
+  const tuk =
+    jadwal?.tuk || {};
+
+  const profile =
+    plainPeserta?.profileAsesi || {};
 
   const nilaiAkhir =
     plainPeserta.nilai_akhir !== undefined &&
     plainPeserta.nilai_akhir !== null &&
     plainPeserta.nilai_akhir !== ""
       ? plainPeserta.nilai_akhir
-      : kelengkapan.data.fria05?.nilai ?? null;
+      : kelengkapan.data.fria05?.nilai ??
+        null;
 
   return {
-    id_peserta: plainPeserta.id_peserta,
-    id_jadwal: plainPeserta.id_jadwal,
-    id_user: plainPeserta.id_user,
+    id_peserta:
+      plainPeserta.id_peserta,
 
-    nama_asesi: profile.nama_lengkap || profile.nama || "-",
+    id_jadwal:
+      plainPeserta.id_jadwal,
+
+    id_user:
+      plainPeserta.id_user,
+
+    nama_asesi:
+      profile.nama_lengkap ||
+      profile.nama ||
+      "-",
+
     nik:
       profile.nik ||
       profile.no_ktp ||
@@ -261,12 +453,20 @@ const buildResponse = async ({ peserta, keputusan }) => {
       profile.no_identitas ||
       "-",
 
-    status_asesmen: statusAkhir,
-    hasil: statusAkhir,
-    is_kompeten: isKompeten,
-    is_belum_kompeten: isBelumKompeten,
+    status_asesmen:
+      statusAkhir,
 
-    nilai_akhir: nilaiAkhir,
+    hasil:
+      statusAkhir,
+
+    is_kompeten:
+      isKompeten,
+
+    is_belum_kompeten:
+      isBelumKompeten,
+
+    nilai_akhir:
+      nilaiAkhir,
 
     keterangan:
       plainPeserta.keterangan ||
@@ -278,139 +478,229 @@ const buildResponse = async ({ peserta, keputusan }) => {
       plainPeserta.keterangan ||
       "",
 
-    tanggal_keputusan: plainKeputusan?.tanggal_keputusan || null,
-    keputusan: plainKeputusan || null,
+    tanggal_keputusan:
+      plainKeputusan?.tanggal_keputusan ||
+      null,
+
+    keputusan:
+      plainKeputusan ||
+      null,
 
     jadwal: {
-      id_jadwal: jadwal.id_jadwal || plainPeserta.id_jadwal,
-      kode_jadwal: jadwal.kode_jadwal || "-",
-      nama_kegiatan: jadwal.nama_kegiatan || "Jadwal Uji Kompetensi",
-      tgl_pra_asesmen: jadwal.tgl_pra_asesmen || null,
-      tgl_awal: jadwal.tgl_awal || null,
-      tgl_akhir: jadwal.tgl_akhir || null,
-      jam: jadwal.jam || "-",
-      status: jadwal.status || "-",
+      id_jadwal:
+        jadwal.id_jadwal ||
+        plainPeserta.id_jadwal,
+
+      kode_jadwal:
+        jadwal.kode_jadwal ||
+        "-",
+
+      nama_kegiatan:
+        jadwal.nama_kegiatan ||
+        "Jadwal Uji Kompetensi",
+
+      tgl_pra_asesmen:
+        jadwal.tgl_pra_asesmen ||
+        null,
+
+      tgl_awal:
+        jadwal.tgl_awal ||
+        null,
+
+      tgl_akhir:
+        jadwal.tgl_akhir ||
+        null,
+
+      jam:
+        jadwal.jam ||
+        "-",
+
+      status:
+        jadwal.status ||
+        "-",
     },
 
     skema: {
-      id_skema: skema.id_skema || jadwal.id_skema || null,
-      kode_skema: skema.kode_skema || "-",
-      judul_skema: skema.judul_skema || skema.nama_skema || "-",
+      id_skema:
+        skema.id_skema ||
+        jadwal.id_skema ||
+        null,
+
+      kode_skema:
+        skema.kode_skema ||
+        "-",
+
+      judul_skema:
+        skema.judul_skema ||
+        skema.nama_skema ||
+        "-",
     },
 
     tuk: {
-      id_tuk: tuk.id_tuk || jadwal.id_tuk || null,
-      nama_tuk: tuk.nama_tuk || tuk.nama || "-",
-      alamat: tuk.alamat || "-",
+      id_tuk:
+        tuk.id_tuk ||
+        jadwal.id_tuk ||
+        null,
+
+      nama_tuk:
+        tuk.nama_tuk ||
+        tuk.nama ||
+        "-",
+
+      alamat:
+        tuk.alamat ||
+        "-",
     },
 
     kelengkapan,
+
     redirect,
 
-    can_fill_frak03: isBelumKompeten && !kelengkapan.fr_ak03,
-    can_fill_frak04: isBelumKompeten && !kelengkapan.fr_ak04,
+    can_fill_frak03:
+      isBelumKompeten &&
+      !kelengkapan.fr_ak03,
 
-    can_view_frak03: isBelumKompeten && kelengkapan.fr_ak03,
-    can_view_frak04: isBelumKompeten && kelengkapan.fr_ak04,
+    can_fill_frak04:
+      isBelumKompeten &&
+      !kelengkapan.fr_ak04,
+
+    can_view_frak03:
+      isBelumKompeten &&
+      kelengkapan.fr_ak03,
+
+    can_view_frak04:
+      isBelumKompeten &&
+      kelengkapan.fr_ak04,
+
+    can_view_frak06:
+      Boolean(kelengkapan.frak06),
 
     tindak_lanjut_selesai:
-      isBelumKompeten && kelengkapan.fr_ak03 && kelengkapan.fr_ak04,
+      isBelumKompeten &&
+      kelengkapan.fr_ak03 &&
+      kelengkapan.fr_ak04,
   };
 };
 
-/* =======================================
-GET STATUS HASIL SAYA
-GET /api/asesi/hasil-saya
-======================================= */
-
-exports.getStatusSaya = async (req, res) => {
+exports.getStatusSaya = async (
+  req,
+  res
+) => {
   try {
-    const peserta = await findPesertaSaya(req);
+    const peserta =
+      await findPesertaSaya(req);
 
     if (!peserta) {
       return res.status(404).json({
         status: "error",
-        message: "Peserta tidak ditemukan untuk akun ini",
+        message:
+          "Peserta tidak ditemukan untuk akun ini",
       });
     }
 
-    const keputusan = await findKeputusan(peserta.id_peserta);
+    const keputusan =
+      await findKeputusan(
+        peserta.id_peserta
+      );
 
     if (!keputusan) {
-      const data = await buildBelumTersediaResponse(peserta);
+      const data =
+        await buildBelumTersediaResponse(
+          peserta
+        );
 
       return res.json({
         status: "success",
-        message: "Hasil asesmen belum tersedia",
+        message:
+          "Hasil asesmen belum tersedia",
         data,
       });
     }
 
-    const data = await buildResponse({
-      peserta,
-      keputusan,
-    });
+    const data =
+      await buildResponse({
+        peserta,
+        keputusan,
+      });
 
     return res.json({
       status: "success",
-      message: "Status hasil asesmen berhasil diambil",
+      message:
+        "Status hasil asesmen berhasil diambil",
       data,
     });
   } catch (err) {
-    console.error("GET STATUS HASIL SAYA ERROR:", err);
+    console.error(
+      "GET STATUS HASIL SAYA ERROR:",
+      err
+    );
 
     return res.status(500).json({
       status: "error",
-      message: "Gagal mengambil status hasil asesmen",
+      message:
+        "Gagal mengambil status hasil asesmen",
       error: err.message,
     });
   }
 };
 
-/* =======================================
-GET HASIL LENGKAP ASESI
-GET /api/asesi/hasil-saya/detail
-======================================= */
-
-exports.getHasilSaya = async (req, res) => {
+exports.getHasilSaya = async (
+  req,
+  res
+) => {
   try {
-    const peserta = await findPesertaSaya(req);
+    const peserta =
+      await findPesertaSaya(req);
 
     if (!peserta) {
       return res.status(404).json({
         status: "error",
-        message: "Peserta tidak ditemukan untuk akun ini",
+        message:
+          "Peserta tidak ditemukan untuk akun ini",
       });
     }
 
-    const keputusan = await findKeputusan(peserta.id_peserta);
+    const keputusan =
+      await findKeputusan(
+        peserta.id_peserta
+      );
 
     if (!keputusan) {
-      const data = await buildBelumTersediaResponse(peserta);
+      const data =
+        await buildBelumTersediaResponse(
+          peserta
+        );
 
       return res.json({
         status: "success",
-        message: "Hasil asesmen belum tersedia",
+        message:
+          "Hasil asesmen belum tersedia",
         data,
       });
     }
 
-    const data = await buildResponse({
-      peserta,
-      keputusan,
-    });
+    const data =
+      await buildResponse({
+        peserta,
+        keputusan,
+      });
 
     return res.json({
       status: "success",
-      message: "Detail hasil asesmen berhasil diambil",
+      message:
+        "Detail hasil asesmen berhasil diambil",
       data,
     });
   } catch (err) {
-    console.error("GET HASIL SAYA ERROR:", err);
+    console.error(
+      "GET HASIL SAYA ERROR:",
+      err
+    );
 
     return res.status(500).json({
       status: "error",
-      message: "Gagal mengambil detail hasil asesmen",
+      message:
+        "Gagal mengambil detail hasil asesmen",
       error: err.message,
     });
   }

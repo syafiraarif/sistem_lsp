@@ -19,6 +19,7 @@ const frAk03Controller = require("../controllers/asesi/frAk03.controller");
 const frAk04Controller = require("../controllers/asesi/frAk04.controller");
 const frIa05AsesiController = require("../controllers/asesi/frIa05Asesi.controller");
 const hasilAkhirAsesiController = require("../controllers/asesi/hasilAkhirAsesi.controller");
+const dokumenHasilController = require("../controllers/asesi/dokumenHasil.controller");
 
 router.use(authMiddleware, roleMiddleware.asesiOnly);
 
@@ -394,6 +395,16 @@ router.get(
 router.get(
   "/hasil-saya/detail",
   hasilAkhirAsesiController.getHasilSaya
+);
+
+router.get(
+  "/hasil-saya/dokumen/:id_peserta",
+  dokumenHasilController.getDaftarDokumen
+);
+
+router.get(
+  "/hasil-saya/dokumen/:jenis/:id_peserta",
+  dokumenHasilController.downloadDokumen
 );
 
 /* =========================
