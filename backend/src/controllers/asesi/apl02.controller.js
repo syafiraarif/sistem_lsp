@@ -28,7 +28,6 @@ exports.getFormApl02 = async (req, res) => {
   try {
     const { id_skema } = req.params;
 
-    // Ambil data skema
     const skema = await Skema.findByPk(id_skema);
 
     if (!skema) {
@@ -38,7 +37,6 @@ exports.getFormApl02 = async (req, res) => {
       });
     }
 
-    // Ambil seluruh unit, elemen dan KUK
     const units = await SkemaUnit.findAll({
       where: {
         id_skema
@@ -50,11 +48,9 @@ exports.getFormApl02 = async (req, res) => {
           include: [
             {
               model: UnitElemen,
-              as: "elemen",
               include: [
                 {
-                  model: UnitKuk,
-                  as: "kuk"
+                  model: UnitKuk
                 }
               ]
             }
@@ -63,11 +59,21 @@ exports.getFormApl02 = async (req, res) => {
       ],
       order: [
         ["urutan", "ASC"],
-        [{ model: UnitKompetensi, as: "unit" }, { model: UnitElemen, as: "elemen" }, "urutan", "ASC"],
         [
           { model: UnitKompetensi, as: "unit" },
-          { model: UnitElemen, as: "elemen" },
-          { model: UnitKuk, as: "kuk" },
+          "id_unit",
+          "ASC"
+        ],
+        [
+          { model: UnitKompetensi, as: "unit" },
+          { model: UnitElemen },
+          "urutan",
+          "ASC"
+        ],
+        [
+          { model: UnitKompetensi, as: "unit" },
+          { model: UnitElemen },
+          { model: UnitKuk },
           "urutan",
           "ASC"
         ]
@@ -82,7 +88,6 @@ exports.getFormApl02 = async (req, res) => {
         units
       }
     });
-
   } catch (err) {
     console.error("GET FORM APL02:", err);
 
@@ -93,7 +98,6 @@ exports.getFormApl02 = async (req, res) => {
     });
   }
 };
-
 
 /*
 =================================
