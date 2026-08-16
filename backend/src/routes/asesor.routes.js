@@ -230,15 +230,30 @@ router.get(
 
 
 /* ========================= FR.AK.05 ========================= */
-router.get("/fr-ak05", frAk05Controller.getFrAk05);
+router.get(
+  "/fr-ak05",
+  frAk05Controller.getFrAk05
+);
 
-router.post("/fr-ak05", frAk05Controller.submitFrAk05);
+router.post(
+  "/fr-ak05",
+  frAk05Controller.submitFrAk05
+);
 
-router.put("/fr-ak05/:id", frAk05Controller.updateFrAk05);
+router.put(
+  "/fr-ak05/:id_fr_ak05",
+  frAk05Controller.updateFrAk05
+);
 
-router.get("/fr-ak05/list/:id_jadwal", frAk05Controller.listFrAk05);
+router.get(
+  "/fr-ak05/list/:id_jadwal",
+  frAk05Controller.listFrAk05
+);
 
-router.get("/fr-ak05/:id/pdf", frAk05Controller.downloadPdfFrAk05);
+router.get(
+  "/fr-ak05/:id_fr_ak05/pdf",
+  frAk05Controller.downloadPdfFrAk05
+);
 
 /* ===================================================
    FR.AK.06

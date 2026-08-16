@@ -21,6 +21,7 @@ import PresensiAsesor from "../pages/Asesor/PresensiAsesor";
 import FRIA05Asesor from "../pages/Asesor/FRIA05Asesor";
 import FRAK01Asesor from "../pages/Asesor/FRAK01Asesor";
 import FRAK02Asesor from "../pages/Asesor/FRAK02Asesor";
+import FRAK05Asesor from "../pages/Asesor/FRAK05Asesor";
 
 import FRIA02 from "../pages/Asesor/komiteTeknis/FRIA02";
 import FRIA05 from "../pages/Asesor/komiteTeknis/FRIA05";
@@ -118,6 +119,11 @@ export default function AsesorRoutes() {
             <Route
                 path="fr-ak02/:id_jadwal/:id_peserta"
                 element={<FRAK02Asesor />}
+            />
+
+            <Route
+                path="fr-ak05/:id_jadwal/:id_peserta"
+                element={<FRAK05Asesor />}
             />
 
             <Route
