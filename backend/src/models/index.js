@@ -40,6 +40,9 @@ const FrAk02 = require("./frAk02.model");
 const FrAk05 = require("./frAk05.model");
 const FrAk06 = require("./frAk06.model");
 const FrAk07 = require("./frAk07.model");
+const FrAk07DetailA = require("./frAk07DetailA.model");
+const FrAk07DetailB = require("./frAk07DetailB.model");
+const FrAk07Hasil = require("./frAk07Hasil.model");
 const VerifikasiTuk = require("./verifikasiTuk.model");
 const VerifikasiTukDetail = require("./verifikasiTukDetail.model");
 const Presensi = require("./presensi");
@@ -497,12 +500,68 @@ ProfileAsesor.hasMany(FrAk06, { foreignKey: "id_asesor", as: "frAk06" });
 FrAk06.hasMany(FrAk06Detail, { foreignKey: "id_fr_ak06", as: "detail", onDelete: "CASCADE" });
 FrAk06Detail.belongsTo(FrAk06, { foreignKey: "id_fr_ak06", as: "frAk06" });
 
-FrAk07.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
-PesertaJadwal.hasMany(FrAk07, { foreignKey: "id_peserta", as: "frAk07" });
-FrAk07.belongsTo(Jadwal, { foreignKey: "id_jadwal", as: "jadwal" });
-Jadwal.hasMany(FrAk07, { foreignKey: "id_jadwal", as: "frAk07" });
-FrAk07.belongsTo(ProfileAsesor, { foreignKey: "id_asesor", as: "asesor" });
-ProfileAsesor.hasMany(FrAk07, { foreignKey: "id_asesor", as: "frAk07" });
+FrAk07.belongsTo(Jadwal, {
+  foreignKey: "id_jadwal",
+  targetKey: "id_jadwal",
+  as: "jadwal"
+});
+
+Jadwal.hasMany(FrAk07, {
+  foreignKey: "id_jadwal",
+  sourceKey: "id_jadwal",
+  as: "frAk07"
+});
+
+FrAk07.belongsTo(ProfileAsesor, {
+  foreignKey: "id_asesor",
+  targetKey: "id_user",
+  as: "asesor"
+});
+
+ProfileAsesor.hasMany(FrAk07, {
+  foreignKey: "id_asesor",
+  sourceKey: "id_user",
+  as: "frAk07"
+});
+
+FrAk07.hasMany(FrAk07DetailA, {
+  foreignKey: "id_fr_ak07",
+  sourceKey: "id_fr_ak07",
+  as: "detailsA",
+  onDelete: "CASCADE"
+});
+
+FrAk07DetailA.belongsTo(FrAk07, {
+  foreignKey: "id_fr_ak07",
+  targetKey: "id_fr_ak07",
+  as: "frAk07"
+});
+
+FrAk07.hasMany(FrAk07DetailB, {
+  foreignKey: "id_fr_ak07",
+  sourceKey: "id_fr_ak07",
+  as: "detailsB",
+  onDelete: "CASCADE"
+});
+
+FrAk07DetailB.belongsTo(FrAk07, {
+  foreignKey: "id_fr_ak07",
+  targetKey: "id_fr_ak07",
+  as: "frAk07"
+});
+
+FrAk07.hasMany(FrAk07Hasil, {
+  foreignKey: "id_fr_ak07",
+  sourceKey: "id_fr_ak07",
+  as: "results",
+  onDelete: "CASCADE"
+});
+
+FrAk07Hasil.belongsTo(FrAk07, {
+  foreignKey: "id_fr_ak07",
+  targetKey: "id_fr_ak07",
+  as: "frAk07"
+});
 
 PesertaJadwal.hasOne(Presensi, { foreignKey: "id_peserta", as: "presensi" });
 Presensi.belongsTo(PesertaJadwal, { foreignKey: "id_peserta", as: "peserta" });
@@ -667,5 +726,10 @@ FrIa05Penilaian,
 FrAk03,
 FrAk03Detail,
 FrAk04,
-HasilKeputusanAsesmen
+HasilKeputusanAsesmen,
+
+FrAk07,
+FrAk07DetailA,
+FrAk07DetailB,
+FrAk07Hasil
 };
