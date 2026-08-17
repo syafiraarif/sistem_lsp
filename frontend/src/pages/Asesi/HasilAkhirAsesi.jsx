@@ -5,9 +5,7 @@ import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import {
   AlertCircle,
   ArrowLeft,
-  BadgeCheck,
   CheckCircle,
-  ClipboardCheck,
   Download,
   Eye,
   FileText,
@@ -15,18 +13,15 @@ import {
   Loader2,
   RefreshCcw,
   ShieldAlert,
-  ShieldCheck,
   Sparkles,
   Trophy,
-  UserCheck,
-  XCircle,
+  XCircle
 } from "lucide-react";
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
 const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: API_BASE
 });
 
 api.interceptors.request.use((config) => {
@@ -50,40 +45,46 @@ export default function HasilAkhirAsesi() {
   const [downloading, setDownloading] = useState("");
   const [data, setData] = useState(null);
   const [dokumen, setDokumen] = useState([]);
+  const [frAk03Exists, setFrAk03Exists] = useState(false);
+  const [frAk04Exists, setFrAk04Exists] = useState(false);
   const [error, setError] = useState("");
   const [errorDokumen, setErrorDokumen] = useState("");
 
-  const fetchHasil = async () => {
-    try {
-      setError("");
-
-      const query = id_peserta ? `?id_peserta=${id_peserta}` : "";
-      const res = await api.get(`/asesi/hasil-saya/detail${query}`);
-
-      const result = res.data?.data || null;
-
-      setData(result);
-
-      if (result?.id_peserta) {
-        await fetchDokumen(result.id_peserta);
-      } else {
-        setDokumen([]);
-      }
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        err.response?.data?.message ||
-          err.response?.data?.error ||
-          "Gagal mengambil hasil akhir asesmen."
-      );
-
-      setData(err.response?.data?.data || null);
-      setDokumen([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  const fetchFrAkStatus = async (pesertaId) => {
+    if (!pesertaId) {
+      setFrAk03Exists(false);
+      setFrAk04Exists(false);
+      return;
     }
+
+    const [frAk03Result, frAk04Result] = await Promise.allSettled([
+      api.get(`/asesi/fr-ak03/${pesertaId}`),
+      api.get(`/asesi/fr-ak04/${pesertaId}`)
+    ]);
+
+    const frAk03Data =
+      frAk03Result.status === "fulfilled"
+        ? frAk03Result.value?.data?.data
+        : null;
+
+    const frAk04Data =
+      frAk04Result.status === "fulfilled"
+        ? frAk04Result.value?.data?.data
+        : null;
+
+    setFrAk03Exists(
+      Boolean(
+        frAk03Data?.is_submitted ||
+        frAk03Data?.id_fr_ak03
+      )
+    );
+
+    setFrAk04Exists(
+      Boolean(
+        frAk04Data?.is_submitted ||
+        frAk04Data?.id_fr_ak04
+      )
+    );
   };
 
   const fetchDokumen = async (pesertaId) => {
@@ -94,9 +95,14 @@ export default function HasilAkhirAsesi() {
         `/asesi/hasil-saya/dokumen/${pesertaId}`
       );
 
-      setDokumen(res.data?.data?.documents || []);
+      setDokumen(
+        res.data?.data?.documents || []
+      );
     } catch (err) {
-      console.error(err);
+      console.error(
+        "GET DOKUMEN:",
+        err
+      );
 
       setDokumen([]);
 
@@ -105,6 +111,63 @@ export default function HasilAkhirAsesi() {
           err.response?.data?.error ||
           "Daftar dokumen belum dapat dimuat."
       );
+    }
+  };
+
+  const fetchHasil = async () => {
+    try {
+      setError("");
+
+      const query = id_peserta
+        ? `?id_peserta=${id_peserta}`
+        : "";
+
+      const res = await api.get(
+        `/asesi/hasil-saya/detail${query}`
+      );
+
+      const result =
+        res.data?.data || null;
+
+      setData(result);
+
+      const pesertaId =
+        result?.id_peserta ||
+        id_peserta;
+
+      if (pesertaId) {
+        await Promise.all([
+          fetchDokumen(pesertaId),
+          fetchFrAkStatus(pesertaId)
+        ]);
+      } else {
+        setDokumen([]);
+        setFrAk03Exists(false);
+        setFrAk04Exists(false);
+      }
+    } catch (err) {
+      console.error(
+        "GET HASIL AKHIR:",
+        err
+      );
+
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Gagal mengambil hasil akhir asesmen."
+      );
+
+      setData(
+        err.response?.data?.data ||
+          null
+      );
+
+      setDokumen([]);
+      setFrAk03Exists(false);
+      setFrAk04Exists(false);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -128,14 +191,22 @@ export default function HasilAkhirAsesi() {
       }
     };
 
-    window.addEventListener("focus", handleFocus);
+    window.addEventListener(
+      "focus",
+      handleFocus
+    );
+
     document.addEventListener(
       "visibilitychange",
       handleVisibility
     );
 
     return () => {
-      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener(
+        "focus",
+        handleFocus
+      );
+
       document.removeEventListener(
         "visibilitychange",
         handleVisibility
@@ -149,15 +220,24 @@ export default function HasilAkhirAsesi() {
   };
 
   const status = normalizeStatus(
-    data?.status_asesmen || data?.hasil
+    data?.status_asesmen ||
+      data?.hasil
   );
 
-  const isKompeten = status === "kompeten";
-  const isBelumKompeten = status === "belum_kompeten";
-  const belumTersedia = status === "belum_tersedia";
+  const isKompeten =
+    status === "kompeten";
 
-  const kelengkapan = data?.kelengkapan || {};
-  const kelengkapanData = kelengkapan?.data || {};
+  const isBelumKompeten =
+    status === "belum_kompeten";
+
+  const belumTersedia =
+    status === "belum_tersedia";
+
+  const kelengkapan =
+    data?.kelengkapan || {};
+
+  const kelengkapanData =
+    kelengkapan?.data || {};
 
   const nilaiAkhir = useMemo(() => {
     return (
@@ -165,56 +245,143 @@ export default function HasilAkhirAsesi() {
       kelengkapanData?.fria05?.nilai ??
       "-"
     );
-  }, [data, kelengkapanData]);
+  }, [
+    data,
+    kelengkapanData
+  ]);
 
   const getDocument = (key) => {
-    return dokumen.find((item) => item.key === key);
+    return dokumen.find(
+      (item) => item.key === key
+    );
+  };
+
+  const getFrAkDocument = (key) => {
+    const pesertaId =
+      data?.id_peserta ||
+      id_peserta;
+
+    if (!pesertaId) {
+      return null;
+    }
+
+    if (
+      key === "frak03" &&
+      !frAk03Exists
+    ) {
+      return null;
+    }
+
+    if (
+      key === "frak04" &&
+      !frAk04Exists
+    ) {
+      return null;
+    }
+
+    return {
+      key,
+      label:
+        key === "frak03"
+          ? "FR.AK.03"
+          : "FR.AK.04",
+      available: true,
+      endpoint:
+        key === "frak03"
+          ? `/asesi/fr-ak03/pdf/${pesertaId}`
+          : `/asesi/fr-ak04/pdf/${pesertaId}`
+    };
   };
 
   const handleGoFrAk03 = () => {
-    if (!data?.id_peserta) {
-      alert("ID peserta tidak ditemukan.");
+    const pesertaId =
+      data?.id_peserta ||
+      id_peserta;
+
+    if (!pesertaId) {
+      alert(
+        "ID peserta tidak ditemukan."
+      );
       return;
     }
 
-    navigate(`/asesi/fr-ak03/${data.id_peserta}`);
+    navigate(
+      `/asesi/fr-ak03/${pesertaId}`
+    );
   };
 
   const handleGoFrAk04 = () => {
-    if (!data?.id_peserta) {
-      alert("ID peserta tidak ditemukan.");
+    const pesertaId =
+      data?.id_peserta ||
+      id_peserta;
+
+    if (!pesertaId) {
+      alert(
+        "ID peserta tidak ditemukan."
+      );
       return;
     }
 
-    navigate(`/asesi/fr-ak04/${data.id_peserta}`);
+    navigate(
+      `/asesi/fr-ak04/${pesertaId}`
+    );
   };
 
-  const handleViewPdf = async (documentData) => {
+  const handleViewPdf = async (
+    documentData
+  ) => {
     if (!documentData?.endpoint) {
-      alert("Dokumen belum tersedia.");
+      alert(
+        "Dokumen belum tersedia."
+      );
       return;
     }
 
     try {
-      setDownloading(`view-${documentData.key}`);
+      setDownloading(
+        `view-${documentData.key}`
+      );
 
-      const res = await api.get(documentData.endpoint, {
-        responseType: "blob",
-      });
+      const res = await api.get(
+        documentData.endpoint,
+        {
+          responseType: "blob"
+        }
+      );
 
-      const blob = new Blob([res.data], {
-        type: "application/pdf",
-      });
+      const blob =
+        new Blob(
+          [res.data],
+          {
+            type: "application/pdf"
+          }
+        );
 
-      const url = window.URL.createObjectURL(blob);
+      const url =
+        window.URL.createObjectURL(
+          blob
+        );
 
-      window.open(url, "_blank");
+      const popup =
+        window.open(
+          url,
+          "_blank"
+        );
+
+      if (popup) {
+        popup.focus();
+      }
 
       setTimeout(() => {
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(
+          url
+        );
       }, 60000);
     } catch (err) {
-      console.error(err);
+      console.error(
+        "VIEW PDF:",
+        err
+      );
 
       alert(
         err.response?.data?.message ||
@@ -226,41 +393,68 @@ export default function HasilAkhirAsesi() {
     }
   };
 
-  const handleDownloadPdf = async (documentData) => {
+  const handleDownloadPdf = async (
+    documentData
+  ) => {
     if (!documentData?.endpoint) {
-      alert("Dokumen belum tersedia.");
+      alert(
+        "Dokumen belum tersedia."
+      );
       return;
     }
 
     try {
-      setDownloading(documentData.key);
+      setDownloading(
+        documentData.key
+      );
 
-      const res = await api.get(documentData.endpoint, {
-        responseType: "blob",
-      });
+      const res = await api.get(
+        documentData.endpoint,
+        {
+          responseType: "blob"
+        }
+      );
 
-      const blob = new Blob([res.data], {
-        type: "application/pdf",
-      });
+      const blob =
+        new Blob(
+          [res.data],
+          {
+            type: "application/pdf"
+          }
+        );
 
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const url =
+        window.URL.createObjectURL(
+          blob
+        );
+
+      const link =
+        document.createElement("a");
 
       link.href = url;
+
       link.setAttribute(
         "download",
         `${documentData.label.replaceAll(".", "-")}-${data?.id_peserta || "dokumen"}.pdf`
       );
 
-      document.body.appendChild(link);
+      document.body.appendChild(
+        link
+      );
+
       link.click();
       link.remove();
 
       setTimeout(() => {
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(
+          url
+        );
       }, 1000);
     } catch (err) {
-      console.error(err);
+      console.error(
+        "DOWNLOAD PDF:",
+        err
+      );
 
       alert(
         err.response?.data?.message ||
@@ -272,68 +466,103 @@ export default function HasilAkhirAsesi() {
     }
   };
 
-  const dokumenKompeten = [
+  const dokumenUtama = [
     {
       key: "presensi",
       label: "Presensi",
-      description: "Dokumen presensi asesmen",
+      description:
+        "Dokumen presensi asesmen"
     },
     {
       key: "apl01",
       label: "APL.01",
-      description: "Formulir permohonan sertifikasi",
+      description:
+        "Formulir permohonan sertifikasi"
     },
     {
       key: "apl02",
       label: "APL.02",
-      description: "Asesmen mandiri",
+      description:
+        "Asesmen mandiri"
     },
     {
       key: "fria01",
       label: "FR.IA.01",
-      description: "Form penilaian asesmen",
+      description:
+        "Form penilaian asesmen"
     },
     {
       key: "fria02",
       label: "FR.IA.02",
-      description: "Form penilaian asesmen",
+      description:
+        "Form tugas praktik demonstrasi"
     },
     {
       key: "fria03",
       label: "FR.IA.03",
-      description: "Form penilaian asesmen",
+      description:
+        "Form pertanyaan untuk observasi"
     },
     {
       key: "fria05",
       label: "FR.IA.05",
-      description: "Form penilaian kompetensi",
+      description:
+        "Form penilaian kompetensi"
     },
     {
       key: "frak01",
       label: "FR.AK.01",
-      description: "Form keputusan asesmen",
+      description:
+        "Persetujuan asesmen dan kerahasiaan"
     },
     {
       key: "frak02",
       label: "FR.AK.02",
-      description: "Form rekaman asesmen",
+      description:
+        "Form rekaman asesmen"
     },
     {
       key: "frak05",
       label: "FR.AK.05",
-      description: "Form umpan balik asesmen",
+      description:
+        "Form umpan balik asesmen"
     },
     {
       key: "frak06",
       label: "FR.AK.06",
-      description: "Form laporan asesmen",
+      description:
+        "Form laporan asesmen"
     },
     {
       key: "frak07",
       label: "FR.AK.07",
-      description: "Form sertifikasi kompetensi",
-    },
+      description:
+        "Form sertifikasi kompetensi"
+    }
   ];
+
+  const dokumenTindakLanjut = [
+    {
+      key: "frak03",
+      label: "FR.AK.03",
+      description:
+        "Form umpan balik dan catatan asesmen"
+    },
+    {
+      key: "frak04",
+      label: "FR.AK.04",
+      description:
+        "Form permohonan banding asesmen"
+    }
+  ];
+
+  const dokumenHasil =
+    isBelumKompeten
+      ? [
+          ...dokumenUtama,
+          ...dokumenTindakLanjut
+        ]
+      : dokumenUtama;
 
   if (loading) {
     return <LoadingScreen />;
@@ -374,17 +603,16 @@ export default function HasilAkhirAsesi() {
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Lihat keputusan akhir asesor dan cek
-                  kelengkapan dokumen. Semua dokumen yang
-                  sudah tersedia dapat dilihat atau diunduh
-                  dalam bentuk PDF.
+                  Lihat keputusan akhir asesor dan cek kelengkapan dokumen. Semua dokumen yang sudah tersedia dapat dilihat atau diunduh dalam bentuk PDF.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
                     onClick={() =>
-                      navigate("/asesi/jadwal-saya")
+                      navigate(
+                        "/asesi/jadwal-saya"
+                      )
                     }
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
                   >
@@ -394,8 +622,12 @@ export default function HasilAkhirAsesi() {
 
                   <button
                     type="button"
-                    onClick={handleRefresh}
-                    disabled={refreshing}
+                    onClick={
+                      handleRefresh
+                    }
+                    disabled={
+                      refreshing
+                    }
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
                     {refreshing ? (
@@ -404,9 +636,10 @@ export default function HasilAkhirAsesi() {
                         className="animate-spin"
                       />
                     ) : (
-                      <RefreshCcw size={17} />
+                      <RefreshCcw
+                        size={17}
+                      />
                     )}
-
                     Refresh
                   </button>
                 </div>
@@ -425,14 +658,14 @@ export default function HasilAkhirAsesi() {
                   </p>
 
                   <h2 className="text-2xl font-black leading-tight">
-                    {formatStatus(status)}
+                    {formatStatus(
+                      status
+                    )}
                   </h2>
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
                     {isBelumKompeten
-                      ? data?.tindak_lanjut_selesai
-                        ? "FR.AK.03 dan FR.AK.04 sudah lengkap."
-                        : "Anda perlu mengisi FR.AK.03 dan FR.AK.04."
+                      ? "Asesi dapat melanjutkan dengan FR.AK.03 dan FR.AK.04."
                       : isKompeten
                       ? "Selamat, Anda dinyatakan kompeten."
                       : "Hasil akhir belum tersedia dari asesor."}
@@ -446,7 +679,9 @@ export default function HasilAkhirAsesi() {
 
                     <HeroPill
                       label="Status"
-                      value={formatStatus(status)}
+                      value={formatStatus(
+                        status
+                      )}
                     />
                   </div>
                 </div>
@@ -465,185 +700,163 @@ export default function HasilAkhirAsesi() {
             <EmptyState />
           ) : (
             <>
-              <section className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                <MiniStat
-                  icon={<UserCheck size={22} />}
-                  label="Asesi"
-                  value={data.nama_asesi || "-"}
-                />
-
-                <MiniStat
-                  icon={<FileText size={22} />}
-                  label="Skema"
-                  value={
-                    data.skema?.judul_skema || "-"
-                  }
-                />
-
-                <MiniStat
-                  icon={<BadgeCheck size={22} />}
-                  label="Nilai Akhir"
-                  value={`${nilaiAkhir}`}
-                />
-
-                <MiniStat
+              <section className="w-full">
+                <Card
+                  title="Detail Hasil Akhir"
                   icon={
-                    isKompeten ? (
-                      <ShieldCheck size={22} />
-                    ) : (
-                      <ShieldAlert size={22} />
-                    )
+                    <Trophy size={22} />
                   }
-                  label="Status"
-                  value={formatStatus(status)}
-                />
+                >
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-slate-200 text-sm">
+                      <tbody>
+                        <TableRow
+                          label="Nama Asesi"
+                          value={
+                            data.nama_asesi
+                          }
+                        />
+
+                        <TableRow
+                          label="NIK"
+                          value={data.nik}
+                        />
+
+                        <TableRow
+                          label="Judul Skema"
+                          value={
+                            data.skema?.judul_skema
+                          }
+                        />
+
+                        <TableRow
+                          label="Kode Skema"
+                          value={
+                            data.skema?.kode_skema
+                          }
+                        />
+
+                        <TableRow
+                          label="TUK"
+                          value={
+                            data.tuk?.nama_tuk
+                          }
+                        />
+
+                        <TableRow
+                          label="Jadwal"
+                          value={
+                            data.jadwal?.nama_kegiatan
+                          }
+                        />
+
+                        <TableRow
+                          label="Tanggal"
+                          value={
+                            data.jadwal?.tgl_awal
+                          }
+                        />
+
+                        <TableRow
+                          label="Nilai Akhir"
+                          value={nilaiAkhir}
+                        />
+
+                        <TableRow
+                          label="Status"
+                          value={formatStatus(
+                            status
+                          )}
+                        />
+
+                        <TableRow
+                          label="Catatan Asesor"
+                          value={
+                            data.catatan_asesor ||
+                            data.keterangan ||
+                            "-"
+                          }
+                        />
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
               </section>
 
-              <section
-                className={`rounded-[32px] border p-6 shadow-sm ${
-                  isKompeten
-                    ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                    : "border-amber-100 bg-amber-50 text-amber-700"
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white">
-                    {isKompeten ? (
-                      <CheckCircle size={28} />
-                    ) : (
-                      <ShieldAlert size={28} />
+              <section className="w-full">
+                <Card
+                  title="Kelengkapan Dokumen"
+                  icon={
+                    <FileText size={22} />
+                  }
+                >
+                  <div className="space-y-5">
+                    {errorDokumen && (
+                      <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+                        {errorDokumen}
+                      </div>
                     )}
-                  </div>
 
-                  <div>
-                    <h2 className="text-2xl font-black">
-                      {isKompeten
-                        ? "Anda Dinyatakan Kompeten"
-                        : "Anda Dinyatakan Belum Kompeten"}
-                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                      {dokumenHasil.map(
+                        (item) => {
+                          let documentData =
+                            null;
 
-                    <p className="mt-2 text-sm font-bold leading-relaxed">
-                      {data.catatan_asesor ||
-                        data.keterangan ||
-                        (isKompeten
-                          ? "Asesi telah memenuhi kriteria asesmen."
-                          : "Asesi perlu melengkapi tindak lanjut melalui FR.AK.03 dan FR.AK.04.")}
-                    </p>
-                  </div>
-                </div>
-              </section>
+                          if (
+                            item.key === "frak03" ||
+                            item.key === "frak04"
+                          ) {
+                            documentData =
+                              getFrAkDocument(
+                                item.key
+                              );
+                          } else {
+                            documentData =
+                              getDocument(
+                                item.key
+                              );
+                          }
 
-              <section className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start">
-                <div className="space-y-6">
-                  <Card
-                    title="Detail Hasil Akhir"
-                    icon={<ClipboardCheck size={22} />}
-                  >
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-slate-200 text-sm">
-                        <tbody>
-                          <TableRow
-                            label="Nama Asesi"
-                            value={data.nama_asesi}
-                          />
-
-                          <TableRow
-                            label="NIK"
-                            value={data.nik}
-                          />
-
-                          <TableRow
-                            label="Judul Skema"
-                            value={
-                              data.skema?.judul_skema
-                            }
-                          />
-
-                          <TableRow
-                            label="Kode Skema"
-                            value={
-                              data.skema?.kode_skema
-                            }
-                          />
-
-                          <TableRow
-                            label="TUK"
-                            value={data.tuk?.nama_tuk}
-                          />
-
-                          <TableRow
-                            label="Jadwal"
-                            value={
-                              data.jadwal?.nama_kegiatan
-                            }
-                          />
-
-                          <TableRow
-                            label="Tanggal"
-                            value={data.jadwal?.tgl_awal}
-                          />
-
-                          <TableRow
-                            label="Nilai Akhir"
-                            value={nilaiAkhir}
-                          />
-
-                          <TableRow
-                            label="Status"
-                            value={formatStatus(status)}
-                          />
-
-                          <TableRow
-                            label="Catatan Asesor"
-                            value={
-                              data.catatan_asesor ||
-                              data.keterangan ||
-                              "-"
-                            }
-                          />
-                        </tbody>
-                      </table>
-                    </div>
-                  </Card>
-
-                  <Card
-                    title="Kelengkapan Dokumen"
-                    icon={<FileText size={22} />}
-                  >
-                    <div className="space-y-5">
-                      {errorDokumen && (
-                        <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-                          {errorDokumen}
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {dokumenKompeten.map((item) => {
-                          const documentData =
-                            getDocument(item.key);
-
-                          const active =
-                            Boolean(
-                              documentData?.available
-                            ) ||
-                            Boolean(
-                              kelengkapan[item.key]
+                          const isFollowUp =
+                            isBelumKompeten &&
+                            (
+                              item.key === "frak03" ||
+                              item.key === "frak04"
                             );
+
+                          const available =
+                            isFollowUp
+                              ? item.key ===
+                                "frak03"
+                                ? frAk03Exists
+                                : frAk04Exists
+                              : Boolean(
+                                  documentData?.available
+                                );
 
                           return (
                             <DocumentCard
                               key={item.key}
-                              label={item.label}
+                              label={
+                                item.label
+                              }
                               description={
                                 item.description
                               }
-                              active={active}
+                              active={
+                                available
+                              }
+                              followUp={
+                                isFollowUp
+                              }
                               loadingView={
                                 downloading ===
                                 `view-${item.key}`
                               }
                               loadingDownload={
-                                downloading === item.key
+                                downloading ===
+                                item.key
                               }
                               onView={() =>
                                 handleViewPdf(
@@ -655,112 +868,77 @@ export default function HasilAkhirAsesi() {
                                   documentData
                                 )
                               }
+                              onOpen={() => {
+                                if (
+                                  item.key ===
+                                  "frak03"
+                                ) {
+                                  handleGoFrAk03();
+                                }
+
+                                if (
+                                  item.key ===
+                                  "frak04"
+                                ) {
+                                  handleGoFrAk04();
+                                }
+                              }}
                             />
                           );
-                        })}
-                      </div>
-
-                      {isKompeten && (
-                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                          <div className="flex items-start gap-3">
-                            <CheckCircle
-                              size={20}
-                              className="mt-0.5 shrink-0 text-emerald-600"
-                            />
-
-                            <div>
-                              <p className="font-black text-emerald-700">
-                                Dokumen hasil kompetensi
-                              </p>
-
-                              <p className="mt-1 text-sm font-semibold leading-relaxed text-emerald-700">
-                                Seluruh dokumen hasil yang
-                                tersedia dapat dilihat dan
-                                diunduh melalui tombol di atas.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+                        }
                       )}
                     </div>
-                  </Card>
-                </div>
 
-                <aside>
-                  <div className="sticky top-6 space-y-6">
-                    <Card
-                      title="Tindak Lanjut"
-                      icon={<ShieldCheck size={22} />}
-                    >
-                      {isBelumKompeten ? (
-                        <div className="space-y-4">
-                          <p className="text-sm font-semibold text-slate-500 leading-relaxed">
-                            Karena hasil akhir belum kompeten,
-                            Anda perlu melengkapi FR.AK.03 dan
-                            FR.AK.04.
-                          </p>
-
-                          <FollowUpAction
-                            title="FR.AK.03"
-                            active={Boolean(
-                              kelengkapan.fr_ak03
-                            )}
-                            documentData={getDocument(
-                              "frak03"
-                            )}
-                            downloading={downloading}
-                            onOpen={handleGoFrAk03}
-                            onView={() =>
-                              handleViewPdf(
-                                getDocument("frak03")
-                              )
-                            }
-                            onDownload={() =>
-                              handleDownloadPdf(
-                                getDocument("frak03")
-                              )
-                            }
+                    {isKompeten && (
+                      <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                        <div className="flex items-start gap-3">
+                          <CheckCircle
+                            size={20}
+                            className="mt-0.5 shrink-0 text-emerald-600"
                           />
 
-                          <FollowUpAction
-                            title="FR.AK.04"
-                            active={Boolean(
-                              kelengkapan.fr_ak04
-                            )}
-                            documentData={getDocument(
-                              "frak04"
-                            )}
-                            downloading={downloading}
-                            onOpen={handleGoFrAk04}
-                            onView={() =>
-                              handleViewPdf(
-                                getDocument("frak04")
-                              )
-                            }
-                            onDownload={() =>
-                              handleDownloadPdf(
-                                getDocument("frak04")
-                              )
-                            }
+                          <div>
+                            <p className="font-black text-emerald-700">
+                              Dokumen hasil kompetensi
+                            </p>
+
+                            <p className="mt-1 text-sm font-semibold leading-relaxed text-emerald-700">
+                              Seluruh dokumen hasil yang tersedia dapat dilihat dan diunduh melalui tombol pada masing-masing dokumen.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isBelumKompeten && (
+                      <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+                        <div className="flex items-start gap-3">
+                          <ShieldAlert
+                            size={20}
+                            className="mt-0.5 shrink-0 text-amber-600"
                           />
 
-                          {data?.tindak_lanjut_selesai && (
-                            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold text-emerald-700 leading-relaxed">
-                              FR.AK.03 dan FR.AK.04 sudah
-                              lengkap.
-                            </div>
-                          )}
+                          <div>
+                            <p className="font-black text-amber-700">
+                              Tindak lanjut asesmen
+                            </p>
+
+                            <p className="mt-1 text-sm font-semibold leading-relaxed text-amber-700">
+                              {frAk03Exists &&
+                              frAk04Exists
+                                ? "FR.AK.03 dan FR.AK.04 sudah diisi dan dapat dilihat atau diunduh."
+                                : frAk03Exists
+                                ? "FR.AK.03 sudah diisi. FR.AK.04 masih dapat dilengkapi."
+                                : frAk04Exists
+                                ? "FR.AK.04 sudah diisi. FR.AK.03 masih dapat dilengkapi."
+                                : "FR.AK.03 dan FR.AK.04 tersedia untuk diisi karena hasil asesmen Anda adalah Belum Kompeten."}
+                            </p>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold text-emerald-700 leading-relaxed">
-                          Tidak ada tindak lanjut FR.AK.03
-                          dan FR.AK.04 karena Anda dinyatakan
-                          kompeten.
-                        </div>
-                      )}
-                    </Card>
+                      </div>
+                    )}
                   </div>
-                </aside>
+                </Card>
               </section>
             </>
           )}
@@ -770,113 +948,54 @@ export default function HasilAkhirAsesi() {
   );
 }
 
-function LoadingScreen() {
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-5">
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl p-10 text-center max-w-sm w-full">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
-          <Loader2
-            className="animate-spin text-white"
-            size={34}
-          />
-        </div>
-
-        <h2 className="text-[#071E3D] font-black text-xl">
-          Memuat Hasil Akhir
-        </h2>
-
-        <p className="text-slate-500 text-sm mt-2 font-medium">
-          Mengambil keputusan akhir asesmen.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({ icon, label, value }) {
-  return (
-    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
-        {icon}
-      </div>
-
-      <div className="min-w-0">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          {label}
-        </p>
-
-        <p className="text-[#071E3D] font-black mt-1 truncate">
-          {value || "-"}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function HeroPill({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm font-black text-white">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function Card({ title, icon, children }) {
-  return (
-    <section className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-slate-100 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
-          {icon}
-        </div>
-
-        <div>
-          <h2 className="text-xl font-black text-[#071E3D]">
-            {title}
-          </h2>
-
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-            Hasil Akhir Asesi
-          </p>
-        </div>
-      </div>
-
-      <div className="p-6">{children}</div>
-    </section>
-  );
-}
-
-function TableRow({ label, value }) {
-  return (
-    <tr>
-      <td className="w-[220px] border border-slate-200 bg-slate-50 px-4 py-3 font-black text-[#071E3D]">
-        {label}
-      </td>
-
-      <td className="border border-slate-200 px-4 py-3 font-semibold text-slate-600">
-        {value || "-"}
-      </td>
-    </tr>
-  );
-}
-
 function DocumentCard({
   label,
   description,
   active,
+  followUp,
   loadingView,
   loadingDownload,
   onView,
   onDownload,
+  onOpen
 }) {
+  if (
+    followUp &&
+    !active
+  ) {
+    return (
+      <div className="rounded-[22px] border border-amber-100 bg-amber-50 p-4 transition-all hover:border-orange-200 hover:shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-orange-500">
+            <ShieldAlert size={19} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="font-black text-amber-700">
+              {label}
+            </p>
+
+            <p className="mt-1 text-xs font-semibold leading-relaxed text-amber-700">
+              Belum diisi. Silakan lengkapi form.
+            </p>
+
+            <button
+              type="button"
+              onClick={onOpen}
+              className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-[#071E3D]"
+            >
+              <FileText size={14} />
+              Isi {label}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`rounded-[24px] border p-4 transition-all ${
+      className={`rounded-[22px] border p-4 transition-all ${
         active
           ? "border-emerald-100 bg-emerald-50"
           : "border-slate-100 bg-slate-50"
@@ -884,16 +1003,16 @@ function DocumentCard({
     >
       <div className="flex items-start gap-3">
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white ${
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white ${
             active
               ? "text-emerald-600"
               : "text-slate-400"
           }`}
         >
           {active ? (
-            <CheckCircle size={21} />
+            <CheckCircle size={19} />
           ) : (
-            <XCircle size={21} />
+            <XCircle size={19} />
           )}
         </div>
 
@@ -920,17 +1039,16 @@ function DocumentCard({
                 type="button"
                 onClick={onView}
                 disabled={loadingView}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#071E3D] px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#071E3D] px-2 py-3 text-[9px] font-black uppercase tracking-widest text-white transition-all hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {loadingView ? (
                   <Loader2
-                    size={14}
+                    size={13}
                     className="animate-spin"
                   />
                 ) : (
-                  <Eye size={14} />
+                  <Eye size={13} />
                 )}
-
                 Lihat
               </button>
 
@@ -938,24 +1056,23 @@ function DocumentCard({
                 type="button"
                 onClick={onDownload}
                 disabled={loadingDownload}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-[10px] font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-3 text-[9px] font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
               >
                 {loadingDownload ? (
                   <Loader2
-                    size={14}
+                    size={13}
                     className="animate-spin"
                   />
                 ) : (
-                  <Download size={14} />
+                  <Download size={13} />
                 )}
-
                 Download
               </button>
             </div>
           ) : (
             <div className="mt-4">
-              <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                <FileText size={13} />
+              <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                <FileText size={12} />
                 Belum tersedia
               </span>
             </div>
@@ -966,133 +1083,74 @@ function DocumentCard({
   );
 }
 
-function FollowUpAction({
+function Card({
   title,
-  active,
-  documentData,
-  downloading,
-  onOpen,
-  onView,
-  onDownload,
+  icon,
+  children
 }) {
   return (
-    <div
-      className={`rounded-[24px] border p-4 ${
-        active
-          ? "border-emerald-100 bg-emerald-50"
-          : "border-amber-100 bg-amber-50"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white ${
-            active
-              ? "text-emerald-600"
-              : "text-amber-600"
-          }`}
-        >
-          {active ? (
-            <CheckCircle size={20} />
-          ) : (
-            <ShieldAlert size={20} />
-          )}
+    <section className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-slate-100 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
+          {icon}
         </div>
 
-        <div className="flex-1">
-          <p
-            className={`font-black ${
-              active
-                ? "text-emerald-700"
-                : "text-amber-700"
-            }`}
-          >
+        <div>
+          <h2 className="text-xl font-black text-[#071E3D]">
             {title}
+          </h2>
+
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+            Hasil Akhir Asesi
           </p>
-
-          <p
-            className={`mt-1 text-xs font-semibold leading-relaxed ${
-              active
-                ? "text-emerald-700"
-                : "text-amber-700"
-            }`}
-          >
-            {active
-              ? `${title} sudah diisi. Anda bisa melihat ulang atau download PDF.`
-              : `${title} belum diisi. Silakan lengkapi form.`}
-          </p>
-
-          <div className="mt-4 grid grid-cols-1 gap-3">
-            <button
-              type="button"
-              onClick={
-                active && documentData?.available
-                  ? onView
-                  : onOpen
-              }
-              disabled={
-                active &&
-                !documentData?.available
-              }
-              className={`w-full rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition-all ${
-                active
-                  ? "bg-emerald-600 hover:bg-[#071E3D]"
-                  : "bg-orange-500 hover:bg-[#071E3D]"
-              } ${
-                active &&
-                !documentData?.available
-                  ? "cursor-not-allowed opacity-60"
-                  : ""
-              }`}
-            >
-              {active
-                ? downloading === `view-${documentData?.key}` ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2
-                        size={15}
-                        className="animate-spin"
-                      />
-                      Membuka
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center justify-center gap-2">
-                      <Eye size={15} />
-                      Lihat {title}
-                    </span>
-                  )
-                : `Isi ${title}`}
-            </button>
-
-            {active &&
-              documentData?.available && (
-                <button
-                  type="button"
-                  onClick={onDownload}
-                  disabled={
-                    downloading === documentData.key
-                  }
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
-                >
-                  {downloading ===
-                  documentData.key ? (
-                    <Loader2
-                      size={15}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <Download size={15} />
-                  )}
-
-                  Download PDF
-                </button>
-              )}
-          </div>
         </div>
       </div>
+
+      <div className="p-6">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function TableRow({
+  label,
+  value
+}) {
+  return (
+    <tr>
+      <td className="w-[220px] border border-slate-200 bg-slate-50 px-4 py-3 font-black text-[#071E3D]">
+        {label}
+      </td>
+
+      <td className="border border-slate-200 px-4 py-3 font-semibold text-slate-600">
+        {value || "-"}
+      </td>
+    </tr>
+  );
+}
+
+function HeroPill({
+  label,
+  value
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
+        {label}
+      </p>
+
+      <p className="mt-1 text-sm font-black text-white">
+        {value}
+      </p>
     </div>
   );
 }
 
-function ErrorAlert({ message, onRetry }) {
+function ErrorAlert({
+  message,
+  onRetry
+}) {
   return (
     <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-5 text-red-600 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div className="flex items-start gap-3">
@@ -1136,15 +1194,39 @@ function EmptyState() {
       </h3>
 
       <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
-        Asesor belum menyimpan keputusan akhir asesmen
-        untuk jadwal ini.
+        Asesor belum menyimpan keputusan akhir asesmen untuk jadwal ini.
       </p>
     </div>
   );
 }
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-5">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl p-10 text-center max-w-sm w-full">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
+          <Loader2
+            className="animate-spin text-white"
+            size={34}
+          />
+        </div>
+
+        <h2 className="text-[#071E3D] font-black text-xl">
+          Memuat Hasil Akhir
+        </h2>
+
+        <p className="text-slate-500 text-sm mt-2 font-medium">
+          Mengambil keputusan akhir asesmen.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function normalizeStatus(status) {
-  const value = String(status || "")
+  const value = String(
+    status || ""
+  )
     .toLowerCase()
     .trim();
 
@@ -1163,13 +1245,19 @@ function normalizeStatus(status) {
 }
 
 function formatStatus(status) {
-  const normalized = normalizeStatus(status);
+  const normalized =
+    normalizeStatus(status);
 
-  if (normalized === "kompeten") {
+  if (
+    normalized === "kompeten"
+  ) {
     return "Kompeten";
   }
 
-  if (normalized === "belum_kompeten") {
+  if (
+    normalized ===
+    "belum_kompeten"
+  ) {
     return "Belum Kompeten";
   }
 

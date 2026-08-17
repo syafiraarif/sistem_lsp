@@ -1,737 +1,823 @@
-// frontend/src/pages/asesi/FRAK04Asesi.jsx
+  import React, { useEffect, useMemo, useState } from "react";
+  import axios from "axios";
+  import { useNavigate, useParams } from "react-router-dom";
+  import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
+  import {
+    ArrowLeft,
+    CheckCircle,
+    Download,
+    Loader2,
+    Printer,
+    RefreshCcw,
+    Save
+  } from "lucide-react";
 
-import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
-import { useNavigate, useParams } from "react-router-dom";
-import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
-import {
-  AlertCircle,
-  ArrowLeft,
-  BadgeCheck,
-  CheckCircle,
-  ClipboardCheck,
-  FileText,
-  Inbox,
-  Loader2,
-  RefreshCcw,
-  Save,
-  ShieldAlert,
-  Sparkles,
-  UserCheck,
-  XCircle,
-} from "lucide-react";
+  const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
-
-const api = axios.create({
-  baseURL: API_BASE,
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return config;
-});
-
-const PERTANYAAN = [
-  {
-    key: "proses_banding_dijelaskan",
-    label: "Proses banding telah dijelaskan kepada saya.",
-  },
-  {
-    key: "diskusi_dengan_asesor",
-    label: "Saya telah mendiskusikan banding dengan asesor.",
-  },
-  {
-    key: "melibatkan_orang_lain",
-    label: "Saya ingin melibatkan orang lain dalam proses banding.",
-  },
-];
-
-export default function FRAK04Asesi() {
-  const navigate = useNavigate();
-  const { id_peserta } = useParams();
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const [formData, setFormData] = useState(null);
-  const [form, setForm] = useState({
-    proses_banding_dijelaskan: "",
-    diskusi_dengan_asesor: "",
-    melibatkan_orang_lain: "",
-    alasan_banding: "",
+  const api = axios.create({
+    baseURL: API_BASE
   });
 
-  const [error, setError] = useState("");
+  api.interceptors.request.use((config) => {
+    const token = localStorage.getItem("token");
 
-  const fetchData = async () => {
-    try {
-      setError("");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-      if (!id_peserta) {
-        throw new Error("ID peserta tidak ditemukan di URL.");
+    return config;
+  });
+
+  const PERTANYAAN = [
+    {
+      key: "proses_banding_dijelaskan",
+      label: "Apakah Proses Banding telah dijelaskan kepada Anda?"
+    },
+    {
+      key: "diskusi_dengan_asesor",
+      label: "Apakah Anda telah mendiskusikan Banding dengan Asesor?"
+    },
+    {
+      key: "melibatkan_orang_lain",
+      label: "Apakah Anda mau melibatkan orang lain membantu Anda dalam Proses Banding?"
+    }
+  ];
+
+  export default function FRAK04Asesi() {
+    const navigate = useNavigate();
+    const { id_peserta } = useParams();
+
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [downloading, setDownloading] = useState(false);
+    const [formData, setFormData] = useState(null);
+    const [form, setForm] = useState({
+      proses_banding_dijelaskan: "",
+      diskusi_dengan_asesor: "",
+      melibatkan_orang_lain: "",
+      alasan_banding: ""
+    });
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [error, setError] = useState("");
+
+    const storageKey = useMemo(() => {
+      return id_peserta ? `frak04_asesi_${id_peserta}` : "";
+    }, [id_peserta]);
+
+    const getLocalState = () => {
+      if (!storageKey) {
+        return null;
       }
 
       try {
-        const res = await api.get(`/asesi/fr-ak04/${id_peserta}`);
-        const data = res.data?.data || null;
+        const value = localStorage.getItem(storageKey);
 
-        if (!data) {
-          throw new Error("Data FR.AK.04 tidak tersedia.");
+        if (!value) {
+          return null;
         }
 
-        setFormData(data);
-        setForm({
-          proses_banding_dijelaskan: data.proses_banding_dijelaskan || "",
-          diskusi_dengan_asesor: data.diskusi_dengan_asesor || "",
-          melibatkan_orang_lain: data.melibatkan_orang_lain || "",
-          alasan_banding: data.alasan_banding || "",
-        });
-      } catch (frErr) {
-        if (frErr.response?.status === 404 && frErr.response?.data?.data) {
-          const data = frErr.response.data.data;
+        const parsed = JSON.parse(value);
 
-          setFormData(data);
-          setForm({
-            proses_banding_dijelaskan: "",
-            diskusi_dengan_asesor: "",
-            melibatkan_orang_lain: "",
-            alasan_banding: "",
-          });
-        } else {
-          throw frErr;
-        }
+        return parsed && typeof parsed === "object" ? parsed : null;
+      } catch {
+        return null;
       }
-    } catch (err) {
-      console.error(err);
+    };
 
-      setError(
-        err.response?.data?.message ||
-          err.response?.data?.error ||
-          err.message ||
-          "Gagal mengambil data FR.AK.04."
-      );
+    const saveLocalState = (nextForm, submitted) => {
+      if (!storageKey) {
+        return;
+      }
 
-      setFormData(null);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id_peserta]);
-
-  const isSubmitted = Boolean(formData?.is_submitted || formData?.id_fr_ak04);
-  const canSubmit = Boolean(formData?.can_submit) && !isSubmitted;
-
-  const answeredCount = useMemo(() => {
-    return PERTANYAAN.filter((item) => {
-      return form[item.key] === "ya" || form[item.key] === "tidak";
-    }).length;
-  }, [form]);
-
-  const allAnswered =
-    answeredCount === PERTANYAAN.length && Boolean(form.alasan_banding.trim());
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchData();
-  };
-
-  const handleChange = (field, value) => {
-    if (isSubmitted) return;
-
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleSubmit = async () => {
-    if (isSubmitted) {
-      alert("FR.AK.04 sudah pernah diisi.");
-      return;
-    }
-
-    if (!allAnswered) {
-      alert("Semua pertanyaan dan alasan banding wajib diisi.");
-      return;
-    }
-
-    const ok = window.confirm(
-      "Yakin ingin menyimpan FR.AK.04? Data yang sudah tersimpan tidak bisa dikirim ulang."
-    );
-
-    if (!ok) return;
-
-    try {
-      setSubmitting(true);
-
-      await api.post("/asesi/fr-ak04", {
-        id_peserta: Number(id_peserta),
-        proses_banding_dijelaskan: form.proses_banding_dijelaskan,
-        diskusi_dengan_asesor: form.diskusi_dengan_asesor,
-        melibatkan_orang_lain: form.melibatkan_orang_lain,
-        alasan_banding: form.alasan_banding,
-      });
-
-      alert("FR.AK.04 berhasil disimpan.");
-      await fetchData();
-    } catch (err) {
-      console.error(err);
-
-      alert(
-        err.response?.data?.message ||
-          err.response?.data?.error ||
-          "Gagal menyimpan FR.AK.04."
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDownloadPdf = async () => {
-    try {
-      const res = await api.get(`/asesi/fr-ak04/pdf/${id_peserta}`, {
-        responseType: "blob",
-      });
-
-      const url = window.URL.createObjectURL(
-        new Blob([res.data], {
-          type: "application/pdf",
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          ...nextForm,
+          is_submitted: Boolean(submitted),
+          updated_at: new Date().toISOString()
         })
       );
+    };
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `FR-AK-04-${id_peserta}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+    const normalizeValue = (value) => {
+      const normalized = String(value || "").trim().toLowerCase();
 
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error(err);
+      if (normalized === "ya") {
+        return "ya";
+      }
 
-      alert(
-        err.response?.data?.message ||
-          err.response?.data?.error ||
-          "Gagal mengunduh PDF FR.AK.04."
+      if (normalized === "tidak") {
+        return "tidak";
+      }
+
+      return "";
+    };
+
+    const buildEmptyForm = () => ({
+      proses_banding_dijelaskan: "",
+      diskusi_dengan_asesor: "",
+      melibatkan_orang_lain: "",
+      alasan_banding: ""
+    });
+
+    const mapServerForm = (data) => ({
+      proses_banding_dijelaskan: normalizeValue(
+        data?.proses_banding_dijelaskan
+      ),
+      diskusi_dengan_asesor: normalizeValue(
+        data?.diskusi_dengan_asesor
+      ),
+      melibatkan_orang_lain: normalizeValue(
+        data?.melibatkan_orang_lain
+      ),
+      alasan_banding: data?.alasan_banding || ""
+    });
+
+    const fetchFallbackData = async () => {
+      try {
+        const result = await api.get(
+          `/asesi/hasil-saya/detail?id_peserta=${id_peserta}`
+        );
+
+        const data = result.data?.data || {};
+
+        return {
+          nama_asesi: data.nama_asesi || data.asesi?.nama_lengkap || "-",
+          nik: data.nik || data.asesi?.nik || "-",
+          nama_asesor:
+            data.asesor?.nama_lengkap ||
+            data.nama_asesor ||
+            "-",
+          skema: data.skema || {},
+          tuk: data.tuk || {},
+          jadwal: data.jadwal || {}
+        };
+      } catch {
+        return null;
+      }
+    };
+
+    const fetchData = async () => {
+      try {
+        setError("");
+
+        if (!id_peserta) {
+          throw new Error("ID peserta tidak ditemukan.");
+        }
+
+        let serverData = null;
+
+        try {
+          const response = await api.get(
+            `/asesi/fr-ak04/${id_peserta}`
+          );
+
+          serverData = response.data?.data || null;
+        } catch (detailError) {
+          if (detailError.response?.status !== 404) {
+            throw detailError;
+          }
+        }
+
+        if (serverData) {
+          setFormData(serverData);
+          setForm(mapServerForm(serverData));
+          setIsSubmitted(
+            Boolean(
+              serverData.id_fr_ak04
+            )
+          );
+          saveLocalState(
+            mapServerForm(serverData),
+            Boolean(serverData.id_fr_ak04)
+          );
+          return;
+        }
+
+        const fallback = await fetchFallbackData();
+
+        const localState = getLocalState();
+
+        setFormData(
+          fallback || {
+            nama_asesi: "-",
+            nik: "-",
+            nama_asesor: "-",
+            skema: {},
+            tuk: {},
+            jadwal: {}
+          }
+        );
+
+        if (localState) {
+          const localForm = {
+            proses_banding_dijelaskan:
+              normalizeValue(
+                localState.proses_banding_dijelaskan
+              ),
+            diskusi_dengan_asesor:
+              normalizeValue(
+                localState.diskusi_dengan_asesor
+              ),
+            melibatkan_orang_lain:
+              normalizeValue(
+                localState.melibatkan_orang_lain
+              ),
+            alasan_banding:
+              localState.alasan_banding || ""
+          };
+
+          setForm(localForm);
+          setIsSubmitted(
+            Boolean(localState.is_submitted)
+          );
+        } else {
+          setForm(buildEmptyForm());
+          setIsSubmitted(false);
+        }
+      } catch (err) {
+        console.error("LOAD FR.AK.04:", err);
+
+        setError(
+          err.response?.data?.message ||
+            err.response?.data?.error ||
+            err.message ||
+            "Gagal mengambil data FR.AK.04."
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    };
+
+    useEffect(() => {
+      fetchData();
+    }, [id_peserta]);
+
+    const answeredCount = useMemo(() => {
+      return PERTANYAAN.filter((item) => {
+        const value = form[item.key];
+
+        return value === "ya" || value === "tidak";
+      }).length;
+    }, [form]);
+
+    const allAnswered =
+      answeredCount === PERTANYAAN.length &&
+      Boolean(form.alasan_banding.trim());
+
+    const handleRefresh = async () => {
+      setRefreshing(true);
+      await fetchData();
+    };
+
+    const handleChange = (field, value) => {
+      if (isSubmitted) {
+        return;
+      }
+
+      const updated = {
+        ...form,
+        [field]: value
+      };
+
+      setForm(updated);
+      saveLocalState(updated, false);
+    };
+
+    const handleSubmit = async () => {
+      if (isSubmitted) {
+        alert("FR.AK.04 sudah pernah diisi.");
+        return;
+      }
+
+      if (!allAnswered) {
+        alert("Semua pertanyaan dan alasan banding wajib diisi.");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Yakin ingin menyimpan FR.AK.04? Data yang sudah disimpan tidak dapat diubah."
       );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        setSubmitting(true);
+
+        await api.post("/asesi/fr-ak04", {
+          id_peserta: Number(id_peserta),
+          proses_banding_dijelaskan:
+            form.proses_banding_dijelaskan,
+          diskusi_dengan_asesor:
+            form.diskusi_dengan_asesor,
+          melibatkan_orang_lain:
+            form.melibatkan_orang_lain,
+          alasan_banding:
+            form.alasan_banding
+        });
+
+        setIsSubmitted(true);
+        saveLocalState(form, true);
+
+        await fetchData();
+
+        alert("FR.AK.04 berhasil disimpan.");
+      } catch (err) {
+        console.error("SUBMIT FR.AK.04:", err);
+
+        alert(
+          err.response?.data?.message ||
+            err.response?.data?.error ||
+            "Gagal menyimpan FR.AK.04."
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    const handleDownloadPdf = async () => {
+      try {
+        setDownloading(true);
+
+        const response = await api.get(
+          `/asesi/fr-ak04/pdf/${id_peserta}`,
+          {
+            responseType: "blob"
+          }
+        );
+
+        const blob = new Blob(
+          [response.data],
+          {
+            type: "application/pdf"
+          }
+        );
+
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = `FR-AK-04-${id_peserta}.pdf`;
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("DOWNLOAD FR.AK.04:", err);
+
+        alert(
+          err.response?.data?.message ||
+            err.response?.data?.error ||
+            "Gagal mengunduh PDF FR.AK.04."
+        );
+      } finally {
+        setDownloading(false);
+      }
+    };
+
+    const handlePrint = () => {
+      window.print();
+    };
+
+    const tanggalAsesmen =
+      formData?.tanggal_asesmen ||
+      formData?.jadwal?.tgl_akhir ||
+      formData?.jadwal?.tgl_awal ||
+      "-";
+
+    const namaAsesi =
+      formData?.nama_asesi ||
+      formData?.peserta?.profileAsesi?.nama_lengkap ||
+      "-";
+
+    const namaAsesor =
+      formData?.nama_asesor ||
+      "-";
+
+    const judulSkema =
+      formData?.nama_skema ||
+      formData?.skema?.judul_skema ||
+      "-";
+
+    const kodeSkema =
+      formData?.kode_skema ||
+      formData?.skema?.kode_skema ||
+      "-";
+
+    const namaTuk =
+      formData?.nama_tuk ||
+      formData?.tuk?.nama_tuk ||
+      "-";
+
+    if (loading) {
+      return <LoadingScreen />;
     }
-  };
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
+    return (
+      <div className="min-h-screen bg-[#F1F5F9] flex">
+        <SidebarAsesi
+          isOpen={sidebarOpen}
+          setIsOpen={setSidebarOpen}
+        />
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
-      <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+        <main className="flex-1 min-w-0 p-4 md:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-[1480px]">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `/asesi/hasil-akhir/${id_peserta}`
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D] hover:text-white"
+              >
+                <ArrowLeft size={17} />
+                Kembali
+              </button>
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
-        <div className="w-full max-w-[1500px] mx-auto space-y-6">
-          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
-            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
-            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
-
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
-              <div className="flex flex-col justify-center">
-                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <ShieldAlert size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    FR.AK.04 Asesi
-                  </span>
-                </div>
-
-                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
-                  Banding
-                  <br />
-                  <span className="text-orange-500">Asesmen</span>
-                </h1>
-
-                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Form ini digunakan untuk mengajukan banding asesmen ketika
-                  hasil akhir dinyatakan Belum Kompeten.
-                </p>
-
-                <div className="mt-7 flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/asesi/hasil-akhir/${id_peserta}`)}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
-                  >
-                    <ArrowLeft size={17} />
-                    Hasil Akhir
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleRefresh}
-                    disabled={refreshing}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
-                  >
-                    {refreshing ? (
-                      <Loader2 size={17} className="animate-spin" />
-                    ) : (
-                      <RefreshCcw size={17} />
-                    )}
-                    Refresh
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
-                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
-
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                    <Sparkles size={28} />
-                  </div>
-
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
-                    Status Pengisian
-                  </p>
-
-                  <h2 className="text-2xl font-black leading-tight">
-                    {isSubmitted ? "Sudah Diisi" : "Belum Submit"}
-                  </h2>
-
-                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    {isSubmitted
-                      ? "FR.AK.04 sudah tersimpan dan dapat diunduh sebagai PDF."
-                      : `${answeredCount} dari ${PERTANYAAN.length} pertanyaan Ya/Tidak sudah dijawab.`}
-                  </p>
-
-                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
-                    <HeroPill label="Pertanyaan" value={`${PERTANYAAN.length}`} />
-                    <HeroPill
-                      label={isSubmitted ? "Status" : "Terjawab"}
-                      value={
-                        isSubmitted
-                          ? "Tersimpan"
-                          : `${answeredCount}/${PERTANYAAN.length}`
-                      }
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-[#071E3D] shadow-sm transition-all hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {refreshing ? (
+                    <Loader2
+                      size={16}
+                      className="animate-spin"
                     />
-                  </div>
-                </div>
+                  ) : (
+                    <RefreshCcw size={16} />
+                  )}
+                  Refresh
+                </button>
+
+                {isSubmitted && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handlePrint}
+                      className="hidden sm:inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-orange-500"
+                    >
+                      <Printer size={16} />
+                      Cetak
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadPdf}
+                      disabled={downloading}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-400"
+                    >
+                      {downloading ? (
+                        <Loader2
+                          size={16}
+                          className="animate-spin"
+                        />
+                      ) : (
+                        <Download size={16} />
+                      )}
+                      <span className="hidden sm:inline">
+                        Cetak / PDF
+                      </span>
+                      <span className="sm:hidden">
+                        PDF
+                      </span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
-          </section>
 
-          {error && <ErrorAlert message={error} onRetry={handleRefresh} />}
+            {error && (
+              <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">
+                {error}
+              </div>
+            )}
 
-          {!formData ? (
-            <EmptyState />
-          ) : (
-            <>
-              <section className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                <MiniStat
-                  icon={<UserCheck size={22} />}
-                  label="Asesi"
-                  value={formData.nama_asesi || "-"}
-                />
+            <section className="overflow-hidden rounded-[4px] border border-slate-200 bg-white shadow-sm print:shadow-none">
+              <div className="border-b border-slate-300 bg-slate-100 px-6 py-5 text-center">
+                <h1 className="text-[18px] font-black text-[#071E3D]">
+                  FR.AK.04. BANDING ASESMEN
+                </h1>
+              </div>
 
-                <MiniStat
-                  icon={<FileText size={22} />}
-                  label="Skema"
-                  value={formData.skema?.judul_skema || "-"}
-                />
+              <div className="border-b border-slate-300">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    <InfoRow
+                      label="Nama Asesi"
+                      value={namaAsesi}
+                    />
+                    <InfoRow
+                      label="Nama Asesor"
+                      value={namaAsesor}
+                    />
+                    <InfoRow
+                      label="Tanggal Asesmen"
+                      value={formatTanggal(tanggalAsesmen)}
+                    />
+                  </tbody>
+                </table>
+              </div>
 
-                <MiniStat
-                  icon={<BadgeCheck size={22} />}
-                  label="Status"
-                  value={isSubmitted ? "Sudah Diisi" : "Belum Submit"}
-                />
+              <div className="border-b border-slate-300 px-6 py-4">
+                <p className="text-[12px] font-bold text-[#071E3D]">
+                  Jawablah dengan Ya atau Tidak pertanyaan-pertanyaan berikut ini:
+                </p>
+              </div>
 
-                <MiniStat
-                  icon={<ShieldAlert size={22} />}
-                  label="Hasil Akhir"
-                  value="Belum Kompeten"
-                />
-              </section>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[850px] border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100">
+                      <th className="w-[58px] border border-slate-300 px-2 py-4 text-center text-[12px] font-black text-[#071E3D]">
+                        No.
+                      </th>
+                      <th className="border border-slate-300 px-4 py-4 text-left text-[12px] font-black text-[#071E3D]">
+                        Pertanyaan
+                      </th>
+                      <th className="w-[72px] border border-slate-300 px-2 py-4 text-center text-[12px] font-black text-[#071E3D]">
+                        YA
+                      </th>
+                      <th className="w-[72px] border border-slate-300 px-2 py-4 text-center text-[12px] font-black text-[#071E3D]">
+                        TIDAK
+                      </th>
+                    </tr>
+                  </thead>
 
-              {isSubmitted && (
-                <section className="rounded-[28px] border border-emerald-100 bg-emerald-50 p-6 text-emerald-700">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600">
-                      <CheckCircle size={24} />
-                    </div>
+                  <tbody>
+                    {PERTANYAAN.map((item, index) => (
+                      <QuestionRow
+                        key={item.key}
+                        index={index}
+                        label={item.label}
+                        value={form[item.key]}
+                        disabled={isSubmitted}
+                        onChange={(value) =>
+                          handleChange(item.key, value)
+                        }
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-                    <div>
-                      <h3 className="text-xl font-black">
-                        FR.AK.04 Sudah Tersimpan
-                      </h3>
+              <section className="border-t border-slate-300">
+                <div className="border-b border-slate-300 px-5 py-4">
+                  <p className="text-[12px] font-bold leading-relaxed text-[#071E3D]">
+                    Banding ini diajukan atas Keputusan Asesmen yang dibuat terhadap Skema Sertifikasi berikut:
+                  </p>
 
-                      <p className="mt-1 text-sm font-semibold leading-relaxed">
-                        Data banding asesmen sudah tersimpan. Anda dapat
-                        mengunduh PDF atau kembali ke halaman hasil akhir.
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={handleDownloadPdf}
-                        className="mt-4 rounded-2xl bg-emerald-600 px-6 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-[#071E3D] transition-all"
-                      >
-                        Download PDF
-                      </button>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              <section className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start">
-                <div className="space-y-6">
-                  <Card title="Data FR.AK.04" icon={<FileText size={22} />}>
-                    <table className="w-full border-collapse border border-slate-200 text-sm">
+                  <div className="mt-3 overflow-hidden rounded-sm border border-slate-300">
+                    <table className="w-full border-collapse">
                       <tbody>
-                        <TableRow label="Nama Asesi" value={formData.nama_asesi} />
-                        <TableRow label="NIK" value={formData.nik} />
-                        <TableRow
-                          label="Judul Skema"
-                          value={formData.skema?.judul_skema}
+                        <InfoRow
+                          label="Skema Sertifikasi"
+                          value={judulSkema}
                         />
-                        <TableRow
-                          label="Kode Skema"
-                          value={formData.skema?.kode_skema}
-                        />
-                        <TableRow label="TUK" value={formData.tuk?.nama_tuk} />
-                        <TableRow
-                          label="Tanggal Asesmen"
-                          value={formData.jadwal?.tgl_akhir || formData.jadwal?.tgl_awal}
+                        <InfoRow
+                          label="No. Skema Sertifikasi"
+                          value={kodeSkema}
                         />
                       </tbody>
                     </table>
-                  </Card>
-
-                  <Card title="Pertanyaan Banding" icon={<ClipboardCheck size={22} />}>
-                    <div className="space-y-5">
-                      {PERTANYAAN.map((item, index) => (
-                        <QuestionCard
-                          key={item.key}
-                          index={index}
-                          label={item.label}
-                          value={form[item.key]}
-                          disabled={isSubmitted}
-                          onChange={(value) => handleChange(item.key, value)}
-                        />
-                      ))}
-                    </div>
-                  </Card>
-
-                  <Card title="Alasan Banding" icon={<FileText size={22} />}>
-                    <textarea
-                      value={form.alasan_banding}
-                      disabled={isSubmitted}
-                      onChange={(e) =>
-                        handleChange("alasan_banding", e.target.value)
-                      }
-                      rows={7}
-                      placeholder="Tuliskan alasan banding asesmen secara jelas..."
-                      className="w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10 disabled:cursor-not-allowed disabled:bg-slate-100"
-                    />
-                  </Card>
+                  </div>
                 </div>
 
-                <aside>
-                  <div className="sticky top-6 space-y-6">
-                    <Card title="Ringkasan Submit" icon={<Save size={22} />}>
-                      <div className="space-y-4">
-                        <StatusCard
-                          label="Akses Form"
-                          desc="Hasil akhir asesi adalah Belum Kompeten."
-                          status
-                        />
+                <div className="border-b border-slate-300 px-5 py-4">
+                  <p className="text-[12px] font-bold text-[#071E3D]">
+                    Banding ini diajukan atas alasan sebagai berikut:
+                  </p>
 
-                        <StatusCard
-                          label="Pertanyaan"
-                          desc={`${answeredCount} dari ${PERTANYAAN.length} pertanyaan sudah dijawab.`}
-                          status={answeredCount === PERTANYAAN.length}
-                        />
+                  <textarea
+                    value={form.alasan_banding}
+                    disabled={isSubmitted}
+                    onChange={(e) =>
+                      handleChange(
+                        "alasan_banding",
+                        e.target.value
+                      )
+                    }
+                    rows={7}
+                    placeholder="Tuliskan alasan banding asesmen..."
+                    className="mt-3 w-full resize-none rounded-md border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-[#071E3D] outline-none transition-all focus:border-orange-300 focus:ring-4 focus:ring-orange-500/10 disabled:bg-slate-100"
+                  />
+                </div>
 
-                        <StatusCard
-                          label="Alasan Banding"
-                          desc={
-                            form.alasan_banding.trim()
-                              ? "Alasan banding sudah diisi."
-                              : "Alasan banding wajib diisi."
-                          }
-                          status={Boolean(form.alasan_banding.trim())}
-                        />
+                <div className="px-5 py-5">
+                  <p className="text-[11px] font-semibold leading-relaxed text-[#071E3D]">
+                    Anda mempunyai hak mengajukan banding jika Anda menilai Proses Asesmen tidak sesuai SOP dan tidak memenuhi Prinsip Asesmen.
+                  </p>
 
-                        <StatusCard
-                          label="Status"
-                          desc={
-                            isSubmitted
-                              ? "FR.AK.04 sudah tersimpan."
-                              : "Belum submit."
-                          }
-                          status={isSubmitted}
-                        />
+                  <div className="mt-7 grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="rounded-md border border-slate-300 bg-white p-4">
+                      <p className="text-[11px] font-black text-[#071E3D]">
+                        Tanda Tangan Asesi
+                      </p>
 
-                        <button
-                          type="button"
-                          onClick={handleSubmit}
-                          disabled={!canSubmit || !allAnswered || submitting}
-                          className={`w-full px-7 py-5 rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 ${
-                            !canSubmit || !allAnswered || submitting
-                              ? "bg-slate-300 cursor-not-allowed"
-                              : "bg-orange-500 hover:bg-[#071E3D] shadow-orange-500/20"
-                          }`}
-                        >
-                          {submitting ? (
-                            <Loader2 size={18} className="animate-spin" />
-                          ) : isSubmitted ? (
-                            <CheckCircle size={18} />
-                          ) : (
-                            <Save size={18} />
-                          )}
-
-                          {isSubmitted
-                            ? "Sudah Tersimpan"
-                            : submitting
-                            ? "Menyimpan..."
-                            : "Submit FR.AK.04"}
-                        </button>
+                      <div className="mt-5 flex min-h-[80px] items-center justify-center border-b border-dotted border-slate-400">
+                        {formData?.ttd_asesi ? (
+                          <img
+                            src={buildFileUrl(
+                              formData.ttd_asesi
+                            )}
+                            alt="Tanda tangan asesi"
+                            className="max-h-[60px] max-w-[180px] object-contain"
+                          />
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-400">
+                            Tanda tangan mengikuti profile asesi
+                          </span>
+                        )}
                       </div>
-                    </Card>
+
+                      <p className="mt-3 text-center text-xs font-bold text-[#071E3D]">
+                        {namaAsesi}
+                      </p>
+                    </div>
+
+                    <div className="rounded-md border border-slate-300 bg-white p-4">
+                      <p className="text-[11px] font-black text-[#071E3D]">
+                        Tanggal
+                      </p>
+
+                      <div className="mt-5 flex min-h-[80px] items-center justify-center border-b border-dotted border-slate-400">
+                        <span className="text-sm font-semibold text-[#071E3D]">
+                          {formatTanggal(tanggalAsesmen)}
+                        </span>
+                      </div>
+
+                      <p className="mt-3 text-center text-xs font-bold text-slate-400">
+                        Tanggal pengajuan banding
+                      </p>
+                    </div>
                   </div>
-                </aside>
+                </div>
               </section>
-            </>
-          )}
-        </div>
-      </main>
-    </div>
-  );
-}
 
-/* =========================
-COMPONENTS
-========================= */
+              <div className="border-t border-slate-300 bg-white px-6 py-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">
+                      Status Pengisian
+                    </p>
 
-function LoadingScreen() {
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-5">
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl p-10 text-center max-w-sm w-full">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
-          <Loader2 className="animate-spin text-white" size={34} />
-        </div>
+                    <p className="mt-1 text-sm font-bold text-[#071E3D]">
+                      {answeredCount} dari {PERTANYAAN.length} pertanyaan sudah dijawab
+                    </p>
+                  </div>
 
-        <h2 className="text-[#071E3D] font-black text-xl">
-          Memuat FR.AK.04
-        </h2>
+                  {isSubmitted ? (
+                    <div className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-5 py-3 text-xs font-black uppercase tracking-widest text-emerald-700">
+                      <CheckCircle size={17} />
+                      Sudah Tersimpan
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={
+                        submitting ||
+                        !allAnswered
+                      }
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      {submitting ? (
+                        <Loader2
+                          size={16}
+                          className="animate-spin"
+                        />
+                      ) : (
+                        <Save size={16} />
+                      )}
 
-        <p className="text-slate-500 text-sm mt-2 font-medium">
-          Mengambil data form banding asesmen.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({ icon, label, value }) {
-  return (
-    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
-        {icon}
-      </div>
-
-      <div className="min-w-0">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          {label}
-        </p>
-
-        <p className="text-[#071E3D] font-black mt-1 truncate">
-          {value || "-"}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function HeroPill({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm font-black text-white">{value}</p>
-    </div>
-  );
-}
-
-function Card({ title, icon, children }) {
-  return (
-    <section className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-slate-100 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
-          {icon}
-        </div>
-
-        <div>
-          <h2 className="text-xl font-black text-[#071E3D]">{title}</h2>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-            FR.AK.04 Asesi
-          </p>
-        </div>
-      </div>
-
-      <div className="p-6">{children}</div>
-    </section>
-  );
-}
-
-function TableRow({ label, value }) {
-  return (
-    <tr>
-      <td className="w-[220px] border border-slate-200 bg-slate-50 px-4 py-3 font-black text-[#071E3D]">
-        {label}
-      </td>
-
-      <td className="border border-slate-200 px-4 py-3 font-semibold text-slate-600">
-        {value || "-"}
-      </td>
-    </tr>
-  );
-}
-
-function QuestionCard({ index, label, value, disabled, onChange }) {
-  return (
-    <div className="rounded-[28px] border border-slate-100 bg-slate-50 p-5">
-      <div className="flex items-start gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#071E3D] text-sm font-black text-white">
-          {index + 1}
-        </div>
-
-        <div className="flex-1">
-          <p className="text-sm font-black leading-relaxed text-[#071E3D]">
-            {label}
-          </p>
-
-          <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <label
-              className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-all ${
-                value === "ya"
-                  ? "border-emerald-200 bg-emerald-50"
-                  : "border-slate-100 bg-white hover:border-emerald-100"
-              } ${disabled ? "cursor-not-allowed opacity-80" : ""}`}
-            >
-              <input
-                type="radio"
-                name={`frak04-${index}`}
-                value="ya"
-                checked={value === "ya"}
-                disabled={disabled}
-                onChange={() => onChange("ya")}
-                className="h-4 w-4 accent-emerald-500"
-              />
-
-              <span className="text-sm font-black text-[#071E3D]">Ya</span>
-            </label>
-
-            <label
-              className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-all ${
-                value === "tidak"
-                  ? "border-red-200 bg-red-50"
-                  : "border-slate-100 bg-white hover:border-red-100"
-              } ${disabled ? "cursor-not-allowed opacity-80" : ""}`}
-            >
-              <input
-                type="radio"
-                name={`frak04-${index}`}
-                value="tidak"
-                checked={value === "tidak"}
-                disabled={disabled}
-                onChange={() => onChange("tidak")}
-                className="h-4 w-4 accent-red-500"
-              />
-
-              <span className="text-sm font-black text-[#071E3D]">Tidak</span>
-            </label>
+                      {submitting
+                        ? "Menyimpan..."
+                        : "Simpan FR.AK.04"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
-        </div>
+        </main>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-function StatusCard({ label, desc, status }) {
-  return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        status
-          ? "bg-emerald-50 border-emerald-100 text-emerald-700"
-          : "bg-slate-50 border-slate-100 text-slate-500"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        {status ? (
-          <CheckCircle size={20} className="shrink-0 mt-0.5" />
-        ) : (
-          <XCircle size={20} className="shrink-0 mt-0.5" />
-        )}
+  function QuestionRow({
+    index,
+    label,
+    value,
+    disabled,
+    onChange
+  }) {
+    return (
+      <tr>
+        <td className="border border-slate-300 px-3 py-5 text-center align-middle text-[12px] font-black text-[#071E3D]">
+          {index + 1}
+        </td>
 
-        <div>
-          <p className="font-black">{label}</p>
-          <p className="text-xs font-semibold mt-1 leading-relaxed">{desc}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
+        <td className="border border-slate-300 px-4 py-5 align-middle text-[13px] font-medium leading-relaxed text-[#071E3D]">
+          {label}
+        </td>
 
-function ErrorAlert({ message, onRetry }) {
-  return (
-    <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-5 text-red-600 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div className="flex items-start gap-3">
-        <AlertCircle size={22} className="shrink-0 mt-0.5" />
+        <td className="border border-slate-300 px-3 py-5 text-center align-middle">
+          <input
+            type="checkbox"
+            checked={value === "ya"}
+            disabled={disabled}
+            onChange={() => onChange("ya")}
+            className="h-5 w-5 accent-[#071E3D]"
+          />
+        </td>
 
-        <div>
-          <p className="font-black">Gagal Memuat Data</p>
-          <p className="mt-1 text-sm font-semibold leading-relaxed">
-            {message}
+        <td className="border border-slate-300 px-3 py-5 text-center align-middle">
+          <input
+            type="checkbox"
+            checked={value === "tidak"}
+            disabled={disabled}
+            onChange={() => onChange("tidak")}
+            className="h-5 w-5 accent-[#071E3D]"
+          />
+        </td>
+      </tr>
+    );
+  }
+
+  function InfoRow({ label, value }) {
+    return (
+      <tr>
+        <td className="w-[230px] border border-slate-300 bg-slate-50 px-3 py-3 text-[11px] font-black text-[#071E3D]">
+          {label}
+        </td>
+
+        <td className="border border-slate-300 px-3 py-3 text-[11px] font-semibold text-[#071E3D]">
+          {value || "-"}
+        </td>
+      </tr>
+    );
+  }
+
+  function buildFileUrl(filePath) {
+    if (!filePath) {
+      return "";
+    }
+
+    if (String(filePath).startsWith("http")) {
+      return filePath;
+    }
+
+    const appBase = API_BASE.replace(/\/api\/?$/, "");
+
+    return `${appBase}/${String(filePath).replace(/^[/\\]+/, "").replace(/\\/g, "/")}`;
+  }
+
+  function formatTanggal(value) {
+    if (!value) {
+      return "-";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
+    }
+
+    return date.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    });
+  }
+
+  function LoadingScreen() {
+    return (
+      <div className="min-h-screen bg-[#F1F5F9] flex items-center justify-center px-5">
+        <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-lg">
+          <Loader2
+            size={32}
+            className="mx-auto animate-spin text-[#071E3D]"
+          />
+
+          <h2 className="mt-4 text-lg font-black text-[#071E3D]">
+            Memuat FR.AK.04
+          </h2>
+
+          <p className="mt-2 text-sm font-medium text-slate-500">
+            Mengambil data formulir banding asesmen.
           </p>
         </div>
       </div>
-
-      <button
-        type="button"
-        onClick={onRetry}
-        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-500 px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-red-600"
-      >
-        Coba Lagi
-        <RefreshCcw size={16} />
-      </button>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="rounded-[32px] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
-      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-        <Inbox size={30} />
-      </div>
-
-      <h3 className="text-2xl font-black text-[#071E3D]">
-        Form FR.AK.04 Tidak Tersedia
-      </h3>
-
-      <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
-        Form ini hanya tersedia jika hasil akhir asesmen adalah Belum Kompeten.
-      </p>
-    </div>
-  );
-}
+    );
+  }
