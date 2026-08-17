@@ -714,7 +714,6 @@ GENERATE PDF APL.02
 exports.generatePdfApl02 = async (req, res) => {
   try {
     const { id_peserta } = req.params;
-
     const data = await Apl02.findOne({
       where: { id_peserta },
       include: [
@@ -733,6 +732,10 @@ exports.generatePdfApl02 = async (req, res) => {
                 {
                   model: Skema,
                   as: "skema"
+                },
+                {
+                  model: Tuk,
+                  as: "tuk"
                 }
               ]
             }
@@ -756,7 +759,8 @@ exports.generatePdfApl02 = async (req, res) => {
             }
           ]
         }
-      ]
+      ],
+      order: [[{ model: Apl02Detail, as: "detail" }, "id_detail", "ASC"]]
     });
 
     if (!data) {
@@ -766,163 +770,536 @@ exports.generatePdfApl02 = async (req, res) => {
       });
     }
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename=APL02-${id_peserta}.pdf`
-    );
+    const PAGE_WIDTH = 595.28;
+    const PAGE_HEIGHT = 841.89;
+    const MARGIN_LEFT = 24;
+    const MARGIN_RIGHT = 24;
+    const MARGIN_TOP = 24;
+    const MARGIN_BOTTOM = 28;
+    const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
 
     const doc = new PDFDocument({
-      margin: 50,
-      size: "A4"
+      size: "A4",
+      margin: 0,
+      bufferPages: true,
+      autoFirstPage: true,
+      info: {
+        Title: `APL.02 - ${data.peserta?.profileAsesi?.nama_lengkap || "Asesi"}`
+      }
     });
 
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=APL02-${id_peserta}.pdf`);
     doc.pipe(res);
-  
 
-    // ==========================
-    // HEADER
-    // ==========================
-    doc
-      .fontSize(18)
-      .text("FORMULIR APL.02", {
+    const safe = (value) => {
+      if (value === undefined || value === null || value === "") return "-";
+      return String(value);
+    };
+
+    const formatTanggal = (value) => {
+      if (!value) return "-";
+
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) return String(value);
+
+      return date.toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      });
+    };
+
+    const normalizeFilePath = (value) => {
+      if (!value) return "";
+
+      const stringValue = String(value);
+
+      if (path.isAbsolute(stringValue) && fs.existsSync(stringValue)) {
+        return stringValue;
+      }
+
+      const cleaned = stringValue.replace(/^[/\\]+/, "");
+      const candidates = [
+        path.join(process.cwd(), cleaned),
+        path.join(process.cwd(), "uploads", cleaned.replace(/^uploads[/\\]/, "")),
+        path.join(process.cwd(), "public", cleaned),
+        path.join(__dirname, "../../../", cleaned)
+      ];
+
+      return candidates.find((filePath) => fs.existsSync(filePath)) || "";
+    };
+
+    const isImageFile = (filePath) => {
+      const extension = path.extname(filePath || "").toLowerCase();
+      return [".jpg", ".jpeg", ".png", ".webp"].includes(extension);
+    };
+
+    const drawCell = (x, y, width, height, text = "", options = {}) => {
+      const { fontSize = 7, bold = false, align = "left", valign = "center", padding = 4, fill = null } = options;
+
+      if (fill) {
+        doc.save().fillColor(fill).rect(x, y, width, height).fill().restore();
+      }
+
+      doc.save().lineWidth(0.7).strokeColor("#000000").rect(x, y, width, height).stroke().restore();
+      doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(fontSize).fillColor("#000000");
+
+      const value = safe(text);
+      const textWidth = Math.max(width - padding * 2, 6);
+      const textHeight = doc.heightOfString(value, { width: textWidth, align });
+      let textY = y + padding;
+
+      if (valign === "center") textY = y + Math.max(padding, (height - textHeight) / 2);
+      if (valign === "bottom") textY = y + height - textHeight - padding;
+
+      doc.text(value, x + padding, textY, {
+        width: textWidth,
+        height: Math.max(height - padding * 2, 6),
+        align,
+        lineGap: 0
+      });
+    };
+
+    const drawCheckbox = (x, y, width, height, checked) => {
+      const boxSize = 9;
+      const boxX = x + (width - boxSize) / 2;
+      const boxY = y + (height - boxSize) / 2;
+
+      doc.save().lineWidth(0.8).strokeColor("#000000").rect(boxX, boxY, boxSize, boxSize).stroke().restore();
+
+      if (checked) {
+        doc.save().lineWidth(1.15).lineCap("round").lineJoin("round").strokeColor("#000000").moveTo(boxX + 1.4, boxY + boxSize * 0.52).lineTo(boxX + boxSize * 0.42, boxY + boxSize * 0.82).lineTo(boxX + boxSize * 0.86, boxY + boxSize * 0.18).stroke().restore();
+      }
+    };
+
+    const getEvidenceHeight = (evidence) => {
+      if (!evidence?.length) return 52;
+
+      let totalHeight = 8;
+
+      evidence.forEach((file) => {
+        const filePath = normalizeFilePath(file.file_path);
+        totalHeight += filePath && isImageFile(filePath) ? 82 : 24;
+      });
+
+      return Math.max(52, totalHeight);
+    };
+
+    const drawEvidence = (evidence, x, y, width, height) => {
+      if (!evidence?.length) {
+        doc.font("Helvetica").fontSize(5.8).fillColor("#666666").text("Belum ada bukti", x + 4, y + height / 2 - 3, {
+          width: width - 8,
+          align: "center"
+        });
+        return;
+      }
+
+      let currentY = y + 5;
+
+      evidence.forEach((file, index) => {
+        const filePath = normalizeFilePath(file.file_path);
+
+        if (filePath && isImageFile(filePath)) {
+          const imageWidth = Math.min(width - 12, 105);
+          const imageHeight = Math.min(58, height - 15);
+          const imageX = x + (width - imageWidth) / 2;
+
+          if (currentY + imageHeight > y + height - 12) return;
+
+          try {
+            doc.image(filePath, imageX, currentY, {
+              fit: [imageWidth, imageHeight],
+              align: "center",
+              valign: "center"
+            });
+
+            currentY += imageHeight + 4;
+
+            const fileName = file.nama_dokumen || file.nama_file || `Bukti ${index + 1}`;
+
+            doc.font("Helvetica").fontSize(5).fillColor("#000000").text(fileName, x + 4, currentY, {
+              width: width - 8,
+              align: "center",
+              lineBreak: false
+            });
+
+            currentY += 12;
+          } catch (error) {
+            doc.font("Helvetica").fontSize(5.5).fillColor("#666666").text(file.nama_dokumen || file.nama_file || `Bukti ${index + 1}`, x + 4, currentY, {
+              width: width - 8,
+              align: "center"
+            });
+
+            currentY += 18;
+          }
+        } else {
+          const fileName = file.nama_dokumen || file.nama_file || `Bukti ${index + 1}`;
+
+          doc.font("Helvetica").fontSize(5.3).fillColor("#000000").text(`${index + 1}. ${fileName}`, x + 4, currentY, {
+            width: width - 8
+          });
+
+          currentY += 18;
+        }
+      });
+    };
+
+    const drawSignature = (value, x, y, width, height) => {
+      const signaturePath = normalizeFilePath(value);
+
+      if (!signaturePath || !fs.existsSync(signaturePath)) return;
+
+      try {
+        const imageWidth = Math.min(150, width - 16);
+        const imageHeight = Math.min(55, height - 16);
+        const imageX = x + (width - imageWidth) / 2;
+        const imageY = y + (height - imageHeight) / 2;
+
+        doc.image(signaturePath, imageX, imageY, {
+          fit: [imageWidth, imageHeight],
+          align: "center",
+          valign: "center"
+        });
+      } catch (error) {
+        return;
+      }
+    };
+
+    const ensureSpace = (currentY, height) => {
+      if (currentY + height > PAGE_HEIGHT - MARGIN_BOTTOM) {
+        doc.addPage();
+        return MARGIN_TOP;
+      }
+
+      return currentY;
+    };
+
+    const peserta = data.peserta || {};
+    const profileAsesi = peserta.profileAsesi || {};
+    const jadwal = peserta.jadwal || {};
+    const skema = jadwal.skema || {};
+    const tuk = jadwal.tuk || {};
+    const namaAsesi = profileAsesi.nama_lengkap || "-";
+    const tanggal = jadwal.tgl_awal || jadwal.tgl_akhir || data.updated_at || data.created_at || null;
+
+    doc.font("Helvetica-Bold").fontSize(14).fillColor("#000000").text("FORMULIR APL.02", MARGIN_LEFT, MARGIN_TOP, {
+      width: CONTENT_WIDTH,
+      align: "center"
+    });
+
+    doc.font("Helvetica-Bold").fontSize(9).text("ASESMEN MANDIRI", MARGIN_LEFT, MARGIN_TOP + 19, {
+      width: CONTENT_WIDTH,
+      align: "center"
+    });
+
+    let currentY = MARGIN_TOP + 41;
+    const infoLabel = 145;
+    const infoSeparator = 18;
+    const infoValue = CONTENT_WIDTH - infoLabel - infoSeparator;
+    const infoHeight = 26;
+
+    const drawInfoRow = (label, value) => {
+      drawCell(MARGIN_LEFT, currentY, infoLabel, infoHeight, label, {
+        bold: true,
+        fontSize: 7
+      });
+
+      drawCell(MARGIN_LEFT + infoLabel, currentY, infoSeparator, infoHeight, ":", {
+        bold: true,
         align: "center"
       });
 
-    doc.moveDown();
+      drawCell(MARGIN_LEFT + infoLabel + infoSeparator, currentY, infoValue, infoHeight, value, {
+        fontSize: 7
+      });
 
-    doc.fontSize(11);
+      currentY += infoHeight;
+    };
 
-    doc.text(
-      `Nama Asesi : ${
-        data.peserta?.profileAsesi?.nama_lengkap || "-"
-      }`
-    );
+    drawInfoRow("Nama Asesi", namaAsesi);
+    drawInfoRow("Skema Sertifikasi", skema.judul_skema || "-");
+    drawInfoRow("Kode Skema", skema.kode_skema || "-");
+    drawInfoRow("TUK", tuk.nama_tuk || tuk.nama || "-");
+    drawInfoRow("Tanggal", formatTanggal(tanggal));
+    drawInfoRow("Status", data.status === "submitted" ? "SUBMITTED" : "DRAFT");
 
-    doc.text(
-      `Skema Sertifikasi : ${
-        data.peserta?.jadwal?.skema?.judul_skema || "-"
-      }`
-    );
+    currentY += 12;
+    currentY = ensureSpace(currentY, 55);
 
-    doc.text(
-      `Status : ${data.status}`
-    );
-
-    doc.moveDown();
-
-    // ==========================
-    // DETAIL PENILAIAN
-    // ==========================
-    data.detail.forEach((item, index) => {
-
-      if (doc.y > 700) {
-        doc.addPage();
-      }
-
-      doc
-        .fontSize(12)
-        .text(`${index + 1}. ${item.unit?.judul_unit || "-"}`, {
-          underline: true
-        });
-
-      doc.fontSize(10);
-
-      doc.text(
-        `Elemen : ${item.elemen?.nama_elemen || "-"}`
-      );
-
-      doc.text(
-        `Penilaian : ${item.kompeten}`
-      );
-
-      doc.text(
-        `Catatan : ${item.catatan || "-"}`
-      );
-
-      doc.text("Bukti Portofolio :");
-
-      if (
-        item.buktiTambahan &&
-        item.buktiTambahan.length > 0
-      ) {
-
-        item.buktiTambahan.forEach((bukti, i) => {
-
-          doc.text(
-            `   ${i + 1}. ${bukti.nama_dokumen || "-"}`
-          );
-
-          doc.text(
-            `      Jenis : ${bukti.jenis_portofolio || "-"}`
-          );
-
-          doc.text(
-            `      Nomor : ${bukti.nomor_dokumen || "-"}`
-          );
-
-          doc.text(
-            `      Tanggal : ${bukti.tanggal_dokumen || "-"}`
-          );
-
-        });
-
-      } else {
-
-        doc.text("   Tidak ada bukti.");
-
-      }
-
-      doc.moveDown();
-
+    drawCell(MARGIN_LEFT, currentY, CONTENT_WIDTH, 23, "PENILAIAN ASESMEN MANDIRI", {
+      bold: true,
+      fontSize: 8,
+      align: "center",
+      fill: "#E5E7EB"
     });
 
-    // ==========================
-    // TANDA TANGAN
-    // ==========================
-    doc.moveDown(2);
+    currentY += 23;
 
-    doc.text("Asesi", {
-      align: "right"
+    const colNo = 28;
+    const colUnit = 105;
+    const colElemen = 113;
+    const colKompetensi = 58;
+    const colCatatan = 105;
+    const colBukti = CONTENT_WIDTH - colNo - colUnit - colElemen - colKompetensi - colCatatan;
+    const headerHeight = 39;
+
+    drawCell(MARGIN_LEFT, currentY, colNo, headerHeight, "No.", {
+      bold: true,
+      align: "center"
     });
 
-    const ttdPath = data.peserta?.profileAsesi?.ttd_path;
+    drawCell(MARGIN_LEFT + colNo, currentY, colUnit, headerHeight, "Unit Kompetensi", {
+      bold: true,
+      align: "center",
+      fontSize: 6.2
+    });
 
-    if (ttdPath) {
+    drawCell(MARGIN_LEFT + colNo + colUnit, currentY, colElemen, headerHeight, "Elemen Kompetensi", {
+      bold: true,
+      align: "center",
+      fontSize: 6.2
+    });
 
-      const fullPath = path.join(
-        process.cwd(),
-        ttdPath
-      );
+    drawCell(MARGIN_LEFT + colNo + colUnit + colElemen, currentY, colKompetensi, headerHeight, "Kompetensi", {
+      bold: true,
+      align: "center",
+      fontSize: 6.2
+    });
 
-      if (fs.existsSync(fullPath)) {
+    drawCell(MARGIN_LEFT + colNo + colUnit + colElemen + colKompetensi, currentY, colCatatan, headerHeight, "Catatan", {
+      bold: true,
+      align: "center",
+      fontSize: 6.5
+    });
 
-        doc.image(fullPath, 430, doc.y, {
-          width: 90
-        });
+    drawCell(MARGIN_LEFT + colNo + colUnit + colElemen + colKompetensi + colCatatan, currentY, colBukti, headerHeight, "Bukti Portofolio", {
+      bold: true,
+      align: "center",
+      fontSize: 6.2
+    });
 
-      }
+    currentY += headerHeight;
 
+    const details = data.detail || [];
+
+    if (!details.length) {
+      drawCell(MARGIN_LEFT, currentY, CONTENT_WIDTH, 42, "Belum ada data penilaian.", {
+        align: "center"
+      });
+
+      currentY += 42;
     }
 
-    doc.moveDown(5);
+    details.forEach((item, index) => {
+      const evidence = item.buktiTambahan || [];
+      const evidenceHeight = getEvidenceHeight(evidence);
+      const unitCode = item.unit?.kode_unit || item.kode_unit || "-";
+      const unitTitle = item.unit?.judul_unit || item.judul_unit || "-";
+      const unitText = `${unitCode}\n${unitTitle}`;
+      const elementText = item.elemen?.nama_elemen || item.nama_elemen || "-";
+      const noteText = item.catatan || "-";
+      const elementHeight = doc.heightOfString(elementText, {
+        width: colElemen - 8,
+        fontSize: 5.8
+      });
+      const unitHeight = doc.heightOfString(unitText, {
+        width: colUnit - 8,
+        fontSize: 5.5
+      });
+      const noteHeight = doc.heightOfString(noteText, {
+        width: colCatatan - 8,
+        fontSize: 5.5
+      });
+      const rowHeight = Math.max(60, evidenceHeight, elementHeight + 12, unitHeight + 12, noteHeight + 12);
 
-    doc.text(
-      data.peserta?.profileAsesi?.nama_lengkap || "",
-      {
-        align: "right"
+      currentY = ensureSpace(currentY, rowHeight);
+
+      drawCell(MARGIN_LEFT, currentY, colNo, rowHeight, String(index + 1), {
+        align: "center",
+        valign: "top",
+        fontSize: 6.5
+      });
+
+      drawCell(MARGIN_LEFT + colNo, currentY, colUnit, rowHeight, unitText, {
+        valign: "top",
+        fontSize: 5.5,
+        padding: 4
+      });
+
+      drawCell(MARGIN_LEFT + colNo + colUnit, currentY, colElemen, rowHeight, elementText, {
+        valign: "top",
+        fontSize: 5.8,
+        padding: 4
+      });
+
+      const competenceX = MARGIN_LEFT + colNo + colUnit + colElemen;
+      const competenceHalf = colKompetensi / 2;
+
+      drawCell(competenceX, currentY, colKompetensi, rowHeight, "", {
+        padding: 0
+      });
+
+      drawCheckbox(competenceX, currentY, competenceHalf, rowHeight, item.kompeten === "K");
+      drawCheckbox(competenceX + competenceHalf, currentY, competenceHalf, rowHeight, item.kompeten === "BK");
+
+      doc.font("Helvetica-Bold").fontSize(5.2).fillColor("#000000").text("K", competenceX, currentY + rowHeight - 13, {
+        width: competenceHalf,
+        align: "center",
+        lineBreak: false
+      });
+
+      doc.font("Helvetica-Bold").fontSize(5.2).text("BK", competenceX + competenceHalf, currentY + rowHeight - 13, {
+        width: competenceHalf,
+        align: "center",
+        lineBreak: false
+      });
+
+      drawCell(competenceX + colKompetensi, currentY, colCatatan, rowHeight, noteText, {
+        valign: "top",
+        fontSize: 5.5,
+        padding: 4
+      });
+
+      const evidenceX = competenceX + colKompetensi + colCatatan;
+
+      drawCell(evidenceX, currentY, colBukti, rowHeight, "", {
+        padding: 0
+      });
+
+      drawEvidence(evidence, evidenceX, currentY, colBukti, rowHeight);
+      currentY += rowHeight;
+    });
+
+    currentY += 12;
+    currentY = ensureSpace(currentY, 150);
+
+    drawCell(MARGIN_LEFT, currentY, CONTENT_WIDTH, 23, "REKOMENDASI ASESI", {
+      bold: true,
+      align: "center",
+      fontSize: 8,
+      fill: "#E5E7EB"
+    });
+
+    currentY += 23;
+
+    const recommendationHeight = 42;
+
+    drawCell(MARGIN_LEFT, currentY, 115, recommendationHeight, "Rekomendasi", {
+      bold: true,
+      fontSize: 7.2
+    });
+
+    drawCell(MARGIN_LEFT + 115, currentY, CONTENT_WIDTH - 115, recommendationHeight, data.rekomendasi_asesi || "-", {
+      fontSize: 7.2
+    });
+
+    currentY += recommendationHeight;
+
+    const approachText = data.pendekatan_rekomendasi || "-";
+    const approachHeight = Math.max(65, doc.heightOfString(approachText, {
+      width: CONTENT_WIDTH - 125,
+      fontSize: 6.4
+    }) + 14);
+
+    drawCell(MARGIN_LEFT, currentY, 115, approachHeight, "Pendekatan / Alasan", {
+      bold: true,
+      valign: "top",
+      fontSize: 7
+    });
+
+    drawCell(MARGIN_LEFT + 115, currentY, CONTENT_WIDTH - 115, approachHeight, approachText, {
+      valign: "top",
+      fontSize: 6.4,
+      padding: 5
+    });
+
+    currentY += approachHeight + 14;
+    currentY = ensureSpace(currentY, 135);
+
+    const signWidth = CONTENT_WIDTH / 2;
+
+    drawCell(MARGIN_LEFT, currentY, CONTENT_WIDTH, 24, "TANDA TANGAN DAN TANGGAL", {
+      bold: true,
+      align: "center",
+      fontSize: 8,
+      fill: "#E5E7EB"
+    });
+
+    currentY += 24;
+
+    drawCell(MARGIN_LEFT, currentY, signWidth, 25, "Asesi", {
+      bold: true,
+      align: "center"
+    });
+
+    drawCell(MARGIN_LEFT + signWidth, currentY, signWidth, 25, "Asesi", {
+      bold: true,
+      align: "center"
+    });
+
+    currentY += 25;
+
+    const signBody = 92;
+
+    drawCell(MARGIN_LEFT, currentY, signWidth, signBody, "", {
+      padding: 0
+    });
+
+    drawCell(MARGIN_LEFT + signWidth, currentY, signWidth, signBody, "", {
+      padding: 0
+    });
+
+    drawSignature(profileAsesi?.ttd_path, MARGIN_LEFT + 10, currentY + 5, signWidth - 20, 55);
+
+    doc.font("Helvetica").fontSize(6.5).fillColor("#000000").text(namaAsesi, MARGIN_LEFT + 8, currentY + 62, {
+      width: signWidth - 16,
+      align: "center",
+      lineBreak: false
+    });
+
+    doc.font("Helvetica").fontSize(6.5).text(formatTanggal(tanggal), MARGIN_LEFT + 8, currentY + 74, {
+      width: signWidth - 16,
+      align: "center",
+      lineBreak: false
+    });
+
+    doc.font("Helvetica").fontSize(6.5).text(namaAsesi, MARGIN_LEFT + signWidth + 8, currentY + 62, {
+      width: signWidth - 16,
+      align: "center",
+      lineBreak: false
+    });
+
+    doc.font("Helvetica").fontSize(6.5).text(formatTanggal(tanggal), MARGIN_LEFT + signWidth + 8, currentY + 74, {
+      width: signWidth - 16,
+      align: "center",
+      lineBreak: false
+    });
+
+    const range = doc.bufferedPageRange();
+
+    if (range && range.count > 1) {
+      for (let pageIndex = range.start; pageIndex < range.start + range.count; pageIndex += 1) {
+        doc.switchToPage(pageIndex);
+        doc.font("Helvetica").fontSize(6.5).fillColor("#555555").text(`Halaman ${pageIndex - range.start + 1} dari ${range.count}`, MARGIN_LEFT, PAGE_HEIGHT - 16, {
+          width: CONTENT_WIDTH,
+          align: "center",
+          lineBreak: false
+        });
       }
-    );
+    }
 
     doc.end();
-
   } catch (err) {
     console.error("GENERATE PDF APL02:", err);
 
-    return res.status(500).json({
-      success: false,
-      message: "Gagal membuat PDF.",
-      error: err.message
-    });
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        message: "Gagal membuat PDF.",
+        error: err.message
+      });
+    }
   }
 };
