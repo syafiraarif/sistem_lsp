@@ -218,7 +218,11 @@ export default function Login() {
             </motion.div>
 
             <motion.div variants={itemVariants} className="flex justify-end">
-              <button type="button" className="text-[10px] font-black text-orange-500 uppercase tracking-widest hover:underline underline-offset-4">
+              <button
+                type="button"
+                onClick={() => navigate("/lupa-akses")}
+                className="text-[10px] font-black text-orange-500 uppercase tracking-widest hover:underline underline-offset-4"
+              >
                 Lupa Akses?
               </button>
             </motion.div>

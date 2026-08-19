@@ -1,5 +1,4 @@
 import { Routes, Route } from "react-router-dom";
-
 import Home from "../pages/public/Home";
 import Profile from "../pages/public/Profile";
 import About from "../pages/public/About";
@@ -9,6 +8,8 @@ import Information from "../pages/public/Information";
 import FAQ from "../pages/public/FAQ";
 import Complaint from "../pages/public/Complaint";
 import Login from "../pages/public/Login";
+import LupaAkses from "../pages/public/LupaAkses";
+import ResetAkses from "../pages/public/ResetAkses";
 import AssessorProfile from "../pages/public/AssessorProfile";
 import AssessorExplore from "../pages/public/AssessorExplore";
 import JadwalDetail from "../pages/public/JadwalDetail";
@@ -18,20 +19,70 @@ import FeedbackPublic from "../pages/public/Feedback";
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/profil-kami" element={<Profile />} />
-      <Route path="/tentang-aplikasi" element={<About />} />
-      <Route path="/pendaftaran" element={<Registration />} />
-      <Route path="/surveillance" element={<SurveillancePage />} />
-      <Route path="/informasi" element={<Information />} />
-      <Route path="/faq" element={<FAQ />} />
-      <Route path="/pengaduan" element={<Complaint />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/assessor/:slug" element={<AssessorProfile />} />
-      <Route path="/explore-assessors" element={<AssessorExplore />} />
-      <Route path="/jadwal-detail/:id" element={<JadwalDetail />} />
-      <Route path="/jadwal" element={<Jadwal />} />
-      <Route path="/feedback" element={<FeedbackPublic />} />
+      <Route
+        path="/"
+        element={<Home />}
+      />
+      <Route
+        path="/profil-kami"
+        element={<Profile />}
+      />
+      <Route
+        path="/tentang-aplikasi"
+        element={<About />}
+      />
+      <Route
+        path="/pendaftaran"
+        element={<Registration />}
+      />
+      <Route
+        path="/surveillance"
+        element={<SurveillancePage />}
+      />
+      <Route
+        path="/informasi"
+        element={<Information />}
+      />
+      <Route
+        path="/faq"
+        element={<FAQ />}
+      />
+      <Route
+        path="/pengaduan"
+        element={<Complaint />}
+      />
+      <Route
+        path="/login"
+        element={<Login />}
+      />
+      <Route
+        path="/lupa-akses"
+        element={<LupaAkses />}
+      />
+      <Route
+        path="/reset-akses/:token"
+        element={<ResetAkses />}
+      />
+      <Route
+        path="/assessor/:slug"
+        element={<AssessorProfile />}
+      />
+      <Route
+        path="/explore-assessors"
+        element={<AssessorExplore />}
+      />
+      <Route
+        path="/jadwal-detail/:id"
+        element={<JadwalDetail />}
+      />
+      <Route
+        path="/jadwal"
+        element={<Jadwal />}
+      />
+      <Route
+        path="/feedback"
+        element={<FeedbackPublic />}
+      />
     </Routes>
   );
 }
