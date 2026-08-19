@@ -1,5 +1,3 @@
-// frontend/src/pages/Asesi/JadwalSaya.jsx
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import axios from "axios";
@@ -18,6 +16,7 @@ import {
   Filter,
   Inbox,
   Loader2,
+  Lock,
   MapPin,
   MonitorCheck,
   RefreshCcw,
@@ -26,7 +25,6 @@ import {
   Sparkles,
   Tag,
   XCircle,
-  Lock,
 } from "lucide-react";
 
 export default function JadwalSaya() {
@@ -52,7 +50,10 @@ export default function JadwalSaya() {
   const requestRunningRef = useRef(false);
 
   const navigate = useNavigate();
-  const API = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
+
+  const API =
+    import.meta.env.VITE_API_BASE ||
+    "http://localhost:3000/api";
 
   const getToken = () => localStorage.getItem("token");
 
@@ -60,38 +61,12 @@ export default function JadwalSaya() {
     Authorization: `Bearer ${getToken()}`,
   });
 
-  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
   useEffect(() => {
     if (hasLoadedRef.current) return;
 
     hasLoadedRef.current = true;
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    const handleFocus = () => {
-      if (!loading && !requestRunningRef.current) {
-        loadData(false);
-      }
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        handleFocus();
-      }
-    };
-
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
 
   const normalizePesertaJadwal = (item) => {
     const jadwalItem = item.jadwal || item.Jadwal || {};
@@ -102,21 +77,19 @@ export default function JadwalSaya() {
         item.id_peserta_jadwal ||
         item.id ||
         item.id_pendaftaran,
-
-      id_jadwal: item.id_jadwal || jadwalItem.id_jadwal,
-
+      id_jadwal:
+        item.id_jadwal ||
+        jadwalItem.id_jadwal,
       id_skema:
         item.id_skema ||
         jadwalItem.id_skema ||
         jadwalItem.skema?.id_skema ||
         jadwalItem.Skema?.id_skema,
-
       status:
         item.status ||
         item.status_peserta ||
         item.status_pendaftaran ||
         "menunggu",
-
       raw: item,
     };
   };
@@ -128,8 +101,12 @@ export default function JadwalSaya() {
       .replace(/\s+/g, "_");
 
     if (value === "belum_bayar") return "belum bayar";
-    if (value === "menunggu_validasi_admin") return "menunggu_validasi";
-    if (value === "menunggu_validasi") return "menunggu_validasi";
+    if (value === "menunggu_validasi_admin") {
+      return "menunggu_validasi";
+    }
+    if (value === "menunggu_validasi") {
+      return "menunggu_validasi";
+    }
     if (value === "pending") return "pending";
     if (value === "paid") return "paid";
     if (value === "ditolak") return "ditolak";
@@ -151,12 +128,14 @@ export default function JadwalSaya() {
 
   const getSelectedJadwal = (id_jadwal) => {
     return myJadwal.find(
-      (item) => Number(item.id_jadwal) === Number(id_jadwal)
+      (item) =>
+        Number(item.id_jadwal) === Number(id_jadwal)
     );
   };
 
   const getIdPesertaByJadwal = (id_jadwal) => {
-    const selected = getSelectedJadwal(id_jadwal);
+    const selected =
+      getSelectedJadwal(id_jadwal);
 
     return (
       selected?.id_peserta ||
@@ -169,7 +148,9 @@ export default function JadwalSaya() {
 
   const isSudahDipilih = (id_jadwal) => {
     return myJadwal.some(
-      (item) => Number(item.id_jadwal) === Number(id_jadwal)
+      (item) =>
+        Number(item.id_jadwal) ===
+        Number(id_jadwal)
     );
   };
 
@@ -184,6 +165,16 @@ export default function JadwalSaya() {
     if (!data) return "belum bayar";
 
     return normalizePaymentStatus(data.status);
+  };
+
+  const getIdPeserta = (item) => {
+    return (
+      item.id_peserta ||
+      item.raw?.id_peserta ||
+      item.raw?.id_peserta_jadwal ||
+      item.raw?.id ||
+      item.raw?.id_pendaftaran
+    );
   };
 
   const loadData = async (showMainLoading = true) => {
@@ -207,17 +198,27 @@ export default function JadwalSaya() {
         return;
       }
 
-      const [jadwalRes, sayaRes] = await Promise.all([
-        axios.get(`${API}/asesi/jadwal/tersedia`, {
-          headers: getHeaders(),
-        }),
-        axios.get(`${API}/asesi/jadwal-saya`, {
-          headers: getHeaders(),
-        }),
-      ]);
+      const [jadwalRes, sayaRes] =
+        await Promise.all([
+          axios.get(
+            `${API}/asesi/jadwal/tersedia`,
+            {
+              headers: getHeaders(),
+            }
+          ),
+          axios.get(
+            `${API}/asesi/jadwal-saya`,
+            {
+              headers: getHeaders(),
+            }
+          ),
+        ]);
 
-      const jadwalData = jadwalRes.data?.data || [];
-      const sayaData = sayaRes.data?.data || [];
+      const jadwalData =
+        jadwalRes.data?.data || [];
+
+      const sayaData =
+        sayaRes.data?.data || [];
 
       const selected = sayaData
         .map(normalizePesertaJadwal)
@@ -226,21 +227,29 @@ export default function JadwalSaya() {
       setJadwal(jadwalData);
       setMyJadwal(selected);
 
-      await loadStatusPembayaran(jadwalData);
-      await loadStatusAPL01(selected);
-      await loadStatusAPL02(selected);
-      await loadStatusPresensi(selected);
-      await loadStatusFRIA05(selected);
-      await loadStatusHasilAsesmen(selected);
+      await Promise.all([
+        loadStatusPembayaran(jadwalData),
+        loadStatusAPL01(selected),
+        loadStatusAPL02(selected),
+        loadStatusPresensi(selected),
+        loadStatusFRIA05(selected),
+        loadStatusHasilAsesmen(selected),
+      ]);
     } catch (err) {
-      console.error(err);
+      console.error(
+        "LOAD JADWAL ERROR:",
+        err
+      );
 
       if (err.response?.status === 429) {
         setError(
-          "Terlalu banyak request ke server. Tunggu sebentar lalu klik Refresh Jadwal."
+          "Terlalu banyak request ke server. Tunggu beberapa saat lalu coba Refresh Jadwal."
         );
       } else {
-        setError(err.response?.data?.message || "Gagal memuat jadwal.");
+        setError(
+          err.response?.data?.message ||
+            "Gagal memuat jadwal."
+        );
       }
     } finally {
       requestRunningRef.current = false;
@@ -249,323 +258,396 @@ export default function JadwalSaya() {
     }
   };
 
-  const loadStatusPembayaran = async (jadwalData) => {
+  const loadStatusPembayaran = async (
+    jadwalData
+  ) => {
     const result = {};
+
     const uniqueSkemaIds = [
-      ...new Set(jadwalData.map((item) => getIdSkema(item)).filter(Boolean)),
+      ...new Set(
+        jadwalData
+          .map((item) => getIdSkema(item))
+          .filter(Boolean)
+      ),
     ];
 
-    for (const idSkema of uniqueSkemaIds) {
-      try {
-        const res = await axios.get(
-  `${API}/asesi/pembayaran/${idSkema}/status`,
-  {
-    headers: getHeaders(),
-  }
-);
+    const requests =
+      uniqueSkemaIds.map(async (idSkema) => {
+        try {
+          const res = await axios.get(
+            `${API}/asesi/pembayaran/${idSkema}/status`,
+            {
+              headers: getHeaders(),
+            }
+          );
 
-        const data = res.data?.data || {};
+          const data =
+            res.data?.data || {};
 
-        result[idSkema] = {
-          id_pembayaran: data.id_pembayaran || null,
-          id_user: data.id_user || null,
-          id_peserta: data.id_peserta || null,
-          id_skema: data.id_skema || idSkema,
-          status: normalizePaymentStatus(data.status),
-          metode_pembayaran: data.metode_pembayaran || null,
-          jalur_pembayaran: data.jalur_pembayaran || null,
-          nominal: data.nominal || 0,
-          waktu_batas: data.waktu_batas || null,
-          waktu_pembayaran: data.waktu_pembayaran || null,
-          bukti_bayar: data.bukti_bayar || null,
-          catatan_admin: data.catatan_admin || null,
-        };
-      } catch (err) {
-        result[idSkema] = {
-          id_pembayaran: null,
-          id_skema: idSkema,
-          status: "belum bayar",
-          metode_pembayaran: null,
-          jalur_pembayaran: null,
-          nominal: 0,
-          waktu_batas: null,
-          waktu_pembayaran: null,
-          bukti_bayar: null,
-          catatan_admin: null,
-        };
+          result[idSkema] = {
+            id_pembayaran:
+              data.id_pembayaran || null,
+            id_user: data.id_user || null,
+            id_peserta:
+              data.id_peserta || null,
+            id_skema:
+              data.id_skema || idSkema,
+            status:
+              normalizePaymentStatus(
+                data.status
+              ),
+            metode_pembayaran:
+              data.metode_pembayaran || null,
+            jalur_pembayaran:
+              data.jalur_pembayaran || null,
+            nominal:
+              data.nominal || 0,
+            waktu_batas:
+              data.waktu_batas || null,
+            waktu_pembayaran:
+              data.waktu_pembayaran || null,
+            bukti_bayar:
+              data.bukti_bayar || null,
+            catatan_admin:
+              data.catatan_admin || null,
+          };
+        } catch (err) {
+          if (err.response?.status === 429) {
+            throw err;
+          }
+
+          result[idSkema] = {
+            id_pembayaran: null,
+            id_skema: idSkema,
+            status: "belum bayar",
+            metode_pembayaran: null,
+            jalur_pembayaran: null,
+            nominal: 0,
+            waktu_batas: null,
+            waktu_pembayaran: null,
+            bukti_bayar: null,
+            catatan_admin: null,
+          };
+        }
+      });
+
+    try {
+      await Promise.all(requests);
+    } catch (err) {
+      if (err.response?.status === 429) {
+        throw err;
       }
-
-      await sleep(80);
     }
 
     setPembayaran(result);
   };
 
-  const loadStatusAPL01 = async (selectedData) => {
+  const loadStatusAPL01 = async (
+    selectedData
+  ) => {
     const result = {};
 
-    for (const item of selectedData) {
-      const idPeserta =
-        item.id_peserta ||
-        item.raw?.id_peserta ||
-        item.raw?.id_peserta_jadwal ||
-        item.raw?.id ||
-        item.raw?.id_pendaftaran;
+    const requests = selectedData.map(
+      async (item) => {
+        const idPeserta =
+          getIdPeserta(item);
 
-      if (!idPeserta) continue;
+        if (!idPeserta) return;
 
-      try {
-        const res = await axios.get(
-  `${API}/asesi/apl01/${idPeserta}`,
-  {
-    headers: getHeaders(),
-  }
-);
+        try {
+          const res = await axios.get(
+            `${API}/asesi/apl01/${idPeserta}`,
+            {
+              headers: getHeaders(),
+            }
+          );
 
-        const apl01 = res.data?.data?.apl01;
+          const apl01 =
+            res.data?.data?.apl01;
 
-        result[idPeserta] = {
-          exists: !!apl01,
-          submitted: apl01?.status === "submit",
-          status: apl01?.status || "belum_ada",
-          id_apl01: apl01?.id_apl01 || null,
-        };
-      } catch (err) {
-        result[idPeserta] = {
-          exists: false,
-          submitted: false,
-          status: "belum_ada",
-          id_apl01: null,
-        };
+          result[idPeserta] = {
+            exists: !!apl01,
+            submitted:
+              apl01?.status === "submit",
+            status:
+              apl01?.status || "belum_ada",
+            id_apl01:
+              apl01?.id_apl01 || null,
+          };
+        } catch (err) {
+          if (err.response?.status === 429) {
+            throw err;
+          }
+
+          result[idPeserta] = {
+            exists: false,
+            submitted: false,
+            status: "belum_ada",
+            id_apl01: null,
+          };
+        }
       }
+    );
 
-      await sleep(80);
+    try {
+      await Promise.all(requests);
+    } catch (err) {
+      if (err.response?.status === 429) {
+        throw err;
+      }
     }
 
     setApl01Status(result);
   };
 
-  const loadStatusAPL02 = async (selectedData) => {
-
+  const loadStatusAPL02 = async (
+    selectedData
+  ) => {
     const result = {};
 
-    for (const item of selectedData) {
-
+    const requests = selectedData.map(
+      async (item) => {
         const idPeserta =
-            item.id_peserta ||
-            item.raw?.id_peserta ||
-            item.raw?.id_peserta_jadwal ||
-            item.raw?.id ||
-            item.raw?.id_pendaftaran;
+          getIdPeserta(item);
 
-        if (!idPeserta) continue;
+        if (!idPeserta) return;
 
         try {
+          const res = await axios.get(
+            `${API}/asesi/apl02/${idPeserta}`,
+            {
+              headers: getHeaders(),
+            }
+          );
 
-          console.log("ID PESERTA APL02 =", idPeserta);
+          const apl02 =
+            res.data?.data;
 
-            const res = await axios.get(
-                `${API}/asesi/apl02/${idPeserta}`,
-                {
-                    headers: getHeaders(),
-                }
-            );
-
-            const apl02 = res.data?.data;
-
-            result[idPeserta] = {
-                exists: !!apl02,
-                submitted: apl02?.status === "submitted",
-                status: apl02?.status || "belum_ada",
-                id_apl02: apl02?.id_apl02 || null,
-            };
-
+          result[idPeserta] = {
+            exists: !!apl02,
+            submitted:
+              apl02?.status ===
+              "submitted",
+            status:
+              apl02?.status || "belum_ada",
+            id_apl02:
+              apl02?.id_apl02 || null,
+          };
         } catch (err) {
+          if (err.response?.status === 429) {
+            throw err;
+          }
 
-            result[idPeserta] = {
-                exists: false,
-                submitted: false,
-                status: "belum_ada",
-                id_apl02: null,
-            };
-
+          result[idPeserta] = {
+            exists: false,
+            submitted: false,
+            status: "belum_ada",
+            id_apl02: null,
+          };
         }
+      }
+    );
 
-        await sleep(80);
+    try {
+      await Promise.all(requests);
+    } catch (err) {
+      if (err.response?.status === 429) {
+        throw err;
+      }
     }
 
     setApl02Status(result);
+  };
 
-};
-
-const loadStatusPresensi = async (selectedData) => {
-
+  const loadStatusPresensi = async (
+    selectedData
+  ) => {
     const result = {};
 
-    for (const item of selectedData) {
-
+    const requests = selectedData.map(
+      async (item) => {
         const idPeserta =
-            item.id_peserta ||
-            item.raw?.id_peserta ||
-            item.raw?.id_peserta_jadwal ||
-            item.raw?.id ||
-            item.raw?.id_pendaftaran;
+          getIdPeserta(item);
 
-        if (!idPeserta) continue;
+        if (!idPeserta) return;
 
         try {
+          const res = await axios.get(
+            `${API}/asesi/presensi/status/${idPeserta}`,
+            {
+              headers: getHeaders(),
+            }
+          );
 
-            const res = await axios.get(
-                `${API}/asesi/presensi/status/${idPeserta}`,
-                {
-                    headers: getHeaders(),
-                }
-            );
+          const data =
+            res.data?.data || {};
 
-            const data = res.data?.data || {};
-
-            result[idPeserta] = {
-                hadir: data?.is_submitted === true,
-                status:
-                  data?.is_submitted
-                  ? "hadir"
-                  : "belum",
-            };
-
+          result[idPeserta] = {
+            hadir:
+              data?.is_submitted === true,
+            status:
+              data?.is_submitted
+                ? "hadir"
+                : "belum",
+          };
         } catch (err) {
+          if (err.response?.status === 429) {
+            throw err;
+          }
 
-            result[idPeserta] = {
-                hadir: false,
-                status: "belum",
-            };
-
+          result[idPeserta] = {
+            hadir: false,
+            status: "belum",
+          };
         }
+      }
+    );
 
-        await sleep(80);
-
+    try {
+      await Promise.all(requests);
+    } catch (err) {
+      if (err.response?.status === 429) {
+        throw err;
+      }
     }
 
     setPresensiStatus(result);
+  };
 
-};
-
-const loadStatusFRIA05 = async (selectedData) => {
-
+  const loadStatusFRIA05 = async (
+    selectedData
+  ) => {
     const result = {};
 
-    for (const item of selectedData) {
-
+    const requests = selectedData.map(
+      async (item) => {
         const idPeserta =
-            item.id_peserta ||
-            item.raw?.id_peserta ||
-            item.raw?.id_peserta_jadwal ||
-            item.raw?.id ||
-            item.raw?.id_pendaftaran;
+          getIdPeserta(item);
 
-        if (!idPeserta) continue;
+        if (!idPeserta) return;
 
         try {
+          const res = await axios.get(
+            `${API}/asesi/fr-ia05/status/${idPeserta}`,
+            {
+              headers: getHeaders(),
+            }
+          );
 
-            const res = await axios.get(
-                `${API}/asesi/fr-ia05/status/${idPeserta}`,
-                {
-                    headers: getHeaders(),
-                }
-            );
+          const data =
+            res.data?.data || {};
 
-            const data = res.data?.data || {};
-
-            result[idPeserta] = {
-                submitted: data?.submitted === true,
-                status: data?.status || "belum",
-            };
-
+          result[idPeserta] = {
+            submitted:
+              data?.submitted === true,
+            status:
+              data?.status || "belum",
+          };
         } catch (err) {
+          if (err.response?.status === 429) {
+            throw err;
+          }
 
-            result[idPeserta] = {
-                submitted: false,
-                status: "belum",
-            };
-
+          result[idPeserta] = {
+            submitted: false,
+            status: "belum",
+          };
         }
+      }
+    );
 
-        await sleep(80);
-
+    try {
+      await Promise.all(requests);
+    } catch (err) {
+      if (err.response?.status === 429) {
+        throw err;
+      }
     }
 
     setFria05Status(result);
+  };
 
-};
-
-const loadStatusHasilAsesmen = async (selectedData) => {
-
+  const loadStatusHasilAsesmen = async (
+    selectedData
+  ) => {
     const result = {};
 
-    for (const item of selectedData) {
-
+    const requests = selectedData.map(
+      async (item) => {
         const idPeserta =
-            item.id_peserta ||
-            item.raw?.id_peserta ||
-            item.raw?.id_peserta_jadwal ||
-            item.raw?.id ||
-            item.raw?.id_pendaftaran;
+          getIdPeserta(item);
 
-        if (!idPeserta) continue;
+        if (!idPeserta) return;
 
         try {
+          const res = await axios.get(
+            `${API}/asesi/hasil-saya/detail?id_peserta=${idPeserta}`,
+            {
+              headers: getHeaders(),
+            }
+          );
 
-          console.log("ID PESERTA APL02 =", idPeserta);
+          const data =
+            res.data?.data || {};
 
-            const res = await axios.get(
-                `${API}/asesi/hasil-saya/detail?id_peserta=${idPeserta}`,
-                {
-                    headers: getHeaders(),
-                }
-            );
-
-            const data = res.data?.data || {};
-
-            result[idPeserta] = {
-                tersedia: true,
-                status:
-                    data.status_asesmen ||
-                    data.hasil ||
-                    "belum_tersedia",
-            };
-
+          result[idPeserta] = {
+            tersedia: true,
+            status:
+              data.status_asesmen ||
+              data.hasil ||
+              "belum_tersedia",
+          };
         } catch (err) {
+          if (err.response?.status === 429) {
+            throw err;
+          }
 
-            result[idPeserta] = {
-                tersedia: false,
-                status: "belum_tersedia",
-            };
-
+          result[idPeserta] = {
+            tersedia: false,
+            status: "belum_tersedia",
+          };
         }
+      }
+    );
 
-        await sleep(80);
-
+    try {
+      await Promise.all(requests);
+    } catch (err) {
+      if (err.response?.status === 429) {
+        throw err;
+      }
     }
 
     setHasilAsesmenStatus(result);
+  };
 
-};
-
-  const pilihJadwal = async (id_jadwal) => {
+  const pilihJadwal = async (
+    id_jadwal
+  ) => {
     setChoosingId(id_jadwal);
 
     try {
       const res = await axios.post(
         `${API}/asesi/jadwal/pilih`,
         { id_jadwal },
-        { headers: getHeaders() }
+        {
+          headers: getHeaders(),
+        }
       );
 
-      alert("Jadwal berhasil dipilih. Silakan lanjut pembayaran.");
+      alert(
+        "Jadwal berhasil dipilih. Silakan lanjut pembayaran."
+      );
 
-      const data = res.data?.data || {};
+      const data =
+        res.data?.data || {};
 
       setMyJadwal((prev) =>
-        prev.some((item) => Number(item.id_jadwal) === Number(id_jadwal))
+        prev.some(
+          (item) =>
+            Number(item.id_jadwal) ===
+            Number(id_jadwal)
+        )
           ? prev
           : [
               ...prev,
@@ -576,8 +658,11 @@ const loadStatusHasilAsesmen = async (selectedData) => {
                   data.id ||
                   data.id_pendaftaran,
                 id_jadwal,
-                id_skema: data.id_skema,
-                status: data.status || "menunggu",
+                id_skema:
+                  data.id_skema,
+                status:
+                  data.status ||
+                  "menunggu",
                 raw: data,
               },
             ]
@@ -585,13 +670,29 @@ const loadStatusHasilAsesmen = async (selectedData) => {
 
       await loadData(false);
     } catch (err) {
-      const message = err.response?.data?.message;
+      const message =
+        err.response?.data?.message;
 
-      if (message?.toLowerCase().includes("sudah terdaftar")) {
-        alert("Anda sudah memilih jadwal ini.");
+      if (
+        message
+          ?.toLowerCase()
+          .includes("sudah terdaftar")
+      ) {
+        alert(
+          "Anda sudah memilih jadwal ini."
+        );
         await loadData(false);
+      } else if (
+        err.response?.status === 429
+      ) {
+        alert(
+          "Terlalu banyak request. Tunggu sebentar lalu coba lagi."
+        );
       } else {
-        alert(message || "Gagal memilih jadwal.");
+        alert(
+          message ||
+            "Gagal memilih jadwal."
+        );
       }
     } finally {
       setChoosingId(null);
@@ -599,102 +700,149 @@ const loadStatusHasilAsesmen = async (selectedData) => {
   };
 
   const pergiBayar = (item) => {
-    const idSkema = getIdSkema(item);
-    const statusBayar = getStatusPembayaran(item);
+    const idSkema =
+      getIdSkema(item);
+
+    const statusBayar =
+      getStatusPembayaran(item);
 
     if (!idSkema) {
-      alert("ID skema tidak ditemukan.");
+      alert(
+        "ID skema tidak ditemukan."
+      );
       return;
     }
 
-    if (statusBayar === "pending" || statusBayar === "menunggu_validasi") {
-      alert("Pembayaran sedang menunggu validasi admin. Tidak bisa bayar ulang.");
+    if (
+      statusBayar === "pending" ||
+      statusBayar === "menunggu_validasi"
+    ) {
+      alert(
+        "Pembayaran sedang menunggu validasi admin. Tidak bisa bayar ulang."
+      );
       return;
     }
 
     if (statusBayar === "paid") {
-      alert("Pembayaran sudah diterima admin.");
+      alert(
+        "Pembayaran sudah diterima admin."
+      );
       return;
     }
 
-    navigate(`/asesi/pembayaran/${idSkema}`);
+    navigate(
+      `/asesi/pembayaran/${idSkema}`
+    );
   };
 
   const pergiAPL01 = (item) => {
-    const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
+    const idPeserta =
+      getIdPesertaByJadwal(
+        item.id_jadwal
+      );
 
     if (!idPeserta) {
-      alert("ID peserta tidak ditemukan. Silakan klik Refresh lalu coba lagi.");
+      alert(
+        "ID peserta tidak ditemukan. Silakan klik Refresh lalu coba lagi."
+      );
       return;
     }
 
-    navigate(`/asesi/apl01/${idPeserta}`);
+    navigate(
+      `/asesi/apl01/${idPeserta}`
+    );
   };
 
   const pergiAPL02 = (item) => {
-    const idSkema = getIdSkema(item);
-    const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
+    const idSkema =
+      getIdSkema(item);
+
+    const idPeserta =
+      getIdPesertaByJadwal(
+        item.id_jadwal
+      );
 
     if (!idSkema) {
-      alert("ID skema tidak ditemukan.");
+      alert(
+        "ID skema tidak ditemukan."
+      );
       return;
     }
 
-    navigate(`/asesi/apl02/${idSkema}`, {
-      state: {
-        id_peserta: idPeserta,
-      },
-    });
+    navigate(
+      `/asesi/apl02/${idSkema}`,
+      {
+        state: {
+          id_peserta:
+            idPeserta,
+        },
+      }
+    );
   };
 
   const pergiPresensi = () => {
-    navigate("/asesi/pra-asesmen");
-};
+    navigate(
+      "/asesi/pra-asesmen"
+    );
+  };
 
   const pergiFRIA05 = (item) => {
     setSelectedFRIA05Item(item);
     setShowFRIA05Warning(true);
-};
+  };
 
-const mulaiFRIA05 = () => {
+  const mulaiFRIA05 = () => {
+    if (!selectedFRIA05Item) {
+      return;
+    }
 
-    if (!selectedFRIA05Item) return;
-
-    const idPeserta = getIdPesertaByJadwal(
+    const idPeserta =
+      getIdPesertaByJadwal(
         selectedFRIA05Item.id_jadwal
-    );
+      );
 
     const idJadwal =
-        selectedFRIA05Item.id_jadwal ||
-        selectedFRIA05Item.jadwal?.id_jadwal ||
-        selectedFRIA05Item.Jadwal?.id_jadwal;
+      selectedFRIA05Item.id_jadwal ||
+      selectedFRIA05Item.jadwal?.id_jadwal ||
+      selectedFRIA05Item.Jadwal?.id_jadwal;
 
     if (!idJadwal) {
-        alert("ID jadwal tidak ditemukan.");
-        return;
+      alert(
+        "ID jadwal tidak ditemukan."
+      );
+      return;
     }
 
     if (!idPeserta) {
-        alert("ID peserta tidak ditemukan.");
-        return;
+      alert(
+        "ID peserta tidak ditemukan."
+      );
+      return;
     }
 
     setShowFRIA05Warning(false);
 
     navigate(
-        `/asesi/fr-ia05/jadwal/${idJadwal}/${idPeserta}`
+      `/asesi/fr-ia05/jadwal/${idJadwal}/${idPeserta}`
     );
-};
+  };
 
   const pergiHasilAkhir = (item) => {
-    const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
+    const idPeserta =
+      getIdPesertaByJadwal(
+        item.id_jadwal
+      );
 
     if (!idPeserta) {
-      alert("ID peserta tidak ditemukan. Silakan klik Refresh lalu coba lagi.");
+      alert(
+        "ID peserta tidak ditemukan. Silakan klik Refresh lalu coba lagi."
+      );
       return;
     }
 
-    navigate(`/asesi/hasil-akhir/${idPeserta}`);
+    navigate(
+      `/asesi/hasil-akhir/${idPeserta}`
+    );
   };
 
   const handleRefresh = async () => {
@@ -706,54 +854,115 @@ const mulaiFRIA05 = () => {
 
     const parsed = new Date(date);
 
-    if (Number.isNaN(parsed.getTime())) return "-";
+    if (
+      Number.isNaN(parsed.getTime())
+    ) {
+      return "-";
+    }
 
-    return parsed.toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
+    return parsed.toLocaleDateString(
+      "id-ID",
+      {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }
+    );
   };
 
   const filteredJadwal = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
+    const keyword =
+      search.trim().toLowerCase();
 
     return jadwal.filter((item) => {
-      const skema = item.skema || item.Skema || {};
-      const tuk = item.tuk || item.Tuk || {};
-      const sudahDipilih = isSudahDipilih(item.id_jadwal);
-      const statusBayar = getStatusPembayaran(item);
+      const skema =
+        item.skema ||
+        item.Skema ||
+        {};
+
+      const tuk =
+        item.tuk ||
+        item.Tuk ||
+        {};
+
+      const sudahDipilih =
+        isSudahDipilih(
+          item.id_jadwal
+        );
+
+      const statusBayar =
+        getStatusPembayaran(item);
 
       const matchSearch =
         !keyword ||
-        skema.judul_skema?.toLowerCase().includes(keyword) ||
-        skema.kode_skema?.toLowerCase().includes(keyword) ||
-        tuk.nama_tuk?.toLowerCase().includes(keyword) ||
-        item.nama_kegiatan?.toLowerCase().includes(keyword) ||
-        item.pelaksanaan_uji?.toLowerCase().includes(keyword);
+        skema.judul_skema
+          ?.toLowerCase()
+          .includes(keyword) ||
+        skema.kode_skema
+          ?.toLowerCase()
+          .includes(keyword) ||
+        tuk.nama_tuk
+          ?.toLowerCase()
+          .includes(keyword) ||
+        item.nama_kegiatan
+          ?.toLowerCase()
+          .includes(keyword) ||
+        item.pelaksanaan_uji
+          ?.toLowerCase()
+          .includes(keyword);
 
       const matchFilter =
         filter === "semua" ||
-        (filter === "dipilih" && sudahDipilih) ||
-        (filter === "belum" && !sudahDipilih) ||
+        (filter === "dipilih" &&
+          sudahDipilih) ||
+        (filter === "belum" &&
+          !sudahDipilih) ||
         (filter === "validasi" &&
-          (statusBayar === "pending" ||
-            statusBayar === "menunggu_validasi")) ||
-        (filter === "paid" && statusBayar === "paid") ||
-        (filter === "ditolak" && statusBayar === "ditolak");
+          (statusBayar ===
+            "pending" ||
+            statusBayar ===
+              "menunggu_validasi")) ||
+        (filter === "paid" &&
+          statusBayar === "paid") ||
+        (filter === "ditolak" &&
+          statusBayar === "ditolak");
 
-      return matchSearch && matchFilter;
+      return (
+        matchSearch &&
+        matchFilter
+      );
     });
-  }, [jadwal, myJadwal, pembayaran, search, filter, apl01Status]);
+  }, [
+    jadwal,
+    myJadwal,
+    pembayaran,
+    search,
+    filter,
+  ]);
 
-  const totalDipilih = myJadwal.length;
-  const totalPaid = jadwal.filter((item) => getStatusPembayaran(item) === "paid")
-    .length;
-  const totalMenunggu = jadwal.filter((item) => {
-    const status = getStatusPembayaran(item);
-    return status === "pending" || status === "menunggu_validasi";
-  }).length;
-  const totalTersedia = jadwal.length;
+  const totalDipilih =
+    myJadwal.length;
+
+  const totalPaid = jadwal.filter(
+    (item) =>
+      getStatusPembayaran(item) ===
+      "paid"
+  ).length;
+
+  const totalMenunggu =
+    jadwal.filter((item) => {
+      const status =
+        getStatusPembayaran(item);
+
+      return (
+        status === "pending" ||
+        status ===
+          "menunggu_validasi"
+      );
+    }).length;
+
+  const totalTersedia =
+    jadwal.length;
 
   if (loading) {
     return <LoadingScreen />;
@@ -761,7 +970,10 @@ const mulaiFRIA05 = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
-      <SidebarAsesi isOpen={isOpen} setIsOpen={setIsOpen} />
+      <SidebarAsesi
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+      />
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
         <div className="w-full max-w-[1500px] mx-auto space-y-6">
@@ -772,7 +984,10 @@ const mulaiFRIA05 = () => {
             <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
               <div className="flex flex-col justify-center">
                 <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <CalendarDays size={15} className="text-orange-500" />
+                  <CalendarDays
+                    size={15}
+                    className="text-orange-500"
+                  />
                   <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
                     Jadwal Saya
                   </span>
@@ -781,13 +996,18 @@ const mulaiFRIA05 = () => {
                 <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
                   Kelola Jadwal
                   <br />
-                  <span className="text-orange-500">Sertifikasi Anda</span>
+                  <span className="text-orange-500">
+                    Sertifikasi Anda
+                  </span>
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Pilih jadwal uji kompetensi, lanjutkan pembayaran, dan akses
-                  APL01, APL02, presensi, FR.IA.05, serta hasil akhir sesuai 
-                  dengan tahapan yang berlaku.
+                  Pilih jadwal uji kompetensi,
+                  lanjutkan pembayaran, dan
+                  akses APL01, APL02, presensi,
+                  FR.IA.05, serta hasil akhir
+                  sesuai dengan tahapan yang
+                  berlaku.
                 </p>
 
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -798,20 +1018,29 @@ const mulaiFRIA05 = () => {
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
                     {refreshing ? (
-                      <Loader2 size={17} className="animate-spin" />
+                      <Loader2
+                        size={17}
+                        className="animate-spin"
+                      />
                     ) : (
-                      <RefreshCcw size={17} />
+                      <RefreshCcw
+                        size={17}
+                      />
                     )}
                     Refresh Jadwal
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => navigate("/asesi")}
+                    onClick={() =>
+                      navigate("/asesi")
+                    }
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
                   >
                     Dashboard
-                    <ChevronRight size={17} />
+                    <ChevronRight
+                      size={17}
+                    />
                   </button>
                 </div>
               </div>
@@ -821,7 +1050,9 @@ const mulaiFRIA05 = () => {
 
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                    <Sparkles size={28} />
+                    <Sparkles
+                      size={28}
+                    />
                   </div>
 
                   <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
@@ -829,41 +1060,68 @@ const mulaiFRIA05 = () => {
                   </p>
 
                   <h2 className="text-2xl font-black leading-tight">
-                    {totalTersedia} Jadwal Tersedia
+                    {totalTersedia} Jadwal
+                    Tersedia
                   </h2>
 
                   <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    Pantau status jadwal dan pembayaran Anda sebelum lanjut ke
-                    proses asesmen.
+                    Pantau status jadwal dan
+                    pembayaran Anda sebelum
+                    lanjut ke proses asesmen.
                   </p>
 
                   <div className="mt-auto pt-6 grid grid-cols-3 gap-3">
-                    <HeroPill label="Dipilih" value={`${totalDipilih}`} />
-                    <HeroPill label="Validasi" value={`${totalMenunggu}`} />
-                    <HeroPill label="Paid" value={`${totalPaid}`} />
+                    <HeroPill
+                      label="Dipilih"
+                      value={`${totalDipilih}`}
+                    />
+                    <HeroPill
+                      label="Validasi"
+                      value={`${totalMenunggu}`}
+                    />
+                    <HeroPill
+                      label="Paid"
+                      value={`${totalPaid}`}
+                    />
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          {error && <ErrorAlert message={error} />}
+          {error && (
+            <ErrorAlert
+              message={error}
+            />
+          )}
 
           <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <MiniStat
-              icon={<CalendarDays size={22} />}
+              icon={
+                <CalendarDays
+                  size={22}
+                />
+              }
               label="Total Jadwal"
               value={`${totalTersedia} Jadwal`}
             />
 
             <MiniStat
-              icon={<BadgeCheck size={22} />}
+              icon={
+                <BadgeCheck
+                  size={22}
+                />
+              }
               label="Jadwal Dipilih"
               value={`${totalDipilih} Dipilih`}
             />
 
             <MiniStat
-              icon={<CheckCircle size={22} />}
+              icon={
+                <CheckCircle
+                  size={22}
+                />
+              }
               label="Menunggu Validasi"
               value={`${totalMenunggu} Pembayaran`}
             />
@@ -873,18 +1131,24 @@ const mulaiFRIA05 = () => {
             <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <Filter size={15} className="text-orange-500" />
+                  <Filter
+                    size={15}
+                    className="text-orange-500"
+                  />
                   <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
                     Filter Jadwal
                   </span>
                 </div>
 
                 <h2 className="text-xl font-black text-[#071E3D]">
-                  Daftar Jadwal Sertifikasi
+                  Daftar Jadwal
+                  Sertifikasi
                 </h2>
 
                 <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-                  Cari berdasarkan skema, kegiatan, TUK, atau pelaksanaan uji
+                  Cari berdasarkan skema,
+                  kegiatan, TUK, atau
+                  pelaksanaan uji
                 </p>
               </div>
 
@@ -895,9 +1159,14 @@ const mulaiFRIA05 = () => {
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {refreshing ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2
+                    size={16}
+                    className="animate-spin"
+                  />
                 ) : (
-                  <RefreshCcw size={16} />
+                  <RefreshCcw
+                    size={16}
+                  />
                 )}
                 Muat Ulang
               </button>
@@ -913,7 +1182,9 @@ const mulaiFRIA05 = () => {
                 <input
                   type="text"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) =>
+                    setSearch(e.target.value)
+                  }
                   placeholder="Cari skema, kode, kegiatan, atau TUK..."
                   className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-12 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                 />
@@ -921,79 +1192,195 @@ const mulaiFRIA05 = () => {
 
               <select
                 value={filter}
-                onChange={(e) => setFilter(e.target.value)}
+                onChange={(e) =>
+                  setFilter(e.target.value)
+                }
                 className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
               >
-                <option value="semua">Semua</option>
-                <option value="dipilih">Dipilih</option>
-                <option value="belum">Belum Dipilih</option>
-                <option value="validasi">Menunggu Validasi</option>
-                <option value="paid">Paid</option>
-                <option value="ditolak">Ditolak</option>
+                <option value="semua">
+                  Semua
+                </option>
+                <option value="dipilih">
+                  Dipilih
+                </option>
+                <option value="belum">
+                  Belum Dipilih
+                </option>
+                <option value="validasi">
+                  Menunggu Validasi
+                </option>
+                <option value="paid">
+                  Paid
+                </option>
+                <option value="ditolak">
+                  Ditolak
+                </option>
               </select>
             </div>
           </section>
 
           <section className="space-y-5">
-            {filteredJadwal.length === 0 ? (
-              <EmptyState search={search} />
+            {filteredJadwal.length ===
+            0 ? (
+              <EmptyState
+                search={search}
+              />
             ) : (
-              filteredJadwal.map((item, index) => {
-                const skema = item.skema || item.Skema || {};
-                const tuk = item.tuk || item.Tuk || {};
-                const idPeserta = getIdPesertaByJadwal(item.id_jadwal);
-                const sudahDipilih = isSudahDipilih(item.id_jadwal);
-                const sedangMemilih = choosingId === item.id_jadwal;
-                const pembayaranData = getPembayaranData(item);
-                const statusPembayaran = getStatusPembayaran(item);
-                const sudahPaid = statusPembayaran === "paid";
-                const menungguValidasi =
-                  statusPembayaran === "pending" ||
-                  statusPembayaran === "menunggu_validasi";
-                const pembayaranDitolak = statusPembayaran === "ditolak";
+              filteredJadwal.map(
+                (item, index) => {
+                  const skema =
+                    item.skema ||
+                    item.Skema ||
+                    {};
 
-                return (
-                  <ScheduleCard
-                    key={item.id_jadwal || index}
-                    item={item}
-                    skema={skema}
-                    tuk={tuk}
-                    idPeserta={idPeserta}
-                    sudahDipilih={sudahDipilih}
-                    sedangMemilih={sedangMemilih}
-                    pembayaranData={pembayaranData}
-                    statusPembayaran={statusPembayaran}
-                    sudahPaid={sudahPaid}
-                    menungguValidasi={menungguValidasi}
-                    pembayaranDitolak={pembayaranDitolak}
-                    apl01Data={apl01Status[idPeserta] || {}}
-                    apl02Data={apl02Status[idPeserta] || {}}
-                    presensiData={presensiStatus[idPeserta] || {}}
-                    fria05Data={fria05Status[idPeserta] || {}}
-                    hasilAsesmenData={hasilAsesmenStatus[idPeserta] || {}}
-                    formatTanggal={formatTanggal}
-                    pilihJadwal={pilihJadwal}
-                    pergiBayar={pergiBayar}
-                    pergiAPL01={pergiAPL01}
-                    pergiAPL02={pergiAPL02}
-                    pergiPresensi={pergiPresensi}
-                    pergiFRIA05={pergiFRIA05}
-                    pergiHasilAkhir={pergiHasilAkhir}
-                  />
-                );
-              })
+                  const tuk =
+                    item.tuk ||
+                    item.Tuk ||
+                    {};
+
+                  const idPeserta =
+                    getIdPesertaByJadwal(
+                      item.id_jadwal
+                    );
+
+                  const sudahDipilih =
+                    isSudahDipilih(
+                      item.id_jadwal
+                    );
+
+                  const sedangMemilih =
+                    choosingId ===
+                    item.id_jadwal;
+
+                  const pembayaranData =
+                    getPembayaranData(
+                      item
+                    );
+
+                  const statusPembayaran =
+                    getStatusPembayaran(
+                      item
+                    );
+
+                  const sudahPaid =
+                    statusPembayaran ===
+                    "paid";
+
+                  const menungguValidasi =
+                    statusPembayaran ===
+                      "pending" ||
+                    statusPembayaran ===
+                      "menunggu_validasi";
+
+                  const pembayaranDitolak =
+                    statusPembayaran ===
+                    "ditolak";
+
+                  return (
+                    <ScheduleCard
+                      key={
+                        item.id_jadwal ||
+                        index
+                      }
+                      item={item}
+                      skema={skema}
+                      tuk={tuk}
+                      idPeserta={
+                        idPeserta
+                      }
+                      sudahDipilih={
+                        sudahDipilih
+                      }
+                      sedangMemilih={
+                        sedangMemilih
+                      }
+                      pembayaranData={
+                        pembayaranData
+                      }
+                      statusPembayaran={
+                        statusPembayaran
+                      }
+                      sudahPaid={
+                        sudahPaid
+                      }
+                      menungguValidasi={
+                        menungguValidasi
+                      }
+                      pembayaranDitolak={
+                        pembayaranDitolak
+                      }
+                      apl01Data={
+                        apl01Status[
+                          idPeserta
+                        ] || {}
+                      }
+                      apl02Data={
+                        apl02Status[
+                          idPeserta
+                        ] || {}
+                      }
+                      presensiData={
+                        presensiStatus[
+                          idPeserta
+                        ] || {}
+                      }
+                      fria05Data={
+                        fria05Status[
+                          idPeserta
+                        ] || {}
+                      }
+                      hasilAsesmenData={
+                        hasilAsesmenStatus[
+                          idPeserta
+                        ] || {}
+                      }
+                      formatTanggal={
+                        formatTanggal
+                      }
+                      pilihJadwal={
+                        pilihJadwal
+                      }
+                      pergiBayar={
+                        pergiBayar
+                      }
+                      pergiAPL01={
+                        pergiAPL01
+                      }
+                      pergiAPL02={
+                        pergiAPL02
+                      }
+                      pergiPresensi={
+                        pergiPresensi
+                      }
+                      pergiFRIA05={
+                        pergiFRIA05
+                      }
+                      pergiHasilAkhir={
+                        pergiHasilAkhir
+                      }
+                    />
+                  );
+                }
+              )
             )}
           </section>
         </div>
+
         <FRIA05AsesiWarning
-    open={showFRIA05Warning}
-    duration={120}
-    onClose={() => {
-        setShowFRIA05Warning(false);
-        setSelectedFRIA05Item(null);
-    }}
-    onConfirm={mulaiFRIA05}
-/>
+          open={showFRIA05Warning}
+          duration={120}
+          onClose={() => {
+            setShowFRIA05Warning(
+              false
+            );
+            setSelectedFRIA05Item(
+              null
+            );
+          }}
+          onConfirm={
+            mulaiFRIA05
+          }
+        />
       </main>
     </div>
   );
@@ -1025,82 +1412,103 @@ function ScheduleCard({
   pergiFRIA05,
   pergiHasilAkhir,
 }) {
-  const title = skema.judul_skema || "Skema tidak tersedia";
-  const kodeSkema = skema.kode_skema || "SKEMA";
-  const kegiatan = item.nama_kegiatan || "Jadwal uji kompetensi";
-  const idJadwal = item.id_jadwal;
-  const tanggal = `${formatTanggal(item.tgl_awal)} - ${formatTanggal(
+  const title =
+    skema.judul_skema ||
+    "Skema tidak tersedia";
+
+  const kodeSkema =
+    skema.kode_skema || "SKEMA";
+
+  const kegiatan =
+    item.nama_kegiatan ||
+    "Jadwal uji kompetensi";
+
+  const idJadwal =
+    item.id_jadwal;
+
+  const tanggal = `${formatTanggal(
+    item.tgl_awal
+  )} - ${formatTanggal(
     item.tgl_akhir
   )}`;
 
-  const isApl01Done = apl01Data?.submitted === true;
+  const isApl01Done =
+    apl01Data?.submitted === true;
 
-const isApl02Done = apl02Data?.submitted === true;
+  const isApl02Done =
+    apl02Data?.submitted === true;
 
-const isPresensiDone = presensiData?.hadir === true;
+  const isPresensiDone =
+    presensiData?.hadir === true;
 
-// cek tanggal ujian
-const tglAwal = item.tgl_awal || item.jadwal?.tgl_awal;
-const tglAkhir = item.tgl_akhir || item.jadwal?.tgl_akhir;
+  const tglAwal =
+    item.tgl_awal ||
+    item.jadwal?.tgl_awal;
 
-const mulai = new Date(tglAwal);
-const selesai = new Date(tglAkhir);
+  const tglAkhir =
+    item.tgl_akhir ||
+    item.jadwal?.tgl_akhir;
 
-selesai.setHours(23, 59, 59, 999);
+  const mulai = tglAwal
+    ? new Date(tglAwal)
+    : null;
 
-selesai.setHours(23, 59, 59, 999);
+  const selesai = tglAkhir
+    ? new Date(tglAkhir)
+    : null;
 
-const hariIni = new Date();
+  if (selesai) {
+    selesai.setHours(
+      23,
+      59,
+      59,
+      999
+    );
+  }
 
-const isHariH =
-  hariIni >= mulai &&
-  hariIni <= selesai;
+  const hariIni =
+    new Date();
 
-const unlockApl02 = sudahPaid && isApl01Done;
+  const isHariH =
+    mulai &&
+    selesai &&
+    hariIni >= mulai &&
+    hariIni <= selesai;
 
-console.log(
-  "ScheduleCard",
-  JSON.stringify({
-    idJadwal,
-    idPeserta,
-    sudahPaid,
-    isApl01Done,
-    isApl02Done,
-    isHariH,
-    tglAwal,
-    tglAkhir,
-    presensi: presensiData,
-  }, null, 2)
-);
+  const unlockApl02 =
+    sudahPaid &&
+    isApl01Done;
 
-const unlockPresensi =
+  const unlockPresensi =
     sudahPaid &&
     isApl01Done &&
     isApl02Done &&
     isHariH;
 
-const unlockFRIA05 =
+  const unlockFRIA05 =
     sudahPaid &&
     isApl01Done &&
     isApl02Done &&
     isPresensiDone &&
     isHariH;
 
-const fria05Submitted =
-    fria05Data?.submitted === true;
+  const fria05Submitted =
+    fria05Data?.submitted ===
+    true;
 
-
-const hasilSudahTerbit = [
+  const hasilSudahTerbit = [
     "kompeten",
     "belum_kompeten",
-].includes(
-    (hasilAsesmenData?.status || "").toLowerCase()
-);
+  ].includes(
+    (
+      hasilAsesmenData?.status ||
+      ""
+    ).toLowerCase()
+  );
 
-const unlockHasilAkhir =
+  const unlockHasilAkhir =
     sudahPaid &&
     hasilSudahTerbit;
-  // ======================================================================
 
   return (
     <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
@@ -1114,27 +1522,49 @@ const unlockHasilAkhir =
                 </span>
 
                 {sudahDipilih ? (
-                  <StatusBadge type="success" label="Dipilih" />
+                  <StatusBadge
+                    type="success"
+                    label="Dipilih"
+                  />
                 ) : (
-                  <StatusBadge type="light" label="Tersedia" />
+                  <StatusBadge
+                    type="light"
+                    label="Tersedia"
+                  />
                 )}
 
                 {menungguValidasi && (
-                  <StatusBadge type="warning" label="Menunggu Validasi" />
+                  <StatusBadge
+                    type="warning"
+                    label="Menunggu Validasi"
+                  />
                 )}
 
-                {sudahPaid && <StatusBadge type="success" label="Paid" />}
+                {sudahPaid && (
+                  <StatusBadge
+                    type="success"
+                    label="Paid"
+                  />
+                )}
 
                 {pembayaranDitolak && (
-                  <StatusBadge type="danger" label="Ditolak" />
+                  <StatusBadge
+                    type="danger"
+                    label="Ditolak"
+                  />
                 )}
 
                 {isApl01Done && (
-                  <StatusBadge type="success" label="APL01 Selesai" />
+                  <StatusBadge
+                    type="success"
+                    label="APL01 Selesai"
+                  />
                 )}
               </div>
 
-              <h3 className="text-2xl font-black text-[#071E3D]">{title}</h3>
+              <h3 className="text-2xl font-black text-[#071E3D]">
+                {title}
+              </h3>
 
               <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
                 {kegiatan}
@@ -1148,19 +1578,36 @@ const unlockHasilAkhir =
 
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <DetailItem
-              icon={<MapPin size={18} />}
+              icon={
+                <MapPin
+                  size={18}
+                />
+              }
               label="TUK"
-              value={tuk.nama_tuk || "-"}
+              value={
+                tuk.nama_tuk || "-"
+              }
             />
 
             <DetailItem
-              icon={<MonitorCheck size={18} />}
+              icon={
+                <MonitorCheck
+                  size={18}
+                />
+              }
               label="Pelaksanaan"
-              value={item.pelaksanaan_uji || "-"}
+              value={
+                item.pelaksanaan_uji ||
+                "-"
+              }
             />
 
             <DetailItem
-              icon={<CalendarCheck size={18} />}
+              icon={
+                <CalendarCheck
+                  size={18}
+                />
+              }
               label="Tanggal"
               value={tanggal}
             />
@@ -1182,7 +1629,10 @@ const unlockHasilAkhir =
             {pembayaranData?.id_pembayaran && (
               <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2">
                 <Tag size={14} />
-                ID Pembayaran: {pembayaranData.id_pembayaran}
+                ID Pembayaran:{" "}
+                {
+                  pembayaranData.id_pembayaran
+                }
               </span>
             )}
           </div>
@@ -1199,25 +1649,37 @@ const unlockHasilAkhir =
             </h4>
 
             <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
-              Pilih jadwal, lakukan pembayaran, lalu lanjutkan pengisian form
-              asesmen secara berurutan sesuai alur.
+              Pilih jadwal, lakukan pembayaran,
+              lalu lanjutkan pengisian form asesmen
+              secara berurutan sesuai alur.
             </p>
           </div>
 
           {!sudahDipilih ? (
             <button
-              disabled={sedangMemilih}
-              onClick={() => pilihJadwal(item.id_jadwal)}
+              disabled={
+                sedangMemilih
+              }
+              onClick={() =>
+                pilihJadwal(
+                  item.id_jadwal
+                )
+              }
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               {sedangMemilih ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2
+                    size={16}
+                    className="animate-spin"
+                  />
                   Memilih
                 </>
               ) : (
                 <>
-                  <ShieldCheck size={16} />
+                  <ShieldCheck
+                    size={16}
+                  />
                   Pilih Jadwal
                 </>
               )}
@@ -1228,13 +1690,18 @@ const unlockHasilAkhir =
               disabled
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-xs font-black uppercase tracking-widest text-amber-700 cursor-not-allowed"
             >
-              <Loader2 size={16} className="animate-spin" />
-              Menunggu Validasi Admin
+              <Loader2
+                size={16}
+                className="animate-spin"
+              />
+              Menunggu Validasi
+              Admin
             </button>
           ) : pembayaranDitolak ? (
             <div className="grid grid-cols-1 gap-3">
               <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-[11px] font-bold text-red-700 leading-relaxed">
-                Pembayaran ditolak admin.
+                Pembayaran ditolak
+                admin.
                 {pembayaranData?.catatan_admin
                   ? ` Catatan: ${pembayaranData.catatan_admin}`
                   : " Silakan lakukan pembayaran ulang."}
@@ -1242,90 +1709,99 @@ const unlockHasilAkhir =
 
               <button
                 type="button"
-                onClick={() => pergiBayar(item)}
+                onClick={() =>
+                  pergiBayar(item)
+                }
                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
               >
-                <CreditCard size={16} />
+                <CreditCard
+                  size={16}
+                />
                 Bayar Ulang
               </button>
             </div>
           ) : sudahPaid ? (
             <div className="grid grid-cols-1 gap-3">
               <ActionButton
-                title={isApl01Done ? "Lihat APL01" : "Isi APL01"}
-                onClick={() => pergiAPL01(item)}
-                />
+                title={
+                  isApl01Done
+                    ? "Lihat APL01"
+                    : "Isi APL01"
+                }
+                onClick={() =>
+                  pergiAPL01(item)
+                }
+              />
 
               {unlockApl02 ? (
-                <ActionButton 
-                  title="Isi / Lihat APL02" 
-                  onClick={() => pergiAPL02(item)} 
+                <ActionButton
+                  title="Isi / Lihat APL02"
+                  onClick={() =>
+                    pergiAPL02(item)
+                  }
                 />
               ) : (
-                <LockedMessage text="APL02 akan tersedia setelah APL01 selesai disubmit." />
+                <LockedMessage
+                  text="APL02 akan tersedia setelah APL01 selesai disubmit."
+                />
               )}
 
-              {console.log("RENDER", unlockPresensi)}
-
-              {/* Syarat Presensi: APL01 dan APL02 harus Valid + Wajib Hari H */}
               {unlockPresensi ? (
+                <ActionButton
+                  title="Presensi Ujian"
+                  onClick={() =>
+                    pergiPresensi(item)
+                  }
+                />
+              ) : (
+                <LockedMessage
+                  text="Presensi akan terbuka setelah APL01 dan APL02 selesai serta jadwal ujian sudah dimulai."
+                />
+              )}
 
-<ActionButton
-    title="Presensi Ujian"
-    onClick={() => pergiPresensi(item)}
-/>
-
-) : (
-
-<LockedMessage
-text="Presensi akan terbuka setelah APL01 dan APL02 selesai serta jadwal ujian sudah dimulai."
-/>
-
-)}
-
-{/* ================= FR.IA.05 ================= */}
-
-{unlockFRIA05 ? (
-
-    fria05Submitted ? (
-
-        <LockedMessage
-            text="FR.IA.05 telah disubmit. Menunggu penilaian asesor."
-        />
-
-    ) : (
-
-        <ActionButton
-    title="Mulai FR.IA.05"
-    onClick={() => pergiFRIA05(item)}
-/>
-
-    )
-
-) : (
-
-    <LockedMessage
-        text="FR.IA.05 akan terbuka setelah Anda melakukan presensi."
-    />
-
-)}
+              {unlockFRIA05 ? (
+                fria05Submitted ? (
+                  <LockedMessage
+                    text="FR.IA.05 telah disubmit. Menunggu penilaian asesor."
+                  />
+                ) : (
+                  <ActionButton
+                    title="Mulai FR.IA.05"
+                    onClick={() =>
+                      pergiFRIA05(item)
+                    }
+                  />
+                )
+              ) : (
+                <LockedMessage
+                  text="FR.IA.05 akan terbuka setelah Anda melakukan presensi."
+                />
+              )}
 
               {unlockHasilAkhir ? (
                 <ActionButton
                   title="Lihat Hasil Akhir"
-                  onClick={() => pergiHasilAkhir(item)}
+                  onClick={() =>
+                    pergiHasilAkhir(item)
+                  }
                 />
               ) : (
-                <LockedMessage text="Hasil akhir akan diumumkan setelah asesor menyelesaikan penilaian FR.IA.05." />
+                <LockedMessage
+                  text="Hasil akhir akan diumumkan setelah asesor menyelesaikan penilaian FR.IA.05."
+                />
               )}
             </div>
           ) : (
             <button
               type="button"
-              onClick={() => pergiBayar(item)}
+              onClick={() =>
+                pergiBayar(item)
+              }
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
             >
-              <CreditCard size={16} />
+              <CreditCard
+                size={16}
+              />
               Bayar Sekarang
             </button>
           )}
@@ -1340,10 +1816,15 @@ function LoadingScreen() {
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-5">
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl p-10 text-center max-w-sm w-full">
         <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
-          <Loader2 className="animate-spin text-white" size={34} />
+          <Loader2
+            className="animate-spin text-white"
+            size={34}
+          />
         </div>
 
-        <h2 className="text-[#071E3D] font-black text-xl">Memuat Jadwal</h2>
+        <h2 className="text-[#071E3D] font-black text-xl">
+          Memuat Jadwal
+        </h2>
 
         <p className="text-slate-500 text-sm mt-2 font-medium">
           Mengambil data jadwal sertifikasi Anda.
@@ -1353,7 +1834,11 @@ function LoadingScreen() {
   );
 }
 
-function MiniStat({ icon, label, value }) {
+function MiniStat({
+  icon,
+  label,
+  value,
+}) {
   return (
     <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
       <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
@@ -1364,36 +1849,52 @@ function MiniStat({ icon, label, value }) {
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           {label}
         </p>
-        <p className="text-[#071E3D] font-black mt-1 truncate">{value}</p>
+
+        <p className="text-[#071E3D] font-black mt-1 truncate">
+          {value}
+        </p>
       </div>
     </div>
   );
 }
 
-function HeroPill({ label, value }) {
+function HeroPill({
+  label,
+  value,
+}) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
       <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
         {label}
       </p>
 
-      <p className="mt-1 text-sm font-black text-white">{value}</p>
+      <p className="mt-1 text-sm font-black text-white">
+        {value}
+      </p>
     </div>
   );
 }
 
-function StatusBadge({ type = "light", label }) {
+function StatusBadge({
+  type = "light",
+  label,
+}) {
   const styles = {
-    success: "bg-green-50 text-green-600",
-    warning: "bg-amber-50 text-amber-600",
-    danger: "bg-red-50 text-red-600",
-    light: "bg-slate-50 text-slate-500",
+    success:
+      "bg-green-50 text-green-600",
+    warning:
+      "bg-amber-50 text-amber-600",
+    danger:
+      "bg-red-50 text-red-600",
+    light:
+      "bg-slate-50 text-slate-500",
   };
 
   return (
     <span
       className={`inline-flex items-center rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
-        styles[type] || styles.light
+        styles[type] ||
+        styles.light
       }`}
     >
       {label}
@@ -1401,7 +1902,11 @@ function StatusBadge({ type = "light", label }) {
   );
 }
 
-function DetailItem({ icon, label, value }) {
+function DetailItem({
+  icon,
+  label,
+  value,
+}) {
   return (
     <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-4">
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
@@ -1419,7 +1924,11 @@ function DetailItem({ icon, label, value }) {
   );
 }
 
-function ActionButton({ title, onClick, disabled = false }) {
+function ActionButton({
+  title,
+  onClick,
+  disabled = false,
+}) {
   return (
     <button
       type="button"
@@ -1437,33 +1946,53 @@ function ActionButton({ title, onClick, disabled = false }) {
   );
 }
 
-function LockedMessage({ text }) {
+function LockedMessage({
+  text,
+}) {
   return (
     <div className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3.5 text-[11px] font-bold text-slate-500 text-center leading-relaxed">
-      <Lock size={14} className="shrink-0 text-slate-400" />
+      <Lock
+        size={14}
+        className="shrink-0 text-slate-400"
+      />
       {text}
     </div>
   );
 }
 
-function ErrorAlert({ message }) {
+function ErrorAlert({
+  message,
+}) {
   return (
     <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-4 text-sm font-semibold flex items-center gap-3 text-red-600">
-      <AlertCircle size={20} className="shrink-0" />
-      <span>{message}</span>
+      <AlertCircle
+        size={20}
+        className="shrink-0"
+      />
+      <span>
+        {message}
+      </span>
     </div>
   );
 }
 
-function EmptyState({ search }) {
+function EmptyState({
+  search,
+}) {
   return (
     <div className="rounded-[32px] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
       <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-        {search ? <XCircle size={30} /> : <Inbox size={30} />}
+        {search ? (
+          <XCircle size={30} />
+        ) : (
+          <Inbox size={30} />
+        )}
       </div>
 
       <h3 className="text-2xl font-black text-[#071E3D]">
-        {search ? "Jadwal Tidak Ditemukan" : "Belum Ada Jadwal"}
+        {search
+          ? "Jadwal Tidak Ditemukan"
+          : "Belum Ada Jadwal"}
       </h3>
 
       <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">

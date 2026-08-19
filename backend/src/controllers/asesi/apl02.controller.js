@@ -38,47 +38,49 @@ exports.getFormApl02 = async (req, res) => {
     }
 
     const units = await SkemaUnit.findAll({
-      where: {
-        id_skema
-      },
+  where: {
+    id_skema
+  },
+  include: [
+    {
+      model: UnitKompetensi,
+      as: "unit",
       include: [
         {
-          model: UnitKompetensi,
-          as: "unit",
+          model: UnitElemen,
+          as: "elemen",
           include: [
             {
-              model: UnitElemen,
-              include: [
-                {
-                  model: UnitKuk
-                }
-              ]
+              model: UnitKuk,
+              as: "kuk"
             }
           ]
         }
-      ],
-      order: [
-        ["urutan", "ASC"],
-        [
-          { model: UnitKompetensi, as: "unit" },
-          "id_unit",
-          "ASC"
-        ],
-        [
-          { model: UnitKompetensi, as: "unit" },
-          { model: UnitElemen },
-          "urutan",
-          "ASC"
-        ],
-        [
-          { model: UnitKompetensi, as: "unit" },
-          { model: UnitElemen },
-          { model: UnitKuk },
-          "urutan",
-          "ASC"
-        ]
       ]
-    });
+    }
+  ],
+  order: [
+    ["urutan", "ASC"],
+    [
+      { model: UnitKompetensi, as: "unit" },
+      "id_unit",
+      "ASC"
+    ],
+    [
+      { model: UnitKompetensi, as: "unit" },
+      { model: UnitElemen, as: "elemen" },
+      "urutan",
+      "ASC"
+    ],
+    [
+      { model: UnitKompetensi, as: "unit" },
+      { model: UnitElemen, as: "elemen" },
+      { model: UnitKuk, as: "kuk" },
+      "urutan",
+      "ASC"
+    ]
+  ]
+});
 
     return res.status(200).json({
       success: true,

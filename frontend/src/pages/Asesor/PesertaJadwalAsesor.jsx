@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import Swal from "sweetalert2";
 import SidebarAsesor from "../../components/sidebar/SidebarAsesor";
 import {
   ArrowLeft,
@@ -30,6 +31,7 @@ export default function PesertaJadwalAsesor() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("semua");
   const [loading, setLoading] = useState(false);
+  const [checkingPesertaId, setCheckingPesertaId] = useState(null);
   const [error, setError] = useState("");
 
   const displayName = getDisplayName();
@@ -57,6 +59,75 @@ export default function PesertaJadwalAsesor() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleKelolaAsesmen = async (peserta) => {
+    const pesertaId = getPesertaJadwalId(peserta);
+
+    try {
+      setCheckingPesertaId(pesertaId);
+
+      const response = await api.get(
+        `/asesor/presensi/cek?id_jadwal=${peserta.id_jadwal}`
+      );
+
+      if (response.data?.hadir) {
+        navigate(
+          `/asesor/jadwal-saya/${peserta.id_jadwal}/peserta/${peserta.id_peserta}`
+        );
+        return;
+      }
+
+      const result = await Swal.fire({
+        icon: "warning",
+        title: "Presensi Diperlukan",
+        text: "Anda belum melakukan presensi. Silakan lakukan presensi terlebih dahulu sebelum mengelola asesmen.",
+        showCancelButton: true,
+        confirmButtonText: "Presensi Sekarang",
+        cancelButtonText: "Nanti",
+        confirmButtonColor: "#F97316",
+        cancelButtonColor: "#64748B",
+        reverseButtons: true,
+        buttonsStyling: true,
+      });
+
+      if (result.isConfirmed) {
+        navigate(
+          `/asesor/presensi/${peserta.id_jadwal}`
+        );
+      }
+    } catch (err) {
+      console.error(
+        "CHECK PRESENSI ERROR:",
+        err
+      );
+
+      const status = err.response?.status;
+      const message =
+        err.response?.data?.message ||
+        "Tidak dapat memeriksa status presensi.";
+
+      if (status === 401) {
+        await Swal.fire({
+          icon: "warning",
+          title: "Sesi Berakhir",
+          text: "Sesi login kamu sudah berakhir. Silakan login kembali.",
+          confirmButtonColor: "#F97316",
+        });
+
+        navigate("/login");
+        return;
+      }
+
+      await Swal.fire({
+        icon: "error",
+        title: "Presensi Tidak Dapat Diperiksa",
+        text: message,
+        confirmButtonColor: "#F97316",
+      });
+    } finally {
+      setCheckingPesertaId(null);
     }
   };
 
@@ -108,20 +179,23 @@ export default function PesertaJadwalAsesor() {
 
   const totalKompeten = pesertaList.filter(
     (item) =>
-      normalizeStatusAsesmen(item.status_asesmen) ===
-      "kompeten"
+      normalizeStatusAsesmen(
+        item.status_asesmen
+      ) === "kompeten"
   ).length;
 
   const totalBelumKompeten = pesertaList.filter(
     (item) =>
-      normalizeStatusAsesmen(item.status_asesmen) ===
-      "belum_kompeten"
+      normalizeStatusAsesmen(
+        item.status_asesmen
+      ) === "belum_kompeten"
   ).length;
 
   const totalBelumDinilai = pesertaList.filter(
     (item) =>
-      normalizeStatusAsesmen(item.status_asesmen) ===
-      "belum_dinilai"
+      normalizeStatusAsesmen(
+        item.status_asesmen
+      ) === "belum_dinilai"
   ).length;
 
   const jadwalInfo =
@@ -390,6 +464,12 @@ export default function PesertaJadwalAsesor() {
                   )}-${index}`}
                   peserta={peserta}
                   index={index}
+                  onKelolaAsesmen={
+                    handleKelolaAsesmen
+                  }
+                  checkingPesertaId={
+                    checkingPesertaId
+                  }
                 />
               ))
             )}
@@ -400,7 +480,12 @@ export default function PesertaJadwalAsesor() {
   );
 }
 
-function PesertaCard({ peserta, index }) {
+function PesertaCard({
+  peserta,
+  index,
+  onKelolaAsesmen,
+  checkingPesertaId,
+}) {
   const nama = getNamaPeserta(peserta);
   const email =
     peserta.email ||
@@ -443,6 +528,14 @@ function PesertaCard({ peserta, index }) {
   const totalSelesai = daftarForm.filter(
     (key) => Boolean(kelengkapan[key])
   ).length;
+
+  const pesertaId = getPesertaJadwalId(
+    peserta
+  );
+
+  const checking =
+    Number(checkingPesertaId) ===
+    Number(pesertaId);
 
   return (
     <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
@@ -487,12 +580,22 @@ function PesertaCard({ peserta, index }) {
             <button
               type="button"
               onClick={() =>
-                window.location.href = `/asesor/jadwal-saya/${peserta.id_jadwal}/peserta/${peserta.id_peserta}`
+                onKelolaAsesmen(peserta)
               }
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+              disabled={checking}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
             >
-              <FileText size={17} />
-              Kelola Asesmen
+              {checking ? (
+                <Loader2
+                  size={17}
+                  className="animate-spin"
+                />
+              ) : (
+                <FileText size={17} />
+              )}
+              {checking
+                ? "Memeriksa..."
+                : "Kelola Asesmen"}
             </button>
           </div>
         </div>
@@ -502,7 +605,8 @@ function PesertaCard({ peserta, index }) {
             icon={<UserCheck size={18} />}
             label="ID Peserta"
             value={
-              getPesertaJadwalId(peserta) || "-"
+              getPesertaJadwalId(peserta) ||
+              "-"
             }
           />
 
@@ -603,7 +707,8 @@ function PesertaCard({ peserta, index }) {
             label="Nilai Akhir"
             value={
               keputusan?.nilai_akhir !== null &&
-              keputusan?.nilai_akhir !== undefined &&
+              keputusan?.nilai_akhir !==
+                undefined &&
               keputusan?.nilai_akhir !== ""
                 ? keputusan.nilai_akhir
                 : peserta.nilai_akhir || "-"
