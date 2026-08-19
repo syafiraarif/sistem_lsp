@@ -117,8 +117,14 @@ exports.create = async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const { id_skema, id_kelompok, id_skkni, kode_unit, judul_unit, urutan } =
-      req.body;
+    const {
+      id_skema,
+      id_kelompok,
+      id_skkni,
+      kode_unit,
+      judul_unit,
+      urutan,
+    } = req.body;
 
     if (!id_skema) {
       await t.rollback();
@@ -137,7 +143,29 @@ exports.create = async (req, res) => {
 
     if (!kode_unit || !judul_unit) {
       await t.rollback();
-      return response.error(res, "Kode unit dan judul unit wajib diisi", 400);
+      return response.error(
+        res,
+        "Kode unit dan judul unit wajib diisi",
+        400
+      );
+    }
+
+    const kodeUnit = String(kode_unit).trim();
+
+    const existingUnit = await UnitKompetensi.findOne({
+      where: {
+        kode_unit: kodeUnit,
+      },
+      transaction: t,
+    });
+
+    if (existingUnit) {
+      await t.rollback();
+      return response.error(
+        res,
+        `Kode unit "${kodeUnit}" sudah digunakan. Silakan gunakan kode unit lain.`,
+        409
+      );
     }
 
     const kelompok = await validateKelompokInSkema({
@@ -149,7 +177,7 @@ exports.create = async (req, res) => {
     const data = await UnitKompetensi.create(
       {
         id_skkni: toNumberOrNull(id_skkni),
-        kode_unit: String(kode_unit).trim(),
+        kode_unit: kodeUnit,
         judul_unit: String(judul_unit).trim(),
       },
       { transaction: t }
@@ -167,11 +195,33 @@ exports.create = async (req, res) => {
 
     await t.commit();
 
-    return response.success(res, "Unit kompetensi berhasil dibuat", data);
+    return response.success(
+      res,
+      "Unit kompetensi berhasil dibuat",
+      data
+    );
   } catch (err) {
     await t.rollback();
+
     console.error("CREATE UNIT ERROR:", err);
-    return response.error(res, "Gagal menambahkan unit: " + err.message, 500);
+
+    if (err.name === "SequelizeUniqueConstraintError") {
+      const field = err.errors?.[0]?.path;
+
+      if (field === "kode_unit") {
+        return response.error(
+          res,
+          "Kode unit tersebut sudah digunakan. Silakan gunakan kode unit lain.",
+          409
+        );
+      }
+    }
+
+    return response.error(
+      res,
+      "Gagal menambahkan unit: " + err.message,
+      500
+    );
   }
 };
 
@@ -273,11 +323,21 @@ exports.update = async (req, res) => {
 
     if (!data) {
       await t.rollback();
-      return response.error(res, "Unit kompetensi tidak ditemukan", 404);
+      return response.error(
+        res,
+        "Unit kompetensi tidak ditemukan",
+        404
+      );
     }
 
-    const { id_skema, id_kelompok, id_skkni, kode_unit, judul_unit, urutan } =
-      req.body;
+    const {
+      id_skema,
+      id_kelompok,
+      id_skkni,
+      kode_unit,
+      judul_unit,
+      urutan,
+    } = req.body;
 
     if (!id_skema) {
       await t.rollback();
@@ -286,17 +346,50 @@ exports.update = async (req, res) => {
 
     if (!id_kelompok) {
       await t.rollback();
-      return response.error(res, "Kelompok pekerjaan wajib dipilih", 400);
+      return response.error(
+        res,
+        "Kelompok pekerjaan wajib dipilih",
+        400
+      );
     }
 
     if (!id_skkni) {
       await t.rollback();
-      return response.error(res, "SKKNI wajib dipilih", 400);
+      return response.error(
+        res,
+        "SKKNI wajib dipilih",
+        400
+      );
     }
 
     if (!kode_unit || !judul_unit) {
       await t.rollback();
-      return response.error(res, "Kode unit dan judul unit wajib diisi", 400);
+      return response.error(
+        res,
+        "Kode unit dan judul unit wajib diisi",
+        400
+      );
+    }
+
+    const kodeUnit = String(kode_unit).trim();
+
+    const existingUnit = await UnitKompetensi.findOne({
+      where: {
+        kode_unit: kodeUnit,
+      },
+      transaction: t,
+    });
+
+    if (
+      existingUnit &&
+      Number(existingUnit.id_unit) !== Number(req.params.id)
+    ) {
+      await t.rollback();
+      return response.error(
+        res,
+        `Kode unit "${kodeUnit}" sudah digunakan oleh unit lain.`,
+        409
+      );
     }
 
     const kelompok = await validateKelompokInSkema({
@@ -308,7 +401,7 @@ exports.update = async (req, res) => {
     await data.update(
       {
         id_skkni: toNumberOrNull(id_skkni),
-        kode_unit: String(kode_unit).trim(),
+        kode_unit: kodeUnit,
         judul_unit: String(judul_unit).trim(),
       },
       { transaction: t }
@@ -326,7 +419,10 @@ exports.update = async (req, res) => {
       await existingLink.update(
         {
           id_kelompok: kelompok.id_kelompok,
-          urutan: toNumberOrNull(urutan) || existingLink.urutan || 1,
+          urutan:
+            toNumberOrNull(urutan) ||
+            existingLink.urutan ||
+            1,
         },
         { transaction: t }
       );
@@ -344,11 +440,33 @@ exports.update = async (req, res) => {
 
     await t.commit();
 
-    return response.success(res, "Unit kompetensi berhasil diperbarui", data);
+    return response.success(
+      res,
+      "Unit kompetensi berhasil diperbarui",
+      data
+    );
   } catch (err) {
     await t.rollback();
+
     console.error("UPDATE UNIT ERROR:", err);
-    return response.error(res, err.message);
+
+    if (err.name === "SequelizeUniqueConstraintError") {
+      const field = err.errors?.[0]?.path;
+
+      if (field === "kode_unit") {
+        return response.error(
+          res,
+          "Kode unit tersebut sudah digunakan oleh unit lain.",
+          409
+        );
+      }
+    }
+
+    return response.error(
+      res,
+      "Gagal memperbarui unit: " + err.message,
+      500
+    );
   }
 };
 

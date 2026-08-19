@@ -585,7 +585,11 @@ const UnitKompetensi = () => {
     e.preventDefault();
 
     if (!selectedSkemaId) {
-      return Swal.fire("Validasi Gagal", "Skema wajib dipilih", "warning");
+      return Swal.fire(
+        "Validasi Gagal",
+        "Skema wajib dipilih",
+        "warning"
+      );
     }
 
     if (!formUnit.id_kelompok) {
@@ -612,10 +616,33 @@ const UnitKompetensi = () => {
       );
     }
 
+    const kodeUnit = String(formUnit.kode_unit).trim();
+
+    const duplicateUnit = unitList.find((unit) => {
+      const unitId = getUnitId(unit);
+
+      return (
+        String(unit.kode_unit || "").trim().toLowerCase() ===
+          kodeUnit.toLowerCase() &&
+        (!isEditingUnit || Number(unitId) !== Number(editUnitId))
+      );
+    });
+
+    if (duplicateUnit) {
+      return Swal.fire({
+        title: "Kode Unit Sudah Digunakan",
+        html: `Kode unit <strong>${kodeUnit}</strong> sudah terdaftar.<br />Silakan gunakan kode unit yang berbeda.`,
+        icon: "warning",
+        confirmButtonColor: "#CC6B27",
+      });
+    }
+
     const confirmResult = await Swal.fire({
       title: "Konfirmasi Simpan",
       text: `Yakin ingin ${
-        isEditingUnit ? "menyimpan perubahan" : "menambahkan"
+        isEditingUnit
+          ? "menyimpan perubahan"
+          : "menambahkan"
       } unit kompetensi ini?`,
       icon: "question",
       showCancelButton: true,
@@ -623,7 +650,9 @@ const UnitKompetensi = () => {
       cancelButtonText: "Batal",
     });
 
-    if (!confirmResult.isConfirmed) return;
+    if (!confirmResult.isConfirmed) {
+      return;
+    }
 
     setLoading(true);
 
@@ -632,18 +661,24 @@ const UnitKompetensi = () => {
         id_skema: selectedSkemaId,
         id_kelompok: formUnit.id_kelompok,
         id_skkni: formUnit.id_skkni,
-        kode_unit: formUnit.kode_unit,
-        judul_unit: formUnit.judul_unit,
+        kode_unit: kodeUnit,
+        judul_unit: formUnit.judul_unit.trim(),
         urutan: formUnit.urutan,
       };
 
       if (isEditingUnit) {
-        await api.put(`/admin/unit-kompetensi/${editUnitId}`, payload);
+        await api.put(
+          `/admin/unit-kompetensi/${editUnitId}`,
+          payload
+        );
       } else {
-        await api.post("/admin/unit-kompetensi", payload);
+        await api.post(
+          "/admin/unit-kompetensi",
+          payload
+        );
       }
 
-      Swal.fire({
+      await Swal.fire({
         title: "Berhasil",
         text: isEditingUnit
           ? "Unit kompetensi diperbarui"
@@ -657,11 +692,26 @@ const UnitKompetensi = () => {
       await fetchUnits();
     } catch (error) {
       console.error(error);
-      Swal.fire(
-        "Gagal",
-        error.response?.data?.message || "Terjadi kesalahan",
-        "error"
-      );
+
+      const status = error.response?.status;
+      const message =
+        error.response?.data?.message ||
+        "Terjadi kesalahan saat menyimpan unit kompetensi";
+
+      if (status === 409) {
+        await Swal.fire({
+          title: "Kode Unit Sudah Digunakan",
+          text: message,
+          icon: "warning",
+          confirmButtonColor: "#CC6B27",
+        });
+      } else {
+        await Swal.fire(
+          "Gagal",
+          message,
+          "error"
+        );
+      }
     } finally {
       setLoading(false);
     }

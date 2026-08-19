@@ -187,75 +187,34 @@ export default function PresensiAsesor() {
     // =====================================================
 
     const getPeserta = async () => {
-        try {
-            const response = await api.get(
-                `/asesor/jadwal/${id_jadwal}/peserta`
-            );
+    try {
+        const response = await api.get(
+            `/asesor/jadwal/${id_jadwal}/peserta`
+        );
 
-            const data =
-                response.data?.data ||
-                response.data ||
-                [];
+        const data =
+            response.data?.data ||
+            response.data ||
+            [];
 
-            const list = Array.isArray(data)
-                ? data
-                : [];
+        const list = Array.isArray(data)
+            ? data
+            : [];
 
-            /*
-             * =================================================
-             * PENTING
-             * =================================================
-             *
-             * Hanya peserta yang ditugaskan kepada
-             * asesor yang sedang login yang dihitung.
-             *
-             * Database:
-             *
-             * peserta.id_asesor
-             *
-             * harus sama dengan:
-             *
-             * user.id_user
-             *
-             * dari localStorage.
-             */
+        return {
+            all: list,
+            milikAsesor: list,
+        };
+    } catch (error) {
+        console.error(
+            "Gagal mengambil peserta jadwal:",
+            error.response?.data ||
+                error.message
+        );
 
-            const currentUserId =
-                getCurrentUserId();
-
-            if (!currentUserId) {
-                console.warn(
-                    "ID user asesor tidak ditemukan di localStorage."
-                );
-
-                return {
-                    all: list,
-                    milikAsesor: [],
-                };
-            }
-
-            const pesertaMilikAsesor =
-                list.filter(
-                    (item) =>
-                        Number(item.id_asesor) ===
-                        Number(currentUserId)
-                );
-
-            return {
-                all: list,
-                milikAsesor:
-                    pesertaMilikAsesor,
-            };
-        } catch (error) {
-            console.error(
-                "Gagal mengambil peserta jadwal:",
-                error.response?.data ||
-                    error.message
-            );
-
-            throw error;
-        }
-    };
+        throw error;
+    }
+};
 
     // =====================================================
     // LOAD SEMUA DATA

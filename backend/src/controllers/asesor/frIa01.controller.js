@@ -6,6 +6,7 @@ const {
   FrIa01,
   FrIa01Detail,
   Jadwal,
+  JadwalAsesor,
   PesertaJadwal,
   ProfileAsesor,
   ProfileAsesi,
@@ -400,6 +401,21 @@ exports.getByPeserta = async (req, res) => {
       });
     }
 
+    const tugasAsesor = await JadwalAsesor.findOne({
+      where: {
+        id_jadwal,
+        id_user: id_asesor,
+        jenis_tugas: "asesor_penguji",
+        status: "aktif",
+      },
+    });
+
+    if (!tugasAsesor) {
+      return res.status(403).json({
+        message: "Anda bukan asesor penguji pada jadwal ini",
+      });
+    }
+
     const context = await buildContext({
       id_jadwal,
       id_peserta,
@@ -414,15 +430,7 @@ exports.getByPeserta = async (req, res) => {
 
     if (!context.peserta) {
       return res.status(404).json({
-        message:
-          "Peserta tidak ditemukan pada jadwal tersebut",
-      });
-    }
-
-    if (Number(context.peserta.id_asesor) !== id_asesor) {
-      return res.status(403).json({
-        message:
-          "Peserta bukan tanggung jawab asesor",
+        message: "Peserta tidak ditemukan pada jadwal tersebut",
       });
     }
 
@@ -430,11 +438,8 @@ exports.getByPeserta = async (req, res) => {
       where: {
         id_jadwal,
         id_peserta,
-        id_asesor,
       },
-      order: [
-        ["id_fr_ia_01", "DESC"],
-      ],
+      order: [["id_fr_ia_01", "DESC"]],
     });
 
     if (!existing) {
@@ -452,9 +457,7 @@ exports.getByPeserta = async (req, res) => {
       where: {
         id_fr_ia_01: existing.id_fr_ia_01,
       },
-      order: [
-        ["id_detail", "ASC"],
-      ],
+      order: [["id_detail", "ASC"]],
     });
 
     return res.json(
@@ -465,12 +468,9 @@ exports.getByPeserta = async (req, res) => {
       })
     );
   } catch (err) {
-    console.error(
-      "GET FR.IA.01 ERROR:",
-      err
-    );
+    console.error("GET FR.IA.01 ERROR:", err);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
       error: err.message,
     });
@@ -517,16 +517,31 @@ exports.create = async (req, res) => {
       where: {
         id_peserta,
         id_jadwal,
-        id_asesor,
       },
     });
 
     if (!peserta) {
       await transaction.rollback();
 
+      return res.status(404).json({
+        message: "Peserta tidak ditemukan pada jadwal tersebut",
+      });
+    }
+
+    const tugasAsesor = await JadwalAsesor.findOne({
+      where: {
+        id_jadwal,
+        id_user: id_asesor,
+        jenis_tugas: "asesor_penguji",
+        status: "aktif",
+      },
+    });
+
+    if (!tugasAsesor) {
+      await transaction.rollback();
+
       return res.status(403).json({
-        message:
-          "Peserta bukan tanggung jawab asesor",
+        message: "Anda bukan asesor penguji pada jadwal ini",
       });
     }
 
@@ -534,7 +549,6 @@ exports.create = async (req, res) => {
       where: {
         id_jadwal,
         id_peserta,
-        id_asesor,
       },
     });
 

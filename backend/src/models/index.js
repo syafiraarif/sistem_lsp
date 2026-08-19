@@ -1012,21 +1012,24 @@ UnitKompetensi.hasMany(BankSoal, {
 // =====================================================
 
 UnitKompetensi.hasMany(UnitElemen, {
-  foreignKey: "id_unit"
+  foreignKey: "id_unit",
+  as: "elemen"
 });
 
 UnitElemen.belongsTo(UnitKompetensi, {
-  foreignKey: "id_unit"
+  foreignKey: "id_unit",
+  as: "unit"
 });
 
 UnitElemen.hasMany(UnitKuk, {
-  foreignKey: "id_elemen"
+  foreignKey: "id_elemen",
+  as: "kuk"
 });
 
 UnitKuk.belongsTo(UnitElemen, {
-  foreignKey: "id_elemen"
+  foreignKey: "id_elemen",
+  as: "elemen"
 });
-
 // =====================================================
 // SKEMA - UNIT
 // =====================================================

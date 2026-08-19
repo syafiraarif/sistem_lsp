@@ -106,16 +106,30 @@ const PesertaJadwal = () => {
 
   // Helper untuk mendapatkan nama Asesor di Dropdown
   const getDropdownAsesorName = (itemJadwalAsesor) => {
-    const user = itemJadwalAsesor.asesor || {};
-    const profile = item.profileAsesor || {};
-    
-    if (profile.nama_lengkap) return profile.nama_lengkap;
-    if (user.nama) return user.nama;
-    if (user.username && !/^\d+$/.test(user.username)) return user.username;
-    
-    // Fallback terakhir jika profil benar-benar kosong
-    return user.username ? `Asesor (${user.username})` : 'Tanpa Nama';
-  };
+  if (!itemJadwalAsesor) return 'Tanpa Nama';
+
+  const user = itemJadwalAsesor.asesor || {};
+  const profile =
+    itemJadwalAsesor.profileAsesor ||
+    itemJadwalAsesor.ProfileAsesor ||
+    {};
+
+  if (profile.nama_lengkap) {
+    return profile.nama_lengkap;
+  }
+
+  if (user.nama) {
+    return user.nama;
+  }
+
+  if (user.username && !/^\d+$/.test(user.username)) {
+    return user.username;
+  }
+
+  return user.username
+    ? `Asesor (${user.username})`
+    : 'Tanpa Nama';
+};
 
   // Helper untuk mendapatkan nama Asesor di baris tabel / Modal (dari data pesertaJadwal)
   const getAssignedAsesorName = (userPenguji) => {
