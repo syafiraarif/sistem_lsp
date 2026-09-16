@@ -3,6 +3,7 @@ const router = require("express").Router();
 const pendaftaran = require("../controllers/public/pendaftaran.controller");
 const pengaduan = require("../controllers/public/pengaduan.controller");
 const skema = require("../controllers/public/skema.controller");
+const statisticsController = require("../controllers/public/statistics.controller");
 const { publicFormLimiter } = require("../middlewares/rateLimit.middleware");
 const wilayah = require("../controllers/public/wilayah.controller");
 const ctrl = require("../controllers/public/surveillance.controller");
@@ -14,6 +15,8 @@ const feedbackController = require("../controllers/public/feedback.controller");
 
 router.post("/feedback", feedbackController.create);
 router.get("/feedback/active", feedbackController.getActiveFeedback);
+
+router.get("/statistics", statisticsController.getStatistics);
 
 router.get("/asesor", asesorController.getAllPublic);
 router.get("/asesor/:id", asesorController.getByIdPublic);

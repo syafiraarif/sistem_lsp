@@ -1,33 +1,71 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function LoginDropdown() {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const roles = ["Asesor", "Peserta (Asesi)", "Administrator", "Komite Teknis", "TUK"];
+  const roles = [
+    {
+      label: "Asesor",
+      role: "asesor"
+    },
+    {
+      label: "Peserta (Asesi)",
+      role: "asesi"
+    },
+    {
+      label: "Administrator",
+      role: "admin"
+    },
+    {
+      label: "Komite Teknis",
+      role: "asesor"
+    },
+    {
+      label: "TUK",
+      role: "tuk"
+    }
+  ];
+
+  const handleLogin = (role) => {
+    setOpen(false);
+    navigate("/login", {
+      state: {
+        role
+      }
+    });
+  };
 
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(!open)}
-        className="px-5 py-2 rounded-lg bg-orange-500 text-white font-semibold hover:bg-orange-600 transition-all"
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="rounded-lg bg-orange-500 px-5 py-2 font-semibold text-white transition-all hover:bg-orange-600"
       >
         Login
       </button>
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)}></div>
-          <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
-            {roles.map((role, index) => (
-              <Link
-                key={index}
-                to="/login"
-                onClick={() => setOpen(false)}
-                className="block px-5 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+          <button
+            type="button"
+            aria-label="Tutup menu login"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-40 h-full w-full cursor-default"
+          />
+
+          <div className="absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+            {roles.map((item, index) => (
+              <button
+                key={`${item.role}-${index}`}
+                type="button"
+                onClick={() => handleLogin(item.role)}
+                className="block w-full px-5 py-3 text-left text-sm text-gray-700 transition-colors hover:bg-orange-50 hover:text-orange-600"
               >
-                Login sebagai {role}
-              </Link>
+                Login sebagai {item.label}
+              </button>
             ))}
           </div>
         </>

@@ -1,127 +1,144 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { Users, Building2, ClipboardCheck, GraduationCap } from "lucide-react";
+import api from "../../services/api";
 
 const Counter = ({ value, duration = 2 }) => {
   const [count, setCount] = useState(0);
   const countRef = useRef(null);
   const isInView = useInView(countRef, { once: true });
 
-  const numericValue = parseInt(value.replace(/[^0-9]/g, ""));
-  const suffix = value.replace(/[0-9]/g, "");
-
   useEffect(() => {
-    if (isInView) {
-      let start = 0;
-      const end = numericValue;
-      const totalMs = duration * 1000;
-      const incrementTime = totalMs / end;
+    if (!isInView) return;
 
-      const timer = setInterval(() => {
-        start += Math.ceil(end / 100);
-        if (start >= end) {
-          setCount(end);
-          clearInterval(timer);
-        } else {
-          setCount(start);
-        }
-      }, incrementTime > 10 ? incrementTime : 10);
-
-      return () => clearInterval(timer);
+    if (value === 0) {
+      setCount(0);
+      return;
     }
-  }, [isInView, numericValue, duration]);
+
+    let start = 0;
+    const end = Number(value) || 0;
+    const totalMs = duration * 1000;
+    const incrementTime = Math.max(totalMs / end, 10);
+    const increment = Math.max(Math.ceil(end / 100), 1);
+
+    const timer = setInterval(() => {
+      start += increment;
+
+      if (start >= end) {
+        setCount(end);
+        clearInterval(timer);
+      } else {
+        setCount(start);
+      }
+    }, incrementTime);
+
+    return () => clearInterval(timer);
+  }, [isInView, value, duration]);
 
   return (
     <span ref={countRef}>
-      {count.toLocaleString()}
-      {suffix}
+      {count.toLocaleString("id-ID")}
     </span>
   );
 };
 
 export default function Statistics() {
+  const [statistics, setStatistics] = useState({
+    asesor: 0,
+    tuk: 0,
+    skema: 0,
+    asesi: 0
+  });
+
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      try {
+        const response = await api.get("/public/statistics");
+        const data = response.data?.data || {};
+
+        setStatistics({
+          asesor: Number(data.asesor) || 0,
+          tuk: Number(data.tuk) || 0,
+          skema: Number(data.skema) || 0,
+          asesi: Number(data.asesi) || 0
+        });
+      } catch (error) {
+        console.error("Gagal mengambil statistik SIMLSP:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStatistics();
+  }, []);
+
   const stats = [
     {
       id: 1,
-      value: "25+",
+      value: statistics.asesor,
       label: "Asesor Tersertifikasi",
-      icon: <GraduationCap size={30} />,
+      icon: <GraduationCap size={30} />
     },
     {
       id: 2,
-      value: "10",
+      value: statistics.tuk,
       label: "Tempat Uji Kompetensi",
-      icon: <Building2 size={30} />,
+      icon: <Building2 size={30} />
     },
     {
       id: 3,
-      value: "40",
+      value: statistics.skema,
       label: "Skema Sertifikasi",
-      icon: <ClipboardCheck size={30} />,
+      icon: <ClipboardCheck size={30} />
     },
     {
       id: 4,
-      value: "1200+",
+      value: statistics.asesi,
       label: "Peserta Tersertifikasi",
-      icon: <Users size={30} />,
-    },
+      icon: <Users size={30} />
+    }
   ];
 
   return (
-    <section className="relative bg-[#071E3D] py-32 overflow-hidden border-t border-white/5">
-      <div className="absolute -bottom-20 -right-20 w-[600px] h-[600px] bg-orange-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/4 -left-20 w-[500px] h-[500px] bg-blue-400/10 rounded-full blur-[130px] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:40px_40px] opacity-40" />
+    <section className="relative overflow-hidden border-t border-white/5 bg-[#071E3D] py-32">
+      <div className="pointer-events-none absolute -bottom-20 -right-20 h-[600px] w-[600px] rounded-full bg-orange-500/10 blur-[120px]" />
+      <div className="pointer-events-none absolute -left-20 top-1/4 h-[500px] w-[500px] rounded-full bg-blue-400/10 blur-[130px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] opacity-40 [background-size:40px_40px]" />
 
-      <div className="relative max-w-7xl mx-auto px-6 z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-20"
-        >
-          <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight">
+      <div className="relative z-10 mx-auto max-w-7xl px-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-20 text-center">
+          <h2 className="text-4xl font-black uppercase tracking-tight text-white md:text-5xl">
             Statistik <span className="text-orange-500">SIMLSP</span>
           </h2>
 
-          <div className="w-16 h-1.5 bg-orange-500 mx-auto mt-6 rounded-full" />
+          <div className="mx-auto mt-6 h-1.5 w-16 rounded-full bg-orange-500" />
 
-          <p className="mt-8 text-blue-100/60 text-lg max-w-2xl mx-auto font-medium">
+          <p className="mx-auto mt-8 max-w-2xl text-lg font-medium text-blue-100/60">
             Data capaian real-time pelaksanaan sertifikasi kompetensi nasional yang terukur dan akurat.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((item, index) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -10 }}
-              className="group relative bg-white/5 backdrop-blur-sm
-                         border border-white/10 rounded-3xl p-10
-                         text-center hover:bg-white/10
-                         hover:border-orange-500/50 transition-all duration-500"
-            >
+            <motion.div key={item.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.1 }} whileHover={{ y: -10 }} className="group relative rounded-3xl border border-white/10 bg-white/5 p-10 text-center backdrop-blur-sm transition-all duration-500 hover:border-orange-500/50 hover:bg-white/10">
+              <div className="absolute inset-0 rounded-3xl bg-orange-500/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
-              <div className="absolute inset-0 bg-orange-500/5 opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity duration-500" />
-              <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl
-                              bg-white/5 text-orange-500 mb-8
-                              group-hover:bg-orange-500 group-hover:text-white
-                              group-hover:rotate-6 transition-all duration-500 shadow-xl">
+              <div className="relative mb-8 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-white/5 text-orange-500 shadow-xl transition-all duration-500 group-hover:rotate-6 group-hover:bg-orange-500 group-hover:text-white">
                 {item.icon}
               </div>
 
-              <div className="relative text-5xl font-black text-white
-                              tracking-tighter mb-4">
-                <Counter value={item.value} />
+              <div className="relative mb-4 text-5xl font-black tracking-tighter text-white">
+                {loading ? (
+                  <span className="inline-block h-12 w-20 animate-pulse rounded-xl bg-white/10" />
+                ) : (
+                  <Counter value={item.value} />
+                )}
               </div>
 
-              <div className="relative text-blue-100/40
-                              font-black uppercase tracking-[0.2em] text-[10px]
-                              group-hover:text-blue-100/70 transition-colors duration-500">
+              <div className="relative text-[10px] font-black uppercase tracking-[0.2em] text-blue-100/40 transition-colors duration-500 group-hover:text-blue-100/70">
                 {item.label}
               </div>
             </motion.div>

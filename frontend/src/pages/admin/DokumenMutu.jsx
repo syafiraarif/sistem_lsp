@@ -1,8 +1,6 @@
-// frontend/src/pages/admin/DokumenMutu.jsx
-
-import React, { useState, useEffect } from "react";
-import Swal from "sweetalert2";
+import React, { useEffect, useState } from "react";
 import api from "../../services/api";
+import { notifikasi } from "../../components/ui/notifikasi";
 import {
   Search,
   Plus,
@@ -19,56 +17,52 @@ import {
   Sparkles,
   ClipboardList,
   BadgeCheck,
-  FileCheck2,
+  FileCheck2
 } from "lucide-react";
+
+const ALLOWED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const ALLOWED_FILE_EXTENSIONS = ["pdf", "jpg", "jpeg", "png"];
+const FILE_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
 
 const DokumenMutu = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterJenis, setFilterJenis] = useState("");
-
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
-
   const [pagination, setPagination] = useState({ page: 1, limit: 10 });
   const [errors, setErrors] = useState({});
 
-  // 🔥 STATE INITIAL FORM: Menambahkan field review
   const initialFormState = {
-    jenis_dokumen: "", 
+    jenis_dokumen: "",
     kategori: "",
     nama_dokumen: "",
     deskripsi: "",
     nomor_dokumen: "",
     nomor_revisi: "",
     penyusun: "",
-    review: "", // <- Tambahan Field Review
+    review: "",
     disahkan_oleh: "",
-    tanggal_dokumen: "",
+    tanggal_dokumen: ""
   };
 
   const [formData, setFormData] = useState(initialFormState);
-
   const [files, setFiles] = useState({
     file_dokumen: null,
-    file_pendukung: null,
+    file_pendukung: null
   });
-
   const [previewUrlUtama, setPreviewUrlUtama] = useState(null);
   const [showFullPreviewUtama, setShowFullPreviewUtama] = useState(false);
-
   const [previewUrlPendukung, setPreviewUrlPendukung] = useState(null);
   const [showFullPreviewPendukung, setShowFullPreviewPendukung] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
-
     try {
       const response = await api.get("/admin/dokumen-mutu");
       const resBody = response.data !== undefined ? response.data : response;
-
       let listData = [];
 
       if (Array.isArray(resBody.data)) {
@@ -82,13 +76,7 @@ const DokumenMutu = () => {
       setData(listData);
     } catch (error) {
       console.error("Error Fetching:", error);
-      Swal.fire({
-        title: "Gagal",
-        text:
-          error.response?.data?.message ||
-          "Gagal mengambil data dari server.",
-        icon: "error",
-      });
+      notifikasi.gagal("Gagal", error.response?.data?.message || "Gagal mengambil data dari server.");
     } finally {
       setLoading(false);
     }
@@ -101,32 +89,51 @@ const DokumenMutu = () => {
   const buildFileUrl = (path) => {
     if (!path) return null;
     if (path.startsWith("blob:") || path.startsWith("http")) return path;
-
     const cleanPath = path.replace(/^(\/?uploads\/|\/)/, "");
     return `http://localhost:3000/uploads/${cleanPath}`;
   };
 
+  const getFileName = (filename, fieldName) => {
+    if (files[fieldName]) return files[fieldName].name;
+    return filename || "";
+  };
+
+  const getFileExtension = (filename) => {
+    const cleanName = String(filename || "").split("?")[0];
+    const parts = cleanName.split(".");
+    return parts.length > 1 ? parts.pop().toLowerCase() : "";
+  };
+
   const isPdfFile = (filename, fieldName) => {
-    const checkName = files[fieldName] ? files[fieldName].name : filename;
-    return checkName && /\.(pdf)$/i.test(checkName);
+    return getFileExtension(getFileName(filename, fieldName)) === "pdf";
   };
 
   const isImageFile = (filename, fieldName) => {
-    const checkName = files[fieldName] ? files[fieldName].name : filename;
-    return checkName && /\.(jpg|jpeg|png|gif|webp)$/i.test(checkName);
+    return ["jpg", "jpeg", "png"].includes(getFileExtension(getFileName(filename, fieldName)));
   };
 
-  const isPreviewable = (filename, fieldName) =>
-    isPdfFile(filename, fieldName) || isImageFile(filename, fieldName);
+  const isPreviewable = (filename, fieldName) => {
+    return isPdfFile(filename, fieldName) || isImageFile(filename, fieldName);
+  };
+
+  const validateDocumentFile = (file, label) => {
+    if (!file) return null;
+
+    const extension = getFileExtension(file.name);
+    const validExtension = ALLOWED_FILE_EXTENSIONS.includes(extension);
+    const validMimeType = ALLOWED_FILE_TYPES.includes(file.type);
+
+    if (!validExtension || !validMimeType) {
+      return `${label} hanya boleh berupa PDF, JPG, JPEG, atau PNG.`;
+    }
+
+    return null;
+  };
 
   const validateInput = (name, value) => {
     let errorMsg = "";
 
-    if (
-      typeof value === "string" &&
-      value.trim().length > 0 &&
-      value.trim().length <= 3
-    ) {
+    if (typeof value === "string" && value.trim().length > 0 && value.trim().length <= 3) {
       errorMsg = "Terlalu pendek (minimal 4 karakter).";
     }
 
@@ -136,24 +143,53 @@ const DokumenMutu = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
     setFormData((prev) => ({ ...prev, [name]: value }));
     validateInput(name, value);
   };
 
+  const clearPreviewByField = (fieldName) => {
+    if (fieldName === "file_dokumen") {
+      setPreviewUrlUtama(null);
+      setShowFullPreviewUtama(false);
+    }
+
+    if (fieldName === "file_pendukung") {
+      setPreviewUrlPendukung(null);
+      setShowFullPreviewPendukung(false);
+    }
+  };
+
   const handleFileChange = (e, fieldName) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
 
-    if (file) {
-      setFiles((prev) => ({ ...prev, [fieldName]: file }));
+    if (!file) {
+      setFiles((prev) => ({ ...prev, [fieldName]: null }));
+      clearPreviewByField(fieldName);
+      return;
+    }
 
-      const url = URL.createObjectURL(file);
+    const label = fieldName === "file_dokumen" ? "Dokumen utama" : "Dokumen pendukung";
+    const errorMessage = validateDocumentFile(file, label);
 
-      if (fieldName === "file_dokumen") {
-        setPreviewUrlUtama(url);
-      } else if (fieldName === "file_pendukung") {
-        setPreviewUrlPendukung(url);
-      }
+    if (errorMessage) {
+      e.target.value = "";
+      setFiles((prev) => ({ ...prev, [fieldName]: null }));
+      clearPreviewByField(fieldName);
+      notifikasi.peringatan("Format File Tidak Valid", errorMessage);
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    setFiles((prev) => ({ ...prev, [fieldName]: file }));
+
+    if (fieldName === "file_dokumen") {
+      setPreviewUrlUtama(url);
+      setShowFullPreviewUtama(false);
+    }
+
+    if (fieldName === "file_pendukung") {
+      setPreviewUrlPendukung(url);
+      setShowFullPreviewPendukung(false);
     }
   };
 
@@ -167,10 +203,16 @@ const DokumenMutu = () => {
 
     if (type === "create") {
       setFormData(initialFormState);
-      setFiles({ file_dokumen: null, file_pendukung: null });
+      setFiles({
+        file_dokumen: null,
+        file_pendukung: null
+      });
       setPreviewUrlUtama(null);
       setPreviewUrlPendukung(null);
-    } else if (item) {
+      return;
+    }
+
+    if (item) {
       setFormData({
         jenis_dokumen: item.jenis_dokumen || "",
         kategori: item.kategori || "",
@@ -179,14 +221,15 @@ const DokumenMutu = () => {
         nomor_dokumen: item.nomor_dokumen || "",
         nomor_revisi: item.nomor_revisi || "",
         penyusun: item.penyusun || "",
-        review: item.review || "", // 🔥 Menyimpan nilai review saat mode Edit/Detail
+        review: item.review || "",
         disahkan_oleh: item.disahkan_oleh || "",
-        tanggal_dokumen: item.tanggal_dokumen
-          ? item.tanggal_dokumen.split("T")[0]
-          : "",
+        tanggal_dokumen: item.tanggal_dokumen ? item.tanggal_dokumen.split("T")[0] : ""
       });
 
-      setFiles({ file_dokumen: null, file_pendukung: null });
+      setFiles({
+        file_dokumen: null,
+        file_pendukung: null
+      });
 
       setPreviewUrlUtama(item.file_dokumen || null);
       setPreviewUrlPendukung(item.file_pendukung || null);
@@ -194,35 +237,23 @@ const DokumenMutu = () => {
   };
 
   const handleDelete = async (id) => {
-    const result = await Swal.fire({
-      title: "Hapus Dokumen?",
-      text: "Data yang dihapus tidak bisa dikembalikan!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#CC6B27",
-      cancelButtonColor: "#182D4A",
-      confirmButtonText: "Ya, Hapus!",
-    });
+    const result = await notifikasi.konfirmasi(
+      "Hapus Dokumen?",
+      "Data yang dihapus tidak bisa dikembalikan!",
+      "Ya, Hapus!",
+      "Batal",
+      "warning",
+      "danger"
+    );
 
-    if (result.isConfirmed) {
-      try {
-        Swal.fire({
-          title: "Menghapus...",
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading(),
-        });
+    if (!result.isConfirmed) return;
 
-        await api.delete(`/admin/dokumen-mutu/${id}`);
-
-        Swal.fire("Terhapus!", "Dokumen berhasil dihapus.", "success");
-        fetchData();
-      } catch (error) {
-        Swal.fire(
-          "Gagal",
-          error.response?.data?.message || "Gagal menghapus data",
-          "error"
-        );
-      }
+    try {
+      await api.delete(`/admin/dokumen-mutu/${id}`);
+      await notifikasi.sukses("Terhapus!", "Dokumen berhasil dihapus.");
+      await fetchData();
+    } catch (error) {
+      notifikasi.gagal("Gagal", error.response?.data?.message || "Gagal menghapus data");
     }
   };
 
@@ -232,41 +263,50 @@ const DokumenMutu = () => {
     let isValid = true;
 
     Object.keys(formData).forEach((key) => {
-      if (!validateInput(key, formData[key])) isValid = false;
+      if (!validateInput(key, formData[key])) {
+        isValid = false;
+      }
     });
 
     if (!isValid) {
-      Swal.fire(
-        "Peringatan",
-        "Silakan perbaiki kolom isian yang terlalu pendek!",
-        "warning"
-      );
+      notifikasi.peringatan("Peringatan", "Silakan perbaiki kolom isian yang terlalu pendek!");
       return;
     }
 
     if (!formData.nama_dokumen || !formData.jenis_dokumen) {
-      Swal.fire(
-        "Peringatan",
-        "Nama Dokumen dan Jenis Dokumen wajib diisi!",
-        "warning"
-      );
+      notifikasi.peringatan("Peringatan", "Nama Dokumen dan Jenis Dokumen wajib diisi!");
       return;
     }
 
-    const actionText =
-      modalType === "create" ? "menambahkan" : "menyimpan perubahan pada";
+    const dokumenUtamaError = validateDocumentFile(files.file_dokumen, "Dokumen utama");
 
-    const confirm = await Swal.fire({
-      title: "Konfirmasi",
-      text: `Apakah Anda yakin ingin ${actionText} dokumen mutu ini?`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: "#CC6B27",
-      cancelButtonColor: "#182D4A",
-      confirmButtonText: "Ya, Simpan",
-    });
+    if (dokumenUtamaError) {
+      notifikasi.peringatan("Format File Tidak Valid", dokumenUtamaError);
+      return;
+    }
 
-    if (!confirm.isConfirmed) return;
+    const dokumenPendukungError = validateDocumentFile(files.file_pendukung, "Dokumen pendukung");
+
+    if (dokumenPendukungError) {
+      notifikasi.peringatan("Format File Tidak Valid", dokumenPendukungError);
+      return;
+    }
+
+    if (modalType === "create" && !files.file_dokumen) {
+      notifikasi.peringatan("Dokumen Utama Wajib Diisi", "Silakan pilih file dokumen utama terlebih dahulu.");
+      return;
+    }
+
+    if (modalType === "edit") {
+      const confirm = await notifikasi.konfirmasi(
+        "Konfirmasi",
+        "Apakah Anda yakin ingin menyimpan perubahan pada dokumen mutu ini?",
+        "Ya, Simpan",
+        "Batal"
+      );
+
+      if (!confirm.isConfirmed) return;
+    }
 
     const dataPayload = new FormData();
 
@@ -276,40 +316,55 @@ const DokumenMutu = () => {
       }
     });
 
-    if (files.file_dokumen) dataPayload.append("file_dokumen", files.file_dokumen);
-    if (files.file_pendukung)
+    if (files.file_dokumen) {
+      dataPayload.append("file_dokumen", files.file_dokumen);
+    }
+
+    if (files.file_pendukung) {
       dataPayload.append("file_pendukung", files.file_pendukung);
+    }
 
     try {
-      Swal.fire({
-        title: "Menyimpan...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      });
+      setLoading(true);
 
       if (modalType === "create") {
         await api.post("/admin/dokumen-mutu", dataPayload, {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: {
+            "Content-Type": "multipart/form-data"
+          }
         });
 
-        Swal.fire("Berhasil", "Dokumen mutu berhasil ditambahkan", "success");
+        setShowModal(false);
+
+        await notifikasi.sukses(
+          "Berhasil",
+          "Dokumen mutu berhasil ditambahkan."
+        );
       } else {
         await api.put(`/admin/dokumen-mutu/${selectedItem.id_dokumen}`, dataPayload, {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: {
+            "Content-Type": "multipart/form-data"
+          }
         });
 
-        Swal.fire("Berhasil", "Dokumen mutu berhasil diperbarui", "success");
+        setShowModal(false);
+
+        await notifikasi.sukses(
+          "Berhasil",
+          "Dokumen mutu berhasil diperbarui."
+        );
       }
 
-      setShowModal(false);
-      fetchData();
+      await fetchData();
     } catch (error) {
       console.error(error);
-      Swal.fire(
+
+      notifikasi.gagal(
         "Gagal",
-        error.response?.data?.message || "Terjadi kesalahan saat menyimpan",
-        "error"
+        error.response?.data?.message || "Terjadi kesalahan saat menyimpan."
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -328,30 +383,18 @@ const DokumenMutu = () => {
     }
   };
 
-  const inputClass = (name) =>
-    `w-full rounded-2xl border px-4 py-3 text-sm font-semibold text-[#071E3D] outline-none transition-all disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70 placeholder:text-slate-300 ${
-      errors[name]
-        ? "border-red-300 bg-red-50 focus:border-red-400 focus:ring-4 focus:ring-red-500/10"
-        : "border-slate-100 bg-slate-50 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-    }`;
+  const inputClass = (name) => `w-full rounded-2xl border px-4 py-3 text-sm font-semibold text-[#071E3D] outline-none transition-all disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70 placeholder:text-slate-300 ${errors[name] ? "border-red-300 bg-red-50 focus:border-red-400 focus:ring-4 focus:ring-red-500/10" : "border-slate-100 bg-slate-50 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"}`;
 
   const filteredData = data.filter((item) => {
-    const matchSearch =
-      item.nama_dokumen?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.nomor_dokumen?.toLowerCase().includes(searchTerm.toLowerCase());
-
+    const search = searchTerm.toLowerCase();
+    const matchSearch = item.nama_dokumen?.toLowerCase().includes(search) || item.nomor_dokumen?.toLowerCase().includes(search);
     const matchJenis = filterJenis ? item.jenis_dokumen === filterJenis : true;
 
     return matchSearch && matchJenis;
   });
 
   const totalPages = Math.ceil(filteredData.length / pagination.limit) || 1;
-
-  const paginatedData = filteredData.slice(
-    (pagination.page - 1) * pagination.limit,
-    pagination.page * pagination.limit
-  );
-
+  const paginatedData = filteredData.slice((pagination.page - 1) * pagination.limit, pagination.page * pagination.limit);
   const totalDokumen = data.length;
   const totalJenis = new Set(data.map((item) => item.jenis_dokumen).filter(Boolean)).size;
   const totalDenganFile = data.filter((item) => item.file_dokumen).length;
@@ -359,7 +402,6 @@ const DokumenMutu = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        {/* HERO */}
         <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
           <div className="absolute right-0 top-0 h-[430px] w-[430px] rounded-full bg-orange-500/10 blur-[110px]" />
           <div className="absolute -bottom-24 -left-24 h-[380px] w-[380px] rounded-full bg-[#071E3D]/5 blur-[100px]" />
@@ -380,8 +422,7 @@ const DokumenMutu = () => {
               </h1>
 
               <p className="mt-5 max-w-2xl text-base font-medium leading-relaxed text-slate-500 lg:text-lg">
-                Kelola dokumen ISO 9001:2015, regulasi LSP, file utama, dan
-                file pendukung dalam satu halaman yang rapi.
+                Kelola dokumen ISO 9001:2015, regulasi LSP, file utama, dan file pendukung dalam satu halaman yang rapi.
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -400,11 +441,7 @@ const DokumenMutu = () => {
                   disabled={loading}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200"
                 >
-                  {loading ? (
-                    <Loader2 size={17} className="animate-spin" />
-                  ) : (
-                    <FileCheck2 size={17} />
-                  )}
+                  {loading ? <Loader2 size={17} className="animate-spin" /> : <FileCheck2 size={17} />}
                   Muat Ulang
                 </button>
               </div>
@@ -427,41 +464,24 @@ const DokumenMutu = () => {
                 </h2>
 
                 <p className="text-sm font-medium leading-relaxed text-white/60">
-                  Data dokumen dapat difilter berdasarkan jenis dokumen dan kata
-                  kunci pencarian.
+                  Data dokumen dapat difilter berdasarkan jenis dokumen dan kata kunci pencarian.
                 </p>
 
                 <div className="mt-6 grid grid-cols-2 gap-3">
-                  <HeroPill label="Jenis" value={`${totalJenis}`} />
-                  <HeroPill label="File" value={`${totalDenganFile}`} />
+                  <HeroPill label="Jenis" value={totalJenis} />
+                  <HeroPill label="File" value={totalDenganFile} />
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* STATS */}
         <section className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          <MiniStat
-            icon={<ClipboardList size={22} />}
-            label="Total Dokumen"
-            value={`${totalDokumen} Dokumen`}
-          />
-          <MiniStat
-            icon={<BadgeCheck size={22} />}
-            label="Jenis Dokumen"
-            value={`${totalJenis} Jenis`}
-            tone="navy"
-          />
-          <MiniStat
-            icon={<FileCheck2 size={22} />}
-            label="File Utama"
-            value={`${totalDenganFile} File`}
-            tone="green"
-          />
+          <MiniStat icon={<ClipboardList size={22} />} label="Total Dokumen" value={`${totalDokumen} Dokumen`} />
+          <MiniStat icon={<BadgeCheck size={22} />} label="Jenis Dokumen" value={`${totalJenis} Jenis`} tone="navy" />
+          <MiniStat icon={<FileCheck2 size={22} />} label="File Utama" value={`${totalDenganFile} File`} tone="green" />
         </section>
 
-        {/* CONTENT */}
         <section className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
           <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -491,13 +511,10 @@ const DokumenMutu = () => {
             </button>
           </div>
 
-          {/* TOOLBAR */}
           <div className="grid grid-cols-1 gap-4 p-6 lg:grid-cols-[1fr_280px]">
             <div className="relative">
-              <Search
-                size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-              />
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+
               <input
                 type="text"
                 className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-12 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
@@ -511,10 +528,8 @@ const DokumenMutu = () => {
             </div>
 
             <div className="relative">
-              <Filter
-                size={18}
-                className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-slate-300"
-              />
+              <Filter size={18} className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-slate-300" />
+
               <select
                 className="w-full appearance-none rounded-2xl border border-slate-100 bg-slate-50 px-12 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                 value={filterJenis}
@@ -533,7 +548,6 @@ const DokumenMutu = () => {
             </div>
           </div>
 
-          {/* TABLE */}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1000px] border-collapse text-left">
               <thead>
@@ -552,38 +566,23 @@ const DokumenMutu = () => {
                 {loading ? (
                   <tr>
                     <td colSpan="7" className="p-16 text-center">
-                      <Loader2
-                        className="mx-auto mb-4 animate-spin text-orange-500"
-                        size={42}
-                      />
-                      <p className="font-black text-[#071E3D]">
-                        Sedang memuat data...
-                      </p>
+                      <Loader2 className="mx-auto mb-4 animate-spin text-orange-500" size={42} />
+                      <p className="font-black text-[#071E3D]">Sedang memuat data...</p>
                     </td>
                   </tr>
                 ) : paginatedData.length > 0 ? (
                   paginatedData.map((item, index) => (
-                    <tr
-                      key={item.id_dokumen}
-                      className="border-b border-slate-100 transition-all last:border-0 hover:bg-orange-50/30"
-                    >
+                    <tr key={item.id_dokumen} className="border-b border-slate-100 transition-all last:border-0 hover:bg-orange-50/30">
                       <td className="px-5 py-4 text-center text-sm font-bold text-slate-500">
                         {(pagination.page - 1) * pagination.limit + index + 1}
                       </td>
 
-                      <td
-                        className="max-w-xs truncate px-5 py-4 text-sm font-black text-[#071E3D]"
-                        title={item.nama_dokumen}
-                      >
+                      <td className="max-w-xs truncate px-5 py-4 text-sm font-black text-[#071E3D]" title={item.nama_dokumen}>
                         {item.nama_dokumen}
                       </td>
 
                       <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${getBadgeColor(
-                            item.jenis_dokumen
-                          )}`}
-                        >
+                        <span className={`inline-flex rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${getBadgeColor(item.jenis_dokumen)}`}>
                           {item.jenis_dokumen?.replace("_", " ")}
                         </span>
                       </td>
@@ -597,11 +596,7 @@ const DokumenMutu = () => {
                       </td>
 
                       <td className="px-5 py-4 text-sm font-semibold text-slate-500">
-                        {item.tanggal_dokumen
-                          ? new Date(item.tanggal_dokumen).toLocaleDateString(
-                              "id-ID"
-                            )
-                          : "-"}
+                        {item.tanggal_dokumen ? new Date(item.tanggal_dokumen).toLocaleDateString("id-ID") : "-"}
                       </td>
 
                       <td className="px-5 py-4 text-center">
@@ -639,13 +634,8 @@ const DokumenMutu = () => {
                 ) : (
                   <tr>
                     <td colSpan="7" className="p-16 text-center">
-                      <FileText
-                        size={48}
-                        className="mx-auto mb-4 text-slate-300"
-                      />
-                      <p className="font-black text-[#071E3D]">
-                        Data tidak ditemukan.
-                      </p>
+                      <FileText size={48} className="mx-auto mb-4 text-slate-300" />
+                      <p className="font-black text-[#071E3D]">Data tidak ditemukan.</p>
                     </td>
                   </tr>
                 )}
@@ -653,7 +643,6 @@ const DokumenMutu = () => {
             </table>
           </div>
 
-          {/* PAGINATION */}
           {filteredData.length > 0 && (
             <div className="flex flex-col gap-4 border-t border-slate-100 p-6 text-sm font-semibold text-slate-500 md:flex-row md:items-center md:justify-between">
               <span>
@@ -667,12 +656,7 @@ const DokumenMutu = () => {
                   type="button"
                   className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-[#071E3D] transition-all hover:bg-orange-50 hover:text-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
                   disabled={pagination.page === 1}
-                  onClick={() =>
-                    setPagination((prev) => ({
-                      ...prev,
-                      page: prev.page - 1,
-                    }))
-                  }
+                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -685,12 +669,7 @@ const DokumenMutu = () => {
                   type="button"
                   className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-[#071E3D] transition-all hover:bg-orange-50 hover:text-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
                   disabled={pagination.page >= totalPages}
-                  onClick={() =>
-                    setPagination((prev) => ({
-                      ...prev,
-                      page: prev.page + 1,
-                    }))
-                  }
+                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
                 >
                   <ChevronRight size={18} />
                 </button>
@@ -700,11 +679,9 @@ const DokumenMutu = () => {
         </section>
       </div>
 
-      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/60 p-4 backdrop-blur-sm">
           <div className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-[34px] border border-slate-100 bg-white shadow-2xl">
-            {/* HEADER */}
             <div className="flex items-center justify-between border-b border-slate-100 p-6">
               <div>
                 <h3 className="flex items-center gap-2 text-xl font-black text-[#071E3D]">
@@ -714,12 +691,14 @@ const DokumenMutu = () => {
                       Tambah Dokumen Baru
                     </>
                   )}
+
                   {modalType === "edit" && (
                     <>
                       <Edit2 size={20} className="text-orange-500" />
                       Edit Dokumen Mutu
                     </>
                   )}
+
                   {modalType === "detail" && (
                     <>
                       <Eye size={20} className="text-orange-500" />
@@ -742,28 +721,20 @@ const DokumenMutu = () => {
               </button>
             </div>
 
-            {/* BODY */}
-            <form
-              onSubmit={handleSubmit}
-              className="flex flex-1 flex-col overflow-hidden"
-            >
+            <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
               <div className="space-y-6 overflow-y-auto px-6 py-5">
-                {/* INFORMASI */}
                 <section className="overflow-hidden rounded-[30px] border border-slate-100 bg-slate-50/50">
                   <div className="border-b border-slate-100 bg-white p-5">
-                    <h4 className="text-lg font-black text-[#071E3D]">
-                      Informasi Utama
-                    </h4>
+                    <h4 className="text-lg font-black text-[#071E3D]">Informasi Utama</h4>
                     <p className="mt-1 text-sm font-medium text-slate-400">
                       Lengkapi identitas dan metadata dokumen mutu.
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2 lg:grid-cols-4">
-                    
-                    {/* Baris 1: Nama, Jenis, Kategori */}
                     <div className="lg:col-span-2">
                       <Label required>Nama/Judul Dokumen</Label>
+
                       <input
                         className={inputClass("nama_dokumen")}
                         type="text"
@@ -774,11 +745,13 @@ const DokumenMutu = () => {
                         disabled={modalType === "detail"}
                         required
                       />
+
                       <ErrorMessage message={errors.nama_dokumen} />
                     </div>
 
-                    <div className="lg:col-span-1">
+                    <div>
                       <Label required>Jenis Dokumen</Label>
+
                       <select
                         className={inputClass("jenis_dokumen")}
                         name="jenis_dokumen"
@@ -787,7 +760,9 @@ const DokumenMutu = () => {
                         disabled={modalType === "detail"}
                         required
                       >
-                        <option value="" disabled>--Pilih Jenis--</option>
+                        <option value="" disabled>
+                          --Pilih Jenis--
+                        </option>
                         <option value="kebijakan_mutu">Kebijakan Mutu</option>
                         <option value="manual_mutu">Manual/Panduan Mutu</option>
                         <option value="standar_mutu">Standar Mutu</option>
@@ -796,8 +771,9 @@ const DokumenMutu = () => {
                       </select>
                     </div>
 
-                    <div className="lg:col-span-1">
+                    <div>
                       <Label>Kategori Dokumen</Label>
+
                       <select
                         className={inputClass("kategori")}
                         name="kategori"
@@ -805,7 +781,9 @@ const DokumenMutu = () => {
                         onChange={handleInputChange}
                         disabled={modalType === "detail"}
                       >
-                        <option value="" disabled>--Pilih Kategori--</option>
+                        <option value="" disabled>
+                          --Pilih Kategori--
+                        </option>
                         <option value="Kelembagaan LSP">Kelembagaan LSP</option>
                         <option value="Standar Kompetensi">Standar Kompetensi</option>
                         <option value="Skema Kompetensi">Skema Kompetensi</option>
@@ -818,12 +796,13 @@ const DokumenMutu = () => {
                         <option value="Referensi / Acuan / undang-undang / perundangan">Referensi / Acuan / undang-undang / perundangan</option>
                         <option value="Lain-lain">Lain-lain</option>
                       </select>
+
                       <ErrorMessage message={errors.kategori} />
                     </div>
 
-                    {/* Baris 2: Deskripsi */}
                     <div className="lg:col-span-4">
                       <Label>Deskripsi Dokumen</Label>
+
                       <textarea
                         className={`${inputClass("deskripsi")} resize-none`}
                         name="deskripsi"
@@ -833,12 +812,13 @@ const DokumenMutu = () => {
                         rows="3"
                         disabled={modalType === "detail"}
                       />
+
                       <ErrorMessage message={errors.deskripsi} />
                     </div>
 
-                    {/* Baris 3: No Doc, No Rev, Tanggal */}
                     <div>
                       <Label>Nomor Dokumen</Label>
+
                       <input
                         className={inputClass("nomor_dokumen")}
                         type="text"
@@ -848,11 +828,13 @@ const DokumenMutu = () => {
                         placeholder="Nomor Dokumen"
                         disabled={modalType === "detail"}
                       />
+
                       <ErrorMessage message={errors.nomor_dokumen} />
                     </div>
 
                     <div>
                       <Label>Nomor Revisi</Label>
+
                       <input
                         className={inputClass("nomor_revisi")}
                         type="text"
@@ -862,11 +844,13 @@ const DokumenMutu = () => {
                         placeholder="0"
                         disabled={modalType === "detail"}
                       />
+
                       <ErrorMessage message={errors.nomor_revisi} />
                     </div>
 
                     <div className="lg:col-span-2">
                       <Label>Tanggal Dokumen</Label>
+
                       <input
                         className={inputClass("tanggal_dokumen")}
                         type="date"
@@ -875,13 +859,14 @@ const DokumenMutu = () => {
                         onChange={handleInputChange}
                         disabled={modalType === "detail"}
                       />
+
                       <ErrorMessage message={errors.tanggal_dokumen} />
                     </div>
 
-                    {/* Baris 4: PENYUSUN, REVIEW (BARU), PENGESAH */}
-                    <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-5 border-t border-slate-200 pt-5 mt-2">
+                    <div className="grid grid-cols-1 gap-5 border-t border-slate-200 pt-5 lg:col-span-4 md:grid-cols-3">
                       <div>
                         <Label>Penyusun Dokumen</Label>
+
                         <input
                           className={inputClass("penyusun")}
                           type="text"
@@ -891,12 +876,13 @@ const DokumenMutu = () => {
                           placeholder="Nama dan Gelar Penyusun"
                           disabled={modalType === "detail"}
                         />
+
                         <ErrorMessage message={errors.penyusun} />
                       </div>
 
-                      {/* 🔥 FIELD REVIEW BARU DITAMBAHKAN DI SINI 🔥 */}
                       <div>
                         <Label>Direview Oleh</Label>
+
                         <input
                           className={inputClass("review")}
                           type="text"
@@ -906,11 +892,13 @@ const DokumenMutu = () => {
                           placeholder="Nama dan Gelar Pereview"
                           disabled={modalType === "detail"}
                         />
+
                         <ErrorMessage message={errors.review} />
                       </div>
 
                       <div>
                         <Label>Disahkan Oleh</Label>
+
                         <input
                           className={inputClass("disahkan_oleh")}
                           type="text"
@@ -920,14 +908,13 @@ const DokumenMutu = () => {
                           placeholder="Nama dan Gelar Pengesah"
                           disabled={modalType === "detail"}
                         />
+
                         <ErrorMessage message={errors.disahkan_oleh} />
                       </div>
                     </div>
-
                   </div>
                 </section>
 
-                {/* FILES (Tetap sama, tidak ada perubahan) */}
                 <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <FilePreviewPanel
                     title="Berkas (File) Dokumen Utama"
@@ -938,16 +925,12 @@ const DokumenMutu = () => {
                     fileObject={files.file_dokumen}
                     previewUrl={previewUrlUtama}
                     showFull={showFullPreviewUtama}
-                    onToggleFull={() =>
-                      setShowFullPreviewUtama(!showFullPreviewUtama)
-                    }
+                    onToggleFull={() => setShowFullPreviewUtama((prev) => !prev)}
                     onFileChange={(e) => handleFileChange(e, "file_dokumen")}
                     buildFileUrl={buildFileUrl}
-                    isPreviewable={(file) =>
-                      isPreviewable(file, "file_dokumen")
-                    }
+                    isPreviewable={(file) => isPreviewable(file, "file_dokumen")}
                     isImageFile={(file) => isImageFile(file, "file_dokumen")}
-                    accept=".pdf"
+                    accept={FILE_ACCEPT}
                   />
 
                   <FilePreviewPanel
@@ -958,25 +941,16 @@ const DokumenMutu = () => {
                     fileObject={files.file_pendukung}
                     previewUrl={previewUrlPendukung}
                     showFull={showFullPreviewPendukung}
-                    onToggleFull={() =>
-                      setShowFullPreviewPendukung(!showFullPreviewPendukung)
-                    }
-                    onFileChange={(e) =>
-                      handleFileChange(e, "file_pendukung")
-                    }
+                    onToggleFull={() => setShowFullPreviewPendukung((prev) => !prev)}
+                    onFileChange={(e) => handleFileChange(e, "file_pendukung")}
                     buildFileUrl={buildFileUrl}
-                    isPreviewable={(file) =>
-                      isPreviewable(file, "file_pendukung")
-                    }
-                    isImageFile={(file) =>
-                      isImageFile(file, "file_pendukung")
-                    }
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    isPreviewable={(file) => isPreviewable(file, "file_pendukung")}
+                    isImageFile={(file) => isImageFile(file, "file_pendukung")}
+                    accept={FILE_ACCEPT}
                   />
                 </section>
               </div>
 
-              {/* FOOTER */}
               <div className="mt-auto flex justify-end gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-5">
                 <button
                   type="button"
@@ -989,10 +963,11 @@ const DokumenMutu = () => {
                 {modalType !== "detail" && (
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+                    disabled={loading}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <Save size={16} />
-                    Tambahkan
+                    {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    {loading ? "Menyimpan..." : modalType === "edit" ? "Simpan Perubahan" : "Tambahkan"}
                   </button>
                 )}
               </div>
@@ -1004,7 +979,6 @@ const DokumenMutu = () => {
   );
 };
 
-// ... (Sisa helper function component seperti FilePreviewPanel, HeroPill, dll biarkan sama persis dengan yang asli)
 function FilePreviewPanel({
   title,
   required,
@@ -1019,20 +993,21 @@ function FilePreviewPanel({
   buildFileUrl,
   isPreviewable,
   isImageFile,
-  accept,
+  accept
 }) {
-  const accentClass =
-    accent === "orange"
-      ? "text-orange-500 border-orange-100 bg-orange-50"
-      : "text-[#071E3D] border-slate-100 bg-slate-50";
+  const accentClass = accent === "orange"
+    ? "text-orange-500 border-orange-100 bg-orange-50"
+    : "text-[#071E3D] border-slate-100 bg-slate-50";
+
+  const previewSource = fileObject ? previewUrl : fileName;
+  const canPreview = previewSource ? isPreviewable(previewSource) : false;
 
   return (
     <div className="overflow-hidden rounded-[30px] border border-slate-100 bg-white shadow-sm">
       <div className="border-b border-slate-100 p-5">
-        <div
-          className={`mb-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 ${accentClass}`}
-        >
+        <div className={`mb-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 ${accentClass}`}>
           <FileText size={15} />
+
           <span className="text-[10px] font-black uppercase tracking-widest">
             {title}
           </span>
@@ -1050,17 +1025,24 @@ function FilePreviewPanel({
           </label>
 
           {modalType !== "detail" && (
-            <input
-              type="file"
-              onChange={onFileChange}
-              className="block w-full cursor-pointer rounded-2xl border border-slate-100 bg-white p-2 text-xs font-semibold text-slate-500 file:mr-3 file:rounded-xl file:border-0 file:bg-orange-50 file:px-4 file:py-2 file:text-xs file:font-black file:text-orange-500 hover:file:bg-orange-500 hover:file:text-white"
-              accept={accept}
-            />
+            <>
+              <input
+                type="file"
+                onChange={onFileChange}
+                accept={accept}
+                className="block w-full cursor-pointer rounded-2xl border border-slate-100 bg-white p-2 text-xs font-semibold text-slate-500 file:mr-3 file:rounded-xl file:border-0 file:bg-orange-50 file:px-4 file:py-2 file:text-xs file:font-black file:text-orange-500 hover:file:bg-orange-500 hover:file:text-white"
+              />
+
+              <p className="mt-3 text-[10px] font-bold leading-relaxed text-slate-400">
+                Format yang diperbolehkan: PDF, JPG, JPEG, PNG.
+              </p>
+            </>
           )}
 
           {fileName && !fileObject && (
             <div className="mt-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-xs font-semibold text-slate-500">
               Tersimpan:{" "}
+
               <a
                 href={buildFileUrl(fileName)}
                 target="_blank"
@@ -1071,19 +1053,25 @@ function FilePreviewPanel({
               </a>
             </div>
           )}
+
+          {fileObject && (
+            <div className="mt-3 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3 text-xs font-semibold text-[#071E3D]">
+              File dipilih:{" "}
+
+              <span className="font-black">
+                {fileObject.name}
+              </span>
+            </div>
+          )}
         </div>
 
-        <div
-          className={`overflow-hidden rounded-[24px] border border-slate-100 bg-white ${
-            showFull ? "min-h-[560px]" : "min-h-[330px]"
-          }`}
-        >
+        <div className={`overflow-hidden rounded-[24px] border border-slate-100 bg-white ${showFull ? "min-h-[560px]" : "min-h-[330px]"}`}>
           <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
               Preview
             </span>
 
-            {previewUrl && isPreviewable(previewUrl) && (
+            {canPreview && (
               <button
                 type="button"
                 onClick={onToggleFull}
@@ -1095,45 +1083,40 @@ function FilePreviewPanel({
           </div>
 
           <div className={`${showFull ? "h-[520px]" : "h-[300px]"} relative`}>
-            {previewUrl ? (
-              isPreviewable(previewUrl) ? (
-                isImageFile(previewUrl) ? (
+            {previewSource ? (
+              canPreview ? (
+                isImageFile(previewSource) ? (
                   <div className="absolute inset-0 flex items-start justify-center overflow-auto bg-slate-50 p-3">
                     <img
-                      src={buildFileUrl(previewUrl)}
+                      src={buildFileUrl(previewUrl || previewSource)}
                       alt="Preview"
-                      className="max-w-full object-contain"
+                      className="max-h-full max-w-full object-contain"
                     />
                   </div>
                 ) : (
                   <iframe
-                    src={`${buildFileUrl(previewUrl)}#toolbar=0&navpanes=0`}
+                    src={`${buildFileUrl(previewUrl || previewSource)}#toolbar=0&navpanes=0`}
                     className="absolute inset-0 h-full w-full border-0"
                     title={`Preview ${title}`}
                   />
                 )
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
-                  <FileText size={42} className="mb-3 text-blue-400" />
+                  <FileText size={42} className="mb-3 text-slate-300" />
+
                   <p className="text-sm font-black text-[#071E3D]">
                     Preview tidak tersedia
                   </p>
+
                   <p className="mt-1 text-xs font-medium text-slate-400">
-                    Format file ini tidak dapat dipratinjau langsung di browser.
+                    Format file harus PDF, JPG, JPEG, atau PNG.
                   </p>
-                  <a
-                    href={buildFileUrl(previewUrl)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 rounded-2xl bg-blue-50 px-5 py-3 text-xs font-black uppercase tracking-widest text-blue-600 hover:bg-blue-100"
-                  >
-                    Unduh File
-                  </a>
                 </div>
               )
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
                 <FileText size={42} className="mb-3 text-slate-300" />
+
                 <p className="text-xs font-semibold text-slate-400">
                   Pilih file untuk melihat pratinjau.
                 </p>
@@ -1152,7 +1135,10 @@ function HeroPill({ label, value }) {
       <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
         {label}
       </p>
-      <p className="mt-1 text-sm font-black text-white">{value}</p>
+
+      <p className="mt-1 text-sm font-black text-white">
+        {value}
+      </p>
     </div>
   );
 }
@@ -1161,16 +1147,12 @@ function MiniStat({ icon, label, value, tone = "orange" }) {
   const tones = {
     orange: "bg-orange-50 text-orange-500",
     green: "bg-green-50 text-green-600",
-    navy: "bg-slate-50 text-[#071E3D]",
+    navy: "bg-slate-50 text-[#071E3D]"
   };
 
   return (
     <div className="flex items-center gap-4 rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm">
-      <div
-        className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl ${
-          tones[tone] || tones.orange
-        }`}
-      >
+      <div className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl ${tones[tone] || tones.orange}`}>
         {icon}
       </div>
 
@@ -1178,7 +1160,10 @@ function MiniStat({ icon, label, value, tone = "orange" }) {
         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
           {label}
         </p>
-        <p className="mt-1 text-lg font-black text-[#071E3D]">{value}</p>
+
+        <p className="mt-1 text-lg font-black text-[#071E3D]">
+          {value}
+        </p>
       </div>
     </div>
   );
@@ -1186,11 +1171,7 @@ function MiniStat({ icon, label, value, tone = "orange" }) {
 
 function TableHead({ children, center }) {
   return (
-    <th
-      className={`border-b-4 border-orange-500 px-5 py-4 text-[11px] font-black uppercase tracking-widest text-white ${
-        center ? "text-center" : "text-left"
-      }`}
-    >
+    <th className={`border-b-4 border-orange-500 px-5 py-4 text-[11px] font-black uppercase tracking-widest text-white ${center ? "text-center" : "text-left"}`}>
       {children}
     </th>
   );
@@ -1199,7 +1180,13 @@ function TableHead({ children, center }) {
 function Label({ children, required }) {
   return (
     <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-      {children} {required && <span className="text-red-500">*</span>}
+      {children}
+
+      {required && (
+        <span className="text-red-500">
+          *
+        </span>
+      )}
     </label>
   );
 }
@@ -1207,7 +1194,11 @@ function Label({ children, required }) {
 function ErrorMessage({ message }) {
   if (!message) return null;
 
-  return <p className="mt-1 text-xs font-semibold text-red-500">{message}</p>;
+  return (
+    <p className="mt-1 text-xs font-semibold text-red-500">
+      {message}
+    </p>
+  );
 }
 
 export default DokumenMutu;
