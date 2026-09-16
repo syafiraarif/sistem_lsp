@@ -59,9 +59,11 @@ const Sidebar = () => {
       const isPathActive = (pathsArray) =>
         pathsArray.some((p) => path.startsWith(p));
 
+      // Menambahkan /admin/skema ke dalam deteksi dropdown standar
       newState.standar = isPathActive([
         "/admin/unit-kompetensi",
         "/admin/skkni",
+        "/admin/skema",
         "/admin/bank-soal",
         "/admin/bank-soal-pg",
       ]);
@@ -278,6 +280,7 @@ const SidebarContent = ({
     standar:
       isActive("/admin/unit-kompetensi") ||
       isActive("/admin/skkni") ||
+      isActive("/admin/skema") ||  // <-- Menambahkan skema ke status aktif dropdown
       isActive("/admin/bank-soal") ||
       isActive("/admin/bank-soal-pg"),
 
@@ -420,6 +423,13 @@ const SidebarContent = ({
                 onClick={() => handleNav("/admin/skkni")}
               />
 
+              {/* Menempatkan Skema Sertifikasi tepat setelah Data SKKNI */}
+              <SubItem
+                label="Skema Sertifikasi"
+                active={isActive("/admin/skema")}
+                onClick={() => handleNav("/admin/skema")}
+              />
+
               <SubItem
                 label="Unit Kompetensi"
                 active={isActive("/admin/unit-kompetensi")}
@@ -427,14 +437,6 @@ const SidebarContent = ({
               />
             </SubMenu>
           )}
-
-          <NavItem
-            icon={<FaLayerGroup />}
-            label="Skema Sertifikasi"
-            active={isActive("/admin/skema")}
-            onClick={() => handleNav("/admin/skema")}
-            isExpanded={isExpanded}
-          />
 
           <SectionLabel isExpanded={isExpanded}>Operasional</SectionLabel>
 

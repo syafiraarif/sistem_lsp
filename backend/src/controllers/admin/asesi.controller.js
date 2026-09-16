@@ -1,8 +1,10 @@
 const XLSX = require("xlsx");
-const { ProfileAsesi, Role, User, Notifikasi } = require("../../models");
+const { ProfileAsesi, Role, User, Notifikasi, PendaftaranAsesi } = require("../../models");
+const { Op } = require("sequelize");
 const response = require("../../utils/response.util");
 const { createUser, resetUserPassword } = require("../../services/account.service");
 const { createNotifikasi } = require("../../services/notifikasi.service");
+const { sendAccountEmail } = require("../../services/email.service");
 const sequelize = require("../../config/database");
 
 exports.downloadTemplate = async (req, res) => {
@@ -61,141 +63,196 @@ exports.downloadTemplate = async (req, res) => {
 };
 
 exports.importAsesiExcel = async (req, res) => {
-  try {
+  try {
 
-    if (!req.file) {
-      return response.error(res, "File tidak ditemukan", 400);
-    }
+    if (!req.file) {
+      return response.error(res, "File tidak ditemukan", 400);
+    }
 
-    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(sheet);
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(sheet);
 
-    if (!data.length) {
-      return response.error(res, "File Excel kosong", 400);
-    }
+    if (!data.length) {
+      return response.error(res, "File Excel kosong", 400);
+    }
 
-    const role = await Role.findOne({
-      where: { role_name: "ASESI" }
-    });
+    const role = await Role.findOne({
+      where: { role_name: "ASESI" }
+    });
 
-    if (!role) {
-      return response.error(res, "Role ASESI tidak ditemukan", 500);
-    }
+    if (!role) {
+      return response.error(res, "Role ASESI tidak ditemukan", 500);
+    }
 
-    let totalSuccess = 0;
-    let totalFailed = 0;
+    let totalSuccess = 0;
+    let totalFailed = 0;
 
-    for (const row of data) {
+    for (const row of data) {
+      const t = await sequelize.transaction();
 
-      const t = await sequelize.transaction();
+      try {
+        if (!row.nik || !row.email) {
+          throw new Error(`Data tidak lengkap untuk NIK ${row.nik}`);
+        }
 
-      try {
+        const { user } = await createUser({
+          username: row.nik,
+          email: row.email,
+          no_hp: row.no_hp || null,
+          id_role: role.id_role
+        }, { transaction: t });
 
-        if (!row.nik || !row.email) {
-          throw new Error(`Data tidak lengkap untuk NIK ${row.nik}`);
-        }
+        await ProfileAsesi.create({
+          id_user: user.id_user,
+          nik: row.nik,
+          nama_lengkap: row.nama_lengkap,
+          jenis_kelamin: row.jenis_kelamin,
+          tempat_lahir: row.tempat_lahir,
+          tanggal_lahir: row.tanggal_lahir,
+          kebangsaan: row.kebangsaan,
+          alamat: row.alamat,
+          rt: row.rt,
+          rw: row.rw,
+          provinsi: row.provinsi,
+          kota: row.kota,
+          kecamatan: row.kecamatan,
+          kelurahan: row.kelurahan,
+          kode_pos: row.kode_pos,
+          pendidikan_terakhir: row.pendidikan_terakhir,
+          universitas: row.universitas,
+          jurusan: row.jurusan,
+          tahun_lulus: row.tahun_lulus,
+          pekerjaan: row.pekerjaan,
+          jabatan: row.jabatan,
+          nama_perusahaan: row.nama_perusahaan,
+          alamat_perusahaan: row.alamat_perusahaan,
+          telp_perusahaan: row.telp_perusahaan,
+          fax_perusahaan: row.fax_perusahaan,
+          email_perusahaan: row.email_perusahaan
+        }, { transaction: t });
 
-        const { user } = await createUser({
-          username: row.nik,
-          email: row.email,
-          no_hp: row.no_hp || null,
-          id_role: role.id_role
-        }, { transaction: t });
+        await t.commit();
+        totalSuccess++;
 
-        await ProfileAsesi.create({
-          id_user: user.id_user,
-          nik: row.nik,
-          nama_lengkap: row.nama_lengkap,
-          jenis_kelamin: row.jenis_kelamin,
-          tempat_lahir: row.tempat_lahir,
-          tanggal_lahir: row.tanggal_lahir,
-          kebangsaan: row.kebangsaan,
-          alamat: row.alamat,
-          rt: row.rt,
-          rw: row.rw,
-          provinsi: row.provinsi,
-          kota: row.kota,
-          kecamatan: row.kecamatan,
-          kelurahan: row.kelurahan,
-          kode_pos: row.kode_pos,
-          pendidikan_terakhir: row.pendidikan_terakhir,
-          universitas: row.universitas,
-          jurusan: row.jurusan,
-          tahun_lulus: row.tahun_lulus,
-          pekerjaan: row.pekerjaan,
-          jabatan: row.jabatan,
-          nama_perusahaan: row.nama_perusahaan,
-          alamat_perusahaan: row.alamat_perusahaan,
-          telp_perusahaan: row.telp_perusahaan,
-          fax_perusahaan: row.fax_perusahaan,
-          email_perusahaan: row.email_perusahaan
-        }, { transaction: t });
+        // ==============================================================
+        // KODE DIPERBAIKI: LANGSUNG KIRIM EMAIL TANPA CEK IF
+        // ==============================================================
+        try {
+          const rawPassword = await resetUserPassword(user);
+          await sendAccountEmail(row.email, row.nik, rawPassword);
+        } catch (emailErr) {
+          console.error(`Gagal membuat/mengirim email sandi untuk NIK ${row.nik}:`, emailErr.message);
+        }
 
-        await t.commit();
-        totalSuccess++;
+        // Buat notifikasi di sistem
+        try {
+          await createNotifikasi({
+            channel: "email", 
+            tujuan: row.nik,
+            pesan: `Akun Asesi berhasil dibuat. Username: ${row.nik}. Password dikirim via email.`,
+            status_kirim: "terkirim",
+            ref_type: "akun", 
+            ref_id: user.id_user
+          });
+        } catch (notifErr) {
+          console.error(`Gagal membuat notif untuk NIK ${row.nik}:`, notifErr.message);
+        }
 
-        try {
-          await createNotifikasi({
-            channel: "email", 
-            tujuan: row.nik,
-            pesan: `Akun Asesi berhasil dibuat. Username: ${row.nik}`,
-            status_kirim: "terkirim",
-            ref_type: "akun", 
-            ref_id: user.id_user
-          });
-        } catch (notifErr) {
-          console.error(`Gagal membuat notif untuk NIK ${row.nik}:`, notifErr.message);
-        }
+      } catch (err) {
+        await t.rollback();
+        totalFailed++;
+        console.error(`Gagal import NIK ${row.nik}:`, err.message);
+      }
+    }
 
-      } catch (err) {
-        await t.rollback();
-        totalFailed++;
-        console.error(`Gagal import NIK ${row.nik}:`, err.message);
-      }
-    }
+    return response.success(
+      res,
+      `Import Asesi selesai. Berhasil (termasuk kirim email): ${totalSuccess}, Gagal: ${totalFailed}`
+    );
 
-    return response.success(
-      res,
-      `Import Asesi selesai. Berhasil: ${totalSuccess}, Gagal: ${totalFailed}`
-    );
-
-  } catch (err) {
-    return response.error(res, err.message);
-  }
+  } catch (err) {
+    return response.error(res, err.message);
+  }
 };
 
 exports.getAll = async (req, res) => {
-  try {
-    const data = await ProfileAsesi.findAll({
-      include: [
-        {
-          model: User,
-          attributes: ["id_user", "email", "no_hp", "status_user", "created_at"], // tambahkan created_at disini jika butuh
-          include: [
-            {
-              model: Notifikasi,
-              where: { ref_type: "akun" },
-              required: false
-            }
-          ]
-        }
-      ],
-      order: [[User, "created_at", "DESC"]]
-    });
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
 
-    return response.success(res, "List Asesi", data);
+    // 1. Ambil NIK dari pendaftar yang DITOLAK
+    const rejectedPendaftar = PendaftaranAsesi ? await PendaftaranAsesi.findAll({
+      where: { 
+        status: { 
+          [Op.or]: [
+            { [Op.like]: '%tolak%' },
+            { [Op.like]: '%reject%' }
+          ]
+        } 
+      },
+      attributes: ['nik']
+    }).catch(() => []) : [];
+    
+    const rejectedNiks = rejectedPendaftar.map(p => p.nik).filter(Boolean);
 
-  } catch (err) {
-    return response.error(res, err.message);
-  }
+    // 2. Bangun kondisi filter
+    const whereCondition = { [Op.and]: [] };
+    
+    if (search) {
+      whereCondition[Op.and].push({
+        [Op.or]: [
+          { nama_lengkap: { [Op.like]: `%${search}%` } },
+          { nik: { [Op.like]: `%${search}%` } }
+        ]
+      });
+    }
+
+    // Filter yang reject
+    if (rejectedNiks.length > 0) {
+      whereCondition[Op.and].push({
+        nik: { [Op.notIn]: rejectedNiks }
+      });
+    }
+
+    const { count, rows } = await ProfileAsesi.findAndCountAll({
+      where: whereCondition[Op.and].length > 0 ? whereCondition : {},
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id_user', 'email', 'no_hp', 'username'],
+          required: false 
+        }
+      ],
+      limit: limit,
+      offset: offset,
+      order: [['id_user', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: {
+        data: rows,
+        pagination: {
+          totalItems: count,
+          currentPage: page,
+          totalPages: Math.ceil(count / limit),
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Error Get Asesi:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
-
 
 exports.getById = async (req, res) => {
   try {
-
     const data = await ProfileAsesi.findByPk(req.params.id, {
       include: User
     });
@@ -212,7 +269,6 @@ exports.getById = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-
     const asesi = await ProfileAsesi.findByPk(req.params.id);
     if (!asesi)
       return response.error(res, "Asesi tidak ditemukan", 404);
@@ -227,11 +283,8 @@ exports.update = async (req, res) => {
 };
 
 exports.delete = async (req, res) => {
-
   const t = await sequelize.transaction();
-
   try {
-
     const asesi = await ProfileAsesi.findByPk(req.params.id, { transaction: t });
 
     if (!asesi) {

@@ -71,7 +71,7 @@ router.get("/asesi", asesiAdmin.getAll);
 router.get("/asesi/:id", asesiAdmin.getById);
 router.put("/asesi/:id", asesiAdmin.update);
 router.delete("/asesi/:id", asesiAdmin.delete);
-router.put("/asesi/:id/reset-password", asesiAdmin.resetPassword);
+router.post("/asesi/:id/reset-password", asesiAdmin.resetPassword);
 
 router.post("/tuk", upload, tukAdmin.createTuk);
 router.post("/import-tuk", uploadExcel.single("file"), tukAdmin.importTukExcel);
@@ -86,7 +86,8 @@ router.post("/tuk/:id/generate-account", tukAdmin.generateAccount);
 
 router.post("/send-email/:id", accountController.sendAccountEmailManual);
 
-router.get("/dashboard", adminController.getDashboard);
+//router.get("/dashboard", adminController.getDashboard);
+router.get('/dashboard-summary', adminController.getDashboardSummary);
 router.put("/admin/:id/reset-password", adminController.resetPassword);
 
 router.get("/pendaftaran", pendaftaranController.getAll);

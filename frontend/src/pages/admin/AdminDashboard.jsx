@@ -6,7 +6,6 @@ import {
   FaUserTie,
   FaUsers,
   FaBuilding,
-  FaEllipsisV,
   FaCalendarAlt,
 } from "react-icons/fa";
 import {
@@ -24,7 +23,6 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const currentYear = new Date().getFullYear();
 
-  // State untuk menyimpan data dinamis
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState({ skema: 0, asesor: 0, asesi: 0, tuk: 0 });
   const [recentRegistrations, setRecentRegistrations] = useState([]);
@@ -32,111 +30,39 @@ const AdminDashboard = () => {
   const [chartData, setChartData] = useState([]);
   const [passRate, setPassRate] = useState({ kompeten: 0, belum: 0 });
 
-  // Fungsi Pembantu
-  const extractData = (res) => {
-    if (Array.isArray(res.data)) return res.data;
-    if (res.data?.data && Array.isArray(res.data.data)) return res.data.data;
-    return [];
-  };
-
-  const extractTotal = (res) => {
-    if (res.data?.pagination?.totalItems !== undefined) return res.data.pagination.totalItems;
-    return extractData(res).length;
-  };
-
-  useEffect(() => {
+useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [
-          resSkema,
-          resAsesor,
-          resAsesi,
-          resTuk,
-          resDaftar,
-          resJadwal
-        ] = await Promise.all([
-          api.get("/admin/skema?limit=1"),
-          api.get("/admin/asesor?limit=1"),
-          api.get("/admin/asesi?limit=1"),
-          api.get("/admin/tuk?limit=1"),
-          api.get("/admin/pendaftaran?limit=50"), 
-          api.get("/admin/jadwal?limit=5") 
-        ]);
+        const response = await api.get("/admin/dashboard-summary");
+        const dashboard = response.data?.data;
 
-        // 1. Set Statistik
-        setStatsData({
-          skema: extractTotal(resSkema),
-          asesor: extractTotal(resAsesor),
-          asesi: extractTotal(resAsesi),
-          tuk: extractTotal(resTuk),
-        });
+        if (dashboard) {
+          setStatsData(dashboard.stats);
+          setChartData(dashboard.chartData || []);
+          setPassRate(dashboard.passRate || { kompeten: 0, belum: 0 });
 
-        const allRegs = extractData(resDaftar);
+          // Mapping Pendaftaran (Berdasarkan kolom tabel pendaftaran_asesi asli)
+          const formattedRegs = (dashboard.recentRegistrations || []).map((reg) => ({
+            name: reg.nama_lengkap || "Nama Tidak Diketahui",
+            schema: reg.kompetensi_keahlian || "Skema Tidak Diketahui",
+            date: new Date(reg.tanggal_daftar || reg.createdAt || new Date()).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }),
+            status: reg.status || "Menunggu",
+          }));
+          setRecentRegistrations(formattedRegs);
 
-        // 2. Set Pendaftaran Terbaru
-        const formattedRegs = allRegs.slice(0, 5).map((reg) => ({
-          name: reg.asesi?.nama_lengkap || reg.user?.profile_asesi?.nama_lengkap || "Nama Tidak Diketahui",
-          schema: reg.skema?.nama_skema || "Skema Umum",
-          date: new Date(reg.createdAt || reg.tanggal_daftar || new Date()).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }),
-          status: reg.status || "Menunggu",
-        }));
-        setRecentRegistrations(formattedRegs);
-
-        // 3. Set Grafik
-        const schemaCounts = {};
-        allRegs.forEach((reg) => {
-          const schemaName = reg.skema?.nama_skema || "Skema Lainnya";
-          schemaCounts[schemaName] = (schemaCounts[schemaName] || 0) + 1;
-        });
-
-        const sortedChart = Object.entries(schemaCounts)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 4)
-          .map(([label, val]) => {
-            const max = Math.max(...Object.values(schemaCounts), 1);
-            const width = `${Math.round((val / max) * 100)}%`;
-            return { label: label.length > 15 ? label.substring(0, 15) + "..." : label, val, width };
+          // Mapping Jadwal (Berdasarkan kolom tabel jadwal asli)
+          const formattedSchedules = (dashboard.schedules || []).map((j) => {
+            const d = new Date(j.tgl_awal || new Date());
+            return {
+              day: d.getDate().toString().padStart(2, "0"),
+              month: d.toLocaleDateString("id-ID", { month: "short" }).toUpperCase(),
+              title: j.nama_kegiatan || "Uji Kompetensi",
+              time: j.pelaksanaan_uji ? j.pelaksanaan_uji.toUpperCase() : "TUK",
+            };
           });
-
-        if (sortedChart.length === 0) {
-          sortedChart.push({ label: "Belum ada pendaftar", val: 0, width: "0%" });
+          setScheduleData(formattedSchedules);
         }
-        setChartData(sortedChart);
-
-        // 4. Set Pie Chart
-        let kompeten = 0;
-        let belum = 0;
-        allRegs.forEach((reg) => {
-          const st = reg.status?.toLowerCase() || "";
-          if (st.includes("terima") || st.includes("kompeten") || st.includes("lulus")) kompeten++;
-          else if (st.includes("tolak") || st.includes("belum")) belum++;
-        });
-
-        const totalLulus = kompeten + belum;
-        let pKomp = 0;
-        let pBelum = 0;
-        if (totalLulus > 0) {
-          pKomp = Math.round((kompeten / totalLulus) * 100);
-          pBelum = 100 - pKomp;
-        } else if (allRegs.length > 0) {
-          pKomp = 100;
-        }
-        setPassRate({ kompeten: pKomp, belum: pBelum });
-
-        // 5. Set Jadwal Terdekat
-        const allJadwal = extractData(resJadwal);
-        const formattedSchedules = allJadwal.slice(0, 5).map((j) => {
-          const d = new Date(j.tanggal || j.waktu_mulai || new Date());
-          return {
-            day: d.getDate().toString().padStart(2, "0"),
-            month: d.toLocaleDateString("id-ID", { month: "short" }).toUpperCase(),
-            title: j.nama_jadwal || "Uji Kompetensi",
-            time: `${d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB • ${j.tuk?.nama_tuk || "TUK"}`,
-          };
-        });
-        setScheduleData(formattedSchedules);
-
       } catch (error) {
         console.error("Gagal mengambil data dashboard:", error);
       } finally {
@@ -147,7 +73,6 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // ✅ PENYESUAIAN LINK NAVIGASI DENGAN ADMINROUTES.JSX
   const stats = [
     { label: "Total Skema", value: statsData.skema, icon: <FaLayerGroup />, color: "text-orange-500", bg: "bg-orange-50", link: "/admin/skema" },
     { label: "Total Asesor", value: statsData.asesor, icon: <FaUserTie />, color: "text-[#071E3D]", bg: "bg-slate-50", link: "/admin/asesor" },
