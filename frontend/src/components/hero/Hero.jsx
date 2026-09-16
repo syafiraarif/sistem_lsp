@@ -106,7 +106,7 @@ export default function Hero() {
               }
               className="px-8 py-4 rounded-2xl border-2 border-[#071E3D]/10 text-[#071E3D] font-black hover:bg-[#071E3D] hover:text-white transition-all uppercase text-xs tracking-widest"
             >
-              Lihat 40 Skema Kami
+              Lihat Skema Kami
             </button>
           </motion.div>
 

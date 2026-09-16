@@ -339,7 +339,7 @@ export default function SurveillancePage() {
                       </div>
                       <ReCAPTCHA
                         ref={recaptchaRef}
-                        sitekey="YOUR_RECAPTCHA_SITE_KEY" 
+                        sitekey="6LdSGX4sAAAAAA7BAt1iY8OVxtnx_EFunFBQV-QF" 
                         onChange={onCaptchaChange}
                       />
                       {errors.captchaToken && (
