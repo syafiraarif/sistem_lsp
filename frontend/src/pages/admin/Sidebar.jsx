@@ -1,5 +1,3 @@
-// frontend/src/pages/admin/Sidebar.jsx
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -10,7 +8,6 @@ import {
   FaUniversity,
   FaBook,
   FaAward,
-  FaLayerGroup,
   FaCalendarAlt,
   FaBuilding,
   FaUserGraduate,
@@ -59,7 +56,6 @@ const Sidebar = () => {
       const isPathActive = (pathsArray) =>
         pathsArray.some((p) => path.startsWith(p));
 
-      // Menambahkan /admin/skema ke dalam deteksi dropdown standar
       newState.standar = isPathActive([
         "/admin/unit-kompetensi",
         "/admin/skkni",
@@ -135,10 +131,11 @@ const Sidebar = () => {
 
   return (
     <>
+      {/* Mobile Toggle Button */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed top-4 left-4 z-[55] lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 shadow-lg text-[#071E3D] flex items-center justify-center"
+        className="fixed top-5 left-5 z-[55] lg:hidden w-11 h-11 rounded-xl bg-white border border-[#071E3D]/10 shadow-sm text-[#071E3D] flex items-center justify-center transition-all hover:bg-slate-50"
       >
         <Menu size={22} />
       </button>
@@ -181,10 +178,11 @@ const Sidebar = () => {
         )}
       </AnimatePresence>
 
+      {/* Desktop Sidebar */}
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`hidden lg:flex fixed left-0 top-0 h-screen bg-white text-[#071E3D] flex-col z-[70] border-r border-slate-100 shadow-[16px_0_40px_-30px_rgba(7,30,61,0.35)] overflow-hidden transition-[width] duration-200 ease-linear ${
+        className={`hidden lg:flex fixed left-0 top-0 h-screen bg-white text-[#071E3D] flex-col z-[70] border-r border-[#071E3D]/10 overflow-hidden transition-[width] duration-200 ease-linear ${
           isExpanded ? "w-80" : "w-24"
         }`}
       >
@@ -209,6 +207,7 @@ const Sidebar = () => {
         }`}
       />
 
+      {/* Logout Modal */}
       <AnimatePresence>
         {showLogoutModal && (
           <motion.div
@@ -222,17 +221,17 @@ const Sidebar = () => {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 12 }}
               transition={{ duration: 0.18 }}
-              className="w-full max-w-md bg-white rounded-[30px] border border-slate-100 shadow-2xl p-8 text-center"
+              className="w-full max-w-sm bg-white rounded-xl border border-[#071E3D]/10 shadow-xl p-8 text-center"
             >
-              <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
-                <LogOut size={30} />
+              <div className="w-14 h-14 mx-auto mb-4 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
+                <LogOut size={26} />
               </div>
 
-              <h2 className="text-2xl font-black text-[#071E3D] mb-2">
+              <h2 className="text-xl font-black text-[#071E3D] mb-2">
                 Keluar dari Sistem?
               </h2>
 
-              <p className="text-slate-500 font-medium mb-7">
+              <p className="text-[#182D4A]/70 text-sm font-medium mb-7">
                 Apakah Anda yakin ingin logout dari dashboard Admin?
               </p>
 
@@ -240,7 +239,7 @@ const Sidebar = () => {
                 <button
                   type="button"
                   onClick={() => setShowLogoutModal(false)}
-                  className="px-5 py-4 rounded-2xl border border-slate-200 text-[#071E3D] font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
+                  className="px-4 py-2.5 rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] text-[#071E3D] font-bold text-[12px] uppercase tracking-wider hover:bg-slate-100 transition-all"
                 >
                   Batal
                 </button>
@@ -248,7 +247,7 @@ const Sidebar = () => {
                 <button
                   type="button"
                   onClick={confirmLogout}
-                  className="px-5 py-4 rounded-2xl bg-red-500 text-white font-black text-xs uppercase tracking-widest hover:bg-red-600 transition-all"
+                  className="px-4 py-2.5 rounded-lg bg-red-600 text-white font-bold text-[12px] uppercase tracking-wider hover:bg-red-700 transition-all"
                 >
                   Ya, Keluar
                 </button>
@@ -280,7 +279,7 @@ const SidebarContent = ({
     standar:
       isActive("/admin/unit-kompetensi") ||
       isActive("/admin/skkni") ||
-      isActive("/admin/skema") ||  // <-- Menambahkan skema ke status aktif dropdown
+      isActive("/admin/skema") ||
       isActive("/admin/bank-soal") ||
       isActive("/admin/bank-soal-pg"),
 
@@ -296,11 +295,12 @@ const SidebarContent = ({
       <style>{`
         .admin-sidebar-scrollbar::-webkit-scrollbar { width: 6px; }
         .admin-sidebar-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .admin-sidebar-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 999px; }
-        .admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover { background: #F97316; }
+        .admin-sidebar-scrollbar::-webkit-scrollbar-thumb { background: #CC6B27; border-radius: 10px; }
+        .admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8561f; }
       `}</style>
 
-      <div className="h-[120px] border-b border-slate-100 flex items-center shrink-0">
+      {/* HEADER LOGO */}
+      <div className="h-[100px] border-b border-[#071E3D]/10 flex items-center shrink-0">
         <button
           type="button"
           onClick={togglePin}
@@ -308,13 +308,13 @@ const SidebarContent = ({
           className="w-24 h-full flex items-center justify-center shrink-0 cursor-pointer group"
         >
           <div
-            className={`relative w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center text-2xl transition-all duration-300 ${
-              isPinned ? "ring-4 ring-orange-500/30 scale-95" : "group-hover:scale-105"
+            className={`relative w-12 h-12 rounded-xl bg-[#071E3D] text-white flex items-center justify-center text-xl transition-all duration-300 ${
+              isPinned ? "ring-2 ring-[#CC6B27]/40 scale-95" : "group-hover:scale-105"
             }`}
           >
             <FaUniversity />
             {isPinned && (
-              <div className="absolute -top-1 -right-1 bg-orange-500 rounded-full p-1 text-[8px]">
+              <div className="absolute -top-1.5 -right-1.5 bg-[#CC6B27] rounded-full p-1 text-[8px]">
                 <FaThumbtack />
               </div>
             )}
@@ -329,8 +329,7 @@ const SidebarContent = ({
           <h1 className="text-xl font-black text-[#071E3D] uppercase truncate max-w-[190px] leading-tight">
             S.I.LSP
           </h1>
-
-          <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-1">
+          <p className="text-[10px] font-black text-[#CC6B27] uppercase tracking-widest mt-0.5">
             Dashboard Admin
           </p>
         </div>
@@ -339,21 +338,20 @@ const SidebarContent = ({
           <button
             type="button"
             onClick={onClose}
-            className="ml-auto mr-5 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+            className="ml-auto mr-5 p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         )}
       </div>
 
+      {/* NAVIGATION MENUS */}
       <nav
         ref={sidebarContentRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto py-4 admin-sidebar-scrollbar"
       >
         <div className="space-y-1">
-          <SectionLabel isExpanded={isExpanded}>Utama</SectionLabel>
-
           <NavItem
             icon={<FaHome />}
             label="Home / Dashboard"
@@ -386,8 +384,6 @@ const SidebarContent = ({
             isExpanded={isExpanded}
           />
 
-          <SectionLabel isExpanded={isExpanded}>Reporting</SectionLabel>
-
           <NavItem
             icon={<FaChartBar />}
             label="Laporan Sertifikasi"
@@ -395,8 +391,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/laporan-sertifikasi")}
             isExpanded={isExpanded}
           />
-
-          <SectionLabel isExpanded={isExpanded}>Master Data</SectionLabel>
 
           <NavItem
             icon={<FaBook />}
@@ -422,14 +416,11 @@ const SidebarContent = ({
                 active={isActive("/admin/skkni")}
                 onClick={() => handleNav("/admin/skkni")}
               />
-
-              {/* Menempatkan Skema Sertifikasi tepat setelah Data SKKNI */}
               <SubItem
                 label="Skema Sertifikasi"
                 active={isActive("/admin/skema")}
                 onClick={() => handleNav("/admin/skema")}
               />
-
               <SubItem
                 label="Unit Kompetensi"
                 active={isActive("/admin/unit-kompetensi")}
@@ -437,8 +428,6 @@ const SidebarContent = ({
               />
             </SubMenu>
           )}
-
-          <SectionLabel isExpanded={isExpanded}>Operasional</SectionLabel>
 
           <NavItem
             icon={<FaCalendarAlt />}
@@ -472,25 +461,21 @@ const SidebarContent = ({
                 active={isActive("/admin/asesi/tambah")}
                 onClick={() => handleNav("/admin/asesi/tambah")}
               />
-
               <SubItem
                 label="Pendaftar Baru"
                 active={isActive("/admin/verifikasi-pendaftaran")}
                 onClick={() => handleNav("/admin/verifikasi-pendaftaran")}
               />
-
               <SubItem
                 label="Terjadwal"
                 active={isActive("/admin/asesi/terjadwal")}
                 onClick={() => handleNav("/admin/asesi/terjadwal")}
               />
-
               <SubItem
                 label="Kompeten"
                 active={isActive("/admin/asesi/kompeten")}
                 onClick={() => handleNav("/admin/asesi/kompeten")}
               />
-
               <SubItem
                 label="Belum Kompeten"
                 active={isActive("/admin/asesi/belum-kompeten")}
@@ -515,7 +500,6 @@ const SidebarContent = ({
                 active={location.pathname === "/admin/asesor"}
                 onClick={() => handleNav("/admin/asesor")}
               />
-
               <SubItem
                 label="Statistik Wilayah"
                 active={isActive("/admin/asesor/statistik")}
@@ -524,8 +508,6 @@ const SidebarContent = ({
             </SubMenu>
           )}
 
-          <SectionLabel isExpanded={isExpanded}>Sistem & Web</SectionLabel>
-
           <NavItem
             icon={<FaCommentDots />}
             label="Notifikasi"
@@ -533,8 +515,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/notifikasi")}
             isExpanded={isExpanded}
           />
-
-          <SectionLabel isExpanded={isExpanded}>Keuangan & Admin</SectionLabel>
 
           <NavItem
             icon={<FaMoneyBillWave />}
@@ -554,46 +534,34 @@ const SidebarContent = ({
         </div>
       </nav>
 
-      <div className="h-28 border-t border-slate-100 bg-slate-50/50 shrink-0 flex items-center">
+      {/* FOOTER LOGOUT */}
+      <div className="h-24 border-t border-[#071E3D]/10 bg-[#FAFAFA] shrink-0 flex items-center">
         <div className="w-24 h-full flex items-center justify-center shrink-0">
           <button
             type="button"
             onClick={handleLogout}
             title={!isExpanded ? "Keluar" : ""}
-            className="w-14 h-14 rounded-2xl bg-white border border-slate-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 shadow-sm flex items-center justify-center transition-colors duration-150"
+            className="w-12 h-12 rounded-xl bg-white border border-red-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 shadow-sm flex items-center justify-center transition-colors duration-150"
           >
-            <FaSignOutAlt className="text-lg" />
+            <FaSignOutAlt className="text-[18px]" />
           </button>
         </div>
 
         <button
           type="button"
           onClick={handleLogout}
-          className={`h-14 flex-1 mr-5 rounded-2xl flex items-center justify-between overflow-hidden text-red-500 transition-opacity duration-150 ${
+          className={`h-12 flex-1 mr-5 rounded-lg flex items-center text-red-500 hover:text-red-600 transition-opacity duration-150 ${
             isExpanded ? "opacity-100" : "opacity-0"
           }`}
         >
-          <span className="text-sm font-black whitespace-nowrap">Keluar</span>
-          {/* Panah dihilangkan karena tidak ada anakan */}
+          <span className="text-[13px] font-bold whitespace-nowrap">Keluar dari Sistem</span>
         </button>
       </div>
     </>
   );
 };
 
-function SectionLabel({ children, isExpanded }) {
-  return (
-    <div
-      className={`px-8 pt-5 pb-2 overflow-hidden transition-opacity duration-150 ${
-        isExpanded ? "opacity-100" : "opacity-0"
-      }`}
-    >
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
-        {children}
-      </p>
-    </div>
-  );
-}
+/* --- SUB COMPONENTS --- */
 
 function NavItem({ icon, label, active, onClick, isExpanded }) {
   return (
@@ -601,14 +569,14 @@ function NavItem({ icon, label, active, onClick, isExpanded }) {
       type="button"
       onClick={onClick}
       title={!isExpanded ? label : ""}
-      className="group w-full min-h-16 flex items-center"
+      className="group w-full min-h-14 flex items-center"
     >
-      <div className="w-24 h-16 flex items-center justify-center shrink-0">
+      <div className="w-24 h-14 flex items-center justify-center shrink-0">
         <div
-          className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-150 text-[20px] ${
+          className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-150 text-[18px] ${
             active
-              ? "bg-orange-50 border border-orange-100 text-orange-500"
-              : "text-[#071E3D]/80 group-hover:bg-slate-50 group-hover:text-orange-500"
+              ? "bg-[#CC6B27]/10 border border-[#CC6B27]/20 text-[#CC6B27]"
+              : "text-[#182D4A]/60 group-hover:bg-[#CC6B27]/5 group-hover:text-[#CC6B27]"
           }`}
         >
           {icon}
@@ -616,44 +584,36 @@ function NavItem({ icon, label, active, onClick, isExpanded }) {
       </div>
 
       <div
-        className={`min-h-16 flex-1 pr-5 flex items-center justify-between gap-3 overflow-hidden transition-opacity duration-150 ${
+        className={`min-h-14 flex-1 pr-5 flex items-center justify-between gap-3 overflow-hidden transition-opacity duration-150 ${
           isExpanded ? "opacity-100" : "opacity-0"
         }`}
       >
         <span
-          className={`text-[14px] text-left leading-snug ${
-            active ? "font-black text-orange-500" : "font-medium text-slate-600"
+          className={`text-[13px] text-left leading-snug ${
+            active ? "font-bold text-[#CC6B27]" : "font-semibold text-[#182D4A]"
           }`}
         >
           {label}
         </span>
-        {/* Panah dihilangkan karena bukan menu anakan */}
       </div>
     </button>
   );
 }
 
-function DropdownItem({
-  icon,
-  label,
-  active,
-  open,
-  onClick,
-  isExpanded,
-}) {
+function DropdownItem({ icon, label, active, open, onClick, isExpanded }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={!isExpanded ? label : ""}
-      className="group w-full min-h-16 flex items-center"
+      className="group w-full min-h-14 flex items-center"
     >
-      <div className="w-24 h-16 flex items-center justify-center shrink-0">
+      <div className="w-24 h-14 flex items-center justify-center shrink-0">
         <div
-          className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-150 text-[20px] ${
+          className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-150 text-[18px] ${
             active
-              ? "bg-orange-50 border border-orange-100 text-orange-500"
-              : "text-[#071E3D]/80 group-hover:bg-slate-50 group-hover:text-orange-500"
+              ? "bg-[#CC6B27]/10 border border-[#CC6B27]/20 text-[#CC6B27]"
+              : "text-[#182D4A]/60 group-hover:bg-[#CC6B27]/5 group-hover:text-[#CC6B27]"
           }`}
         >
           {icon}
@@ -661,29 +621,28 @@ function DropdownItem({
       </div>
 
       <div
-        className={`min-h-16 flex-1 pr-5 flex items-center justify-between gap-3 overflow-hidden transition-opacity duration-150 ${
+        className={`min-h-14 flex-1 pr-5 flex items-center justify-between gap-3 overflow-hidden transition-opacity duration-150 ${
           isExpanded ? "opacity-100" : "opacity-0"
         }`}
       >
         <span
-          className={`text-[14px] text-left leading-snug ${
-            active ? "font-black text-orange-500" : "font-medium text-slate-600"
+          className={`text-[13px] text-left leading-snug ${
+            active ? "font-bold text-[#CC6B27]" : "font-semibold text-[#182D4A]"
           }`}
         >
           {label}
         </span>
 
-        {/* Panah tetap ada karena ini menu dropdown (punya anakan) */}
         {open ? (
           <FaChevronDown
-            className={`text-xs shrink-0 ${
-              active ? "text-orange-500" : "text-slate-300"
+            className={`text-[10px] shrink-0 ${
+              active ? "text-[#CC6B27]" : "text-[#182D4A]/40"
             }`}
           />
         ) : (
           <FaChevronRight
-            className={`text-xs shrink-0 ${
-              active ? "text-orange-500" : "text-slate-300 group-hover:text-orange-500"
+            className={`text-[10px] shrink-0 ${
+              active ? "text-[#CC6B27]" : "text-[#182D4A]/40 group-hover:text-[#CC6B27]"
             }`}
           />
         )}
@@ -701,21 +660,21 @@ function SubItem({ label, active, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`group w-full min-h-11 rounded-2xl flex items-center gap-3 px-4 text-left transition-all duration-150 ${
+      className={`group w-full min-h-10 rounded-lg flex items-center gap-3 px-4 text-left transition-all duration-150 ${
         active
-          ? "bg-orange-50 border border-orange-100 text-orange-500"
-          : "bg-slate-50/70 border border-transparent text-slate-500 hover:bg-white hover:border-orange-100 hover:text-orange-500"
+          ? "bg-[#CC6B27]/10 border border-[#CC6B27]/20 text-[#CC6B27]"
+          : "bg-[#FAFAFA] border border-transparent text-[#182D4A]/70 hover:bg-white hover:border-[#CC6B27]/20 hover:text-[#CC6B27]"
       }`}
     >
       <span
         className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-          active ? "bg-orange-500" : "bg-slate-300 group-hover:bg-orange-500"
+          active ? "bg-[#CC6B27]" : "bg-[#182D4A]/30 group-hover:bg-[#CC6B27]"
         }`}
       />
 
       <span
-        className={`text-xs leading-snug ${
-          active ? "font-black" : "font-semibold"
+        className={`text-[12px] leading-snug ${
+          active ? "font-bold" : "font-semibold"
         }`}
       >
         {label}

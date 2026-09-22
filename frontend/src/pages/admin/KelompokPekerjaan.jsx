@@ -194,7 +194,7 @@ const KelompokPekerjaan = () => {
                   ) : (
                     <ClipboardList size={17} />
                   )}
-                  Refresh Data
+                  Refresh
                 </button>
               </div>
             </div>

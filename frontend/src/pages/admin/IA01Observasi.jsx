@@ -218,7 +218,7 @@ const IA01Observasi = () => {
                   ) : (
                     <RefreshCcw size={17} />
                   )}
-                  Refresh Data
+                  Refresh
                 </button>
               </div>
             </div>

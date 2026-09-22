@@ -336,7 +336,7 @@ setTimeout(() => {
                     ) : (
                       <RefreshCcw size={17} />
                     )}
-                    Refresh Data
+                    Refresh
                   </button>
 
                   <button

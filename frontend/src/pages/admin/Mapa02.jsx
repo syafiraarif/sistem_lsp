@@ -327,7 +327,7 @@ const Mapa02 = () => {
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
                 >
                   <RefreshCcw size={17} />
-                  Refresh Data
+                  Refresh
                 </button>
               </div>
             </div>

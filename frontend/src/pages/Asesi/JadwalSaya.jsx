@@ -1168,7 +1168,7 @@ export default function JadwalSaya() {
                     size={16}
                   />
                 )}
-                Muat Ulang
+                Refresh
               </button>
             </div>
 

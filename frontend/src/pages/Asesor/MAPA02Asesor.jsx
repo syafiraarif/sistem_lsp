@@ -754,7 +754,7 @@ export default function MAPA02Asesor() {
             );
 
             if (!mukPayload.length) {
-                // Fallback: refresh data satu kali lagi apabila state lama
+                // Fallback: Refresh satu kali lagi apabila state lama
                 // belum sempat menerima MUK hasil generate.
                 const latestResponse = await api.get(
                     `/asesor/fr-mapa02?id_peserta=${targetPeserta}`

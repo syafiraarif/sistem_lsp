@@ -170,10 +170,6 @@ const VerifikasiPendaftaran = () => {
         <div className="absolute right-0 top-0 w-72 h-72 bg-[#CC6B27]/10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/2"></div>
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#CC6B27]/10 text-[#CC6B27] text-[11px] font-black uppercase tracking-wider mb-3">
-              <ShieldCheck size={14} />
-              Verifikasi Pendaftaran
-            </div>
             <h2 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">Pendaftar Baru</h2>
             <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">Validasi data calon asesi baru yang mendaftar.</p>
           </div>

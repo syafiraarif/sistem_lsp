@@ -86,7 +86,7 @@ const Surveillance = () => {
         
         Swal.fire('Berhasil', 'Status pengajuan telah diperbarui', 'success');
         setShowModal(false);
-        fetchSurveillance(); // Refresh data di tabel
+        fetchSurveillance(); // Refresh di tabel
       } catch (error) {
         Swal.fire('Gagal', error.response?.data?.message || 'Gagal mengubah status', 'error');
       }

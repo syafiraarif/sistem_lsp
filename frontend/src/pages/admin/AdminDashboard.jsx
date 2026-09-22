@@ -2,21 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import {
-  FaLayerGroup,
-  FaUserTie,
-  FaUsers,
-  FaBuilding,
-  FaCheckCircle,
-  FaTimesCircle
-} from "react-icons/fa";
-import {
-  ChevronRight,
   ClipboardList,
   CalendarCheck,
   Sparkles,
   Loader2,
   PieChart,
-  BarChart3
+  BarChart3,
+  ArrowRight,
+  Layers,
+  UserCheck,
+  Users,
+  Building2,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 
 const AdminDashboard = () => {
@@ -54,8 +52,23 @@ const AdminDashboard = () => {
           }));
           setRecentRegistrations(formattedRegs);
 
-          // Mapping Jadwal
-          const formattedSchedules = (dashboard.schedules || []).map((j) => {
+          // Mapping & Filter Jadwal Paling Mendekati Hari Ini
+          const rawSchedules = dashboard.schedules || [];
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+
+          // Pisahkan jadwal yang akan datang/hari ini dan jadwal lampau
+          const upcoming = rawSchedules.filter((j) => new Date(j.tgl_awal || 0) >= now);
+          
+          // Jika ada jadwal mendatang, urutkan dari yang terdekat (ASC)
+          // Jika tidak ada jadwal mendatang, ambil jadwal terbaru dari yang lampau (DESC)
+          const sortedSchedules = (upcoming.length > 0 ? upcoming : rawSchedules).sort((a, b) => {
+            const dateA = new Date(a.tgl_awal || 0).getTime();
+            const dateB = new Date(b.tgl_awal || 0).getTime();
+            return upcoming.length > 0 ? dateA - dateB : dateB - dateA;
+          });
+
+          const formattedSchedules = sortedSchedules.map((j) => {
             const d = new Date(j.tgl_awal || new Date());
             return {
               day: d.getDate().toString().padStart(2, "0"),
@@ -98,7 +111,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
       <div className="flex flex-col gap-6">
 
-        {/* HEADER SECTION (Gaya Modul Asesor) */}
+        {/* HEADER SECTION */}
         <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
           <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
           <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
@@ -114,13 +127,6 @@ const AdminDashboard = () => {
             <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
               <button
                 type="button"
-                onClick={() => navigate("/admin/verifikasi-pendaftaran")}
-                className="flex-1 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 md:flex-none"
-              >
-                Verifikasi Pendaftaran
-              </button>
-              <button
-                type="button"
                 onClick={() => navigate("/admin/laporan-sertifikasi")}
                 className="flex-1 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] hover:shadow-md md:flex-none"
               >
@@ -130,31 +136,31 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* STAT CARD KOTAK-KOTAK ANGKA */}
+        {/* STAT CARD KOTAK-KOTAK ANGKA (Icon Lucide-React Line) */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
-            icon={<FaLayerGroup size={20} />}
+            icon={<Layers size={22} />}
             label="Total Skema"
             value={`${statsData.skema} Skema`}
             tone="orange"
             onClick={() => navigate("/admin/skema")}
           />
           <StatCard
-            icon={<FaUserTie size={20} />}
+            icon={<UserCheck size={22} />}
             label="Total Asesor"
             value={`${statsData.asesor} Asesor`}
             tone="navy"
             onClick={() => navigate("/admin/asesor")}
           />
           <StatCard
-            icon={<FaUsers size={20} />}
+            icon={<Users size={22} />}
             label="Total Asesi"
             value={`${statsData.asesi} Asesi`}
             tone="green"
             onClick={() => navigate("/admin/asesi/tambah")}
           />
           <StatCard
-            icon={<FaBuilding size={20} />}
+            icon={<Building2 size={22} />}
             label="Data TUK"
             value={`${statsData.tuk} Lokasi`}
             tone="orange"
@@ -204,7 +210,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Tabel Kelulusan Asesi (Pengganti Diagram Bulat) */}
+          {/* Tabel Kelulusan Asesi */}
           <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
             <div className="flex items-center gap-2 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4">
               <PieChart size={18} className="text-[#CC6B27]" />
@@ -214,11 +220,10 @@ const AdminDashboard = () => {
             </div>
 
             <div className="p-5 flex flex-col gap-5">
-              {/* Mini cards kompeten & belum kompeten */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-xl border border-green-200 bg-green-50/70 p-4">
                   <div className="flex items-center gap-2 text-green-700">
-                    <FaCheckCircle size={16} />
+                    <CheckCircle size={16} />
                     <span className="text-[11px] font-black uppercase tracking-wider">Kompeten</span>
                   </div>
                   <p className="mt-2 text-2xl font-black text-green-700">{jumlahKompeten} <span className="text-xs font-semibold text-green-600">Asesi</span></p>
@@ -227,7 +232,7 @@ const AdminDashboard = () => {
 
                 <div className="rounded-xl border border-red-200 bg-red-50/70 p-4">
                   <div className="flex items-center gap-2 text-red-600">
-                    <FaTimesCircle size={16} />
+                    <XCircle size={16} />
                     <span className="text-[11px] font-black uppercase tracking-wider">Belum Kompeten</span>
                   </div>
                   <p className="mt-2 text-2xl font-black text-red-600">{jumlahBelum} <span className="text-xs font-semibold text-red-500">Asesi</span></p>
@@ -235,7 +240,6 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Tabel perincian */}
               <div className="overflow-hidden rounded-lg border border-[#071E3D]/10">
                 <table className="w-full border-collapse bg-white text-left">
                   <thead>
@@ -279,16 +283,18 @@ const AdminDashboard = () => {
           
           {/* Tabel Pendaftaran Terbaru (2 Kolom) */}
           <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm lg:col-span-2">
-            <div className="flex flex-col gap-3 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-3.5 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="flex items-center gap-2 text-[14px] font-bold uppercase tracking-wider text-[#FAFAFA]">
                 <ClipboardList size={18} className="text-[#CC6B27]" />
                 Pendaftaran Masuk Terbaru
               </h2>
+              {/* Tombol aksi jelas dan tegas */}
               <button
+                type="button"
                 onClick={() => navigate("/admin/verifikasi-pendaftaran")}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FAFAFA] hover:text-[#CC6B27] transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm backdrop-blur-sm transition-all hover:bg-[#CC6B27] hover:border-[#CC6B27]"
               >
-                Lihat Semua <ChevronRight size={14} />
+                Verifikasi Pendaftaran <ArrowRight size={14} />
               </button>
             </div>
 
@@ -327,40 +333,41 @@ const AdminDashboard = () => {
           </div>
 
           {/* Agenda Jadwal Terdekat (1 Kolom) */}
-          <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
-            <div className="flex items-center gap-2 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4">
-              <CalendarCheck size={18} className="text-[#CC6B27]" />
-              <h2 className="text-[14px] font-bold uppercase tracking-wider text-[#FAFAFA]">
-                Jadwal Terdekat
-              </h2>
-            </div>
+          <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4">
+                <CalendarCheck size={18} className="text-[#CC6B27]" />
+                <h2 className="text-[14px] font-bold uppercase tracking-wider text-[#FAFAFA]">
+                  Jadwal Terdekat
+                </h2>
+              </div>
 
-            <div className="space-y-3 p-5 max-h-[380px] overflow-y-auto custom-scrollbar">
-              {scheduleData.length === 0 ? (
-                <p className="py-12 text-center text-[13.5px] font-medium text-[#182D4A]/50">
-                  Belum ada jadwal asesmen terdekat
-                </p>
-              ) : (
-                scheduleData.map((item, index) => (
-                  <div
-                    key={index}
-                    onClick={() => navigate("/admin/jadwal/uji-kompetensi")}
-                    className="flex cursor-pointer items-center gap-3.5 rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] p-3 transition-all hover:border-[#CC6B27]/40 hover:bg-[#CC6B27]/5"
-                  >
-                    <div className="flex min-w-[54px] flex-col items-center justify-center rounded-lg bg-[#071E3D] px-2 py-2 text-white">
-                      <span className="text-lg font-black leading-none">{item.day}</span>
-                      <span className="mt-0.5 text-[9px] font-black uppercase tracking-wider text-[#CC6B27]">
-                        {item.month}
-                      </span>
+              <div className="space-y-3 p-5 max-h-[380px] overflow-y-auto custom-scrollbar">
+                {scheduleData.length === 0 ? (
+                  <p className="py-12 text-center text-[13.5px] font-medium text-[#182D4A]/50">
+                    Belum ada jadwal asesmen terdekat
+                  </p>
+                ) : (
+                  scheduleData.slice(0, 4).map((item, index) => (
+                    /* Item jadwal murni tampilan informatif (non-clickable) */
+                    <div
+                      key={index}
+                      className="flex select-none items-center gap-3.5 rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] p-3"
+                    >
+                      <div className="flex min-w-[54px] flex-col items-center justify-center rounded-lg bg-[#071E3D] px-2 py-2 text-white">
+                        <span className="text-lg font-black leading-none">{item.day}</span>
+                        <span className="mt-0.5 text-[9px] font-black uppercase tracking-wider text-[#CC6B27]">
+                          {item.month}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-bold text-[#071E3D]">{item.title}</p>
+                        <p className="text-[11px] font-semibold text-[#182D4A]/60">{item.time}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-bold text-[#071E3D]">{item.title}</p>
-                      <p className="text-[11px] font-semibold text-[#182D4A]/60">{item.time}</p>
-                    </div>
-                    <ChevronRight size={16} className="text-[#182D4A]/40" />
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
 
             <div className="border-t border-[#071E3D]/10 p-4">
@@ -388,7 +395,7 @@ const AdminDashboard = () => {
   );
 };
 
-/* --- STAT CARD KOTAK (PERSIS SEPERTI DI MODUL ASESOR) --- */
+/* --- STAT CARD KOTAK --- */
 const StatCard = ({ icon, label, value, tone = "orange", onClick }) => {
   const tones = {
     orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
@@ -413,14 +420,14 @@ const StatCard = ({ icon, label, value, tone = "orange", onClick }) => {
   );
 };
 
-/* --- STATUS BADGE (KONSISTEN DENGAN ASESOR) --- */
+/* --- STATUS BADGE --- */
 function StatusBadge({ status }) {
   const s = status?.toLowerCase() || "";
   let badgeStyle = "border-orange-200 bg-orange-50 text-[#CC6B27]";
 
-  if (s.includes("terima") || s.includes("kompeten") || s.includes("aktif")) {
+  if (s.includes("terima") || s.includes("kompeten") || s.includes("aktif") || s.includes("approved")) {
     badgeStyle = "border-green-200 bg-green-50 text-green-600";
-  } else if (s.includes("tolak") || s.includes("belum") || s.includes("nonaktif")) {
+  } else if (s.includes("tolak") || s.includes("belum") || s.includes("nonaktif") || s.includes("rejected")) {
     badgeStyle = "border-red-200 bg-red-50 text-red-600";
   } else if (s.includes("verifikasi") || s.includes("proses")) {
     badgeStyle = "border-blue-200 bg-blue-50 text-blue-600";

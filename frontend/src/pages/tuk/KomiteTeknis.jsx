@@ -437,7 +437,7 @@ export default function KomiteTeknis() {
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
                   >
                     <ClipboardList size={16} />
-                    Refresh Data
+                    Refresh
                   </button>
 
                   {selected.length > 0 && (

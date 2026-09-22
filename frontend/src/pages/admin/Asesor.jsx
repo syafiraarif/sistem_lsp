@@ -638,10 +638,6 @@ const handleImportExcel = async (e) => {
           <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
           <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#CC6B27]/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-[#CC6B27]">
-                <Sparkles size={14} />
-                Data Asesor
-              </div>
               <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">Data Asesor</h2>
               <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">Kelola data profil, sertifikasi, dan akun login asesor.</p>
             </div>

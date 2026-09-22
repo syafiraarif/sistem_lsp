@@ -392,7 +392,7 @@ export default function JadwalAsesi() {
                 ) : (
                   <RefreshCcw size={16} />
                 )}
-                Muat Ulang
+                Refresh
               </button>
             </div>
 

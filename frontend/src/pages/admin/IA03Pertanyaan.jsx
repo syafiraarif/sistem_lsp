@@ -212,7 +212,7 @@ const IA03Pertanyaan = () => {
                   ) : (
                     <RefreshCcw size={17} />
                   )}
-                  Refresh Data
+                  Refresh
                 </button>
               </div>
             </div>
