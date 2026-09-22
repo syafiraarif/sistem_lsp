@@ -1,64 +1,56 @@
-// frontend/src/pages/asesor/DashboardAsesor.jsx
-
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SidebarAsesor from "../../components/sidebar/SidebarAsesor";
 import {
+  BadgeCheck,
   CalendarCheck,
   CalendarDays,
+  ChevronLeft,
   ChevronRight,
   ClipboardCheck,
   FileSearch,
-  FileText,
   KeyRound,
   Loader2,
   MapPin,
   RefreshCcw,
   ShieldCheck,
-  Sparkles,
   User,
 } from "lucide-react";
+import { notifikasi } from "../../components/ui/notifikasi";
 import api from "../../services/api";
 
-export default function DashboardAsesor() {
+const DashboardAsesor = () => {
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
-
   const [jadwalUji, setJadwalUji] = useState([]);
   const [jadwalVerifikasi, setJadwalVerifikasi] = useState([]);
   const [jadwalKomite, setJadwalKomite] = useState([]);
   const [jadwalMkva, setJadwalMkva] = useState([]);
-
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const itemsPerPage = 3;
 
   const getUserFromStorage = () => {
     try {
       const storedUser = localStorage.getItem("user");
       return storedUser ? JSON.parse(storedUser) : null;
-    } catch (err) {
+    } catch {
       return null;
     }
   };
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  const fetchDashboardData = async (showSuccess = false) => {
+    setLoading(true);
 
+    try {
       const localUser = getUserFromStorage();
       setUser(localUser);
 
-      const [
-        profileRes,
-        jadwalUjiRes,
-        jadwalVerifikasiRes,
-        jadwalKomiteRes,
-        jadwalMkvaRes,
-      ] = await Promise.allSettled([
+      const [profileRes, jadwalUjiRes, jadwalVerifikasiRes, jadwalKomiteRes, jadwalMkvaRes] = await Promise.allSettled([
         api.get("/asesor/profile"),
         api.get("/asesor/jadwal-uji-kompetensi"),
         api.get("/asesor/jadwal-verifikasi-tuk"),
@@ -66,53 +58,83 @@ export default function DashboardAsesor() {
         api.get("/asesor/mkva/jadwal"),
       ]);
 
+      let failedCount = 0;
+
       if (profileRes.status === "fulfilled") {
         setProfile(profileRes.value.data?.data || null);
+      } else {
+        failedCount += 1;
       }
 
       if (jadwalUjiRes.status === "fulfilled") {
         const data = jadwalUjiRes.value.data?.data || [];
         setJadwalUji(Array.isArray(data) ? data : []);
+      } else {
+        failedCount += 1;
       }
 
       if (jadwalVerifikasiRes.status === "fulfilled") {
         const data = jadwalVerifikasiRes.value.data?.data || [];
         setJadwalVerifikasi(Array.isArray(data) ? data : []);
+      } else {
+        failedCount += 1;
       }
 
       if (jadwalKomiteRes.status === "fulfilled") {
         const data = jadwalKomiteRes.value.data?.data || [];
         setJadwalKomite(Array.isArray(data) ? data : []);
+      } else {
+        failedCount += 1;
       }
 
       if (jadwalMkvaRes.status === "fulfilled") {
         const data = jadwalMkvaRes.value.data?.data || [];
         setJadwalMkva(Array.isArray(data) ? data : []);
+      } else {
+        failedCount += 1;
+      }
+
+      setCurrentPage(1);
+
+      if (failedCount === 0) {
+        if (showSuccess) {
+          await notifikasi.sukses("Berhasil", "Data dashboard asesor berhasil diperbarui.");
+        }
+      } else if (failedCount < 5) {
+        await notifikasi.peringatan(
+          "Data Tidak Lengkap",
+          `${failedCount} data gagal dimuat. Silakan coba Refresh kembali.`
+        );
+      } else {
+        await notifikasi.gagal("Gagal", "Data dashboard asesor gagal dimuat.");
       }
     } catch (err) {
       console.error(err);
-      setError("Gagal memuat dashboard asesor");
+      await notifikasi.gagal(
+        "Gagal",
+        err.response?.data?.message || "Gagal memuat dashboard asesor."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchDashboardData(false);
   }, []);
 
-  const namaAsesor =
-    profile?.nama_lengkap ||
-    user?.nama_lengkap ||
-    user?.nama ||
-    user?.username ||
-    "Asesor";
+  const namaAsesor = profile?.nama_lengkap || user?.nama_lengkap || user?.nama || user?.username || "Asesor";
 
-  const totalJadwal =
-    jadwalUji.length +
-    jadwalVerifikasi.length +
-    jadwalKomite.length +
-    jadwalMkva.length;
+  const totalJadwal = jadwalUji.length + jadwalVerifikasi.length + jadwalKomite.length + jadwalMkva.length;
+
+  const totalMkvaSelesai = jadwalMkva.filter((item) =>
+    Boolean(
+      item?.id_mkva ||
+        item?.mkva?.id_mkva ||
+        item?.status_mkva === "selesai" ||
+        item?.status_mkva === "sudah"
+    )
+  ).length;
 
   const jadwalTerdekat = useMemo(() => {
     const merged = [
@@ -141,428 +163,448 @@ export default function DashboardAsesor() {
     return merged.slice(0, 5);
   }, [jadwalUji, jadwalVerifikasi, jadwalKomite, jadwalMkva]);
 
-  const isProfileComplete =
-    profile?.nama_lengkap &&
-    profile?.no_reg_asesor &&
-    profile?.foto_profil &&
-    profile?.ttd_path;
+  const totalPages = Math.max(1, Math.ceil(jadwalTerdekat.length / itemsPerPage));
+
+  const paginatedJadwal = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return jadwalTerdekat.slice(startIndex, startIndex + itemsPerPage);
+  }, [jadwalTerdekat, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const menuCards = [
     {
-      icon: <User size={24} />,
+      icon: <User size={20} />,
       title: "Profile",
       desc: "Lengkapi biodata, lisensi, foto profil, dan tanda tangan digital.",
       path: "/asesor/profile",
+      tone: "orange",
     },
     {
-      icon: <CalendarDays size={24} />,
+      icon: <CalendarDays size={20} />,
       title: "Jadwal Uji Kompetensi",
       desc: "Lihat jadwal sebagai asesor penguji dan kelola peserta asesmen.",
       path: "/asesor/jadwal-saya",
+      tone: "orange",
     },
     {
-      icon: <ShieldCheck size={24} />,
+      icon: <ShieldCheck size={20} />,
       title: "Jadwal Verifikasi TUK",
       desc: "Isi form verifikasi tempat uji kompetensi sesuai penugasan.",
       path: "/asesor/verifikasi-tuk",
+      tone: "orange",
     },
     {
-      icon: <FileSearch size={24} />,
+      icon: <FileSearch size={20} />,
       title: "Jadwal Komite Teknis",
       desc: "Kelola peninjauan instrumen dan formulir FR.IA komite teknis.",
       path: "/asesor/komite-teknis",
+      tone: "orange",
     },
     {
-      icon: <ClipboardCheck size={24} />,
+      icon: <ClipboardCheck size={20} />,
       title: "Jadwal MKVA",
       desc: "Validasi MKVA dan kelola dokumen validasi asesmen.",
       path: "/asesor/mkva",
+      tone: "orange",
     },
     {
-      icon: <KeyRound size={24} />,
+      icon: <KeyRound size={20} />,
       title: "Ubah Sandi",
       desc: "Perbarui sandi akun asesor secara aman.",
       path: "/asesor/ubah-password",
+      tone: "orange",
     },
   ];
 
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className="min-h-screen bg-[#FAFAFA] flex">
       <SidebarAsesor isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
-        <div className="w-full max-w-[1500px] mx-auto space-y-6">
-          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
-            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
-            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
+      <main className="flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-[1500px] space-y-5">
+          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="border-b border-[#071E3D]/10 px-5 py-5 md:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h1 className="text-[24px] font-black text-[#071E3D] md:text-[28px]">
+                    Dashboard {namaAsesor}
+                  </h1>
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
-              <div className="flex flex-col justify-center">
-                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <ShieldCheck size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Dashboard Asesor
-                  </span>
+                  <p className="mt-1 text-[13px] font-medium text-[#182D4A]/70">
+                    Kelola profile, penugasan, jadwal asesmen, dan aktivitas asesor.
+                  </p>
                 </div>
 
-                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
-                  Selamat Datang,
-                  <br />
-                  <span className="text-orange-500">{namaAsesor}</span>
-                </h1>
+                <button
+                  type="button"
+                  onClick={() => fetchDashboardData(true)}
+                  disabled={loading}
+                  className="rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[12px] font-bold text-[#071E3D] shadow-sm transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    {loading ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <RefreshCcw size={15} />
+                    )}
+                    Refresh
+                  </span>
+                </button>
+              </div>
+            </div>
 
-                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Kelola jadwal uji kompetensi, verifikasi TUK, komite teknis,
-                  MKVA, profile, dan keamanan akun dalam satu dashboard asesor.
-                </p>
+            <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-4 md:p-6">
+              <MiniStat
+                icon={<CalendarDays size={22} />}
+                label="Uji Kompetensi"
+                value={`${jadwalUji.length} Jadwal`}
+                tone="orange"
+              />
 
-                <div className="mt-7 flex flex-col sm:flex-row gap-3">
+              <MiniStat
+                icon={<ShieldCheck size={22} />}
+                label="Verifikasi TUK"
+                value={`${jadwalVerifikasi.length} Jadwal`}
+                tone="orange"
+              />
+
+              <MiniStat
+                icon={<FileSearch size={22} />}
+                label="Komite Teknis"
+                value={`${jadwalKomite.length} Jadwal`}
+                tone="orange"
+              />
+
+              <MiniStat
+                icon={<ClipboardCheck size={22} />}
+                label="MKVA"
+                value={`${jadwalMkva.length} Jadwal`}
+                tone="orange"
+              />
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[1fr_380px]">
+            <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+              <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5 md:px-6">
+                <h2 className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-white">
+                  <ClipboardCheck size={17} className="text-[#CC6B27]" />
+                  Menu Utama
+                </h2>
+              </div>
+
+              <div className="p-5 md:p-6">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {menuCards.map((item) => (
+                    <MenuCard
+                      key={item.title}
+                      icon={item.icon}
+                      title={item.title}
+                      desc={item.desc}
+                      tone={item.tone}
+                      onClick={() => navigate(item.path)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <aside className="flex h-full flex-col overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+              <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-white">
+                    <CalendarDays size={17} className="text-[#CC6B27]" />
+                    Jadwal Terbaru
+                  </h2>
+
                   <button
                     type="button"
                     onClick={() => navigate("/asesor/jadwal-saya")}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+                    className="text-[10px] font-bold uppercase tracking-wider text-white transition-colors hover:text-[#CC6B27]"
                   >
-                    Lihat Jadwal
-                    <ChevronRight size={17} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={fetchDashboardData}
-                    disabled={loading}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-orange-500 hover:text-white disabled:opacity-60"
-                  >
-                    {loading ? (
-                      <Loader2 size={17} className="animate-spin" />
-                    ) : (
-                      <RefreshCcw size={17} />
-                    )}
-                    Refresh
+                    Lihat Semua
                   </button>
                 </div>
               </div>
 
-              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
-                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
-
-                <div className="relative z-10 flex h-full flex-col">
-                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                    <Sparkles size={28} />
-                  </div>
-
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
-                    Ringkasan Akun
-                  </p>
-
-                  <h2 className="text-2xl font-black leading-tight">
-                    {isProfileComplete
-                      ? "Profile Siap"
-                      : "Profile Perlu Dilengkapi"}
-                  </h2>
-
-                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    Pastikan profile, tanda tangan digital, dan data lisensi
-                    sudah lengkap sebelum menjalankan proses asesmen.
-                  </p>
-
-                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
-                    <HeroPill label="Total Jadwal" value={`${totalJadwal}`} />
-                    <HeroPill
-                      label="Profile"
-                      value={isProfileComplete ? "Lengkap" : "Belum"}
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate("/asesor/profile")}
-                    className="mt-5 w-full rounded-2xl bg-white/10 px-5 py-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-white/15"
-                  >
-                    Kelola Profile
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {error && (
-            <AlertBox
-              type="error"
-              icon={<ShieldCheck size={20} />}
-              message={error}
-            />
-          )}
-
-          {loading && (
-            <AlertBox
-              type="loading"
-              icon={<Loader2 size={20} className="animate-spin" />}
-              message="Memuat dashboard asesor..."
-            />
-          )}
-
-          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-            <MiniStat
-              icon={<CalendarDays size={22} />}
-              label="Uji Kompetensi"
-              value={`${jadwalUji.length} Jadwal`}
-            />
-            <MiniStat
-              icon={<ShieldCheck size={22} />}
-              label="Verifikasi TUK"
-              value={`${jadwalVerifikasi.length} Jadwal`}
-            />
-            <MiniStat
-              icon={<FileSearch size={22} />}
-              label="Komite Teknis"
-              value={`${jadwalKomite.length} Jadwal`}
-            />
-            <MiniStat
-              icon={<ClipboardCheck size={22} />}
-              label="MKVA"
-              value={`${jadwalMkva.length} Jadwal`}
-            />
-          </section>
-
-          <section className="grid grid-cols-1 xl:grid-cols-[1fr_430px] gap-6 items-start">
-            <div className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <FileText size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Menu Utama
-                  </span>
-                </div>
-
-                <h2 className="text-2xl lg:text-3xl font-black text-[#071E3D]">
-                  Akses Cepat Asesor
-                </h2>
-
-                <p className="mt-2 text-sm font-medium text-slate-400">
-                  Pilih menu sesuai proses kerja asesor.
-                </p>
-              </div>
-
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-                {menuCards.map((item) => (
-                  <MenuCard
-                    key={item.title}
-                    icon={item.icon}
-                    title={item.title}
-                    desc={item.desc}
-                    onClick={() => navigate(item.path)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <aside className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <CalendarCheck size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Jadwal Terbaru
-                  </span>
-                </div>
-
-                <h2 className="text-2xl font-black text-[#071E3D]">
-                  Penugasan Saya
-                </h2>
-
-                <p className="mt-2 text-sm font-medium text-slate-400">
-                  Lima jadwal terbaru dari seluruh jenis tugas.
-                </p>
-              </div>
-
-              <div className="p-5 space-y-3">
+              <div className="flex flex-1 flex-col p-5">
                 {jadwalTerdekat.length === 0 ? (
-                  <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center">
-                    <CalendarDays
-                      size={32}
-                      className="mx-auto mb-3 text-slate-300"
-                    />
-                    <p className="text-sm font-black text-[#071E3D]">
-                      Belum Ada Jadwal
-                    </p>
-                    <p className="mt-1 text-xs font-medium text-slate-400">
-                      Jadwal penugasan asesor belum tersedia.
-                    </p>
+                  <div className="flex flex-1 items-center justify-center">
+                    <div className="w-full rounded-lg border border-dashed border-[#071E3D]/15 bg-[#FAFAFA] p-8 text-center">
+                      <CalendarDays size={34} className="mx-auto mb-3 text-[#071E3D]/20" />
+
+                      <p className="text-[14px] font-bold text-[#071E3D]">
+                        Belum Ada Jadwal
+                      </p>
+
+                      <p className="mt-1 text-[12px] font-medium leading-relaxed text-[#182D4A]/60">
+                        Jadwal penugasan asesor belum tersedia.
+                      </p>
+                    </div>
                   </div>
                 ) : (
-                  jadwalTerdekat.map((item, index) => (
-                    <JadwalMiniCard
-                      key={`${item.tipe}-${index}-${getJadwalId(item)}`}
-                      item={item}
-                      onClick={() => navigate(item.path)}
-                    />
-                  ))
+                  <>
+                    <div className="space-y-3">
+                      {paginatedJadwal.map((item, index) => (
+                        <JadwalMiniCard
+                          key={`${item.tipe}-${currentPage}-${index}-${getJadwalId(item)}`}
+                          item={item}
+                          onClick={() => navigate(item.path)}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="mt-auto pt-4">
+                      <div className="flex items-center justify-between border-t border-[#071E3D]/10 pt-4">
+                        <button
+                          type="button"
+                          onClick={handlePreviousPage}
+                          disabled={currentPage === 1}
+                          className="rounded-lg border border-[#071E3D]/20 bg-white px-3 py-2 text-[10px] font-bold text-[#071E3D] transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-300"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <ChevronLeft size={14} />
+                            Sebelumnya
+                          </span>
+                        </button>
+
+                        <span className="text-[10px] font-bold text-[#182D4A]/60">
+                          {currentPage} / {totalPages}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={handleNextPage}
+                          disabled={currentPage === totalPages}
+                          className="rounded-lg border border-[#071E3D]/20 bg-white px-3 py-2 text-[10px] font-bold text-[#071E3D] transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-300"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            Berikutnya
+                            <ChevronRight size={14} />
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             </aside>
+          </section>
+
+          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-[#071E3D]/10 px-5 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+              <div>
+                <h2 className="flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
+                  <BadgeCheck size={18} className="text-[#CC6B27]" />
+                  Informasi Asesor
+                </h2>
+
+                <p className="mt-1 text-[12px] font-medium text-[#182D4A]/60">
+                  Informasi singkat akun dan aktivitas penugasan.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate("/asesor/profile")}
+                className="rounded-lg border border-[#CC6B27]/40 bg-white px-4 py-2.5 text-[12px] font-bold text-[#CC6B27] transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27] hover:text-white"
+              >
+                Kelola Profile
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-3 md:p-6">
+              <InfoCard
+                icon={<User size={20} />}
+                label="Nama Asesor"
+                value={namaAsesor}
+              />
+
+              <InfoCard
+                icon={<CalendarCheck size={20} />}
+                label="Total Penugasan"
+                value={`${totalJadwal} Jadwal`}
+              />
+
+              <InfoCard
+                icon={<ClipboardCheck size={20} />}
+                label="MKVA Selesai"
+                value={`${totalMkvaSelesai} Dokumen`}
+              />
+            </div>
           </section>
         </div>
       </main>
     </div>
   );
-}
+};
 
-function MenuCard({ icon, title, desc, onClick }) {
+const MiniStat = ({ icon, label, value, tone = "orange" }) => {
+  const tones = {
+    orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
+    green: "bg-green-50 text-green-600",
+    blue: "bg-blue-50 text-blue-600",
+    gray: "bg-slate-100 text-slate-500",
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group text-left rounded-[28px] border border-slate-100 bg-slate-50/60 p-5 transition-all hover:bg-white hover:border-orange-200 hover:shadow-xl hover:shadow-orange-500/5"
-    >
-      <div className="w-14 h-14 rounded-2xl bg-white group-hover:bg-orange-50 text-[#071E3D] group-hover:text-orange-500 border border-slate-100 group-hover:border-orange-100 flex items-center justify-center mb-5 transition-all">
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone] || tones.orange}`}>
         {icon}
       </div>
 
-      <h3 className="font-black text-[#071E3D] text-lg mb-2">{title}</h3>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
+          {label}
+        </p>
 
-      <p className="text-sm text-slate-500 font-medium leading-relaxed min-h-[44px]">
-        {desc}
-      </p>
-
-      <div className="mt-5 flex items-center gap-2 text-orange-500 font-black text-[10px] uppercase tracking-widest">
-        Buka Menu
-        <ChevronRight
-          size={15}
-          className="group-hover:translate-x-1 transition-transform"
-        />
+        <p className="mt-1 truncate text-[19px] font-black text-[#071E3D]">
+          {value}
+        </p>
       </div>
-    </button>
+    </div>
   );
-}
+};
 
-function JadwalMiniCard({ item, onClick }) {
-  const jadwal = item.jadwal || item;
-
-  const title =
-    item.nama_kegiatan ||
-    jadwal.nama_kegiatan ||
-    item.skema ||
-    jadwal.nama_skema ||
-    jadwal.skema?.nama_skema ||
-    jadwal.skema?.judul_skema ||
-    item.tipe ||
-    "Jadwal Asesor";
-
-  const tanggal =
-    item.tanggal ||
-    jadwal.tgl_awal ||
-    jadwal.tanggal ||
-    jadwal.tanggal_uji ||
-    jadwal.created_at;
-
-  const lokasi =
-    item.tempat ||
-    jadwal.tuk?.nama_tuk ||
-    jadwal.tuk?.nama ||
-    jadwal.nama_tuk ||
-    jadwal.tempat ||
-    jadwal.lokasi ||
-    "Lokasi belum tersedia";
+const MenuCard = ({ icon, title, desc, tone = "orange", onClick }) => {
+  const toneClass = tone === "blue" ? "bg-blue-50 text-blue-600" : "bg-[#CC6B27]/10 text-[#CC6B27]";
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left rounded-[24px] border border-slate-100 bg-slate-50/70 p-4 transition-all hover:bg-orange-50 hover:border-orange-100"
+      className="group w-full rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4 text-left transition-all hover:border-[#CC6B27]/40 hover:bg-[#CC6B27]/5"
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="rounded-full bg-orange-50 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-orange-500">
-          {item.tipe}
-        </span>
+      <div className="flex items-start justify-between gap-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${toneClass}`}>
+          {icon}
+        </div>
 
-        <ChevronRight size={16} className="text-slate-300" />
+        <ChevronRight
+          size={16}
+          className="mt-1 text-[#071E3D]/25 transition-transform group-hover:translate-x-1 group-hover:text-[#CC6B27]"
+        />
       </div>
 
-      <h3 className="text-sm font-black text-[#071E3D] line-clamp-2">
+      <h3 className="mt-3 text-[13px] font-bold text-[#071E3D]">
+        {title}
+      </h3>
+
+      <p className="mt-1.5 min-h-[42px] text-[11px] font-medium leading-relaxed text-[#182D4A]/65">
+        {desc}
+      </p>
+
+      <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#CC6B27]">
+        Buka Menu
+        <ChevronRight size={13} />
+      </div>
+    </button>
+  );
+};
+
+const JadwalMiniCard = ({ item, onClick }) => {
+  const jadwal = item?.jadwal || item;
+
+  const title = item?.nama_kegiatan || jadwal?.nama_kegiatan || item?.skema || jadwal?.nama_skema || jadwal?.skema?.nama_skema || jadwal?.skema?.judul_skema || item?.tipe || "Jadwal Asesor";
+
+  const tanggal = item?.tanggal || jadwal?.tgl_awal || jadwal?.tanggal || jadwal?.tanggal_uji || jadwal?.created_at;
+
+  const lokasi = item?.tempat || jadwal?.tuk?.nama_tuk || jadwal?.tuk?.nama || jadwal?.nama_tuk || jadwal?.tempat || jadwal?.lokasi || "Lokasi belum tersedia";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group w-full rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4 text-left transition-all hover:border-[#CC6B27]/40 hover:bg-[#CC6B27]/5"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="rounded-lg bg-[#CC6B27]/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-[#CC6B27]">
+          {item?.tipe}
+        </span>
+
+        <ChevronRight
+          size={15}
+          className="text-[#071E3D]/25 transition-transform group-hover:translate-x-1 group-hover:text-[#CC6B27]"
+        />
+      </div>
+
+      <h3 className="mt-2 line-clamp-2 text-[13px] font-bold leading-snug text-[#071E3D]">
         {title}
       </h3>
 
       <div className="mt-3 space-y-2">
         <SmallLine
-          icon={<CalendarCheck size={14} />}
+          icon={<CalendarCheck size={13} />}
           text={formatTanggal(tanggal)}
         />
-        <SmallLine icon={<MapPin size={14} />} text={lokasi} />
+
+        <SmallLine
+          icon={<MapPin size={13} />}
+          text={lokasi}
+        />
       </div>
     </button>
   );
-}
+};
 
-function MiniStat({ icon, label, value }) {
+const InfoCard = ({ icon, label, value }) => {
   return (
-    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+    <div className="flex items-center gap-4 rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
         {icon}
       </div>
 
       <div className="min-w-0">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
           {label}
         </p>
-        <p className="text-[#071E3D] font-black mt-1 truncate">{value}</p>
+
+        <p className="mt-1 truncate text-[13px] font-bold text-[#071E3D]">
+          {value}
+        </p>
       </div>
     </div>
   );
-}
+};
 
-function HeroPill({ label, value }) {
+const SmallLine = ({ icon, text }) => {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-black text-white">{value}</p>
-    </div>
-  );
-}
-
-function AlertBox({ type, icon, message }) {
-  const styles = {
-    error: "border-red-100 bg-red-50 text-red-600",
-    loading: "border-blue-100 bg-blue-50 text-blue-600",
-  };
-
-  return (
-    <div
-      className={`rounded-[24px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
-        styles[type] || styles.loading
-      }`}
-    >
-      <div className="shrink-0">{icon}</div>
-      <span>{message}</span>
-    </div>
-  );
-}
-
-function SmallLine({ icon, text }) {
-  return (
-    <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-      <span className="text-orange-500">{icon}</span>
+    <div className="flex items-center gap-2 text-[11px] font-medium text-[#182D4A]/60">
+      <span className="text-[#CC6B27]">{icon}</span>
       <span className="line-clamp-1">{text || "-"}</span>
     </div>
   );
-}
+};
 
-function getJadwalId(item) {
+const getJadwalId = (item) => {
   return item?.id_jadwal || item?.jadwal?.id_jadwal || item?.jadwal?.id;
-}
+};
 
-function formatTanggal(value) {
+const formatTanggal = (value) => {
   if (!value) return "-";
 
   const parsed = new Date(value);
 
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
+  if (Number.isNaN(parsed.getTime())) return value;
 
   return parsed.toLocaleDateString("id-ID", {
     day: "2-digit",
     month: "long",
     year: "numeric",
   });
-}
+};
+
+export default DashboardAsesor;

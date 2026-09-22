@@ -1,29 +1,22 @@
-// frontend/src/pages/asesor/ProfileAsesor.jsx
-
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import SidebarAsesor from "../../components/sidebar/SidebarAsesor";
 import {
   BadgeCheck,
   Camera,
-  CheckCircle2,
-  ChevronRight,
   FileSignature,
   IdCard,
   ImagePlus,
   Loader2,
   MapPin,
   PenLine,
+  RefreshCcw,
   RotateCcw,
   Save,
   ShieldCheck,
-  Sparkles,
   UploadCloud,
   User,
-  UserRoundCheck,
-  X,
-  XCircle,
 } from "lucide-react";
+import { notifikasi } from "../../components/ui/notifikasi";
 import api from "../../services/api";
 
 const BASE_URL = "http://localhost:3000";
@@ -58,105 +51,80 @@ const initialProfile = {
 };
 
 export default function ProfileAsesor() {
-  const navigate = useNavigate();
-
   const canvasRef = useRef(null);
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef({ x: 0, y: 0 });
-  const notificationTimerRef = useRef(null);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profile, setProfile] = useState(initialProfile);
-
   const [fotoProfil, setFotoProfil] = useState(null);
   const [previewFoto, setPreviewFoto] = useState("");
   const [previewTtd, setPreviewTtd] = useState("");
-
   const [isEditingTtd, setIsEditingTtd] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
-
   const [loading, setLoading] = useState(false);
 
-  const [notification, setNotification] = useState({
-    show: false,
-    type: "success",
-    title: "",
-    message: "",
-  });
-
-  const showNotification = ({ type = "success", title, message }) => {
-    if (notificationTimerRef.current) {
-      clearTimeout(notificationTimerRef.current);
-    }
-
-    setNotification({
-      show: true,
-      type,
-      title,
-      message,
-    });
-
-    notificationTimerRef.current = setTimeout(() => {
-      setNotification((prev) => ({
-        ...prev,
-        show: false,
-      }));
-    }, 2600);
-  };
-
-  const closeNotification = () => {
-    if (notificationTimerRef.current) {
-      clearTimeout(notificationTimerRef.current);
-    }
-
-    setNotification((prev) => ({
-      ...prev,
-      show: false,
-    }));
-  };
-
   const getFileUrl = (filePath) => {
-    if (!filePath) return "";
+    if (!filePath) {
+      return "";
+    }
 
-    const cleanPath = filePath.replace(/\\/g, "/");
+    const cleanPath = String(filePath).replace(/\\/g, "/");
 
-    if (cleanPath.startsWith("http")) {
+    if (
+      cleanPath.startsWith("http://") ||
+      cleanPath.startsWith("https://")
+    ) {
       return cleanPath;
     }
 
-    return `${BASE_URL}/${cleanPath}`;
+    return `${BASE_URL}/${cleanPath.replace(/^\/+/, "")}`;
   };
 
   const formatDateForInput = (dateValue) => {
-    if (!dateValue) return "";
+    if (!dateValue) {
+      return "";
+    }
+
     return String(dateValue).slice(0, 10);
   };
 
   const setupSignatureCanvas = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+
+    if (!canvas) {
+      return;
+    }
 
     const rect = canvas.getBoundingClientRect();
     const ratio = window.devicePixelRatio || 1;
 
-    canvas.width = rect.width * ratio;
-    canvas.height = rect.height * ratio;
+    canvas.width = Math.max(1, rect.width * ratio);
+    canvas.height = Math.max(1, rect.height * ratio);
 
     const ctx = canvas.getContext("2d");
 
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, rect.width, rect.height);
+    if (!ctx) {
+      return;
+    }
 
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, rect.width, rect.height);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.strokeStyle = "#071E3D";
   };
 
-  const fetchProfile = async ({ showLoading = true } = {}) => {
+  const fetchProfile = async ({
+    showLoading = true,
+    showSuccess = false,
+  } = {}) => {
     try {
-      if (showLoading) setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
 
       const res = await api.get("/asesor/profile");
       const data = res.data?.data || {};
@@ -176,46 +144,69 @@ export default function ProfileAsesor() {
       setPreviewTtd(ttdUrl);
       setIsEditingTtd(!ttdUrl);
       setHasSignature(false);
+
+      if (showSuccess) {
+        await notifikasi.sukses(
+          "Berhasil",
+          "Data profile asesor berhasil diperbarui."
+        );
+      }
     } catch (err) {
       console.error(err);
-      showNotification({
-        type: "error",
-        title: "Gagal Memuat Profile",
-        message:
-          err.response?.data?.message ||
-          "Data profile asesor gagal dimuat dari server.",
-      });
+
+      await notifikasi.gagal(
+        "Gagal Memuat Profile",
+        err.response?.data?.message ||
+          "Data profile asesor gagal dimuat dari server."
+      );
     } finally {
-      if (showLoading) setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchProfile();
+    fetchProfile({
+      showLoading: true,
+      showSuccess: false,
+    });
   }, []);
 
   useEffect(() => {
-    if (isEditingTtd) {
-      setTimeout(setupSignatureCanvas, 50);
+    if (!isEditingTtd) {
+      return;
     }
+
+    const timer = setTimeout(() => {
+      setupSignatureCanvas();
+    }, 80);
+
+    return () => {
+      clearTimeout(timer);
+    };
   }, [isEditingTtd]);
 
   useEffect(() => {
     const handleResize = () => {
-      if (isEditingTtd) {
-        setupSignatureCanvas();
-        setHasSignature(false);
+      if (!isEditingTtd) {
+        return;
       }
+
+      setupSignatureCanvas();
+      setHasSignature(false);
     };
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener(
+      "resize",
+      handleResize
+    );
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-
-      if (notificationTimerRef.current) {
-        clearTimeout(notificationTimerRef.current);
-      }
+      window.removeEventListener(
+        "resize",
+        handleResize
+      );
     };
   }, [isEditingTtd]);
 
@@ -233,31 +224,71 @@ export default function ProfileAsesor() {
     event.preventDefault();
 
     const point = getCanvasPoint(event);
+
     isDrawingRef.current = true;
     lastPointRef.current = point;
+
+    const canvas = canvasRef.current;
+
+    if (canvas?.setPointerCapture) {
+      canvas.setPointerCapture(event.pointerId);
+    }
   };
 
   const drawSignature = (event) => {
-    if (!isDrawingRef.current) return;
+    if (!isDrawingRef.current) {
+      return;
+    }
 
     event.preventDefault();
 
     const canvas = canvasRef.current;
+
+    if (!canvas) {
+      return;
+    }
+
     const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      return;
+    }
+
     const currentPoint = getCanvasPoint(event);
     const lastPoint = lastPointRef.current;
 
     ctx.beginPath();
-    ctx.moveTo(lastPoint.x, lastPoint.y);
-    ctx.lineTo(currentPoint.x, currentPoint.y);
+    ctx.moveTo(
+      lastPoint.x,
+      lastPoint.y
+    );
+    ctx.lineTo(
+      currentPoint.x,
+      currentPoint.y
+    );
     ctx.stroke();
 
     lastPointRef.current = currentPoint;
     setHasSignature(true);
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (event) => {
     isDrawingRef.current = false;
+
+    const canvas = canvasRef.current;
+
+    if (
+      canvas?.releasePointerCapture &&
+      event?.pointerId !== undefined
+    ) {
+      try {
+        canvas.releasePointerCapture(
+          event.pointerId
+        );
+      } catch {
+        return;
+      }
+    }
   };
 
   const clearSignature = () => {
@@ -268,7 +299,10 @@ export default function ProfileAsesor() {
   const handleEditTtd = () => {
     setIsEditingTtd(true);
     setHasSignature(false);
-    setTimeout(setupSignatureCanvas, 50);
+
+    setTimeout(() => {
+      setupSignatureCanvas();
+    }, 80);
   };
 
   const handleCancelEditTtd = () => {
@@ -290,12 +324,17 @@ export default function ProfileAsesor() {
         return;
       }
 
-      canvas.toBlob((blob) => resolve(blob), "image/png", 1);
+      canvas.toBlob(
+        (blob) => resolve(blob),
+        "image/png",
+        1
+      );
     });
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const handleChange = (event) => {
+    const { name, value } =
+      event.target;
 
     setProfile((prev) => ({
       ...prev,
@@ -303,768 +342,1040 @@ export default function ProfileAsesor() {
     }));
   };
 
-  const handleSubmitProfile = async (e) => {
-    e.preventDefault();
+  const handleFotoChange = (event) => {
+    const file =
+      event.target.files?.[0];
 
-    try {
-      setLoading(true);
-
-      await api.put("/asesor/profile", {
-        nik: profile.nik,
-        gelar_depan: profile.gelar_depan,
-        nama_lengkap: profile.nama_lengkap,
-        gelar_belakang: profile.gelar_belakang,
-        jenis_kelamin: profile.jenis_kelamin || null,
-        tempat_lahir: profile.tempat_lahir,
-        tanggal_lahir: profile.tanggal_lahir || null,
-        kebangsaan: profile.kebangsaan,
-        pendidikan_terakhir: profile.pendidikan_terakhir,
-        tahun_lulus: profile.tahun_lulus || null,
-        institut_asal: profile.institut_asal,
-        alamat: profile.alamat,
-        rt: profile.rt,
-        rw: profile.rw,
-        provinsi: profile.provinsi,
-        kota: profile.kota,
-        kecamatan: profile.kecamatan,
-        kelurahan: profile.kelurahan,
-        kode_pos: profile.kode_pos,
-        bidang_keahlian: profile.bidang_keahlian,
-        no_reg_asesor: profile.no_reg_asesor,
-        no_lisensi: profile.no_lisensi,
-        masa_berlaku: profile.masa_berlaku || null,
-        status_asesor: profile.status_asesor || null,
-      });
-
-      await fetchProfile({ showLoading: false });
-
-      showNotification({
-        type: "success",
-        title: "Profile Berhasil Disimpan",
-        message: "Data profile asesor berhasil diperbarui.",
-      });
-    } catch (err) {
-      console.error(err);
-      showNotification({
-        type: "error",
-        title: "Gagal Menyimpan Profile",
-        message:
-          err.response?.data?.message ||
-          "Profile asesor gagal diperbarui. Periksa kembali data Anda.",
-      });
-    } finally {
-      setLoading(false);
+    if (!file) {
+      return;
     }
-  };
-
-  const handleFotoChange = (e) => {
-    const file = e.target.files?.[0];
-
-    if (!file) return;
 
     setFotoProfil(file);
-    setPreviewFoto(URL.createObjectURL(file));
 
-    showNotification({
-      type: "info",
-      title: "Foto Dipilih",
-      message: "Foto sudah dipilih. Klik Upload Foto untuk menyimpan.",
-    });
+    const objectUrl =
+      URL.createObjectURL(file);
+
+    setPreviewFoto(objectUrl);
   };
 
-  const handleUploadFoto = async () => {
-    if (!fotoProfil) {
-      showNotification({
-        type: "error",
-        title: "Foto Belum Dipilih",
-        message: "Pilih foto profil terlebih dahulu sebelum upload.",
-      });
-      return;
-    }
+  const handleSubmitProfile = async (
+    event
+  ) => {
+    event.preventDefault();
 
     try {
       setLoading(true);
 
-      const formData = new FormData();
-      formData.append("foto_profil", fotoProfil);
+      await api.put(
+        "/asesor/profile",
+        {
+          nik: profile.nik,
+          gelar_depan:
+            profile.gelar_depan,
+          nama_lengkap:
+            profile.nama_lengkap,
+          gelar_belakang:
+            profile.gelar_belakang,
+          jenis_kelamin:
+            profile.jenis_kelamin ||
+            null,
+          tempat_lahir:
+            profile.tempat_lahir,
+          tanggal_lahir:
+            profile.tanggal_lahir ||
+            null,
+          kebangsaan:
+            profile.kebangsaan,
+          pendidikan_terakhir:
+            profile.pendidikan_terakhir,
+          tahun_lulus:
+            profile.tahun_lulus ||
+            null,
+          institut_asal:
+            profile.institut_asal,
+          alamat:
+            profile.alamat,
+          rt: profile.rt,
+          rw: profile.rw,
+          provinsi:
+            profile.provinsi,
+          kota: profile.kota,
+          kecamatan:
+            profile.kecamatan,
+          kelurahan:
+            profile.kelurahan,
+          kode_pos:
+            profile.kode_pos,
+          bidang_keahlian:
+            profile.bidang_keahlian,
+          no_reg_asesor:
+            profile.no_reg_asesor,
+          no_lisensi:
+            profile.no_lisensi,
+          masa_berlaku:
+            profile.masa_berlaku ||
+            null,
+          status_asesor:
+            profile.status_asesor ||
+            null,
+        }
+      );
 
-      await api.put("/asesor/profile/upload-foto", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      if (fotoProfil) {
+        const formDataFoto =
+          new FormData();
 
-      setFotoProfil(null);
-      await fetchProfile({ showLoading: false });
+        formDataFoto.append(
+          "foto_profil",
+          fotoProfil
+        );
 
-      showNotification({
-        type: "success",
-        title: "Foto Profil Tersimpan",
-        message: "Foto profil asesor berhasil diupload dan diperbarui.",
-      });
-    } catch (err) {
-      console.error(err);
-      showNotification({
-        type: "error",
-        title: "Upload Foto Gagal",
-        message:
-          err.response?.data?.message ||
-          "Foto profil gagal diupload. Pastikan format file benar.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUploadTtd = async () => {
-    if (!hasSignature) {
-      showNotification({
-        type: "error",
-        title: "TTD Masih Kosong",
-        message: "Silakan buat tanda tangan terlebih dahulu di canvas.",
-      });
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const blob = await canvasToBlob();
-
-      if (!blob) {
-        showNotification({
-          type: "error",
-          title: "Gagal Membuat TTD",
-          message: "Canvas tanda tangan gagal diproses menjadi gambar.",
-        });
-        return;
+        await api.put(
+          "/asesor/profile/upload-foto",
+          formDataFoto,
+          {
+            headers: {
+              "Content-Type":
+                "multipart/form-data",
+            },
+          }
+        );
       }
 
-      const file = new File([blob], "ttd-asesor.png", {
-        type: "image/png",
-      });
+      if (
+        isEditingTtd &&
+        hasSignature
+      ) {
+        const blob =
+          await canvasToBlob();
 
-      const formData = new FormData();
-      formData.append("ttd", file);
+        if (!blob) {
+          throw new Error(
+            "Canvas tanda tangan gagal diproses menjadi gambar."
+          );
+        }
 
-      await api.put("/asesor/profile/upload-ttd", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+        const fileTtd = new File(
+          [blob],
+          "ttd-asesor.png",
+          {
+            type: "image/png",
+          }
+        );
 
+        const formDataTtd =
+          new FormData();
+
+        formDataTtd.append(
+          "ttd",
+          fileTtd
+        );
+
+        await api.put(
+          "/asesor/profile/upload-ttd",
+          formDataTtd,
+          {
+            headers: {
+              "Content-Type":
+                "multipart/form-data",
+            },
+          }
+        );
+      }
+
+      setFotoProfil(null);
       setHasSignature(false);
-      setIsEditingTtd(false);
 
-      await fetchProfile({ showLoading: false });
-
-      showNotification({
-        type: "success",
-        title: "TTD Digital Tersimpan",
-        message: "Tanda tangan digital asesor berhasil diperbarui.",
+      await fetchProfile({
+        showLoading: false,
+        showSuccess: false,
       });
+
+      await notifikasi.sukses(
+        "Berhasil",
+        "Data profile asesor berhasil disimpan."
+      );
     } catch (err) {
       console.error(err);
-      showNotification({
-        type: "error",
-        title: "Gagal Menyimpan TTD",
-        message:
-          err.response?.data?.message ||
-          "Tanda tangan digital gagal disimpan ke server.",
-      });
+
+      await notifikasi.gagal(
+        "Gagal Menyimpan Profile",
+        err.response?.data?.message ||
+          err.message ||
+          "Profile asesor gagal disimpan. Periksa kembali data Anda."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const displayName =
-    profile.nama_lengkap || profile.nama || profile.username || "Asesor";
+    profile.nama_lengkap ||
+    profile.nama ||
+    profile.username ||
+    "Asesor";
 
-  const statusLabel = profile.status_asesor || "Belum Diatur";
+  const statusLabel =
+    profile.status_asesor ||
+    "Belum Diatur";
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
-      <SidebarAsesor isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-
-      <NotificationPopup
-        show={notification.show}
-        type={notification.type}
-        title={notification.title}
-        message={notification.message}
-        onClose={closeNotification}
+    <div className="min-h-screen bg-[#FAFAFA] flex">
+      <SidebarAsesor
+        isOpen={sidebarOpen}
+        setIsOpen={setSidebarOpen}
       />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
-        <div className="w-full max-w-[1500px] mx-auto space-y-6">
-          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
-            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
-            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
+      <main className="flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-[1500px] space-y-5">
+          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="border-b border-[#071E3D]/10 px-5 py-5 md:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h1 className="text-[24px] font-black text-[#071E3D] md:text-[28px]">
+                    Data Profile {displayName}
+                  </h1>
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
-              <div className="flex flex-col justify-center">
-                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <ShieldCheck size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Profile Asesor
+                  <p className="mt-1 text-[13px] font-medium text-[#182D4A]/70">
+                    Kelola identitas, sertifikasi, foto profil, dan tanda tangan digital asesor.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    fetchProfile({
+                      showLoading: true,
+                      showSuccess: true,
+                    })
+                  }
+                  disabled={loading}
+                  className="rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[12px] font-bold text-[#071E3D] shadow-sm transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    {loading ? (
+                      <Loader2
+                        size={15}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <RefreshCcw
+                        size={15}
+                      />
+                    )}
+                    Refresh
                   </span>
-                </div>
-
-                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
-                  Lengkapi Identitas
-                  <br />
-                  <span className="text-orange-500">{displayName}</span>
-                </h1>
-
-                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Kelola data asesor, lisensi, foto profil, dan tanda tangan
-                  digital agar seluruh dokumen asesmen siap digunakan.
-                </p>
-
-                <div className="mt-7 flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      document
-                        .getElementById("form-profile")
-                        ?.scrollIntoView({ behavior: "smooth" })
-                    }
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
-                  >
-                    Edit Profile
-                    <ChevronRight size={17} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      document
-                        .getElementById("upload-section")
-                        ?.scrollIntoView({ behavior: "smooth" })
-                    }
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
-                  >
-                    Dokumen Digital
-                    <ChevronRight size={17} />
-                  </button>
-                </div>
+                </button>
               </div>
+            </div>
 
-              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
-                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+            <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-3 md:p-6">
+              <ProfileStat
+                icon={<User size={21} />}
+                label="Nama Asesor"
+                value={displayName}
+              />
 
-                <div className="relative z-10 flex h-full flex-col">
-                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                    <Sparkles size={28} />
-                  </div>
+              <ProfileStat
+                icon={
+                  <BadgeCheck
+                    size={21}
+                  />
+                }
+                label="Status Asesor"
+                value={statusLabel}
+                tone={
+                  profile.status_asesor ===
+                  "aktif"
+                    ? "green"
+                    : "orange"
+                }
+              />
 
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
-                    Ringkasan Profile
-                  </p>
-
-                  <h2 className="text-2xl font-black leading-tight">
-                    {statusLabel}
-                  </h2>
-
-                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    Pastikan foto dan tanda tangan digital tersedia agar proses
-                    administrasi asesmen berjalan lebih cepat.
-                  </p>
-
-                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
-                    <InfoPill
-                      label="Foto Profil"
-                      value={previewFoto ? "Tersedia" : "Belum Ada"}
-                    />
-                    <InfoPill
-                      label="TTD Digital"
-                      value={previewTtd ? "Tersedia" : "Belum Ada"}
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate("/asesor/dashboard")}
-                    className="mt-5 w-full rounded-2xl bg-white/10 px-5 py-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-white/15"
-                  >
-                    Kembali ke Dashboard
-                  </button>
-                </div>
-              </div>
+              <ProfileStat
+                icon={
+                  <ShieldCheck
+                    size={21}
+                  />
+                }
+                label="Registrasi"
+                value={
+                  profile.no_reg_asesor ||
+                  "Belum tersedia"
+                }
+              />
             </div>
           </section>
 
-          {loading && (
-            <AlertBox
-              type="loading"
-              icon={<Loader2 size={20} className="animate-spin" />}
-              message="Memproses data..."
-            />
-          )}
-
-          <section
-            id="upload-section"
-            className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch"
+          <form
+            id="profileForm"
+            onSubmit={
+              handleSubmitProfile
+            }
+            className="space-y-5"
           >
-            <UploadCard
-              title="Foto Profil"
-              description="Gunakan foto resmi asesor untuk kebutuhan identitas dan dokumen."
-              icon={<Camera size={22} />}
-            >
-              <div className="flex h-full flex-col justify-between gap-5">
-                <div className="grid grid-cols-1 md:grid-cols-[190px_1fr] gap-5 items-center">
-                  <div className="relative h-[220px] rounded-[30px] border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden shadow-inner">
-                    {previewFoto ? (
-                      <img
-                        src={previewFoto}
-                        alt="Foto Profil"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-center px-4">
-                        <User
-                          size={38}
-                          className="mx-auto mb-3 text-slate-300"
-                        />
-                        <p className="text-sm font-black text-slate-400">
-                          Belum ada foto
-                        </p>
-                        <p className="mt-1 text-xs font-medium text-slate-400">
-                          Upload foto profil asesor.
-                        </p>
-                      </div>
-                    )}
+            <section className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+              <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+                <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5">
+                  <h2 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-wider text-white">
+                    <Camera
+                      size={17}
+                      className="text-[#CC6B27]"
+                    />
+                    Foto Profil
+                  </h2>
+                </div>
 
-                    <div className="absolute bottom-4 right-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-500/20">
-                      <ImagePlus size={20} />
+                <div className="border-b border-[#071E3D]/10 bg-white px-5 py-3">
+                  <p className="text-[12px] font-medium text-[#182D4A]/60">
+                    Foto resmi asesor untuk identitas profile.
+                  </p>
+                </div>
+
+                <div className="p-5">
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-[180px_1fr] md:items-center">
+                    <div className="relative h-[210px] overflow-hidden rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA]">
+                      {previewFoto ? (
+                        <img
+                          src={previewFoto}
+                          alt="Foto Profil"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center p-5 text-center">
+                          <div>
+                            <User
+                              size={38}
+                              className="mx-auto mb-3 text-[#071E3D]/20"
+                            />
+
+                            <p className="text-[13px] font-bold text-[#071E3D]">
+                              Belum Ada Foto
+                            </p>
+
+                            <p className="mt-1 text-[11px] font-medium text-[#182D4A]/60">
+                              Pilih foto profil asesor.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <label className="cursor-pointer rounded-lg border border-dashed border-[#CC6B27]/40 bg-[#CC6B27]/5 p-5 transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27]/10">
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg"
+                          onChange={
+                            handleFotoChange
+                          }
+                          className="hidden"
+                        />
+
+                        <div className="flex items-center gap-4">
+                          <div className="rounded-lg bg-white p-3 text-[#CC6B27] shadow-sm">
+                            <UploadCloud
+                              size={22}
+                            />
+                          </div>
+
+                          <div>
+                            <p className="text-[13px] font-bold text-[#071E3D]">
+                              Pilih Foto Profil
+                            </p>
+
+                            <p className="mt-1 text-[11px] font-medium text-[#182D4A]/60">
+                              PNG, JPG, atau JPEG
+                            </p>
+                          </div>
+                        </div>
+                      </label>
+
+                      {fotoProfil && (
+                        <div className="rounded-lg border border-[#CC6B27]/20 bg-[#CC6B27]/5 px-4 py-3">
+                          <p className="text-[11px] font-bold text-[#071E3D]">
+                            Foto baru siap disimpan
+                          </p>
+
+                          <p className="mt-1 truncate text-[11px] font-medium text-[#182D4A]/60">
+                            {fotoProfil.name}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <SmallInfoCard
+                          label="Status Foto"
+                          value={
+                            previewFoto
+                              ? "Sudah tersedia"
+                              : "Belum tersedia"
+                          }
+                        />
+
+                        <SmallInfoCard
+                          label="Format"
+                          value="PNG, JPG, JPEG"
+                        />
+                      </div>
                     </div>
                   </div>
+                </div>
+              </section>
 
-                  <div className="flex flex-col gap-4">
-                    <label className="cursor-pointer rounded-[28px] border border-dashed border-slate-200 bg-slate-50/60 p-5 transition-all hover:border-orange-200 hover:bg-orange-50">
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg"
-                        onChange={handleFotoChange}
-                        className="hidden"
-                      />
-
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-white text-orange-500">
-                          <UploadCloud size={22} />
-                        </div>
-
-                        <div>
-                          <p className="font-black text-[#071E3D]">
-                            Pilih Foto Profil
-                          </p>
-                          <p className="mt-1 text-xs font-medium text-slate-400">
-                            Format PNG, JPG, atau JPEG
-                          </p>
-                        </div>
-                      </div>
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={handleUploadFoto}
-                      disabled={loading}
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
-                      {loading ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <UploadCloud size={16} />
-                      )}
-                      Upload Foto
-                    </button>
-                  </div>
+              <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+                <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5">
+                  <h2 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-wider text-white">
+                    <FileSignature
+                      size={17}
+                      className="text-[#CC6B27]"
+                    />
+                    Tanda Tangan Digital
+                  </h2>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <SmallInfoCard
-                    label="Status Foto"
-                    value={previewFoto ? "Sudah tersedia" : "Belum tersedia"}
-                  />
-                  <SmallInfoCard
-                    label="Rekomendasi"
-                    value="Gunakan foto formal"
-                  />
+                <div className="border-b border-[#071E3D]/10 bg-white px-5 py-3">
+                  <p className="text-[12px] font-medium text-[#182D4A]/60">
+                    Tanda tangan yang digunakan pada dokumen asesor.
+                  </p>
                 </div>
-              </div>
-            </UploadCard>
 
-            <UploadCard
-              title="Tanda Tangan Digital"
-              description={
-                isEditingTtd
-                  ? "Coret tanda tangan baru pada area canvas."
-                  : "Tanda tangan sudah tersimpan. Klik ganti untuk mengubah."
-              }
-              icon={<FileSignature size={22} />}
-            >
-              <div className="rounded-[30px] border border-dashed border-orange-200 bg-orange-50/30 p-4">
-                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-black text-[#071E3D]">
-                      {isEditingTtd
-                        ? "Area Tanda Tangan"
-                        : "TTD Tersimpan Saat Ini"}
-                    </p>
-                    <p className="text-xs font-medium text-slate-400">
-                      {isEditingTtd
-                        ? "Gunakan mouse, trackpad, atau layar sentuh."
-                        : "Klik Ganti TTD untuk membuat tanda tangan baru."}
-                    </p>
-                  </div>
+                <div className="p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-[13px] font-bold text-[#071E3D]">
+                        {isEditingTtd
+                          ? "Area Tanda Tangan"
+                          : "TTD Tersimpan"}
+                      </p>
 
-                  {isEditingTtd ? (
-                    <div className="flex gap-2">
+                      <p className="mt-1 text-[11px] font-medium text-[#182D4A]/60">
+                        {isEditingTtd
+                          ? "Gunakan mouse, trackpad, atau layar sentuh."
+                          : "Tanda tangan digital yang tersimpan saat ini."}
+                      </p>
+                    </div>
+
+                    {!isEditingTtd && (
                       <button
                         type="button"
-                        onClick={clearSignature}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all hover:bg-red-50 hover:text-red-500"
+                        onClick={
+                          handleEditTtd
+                        }
+                        className="rounded-lg border border-[#CC6B27]/40 bg-white px-4 py-2 text-[11px] font-bold text-[#CC6B27] transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27] hover:text-white"
                       >
-                        <RotateCcw size={14} />
-                        Hapus
+                        <span className="flex items-center justify-center gap-2">
+                          <PenLine
+                            size={14}
+                          />
+                          Ganti TTD
+                        </span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="relative h-[235px] overflow-hidden rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA]">
+                    {!isEditingTtd &&
+                    previewTtd ? (
+                      <div className="flex h-full items-center justify-center bg-white">
+                        <img
+                          src={previewTtd}
+                          alt="Tanda Tangan"
+                          className="max-h-full max-w-full object-contain p-8"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        {!hasSignature && (
+                          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                            <div className="rounded-lg border border-[#071E3D]/10 bg-white px-5 py-4 text-center shadow-sm">
+                              <PenLine
+                                size={25}
+                                className="mx-auto mb-2 text-[#071E3D]/20"
+                              />
+
+                              <p className="text-[12px] font-bold text-[#071E3D]">
+                                Buat Tanda Tangan
+                              </p>
+
+                              <p className="mt-1 text-[10px] font-medium text-[#182D4A]/60">
+                                Coret pada area putih.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        <canvas
+                          ref={canvasRef}
+                          onPointerDown={
+                            startDrawing
+                          }
+                          onPointerMove={
+                            drawSignature
+                          }
+                          onPointerUp={
+                            stopDrawing
+                          }
+                          onPointerLeave={
+                            stopDrawing
+                          }
+                          onPointerCancel={
+                            stopDrawing
+                          }
+                          className="h-full w-full cursor-crosshair bg-white touch-none"
+                        />
+                      </>
+                    )}
+                  </div>
+
+                  {isEditingTtd && (
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={
+                          clearSignature
+                        }
+                        className="rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[12px] font-bold text-[#071E3D] transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white"
+                      >
+                        <span className="flex items-center justify-center gap-2">
+                          <RotateCcw
+                            size={15}
+                          />
+                          Bersihkan
+                        </span>
                       </button>
 
                       {previewTtd && (
                         <button
                           type="button"
-                          onClick={handleCancelEditTtd}
-                          className="rounded-2xl border border-slate-100 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-slate-50"
+                          onClick={
+                            handleCancelEditTtd
+                          }
+                          className="rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[12px] font-bold text-[#071E3D] transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white"
                         >
                           Batal
                         </button>
                       )}
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleEditTtd}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-[#071E3D]"
-                    >
-                      <PenLine size={14} />
-                      Ganti TTD
-                    </button>
-                  )}
-                </div>
 
-                <div className="relative h-[230px] w-full overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-inner">
-                  {!isEditingTtd && previewTtd ? (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <img
-                        src={previewTtd}
-                        alt="Tanda Tangan Tersimpan"
-                        className="max-h-full max-w-full object-contain p-5"
-                      />
-                    </div>
-                  ) : (
-                    <>
-                      {!hasSignature && (
-                        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                          <div className="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3 text-center backdrop-blur-sm">
-                            <PenLine
-                              size={24}
-                              className="mx-auto mb-2 text-slate-300"
-                            />
-                            <p className="text-xs font-bold text-slate-400">
-                              Coret tanda tangan di area ini
-                            </p>
-                          </div>
+                      {hasSignature && (
+                        <div className="flex items-center rounded-lg border border-[#CC6B27]/20 bg-[#CC6B27]/5 px-4 py-2.5 text-[11px] font-semibold text-[#CC6B27]">
+                          TTD baru siap disimpan
                         </div>
                       )}
-
-                      <canvas
-                        ref={canvasRef}
-                        onPointerDown={startDrawing}
-                        onPointerMove={drawSignature}
-                        onPointerUp={stopDrawing}
-                        onPointerLeave={stopDrawing}
-                        onPointerCancel={stopDrawing}
-                        className="h-full w-full cursor-crosshair bg-white touch-none"
-                      />
-                    </>
+                    </div>
                   )}
                 </div>
+              </section>
+            </section>
+
+            <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+              <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5 md:px-6">
+                <h2 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-wider text-white">
+                  <IdCard
+                    size={17}
+                    className="text-[#CC6B27]"
+                  />
+                  Informasi Profile
+                </h2>
               </div>
 
-              <button
-                type="button"
-                onClick={isEditingTtd ? handleUploadTtd : handleEditTtd}
-                disabled={loading}
-                className={`mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest transition-all disabled:cursor-not-allowed disabled:bg-slate-300 ${
-                  isEditingTtd
-                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-[#071E3D]"
-                    : "border border-slate-100 bg-slate-50 text-[#071E3D] hover:bg-[#071E3D] hover:text-white"
-                }`}
-              >
-                {loading ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : isEditingTtd ? (
-                  <FileSignature size={16} />
-                ) : (
-                  <PenLine size={16} />
-                )}
-                {isEditingTtd ? "Simpan TTD" : "Ganti TTD"}
-              </button>
-            </UploadCard>
-          </section>
-
-          <form
-            id="form-profile"
-            onSubmit={handleSubmitProfile}
-            className="overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm"
-          >
-            <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between lg:p-8">
-              <div>
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <UserRoundCheck size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Data Profile
-                  </span>
-                </div>
-
-                <h2 className="text-2xl lg:text-3xl font-black text-[#071E3D]">
-                  Informasi Asesor
-                </h2>
-
-                <p className="mt-2 text-sm font-medium text-slate-400">
-                  Lengkapi data sesuai identitas dan lisensi asesor.
+              <div className="border-b border-[#071E3D]/10 bg-white px-5 py-3 md:px-6">
+                <p className="text-[12px] font-medium text-[#182D4A]/60">
+                  Lengkapi seluruh data asesor dengan benar.
                 </p>
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {loading ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Save size={16} />
-                )}
-                Simpan Perubahan
-              </button>
-            </div>
+              <div className="space-y-5 p-5 md:p-6">
+                <FormSection
+                  icon={<User size={18} />}
+                  title="Identitas Pribadi"
+                  desc="Data dasar identitas asesor."
+                >
+                  <FormInput label="NIK">
+                    <input
+                      type="text"
+                      name="nik"
+                      value={profile.nik || ""}
+                      onChange={
+                        handleChange
+                      }
+                      maxLength="16"
+                      className={inputClass()}
+                      placeholder="Masukkan NIK"
+                    />
+                  </FormInput>
 
-            <div className="space-y-8 p-6 lg:p-8">
-              <FormSection
-                icon={<IdCard size={22} />}
-                title="Identitas Pribadi"
-                desc="Data dasar asesor yang digunakan pada dokumen asesmen."
-              >
-                <Input
-                  label="NIK"
-                  name="nik"
-                  value={profile.nik}
-                  onChange={handleChange}
-                  maxLength={16}
-                />
-                <Input
-                  label="Nama Lengkap"
-                  name="nama_lengkap"
-                  value={profile.nama_lengkap}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Gelar Depan"
-                  name="gelar_depan"
-                  value={profile.gelar_depan}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Gelar Belakang"
-                  name="gelar_belakang"
-                  value={profile.gelar_belakang}
-                  onChange={handleChange}
-                />
+                  <FormInput label="Nama Lengkap">
+                    <input
+                      type="text"
+                      name="nama_lengkap"
+                      value={
+                        profile.nama_lengkap ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Masukkan nama lengkap"
+                    />
+                  </FormInput>
 
-                <Select
-                  label="Jenis Kelamin"
-                  name="jenis_kelamin"
-                  value={profile.jenis_kelamin || ""}
-                  onChange={handleChange}
-                  options={[
-                    { value: "", label: "Pilih jenis kelamin" },
-                    { value: "laki-laki", label: "Laki-laki" },
-                    { value: "perempuan", label: "Perempuan" },
-                  ]}
-                />
+                  <FormInput label="Gelar Depan">
+                    <input
+                      type="text"
+                      name="gelar_depan"
+                      value={
+                        profile.gelar_depan ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Masukkan gelar depan"
+                    />
+                  </FormInput>
 
-                <Input
-                  label="Tempat Lahir"
-                  name="tempat_lahir"
-                  value={profile.tempat_lahir}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Tanggal Lahir"
-                  name="tanggal_lahir"
-                  type="date"
-                  value={profile.tanggal_lahir}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Kebangsaan"
-                  name="kebangsaan"
-                  value={profile.kebangsaan}
-                  onChange={handleChange}
-                />
-              </FormSection>
+                  <FormInput label="Gelar Belakang">
+                    <input
+                      type="text"
+                      name="gelar_belakang"
+                      value={
+                        profile.gelar_belakang ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Masukkan gelar belakang"
+                    />
+                  </FormInput>
 
-              <FormSection
-                icon={<BadgeCheck size={22} />}
-                title="Pendidikan & Keahlian"
-                desc="Informasi pendidikan terakhir dan bidang kompetensi asesor."
-              >
-                <Input
-                  label="Pendidikan Terakhir"
-                  name="pendidikan_terakhir"
-                  value={profile.pendidikan_terakhir}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Tahun Lulus"
-                  name="tahun_lulus"
-                  type="number"
-                  value={profile.tahun_lulus}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Institut Asal"
-                  name="institut_asal"
-                  value={profile.institut_asal}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Bidang Keahlian"
-                  name="bidang_keahlian"
-                  value={profile.bidang_keahlian}
-                  onChange={handleChange}
-                />
-              </FormSection>
+                  <FormInput label="Jenis Kelamin">
+                    <select
+                      name="jenis_kelamin"
+                      value={
+                        profile.jenis_kelamin ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                    >
+                      <option value="">
+                        Pilih jenis kelamin
+                      </option>
+                      <option value="laki-laki">
+                        Laki-laki
+                      </option>
+                      <option value="perempuan">
+                        Perempuan
+                      </option>
+                    </select>
+                  </FormInput>
 
-              <FormSection
-                icon={<ShieldCheck size={22} />}
-                title="Registrasi & Lisensi"
-                desc="Nomor registrasi, lisensi, masa berlaku, dan status asesor."
-              >
-                <Input
-                  label="Nomor Registrasi Asesor"
-                  name="no_reg_asesor"
-                  value={profile.no_reg_asesor}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Nomor Lisensi"
-                  name="no_lisensi"
-                  value={profile.no_lisensi}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Masa Berlaku"
-                  name="masa_berlaku"
-                  type="date"
-                  value={profile.masa_berlaku}
-                  onChange={handleChange}
-                />
+                  <FormInput label="Tempat Lahir">
+                    <input
+                      type="text"
+                      name="tempat_lahir"
+                      value={
+                        profile.tempat_lahir ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Masukkan tempat lahir"
+                    />
+                  </FormInput>
 
-                <Select
-                  label="Status Asesor"
-                  name="status_asesor"
-                  value={profile.status_asesor || ""}
-                  onChange={handleChange}
-                  options={[
-                    { value: "", label: "Pilih status" },
-                    { value: "aktif", label: "Aktif" },
-                    { value: "nonaktif", label: "Nonaktif" },
-                  ]}
-                />
-              </FormSection>
+                  <FormInput label="Tanggal Lahir">
+                    <input
+                      type="date"
+                      name="tanggal_lahir"
+                      value={
+                        profile.tanggal_lahir ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                    />
+                  </FormInput>
 
-              <FormSection
-                icon={<MapPin size={22} />}
-                title="Alamat Domisili"
-                desc="Alamat lengkap asesor untuk kebutuhan administrasi."
-              >
-                <div className="md:col-span-2">
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Alamat
-                  </label>
-                  <textarea
-                    name="alamat"
-                    value={profile.alamat || ""}
-                    onChange={handleChange}
-                    rows="4"
-                    className="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-                    placeholder="Masukkan alamat"
-                  />
+                  <FormInput label="Kebangsaan">
+                    <input
+                      type="text"
+                      name="kebangsaan"
+                      value={
+                        profile.kebangsaan ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Masukkan kebangsaan"
+                    />
+                  </FormInput>
+                </FormSection>
+
+                <FormSection
+                  icon={
+                    <BadgeCheck
+                      size={18}
+                    />
+                  }
+                  title="Pendidikan & Keahlian"
+                  desc="Informasi pendidikan dan bidang keahlian asesor."
+                >
+                  <FormInput label="Pendidikan Terakhir">
+                    <select
+                      name="pendidikan_terakhir"
+                      value={
+                        profile.pendidikan_terakhir ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                    >
+                      <option value="">
+                        Pilih pendidikan
+                      </option>
+                      <option value="D3">
+                        D3
+                      </option>
+                      <option value="D4">
+                        D4
+                      </option>
+                      <option value="S1">
+                        S1
+                      </option>
+                      <option value="S2">
+                        S2
+                      </option>
+                      <option value="S3">
+                        S3
+                      </option>
+                    </select>
+                  </FormInput>
+
+                  <FormInput label="Tahun Lulus">
+                    <input
+                      type="text"
+                      name="tahun_lulus"
+                      value={
+                        profile.tahun_lulus ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      maxLength="4"
+                      inputMode="numeric"
+                      className={inputClass()}
+                      placeholder="Contoh: 2024"
+                    />
+                  </FormInput>
+
+                  <FormInput label="Institut Asal">
+                    <input
+                      type="text"
+                      name="institut_asal"
+                      value={
+                        profile.institut_asal ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Nama institusi"
+                    />
+                  </FormInput>
+
+                  <FormInput label="Bidang Keahlian">
+                    <input
+                      type="text"
+                      name="bidang_keahlian"
+                      value={
+                        profile.bidang_keahlian ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Bidang keahlian"
+                    />
+                  </FormInput>
+                </FormSection>
+
+                <FormSection
+                  icon={
+                    <ShieldCheck
+                      size={18}
+                    />
+                  }
+                  title="Registrasi & Lisensi"
+                  desc="Data registrasi dan lisensi asesor."
+                >
+                  <FormInput label="No. Registrasi Asesor">
+                    <input
+                      type="text"
+                      name="no_reg_asesor"
+                      value={
+                        profile.no_reg_asesor ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Nomor registrasi asesor"
+                    />
+                  </FormInput>
+
+                  <FormInput label="No. Lisensi">
+                    <input
+                      type="text"
+                      name="no_lisensi"
+                      value={
+                        profile.no_lisensi ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Nomor lisensi"
+                    />
+                  </FormInput>
+
+                  <FormInput label="Masa Berlaku">
+                    <input
+                      type="date"
+                      name="masa_berlaku"
+                      value={
+                        profile.masa_berlaku ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                    />
+                  </FormInput>
+
+                  <FormInput label="Status Asesor">
+                    <select
+                      name="status_asesor"
+                      value={
+                        profile.status_asesor ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                    >
+                      <option value="">
+                        Pilih status
+                      </option>
+                      <option value="aktif">
+                        Aktif
+                      </option>
+                      <option value="nonaktif">
+                        Nonaktif
+                      </option>
+                    </select>
+                  </FormInput>
+                </FormSection>
+
+                <FormSection
+                  icon={
+                    <MapPin
+                      size={18}
+                    />
+                  }
+                  title="Alamat"
+                  desc="Alamat sesuai data profile asesor."
+                >
+                  <div className="md:col-span-2">
+                    <FormInput label="Alamat Lengkap">
+                      <textarea
+                        name="alamat"
+                        value={
+                          profile.alamat ||
+                          ""
+                        }
+                        onChange={
+                          handleChange
+                        }
+                        rows="3"
+                        className={`${inputClass()} resize-none`}
+                        placeholder="Masukkan alamat lengkap"
+                      />
+                    </FormInput>
+                  </div>
+
+                  <FormInput label="RT">
+                    <input
+                      type="text"
+                      name="rt"
+                      value={
+                        profile.rt ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      maxLength="3"
+                      inputMode="numeric"
+                      className={inputClass()}
+                      placeholder="RT"
+                    />
+                  </FormInput>
+
+                  <FormInput label="RW">
+                    <input
+                      type="text"
+                      name="rw"
+                      value={
+                        profile.rw ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      maxLength="3"
+                      inputMode="numeric"
+                      className={inputClass()}
+                      placeholder="RW"
+                    />
+                  </FormInput>
+
+                  <FormInput label="Provinsi">
+                    <input
+                      type="text"
+                      name="provinsi"
+                      value={
+                        profile.provinsi ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Provinsi"
+                    />
+                  </FormInput>
+
+                  <FormInput label="Kota / Kabupaten">
+                    <input
+                      type="text"
+                      name="kota"
+                      value={
+                        profile.kota ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Kota / Kabupaten"
+                    />
+                  </FormInput>
+
+                  <FormInput label="Kecamatan">
+                    <input
+                      type="text"
+                      name="kecamatan"
+                      value={
+                        profile.kecamatan ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Kecamatan"
+                    />
+                  </FormInput>
+
+                  <FormInput label="Kelurahan">
+                    <input
+                      type="text"
+                      name="kelurahan"
+                      value={
+                        profile.kelurahan ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      className={inputClass()}
+                      placeholder="Kelurahan"
+                    />
+                  </FormInput>
+
+                  <FormInput label="Kode Pos">
+                    <input
+                      type="text"
+                      name="kode_pos"
+                      value={
+                        profile.kode_pos ||
+                        ""
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      maxLength="5"
+                      inputMode="numeric"
+                      className={inputClass()}
+                      placeholder="Kode pos"
+                    />
+                  </FormInput>
+                </FormSection>
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-[#071E3D]/10 bg-[#FAFAFA] px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/50">
+                    Simpan Profile
+                  </p>
+
+                  <p className="mt-1 text-[12px] font-medium leading-relaxed text-[#182D4A]/60">
+                    Semua perubahan data, foto profil, dan tanda tangan akan disimpan melalui tombol ini.
+                  </p>
                 </div>
 
-                <Input
-                  label="RT"
-                  name="rt"
-                  value={profile.rt}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="RW"
-                  name="rw"
-                  value={profile.rw}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Provinsi"
-                  name="provinsi"
-                  value={profile.provinsi}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Kota"
-                  name="kota"
-                  value={profile.kota}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Kecamatan"
-                  name="kecamatan"
-                  value={profile.kecamatan}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Kelurahan"
-                  name="kelurahan"
-                  value={profile.kelurahan}
-                  onChange={handleChange}
-                />
-                <Input
-                  label="Kode Pos"
-                  name="kode_pos"
-                  value={profile.kode_pos}
-                  onChange={handleChange}
-                />
-              </FormSection>
-            </div>
-
-            <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/50 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8">
-              <p className="text-sm font-medium text-slate-500">
-                Pastikan semua data sudah benar sebelum menyimpan perubahan.
-              </p>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {loading ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Save size={16} />
-                )}
-                Simpan Profile
-              </button>
-            </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="rounded-lg bg-[#CC6B27] px-5 py-2.5 text-[12px] font-bold text-white shadow-sm transition-all hover:bg-[#A8561F] disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    {loading ? (
+                      <Loader2
+                        size={15}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <Save size={15} />
+                    )}
+                    Simpan Profile
+                  </span>
+                </button>
+              </div>
+            </section>
           </form>
         </div>
       </main>
@@ -1072,207 +1383,126 @@ export default function ProfileAsesor() {
   );
 }
 
-function NotificationPopup({ show, type, title, message, onClose }) {
-  if (!show) return null;
-
-  const isSuccess = type === "success";
-  const isError = type === "error";
-
-  const iconWrapperClass = isSuccess
-    ? "bg-green-50 text-green-600"
-    : isError
-    ? "bg-red-50 text-red-500"
-    : "bg-orange-50 text-orange-500";
-
-  const borderClass = isSuccess
-    ? "border-green-100"
-    : isError
-    ? "border-red-100"
-    : "border-orange-100";
-
-  const titleClass = isSuccess
-    ? "text-green-700"
-    : isError
-    ? "text-red-600"
-    : "text-[#071E3D]";
-
-  return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#071E3D]/35 backdrop-blur-sm px-4">
-      <div
-        className={`relative w-full max-w-md overflow-hidden rounded-[34px] border ${borderClass} bg-white p-7 text-center shadow-2xl shadow-[#071E3D]/20 animate-[popupScale_0.18s_ease-out]`}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-all hover:bg-slate-100 hover:text-[#071E3D]"
-        >
-          <X size={18} />
-        </button>
-
-        <div className="absolute -right-16 -top-16 h-36 w-36 rounded-full bg-orange-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-36 w-36 rounded-full bg-[#071E3D]/10 blur-3xl" />
-
-        <div className="relative z-10">
-          <div
-            className={`mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[28px] ${iconWrapperClass}`}
-          >
-            {isSuccess ? (
-              <CheckCircle2 size={42} />
-            ) : isError ? (
-              <XCircle size={42} />
-            ) : (
-              <Sparkles size={40} />
-            )}
-          </div>
-
-          <h2 className={`text-2xl font-black ${titleClass}`}>{title}</h2>
-
-          <p className="mx-auto mt-3 max-w-sm text-sm font-medium leading-relaxed text-slate-500">
-            {message}
-          </p>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="mt-7 w-full rounded-2xl bg-[#071E3D] px-6 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-orange-500"
-          >
-            Mengerti
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InfoPill({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-black text-white">{value}</p>
-    </div>
-  );
-}
-
-function AlertBox({ type, icon, message }) {
-  const styles = {
-    success: "border-green-100 bg-green-50 text-green-700",
-    error: "border-red-100 bg-red-50 text-red-600",
-    loading: "border-blue-100 bg-blue-50 text-blue-600",
+function ProfileStat({
+  icon,
+  label,
+  value,
+  tone = "orange",
+}) {
+  const tones = {
+    orange: {
+      icon: "bg-[#CC6B27]/10 text-[#CC6B27]",
+      value: "text-[#071E3D]",
+    },
+    green: {
+      icon: "bg-green-50 text-green-600",
+      value: "text-green-600",
+    },
+    blue: {
+      icon: "bg-blue-50 text-blue-600",
+      value: "text-[#071E3D]",
+    },
   };
 
-  return (
-    <div
-      className={`rounded-[24px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
-        styles[type] || styles.loading
-      }`}
-    >
-      <div className="shrink-0">{icon}</div>
-      <span>{message}</span>
-    </div>
-  );
-}
+  const current =
+    tones[tone] ||
+    tones.orange;
 
-function UploadCard({ title, description, icon, children }) {
   return (
-    <div className="h-full overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
-      <div className="flex items-center justify-between gap-4 border-b border-slate-100 p-6">
-        <div>
-          <h3 className="text-2xl font-black text-[#071E3D]">{title}</h3>
-          <p className="mt-1 text-sm font-medium text-slate-400">
-            {description}
-          </p>
-        </div>
-
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-          {icon}
-        </div>
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-4 shadow-sm">
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${current.icon}`}>
+        {icon}
       </div>
 
-      <div className="h-[calc(100%-97px)] p-6">{children}</div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
+          {label}
+        </p>
+
+        <p className={`mt-1 truncate text-[15px] font-black ${current.value}`}>
+          {value || "-"}
+        </p>
+      </div>
     </div>
   );
 }
 
-function SmallInfoCard({ label, value }) {
+function FormSection({
+  icon,
+  title,
+  desc,
+  children,
+}) {
   return (
-    <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-4">
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-black text-[#071E3D]">{value}</p>
-    </div>
-  );
-}
-
-function FormSection({ icon, title, desc, children }) {
-  return (
-    <section className="overflow-hidden rounded-[30px] border border-slate-100 bg-slate-50/50">
-      <div className="flex items-start gap-4 border-b border-slate-100 bg-white p-5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-          {icon}
-        </div>
-
-        <div>
-          <h3 className="text-lg font-black text-[#071E3D]">{title}</h3>
-          <p className="mt-1 text-sm font-medium text-slate-400">{desc}</p>
-        </div>
+    <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA]">
+      <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5">
+        <h3 className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-white">
+          <span className="text-[#CC6B27]">
+            {icon}
+          </span>
+          {title}
+        </h3>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2">
+      <div className="border-b border-[#071E3D]/10 bg-white px-5 py-3">
+        <p className="text-[11px] font-medium text-[#182D4A]/60">
+          {desc}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
         {children}
       </div>
     </section>
   );
 }
 
-function Input({
+function FormInput({
   label,
-  name,
-  value,
-  onChange,
-  type = "text",
-  maxLength,
+  required = false,
+  error,
+  children,
 }) {
   return (
     <div>
-      <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+      <label className="mb-1.5 block text-[12px] font-bold text-[#071E3D]">
         {label}
+
+        {required && (
+          <span className="ml-1 text-red-500">
+            *
+          </span>
+        )}
       </label>
 
-      <input
-        type={type}
-        name={name}
-        value={value || ""}
-        onChange={onChange}
-        maxLength={maxLength}
-        className="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-        placeholder={`Masukkan ${label.toLowerCase()}`}
-      />
+      {children}
+
+      {error && (
+        <span className="mt-1 block text-[11px] font-medium text-red-500">
+          {error}
+        </span>
+      )}
     </div>
   );
 }
 
-function Select({ label, name, value, onChange, options }) {
+function SmallInfoCard({
+  label,
+  value,
+}) {
   return (
-    <div>
-      <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+    <div className="rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
         {label}
-      </label>
+      </p>
 
-      <select
-        name={name}
-        value={value || ""}
-        onChange={onChange}
-        className="w-full rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-semibold text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-      >
-        {options.map((item) => (
-          <option key={`${name}-${item.value}`} value={item.value}>
-            {item.label}
-          </option>
-        ))}
-      </select>
+      <p className="mt-1 text-[12px] font-bold text-[#071E3D]">
+        {value}
+      </p>
     </div>
   );
+}
+
+function inputClass() {
+  return "w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] p-2.5 text-[13px] font-medium text-[#071E3D] outline-none transition-all placeholder:text-[#182D4A]/40 focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10";
 }

@@ -1,5 +1,3 @@
-// frontend/src/components/sidebar/SidebarAsesor.jsx
-
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -16,10 +14,12 @@ import {
   Pin,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "../../services/api";
 
 const SidebarAsesor = ({ isOpen, setIsOpen }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [profileData, setProfileData] = useState(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const [isPinned, setIsPinned] = useState(() => {
@@ -45,14 +45,47 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
     }
   }, []);
 
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await api.get("/asesor/profile");
+        const data = res.data?.data || null;
+
+        if (data) {
+          setProfileData(data);
+        }
+      } catch (error) {
+        console.error("Gagal mengambil profile asesor:", error);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
   const isExpanded = isOpen || isHovered || isPinned;
 
   const displayName =
-    userData?.nama ||
+    profileData?.nama_lengkap ||
+    profileData?.nama ||
+    profileData?.username ||
+    profileData?.name ||
     userData?.nama_lengkap ||
+    userData?.nama_asesor ||
+    userData?.nama ||
     userData?.username ||
     userData?.name ||
     "Asesor";
+
+  const displayNik =
+    profileData?.nik ||
+    profileData?.nik_asesor ||
+    profileData?.no_ktp ||
+    profileData?.NIK ||
+    userData?.nik ||
+    userData?.nik_asesor ||
+    userData?.no_ktp ||
+    userData?.NIK ||
+    "-";
 
   const menus = useMemo(
     () => [
@@ -110,38 +143,23 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
     }
 
     if (path === "/asesor/jadwal-saya") {
-      return (
-        currentPath === "/asesor/jadwal-saya" ||
-        currentPath.startsWith("/asesor/jadwal-saya/")
-      );
+      return currentPath === "/asesor/jadwal-saya" || currentPath.startsWith("/asesor/jadwal-saya/");
     }
 
     if (path === "/asesor/verifikasi-tuk") {
-      return (
-        currentPath === "/asesor/verifikasi-tuk" ||
-        currentPath.startsWith("/asesor/verifikasi-tuk/")
-      );
+      return currentPath === "/asesor/verifikasi-tuk" || currentPath.startsWith("/asesor/verifikasi-tuk/");
     }
 
     if (path === "/asesor/komite-teknis") {
-      return (
-        currentPath === "/asesor/komite-teknis" ||
-        currentPath.startsWith("/asesor/komite-teknis/")
-      );
+      return currentPath === "/asesor/komite-teknis" || currentPath.startsWith("/asesor/komite-teknis/");
     }
 
     if (path === "/asesor/mkva") {
-      return (
-        currentPath === "/asesor/mkva" ||
-        currentPath.startsWith("/asesor/mkva/")
-      );
+      return currentPath === "/asesor/mkva" || currentPath.startsWith("/asesor/mkva/");
     }
 
     if (path === "/asesor/ubah-password") {
-      return (
-        currentPath === "/asesor/ubah-password" ||
-        currentPath.startsWith("/asesor/ubah-password/")
-      );
+      return currentPath === "/asesor/ubah-password" || currentPath.startsWith("/asesor/ubah-password/");
     }
 
     return currentPath === path || currentPath.startsWith(`${path}/`);
@@ -174,7 +192,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed top-4 left-4 z-[55] lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 shadow-lg text-[#071E3D] flex items-center justify-center"
+        className="fixed left-5 top-5 z-[55] flex h-11 w-11 items-center justify-center rounded-xl border border-[#071E3D]/10 bg-white text-[#071E3D] shadow-sm transition-all hover:bg-slate-50 lg:hidden"
       >
         <Menu size={22} />
       </button>
@@ -187,7 +205,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-[#071E3D]/50 backdrop-blur-sm z-[60] lg:hidden"
+              className="fixed inset-0 z-[60] bg-[#071E3D]/50 backdrop-blur-sm lg:hidden"
             />
 
             <motion.aside
@@ -195,7 +213,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-y-0 left-0 w-80 bg-white shadow-2xl z-[70] lg:hidden flex flex-col overflow-hidden"
+              className="fixed inset-y-0 left-0 z-[70] flex w-80 flex-col overflow-hidden border-r border-[#071E3D]/10 bg-white shadow-2xl lg:hidden"
             >
               <SidebarContent
                 menus={menus}
@@ -203,6 +221,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
                 handleClick={handleClick}
                 handleLogout={() => setShowLogoutModal(true)}
                 displayName={displayName}
+                displayNik={displayNik}
                 isExpanded={true}
                 onClose={() => setIsOpen(false)}
                 isPinned={false}
@@ -217,7 +236,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`hidden lg:flex fixed left-0 top-0 h-screen bg-white text-[#071E3D] flex-col z-[70] border-r border-slate-100 shadow-[16px_0_40px_-30px_rgba(7,30,61,0.35)] overflow-hidden transition-[width] duration-200 ease-linear ${
+        className={`fixed left-0 top-0 z-[70] hidden h-screen flex-col overflow-hidden border-r border-[#071E3D]/10 bg-white text-[#071E3D] shadow-[16px_0_40px_-30px_rgba(7,30,61,0.35)] transition-[width] duration-200 ease-linear lg:flex ${
           isExpanded ? "w-80" : "w-24"
         }`}
       >
@@ -227,6 +246,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
           handleClick={handleClick}
           handleLogout={() => setShowLogoutModal(true)}
           displayName={displayName}
+          displayNik={displayNik}
           isExpanded={isExpanded}
           isPinned={isPinned}
           togglePin={togglePin}
@@ -234,7 +254,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
       </aside>
 
       <div
-        className={`hidden lg:block shrink-0 pointer-events-none transition-[width] duration-200 ease-linear ${
+        className={`hidden shrink-0 pointer-events-none transition-[width] duration-200 ease-linear lg:block ${
           isExpanded ? "w-80" : "w-24"
         }`}
       />
@@ -245,24 +265,24 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-[#071E3D]/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071E3D]/60 p-4 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.95, y: 12 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 12 }}
               transition={{ duration: 0.18 }}
-              className="w-full max-w-md bg-white rounded-[30px] border border-slate-100 shadow-2xl p-8 text-center"
+              className="w-full max-w-sm rounded-xl border border-[#071E3D]/10 bg-white p-8 text-center shadow-xl"
             >
-              <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
-                <LogOut size={30} />
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-red-50 text-red-500">
+                <LogOut size={26} />
               </div>
 
-              <h2 className="text-2xl font-black text-[#071E3D] mb-2">
-                Keluar dari Akun?
+              <h2 className="mb-2 text-xl font-black text-[#071E3D]">
+                Keluar dari Sistem?
               </h2>
 
-              <p className="text-slate-500 font-medium mb-7">
+              <p className="mb-7 text-sm font-medium text-[#182D4A]/70">
                 Apakah Anda yakin ingin logout dari dashboard Asesor?
               </p>
 
@@ -270,7 +290,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
                 <button
                   type="button"
                   onClick={() => setShowLogoutModal(false)}
-                  className="px-5 py-4 rounded-2xl border border-slate-200 text-[#071E3D] font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
+                  className="rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] px-4 py-2.5 text-[12px] font-bold uppercase tracking-wider text-[#071E3D] transition-all hover:bg-slate-100"
                 >
                   Batal
                 </button>
@@ -278,7 +298,7 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
                 <button
                   type="button"
                   onClick={confirmLogout}
-                  className="px-5 py-4 rounded-2xl bg-red-500 text-white font-black text-xs uppercase tracking-widest hover:bg-red-600 transition-all"
+                  className="rounded-lg bg-red-600 px-4 py-2.5 text-[12px] font-bold uppercase tracking-wider text-white transition-all hover:bg-red-700"
                 >
                   Ya, Keluar
                 </button>
@@ -297,6 +317,7 @@ const SidebarContent = ({
   handleClick,
   handleLogout,
   displayName,
+  displayNik,
   isExpanded,
   onClose,
   isPinned,
@@ -307,50 +328,57 @@ const SidebarContent = ({
 
   return (
     <>
-      <div className="h-[120px] border-b border-slate-100 flex items-center shrink-0">
-        <button
-          type="button"
-          onClick={togglePin}
-          title={isPinned ? "Buka Kunci Sidebar" : "Kunci Sidebar"}
-          className="w-24 h-full flex items-center justify-center shrink-0 cursor-pointer group"
-        >
-          <div
-            className={`relative w-14 h-14 rounded-2xl bg-[#071E3D] text-white flex items-center justify-center font-black text-xl transition-all duration-300 ${
-              isPinned ? "ring-4 ring-orange-500/30 scale-95" : "group-hover:scale-105"
-            }`}
-          >
-            {initialName}
-            {isPinned && (
-              <div className="absolute -top-1 -right-1 bg-orange-500 rounded-full p-1 text-white">
-                <Pin size={10} className="fill-current" />
-              </div>
-            )}
-          </div>
-        </button>
-
-        <div
-          className={`overflow-hidden whitespace-nowrap transition-opacity duration-150 ${
-            isExpanded ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <h1 className="text-xl font-black text-[#071E3D] uppercase truncate max-w-[190px] leading-tight">
-            {displayName}
-          </h1>
-
-          <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-1">
-            Dashboard Asesor
-          </p>
-        </div>
-
-        {isMobile && (
+      <div className="h-[120px] shrink-0 border-b border-[#071E3D]/10">
+        <div className="flex h-full items-center">
           <button
             type="button"
-            onClick={onClose}
-            className="ml-auto mr-5 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+            onClick={togglePin}
+            title={isPinned ? "Buka Kunci Sidebar" : "Kunci Sidebar"}
+            className="group flex h-full w-24 shrink-0 cursor-pointer items-center justify-center"
           >
-            <X size={24} />
+            <div
+              className={`relative flex h-14 w-14 items-center justify-center rounded-xl bg-[#071E3D] text-xl font-black text-white transition-all duration-300 ${
+                isPinned ? "scale-95 ring-2 ring-[#CC6B27]/40" : "group-hover:scale-105"
+              }`}
+            >
+              {initialName}
+
+              {isPinned && (
+                <div className="absolute -right-1.5 -top-1.5 rounded-full bg-[#CC6B27] p-1 text-white">
+                  <Pin size={10} className="fill-current" />
+                </div>
+              )}
+            </div>
           </button>
-        )}
+
+          <div
+            className={`min-w-0 overflow-hidden whitespace-nowrap transition-opacity duration-150 ${
+              isExpanded ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <h1 className="max-w-[190px] truncate text-xl font-black uppercase leading-tight text-[#071E3D]">
+              {displayName}
+            </h1>
+
+            <p className="mt-1 max-w-[190px] truncate text-[10px] font-black uppercase tracking-wider text-[#CC6B27]">
+              {displayNik}
+            </p>
+
+            <p className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-[#182D4A]/50">
+              Dashboard Asesor
+            </p>
+          </div>
+
+          {isMobile && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="ml-auto mr-5 rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100"
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4">
@@ -364,14 +392,14 @@ const SidebarContent = ({
                 type="button"
                 onClick={() => handleClick(item.path)}
                 title={!isExpanded ? item.name : ""}
-                className="group w-full min-h-16 flex items-center"
+                className="group flex min-h-14 w-full items-center"
               >
-                <div className="w-24 h-16 flex items-center justify-center shrink-0">
+                <div className="flex h-14 w-24 shrink-0 items-center justify-center">
                   <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-150 ${
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl text-[18px] transition-colors duration-150 ${
                       active
-                        ? "bg-orange-50 border border-orange-100 text-orange-500"
-                        : "text-[#071E3D]/80 group-hover:bg-slate-50 group-hover:text-orange-500"
+                        ? "border border-[#CC6B27]/20 bg-[#CC6B27]/10 text-[#CC6B27]"
+                        : "text-[#182D4A]/60 group-hover:bg-[#CC6B27]/5 group-hover:text-[#CC6B27]"
                     }`}
                   >
                     {item.icon}
@@ -379,20 +407,19 @@ const SidebarContent = ({
                 </div>
 
                 <div
-                  className={`min-h-16 flex-1 pr-5 flex items-center justify-between gap-3 overflow-hidden transition-opacity duration-150 ${
+                  className={`flex min-h-14 flex-1 items-center overflow-hidden pr-5 transition-opacity duration-150 ${
                     isExpanded ? "opacity-100" : "opacity-0"
                   }`}
                 >
                   <span
-                    className={`text-[14px] text-left leading-snug ${
+                    className={`text-left text-[13px] leading-snug ${
                       active
-                        ? "font-black text-orange-500"
-                        : "font-medium text-slate-600"
+                        ? "font-bold text-[#CC6B27]"
+                        : "font-semibold text-[#182D4A]"
                     }`}
                   >
                     {item.name}
                   </span>
-                  {/* Panah dihilangkan karena tidak ada anakan */}
                 </div>
               </button>
             );
@@ -400,27 +427,28 @@ const SidebarContent = ({
         </div>
       </nav>
 
-      <div className="h-28 border-t border-slate-100 bg-slate-50/50 shrink-0 flex items-center">
-        <div className="w-24 h-full flex items-center justify-center shrink-0">
+      <div className="flex h-24 shrink-0 items-center border-t border-[#071E3D]/10 bg-[#FAFAFA]">
+        <div className="flex h-full w-24 shrink-0 items-center justify-center">
           <button
             type="button"
             onClick={handleLogout}
             title={!isExpanded ? "Keluar" : ""}
-            className="w-14 h-14 rounded-2xl bg-white border border-slate-100 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 shadow-sm flex items-center justify-center transition-colors duration-150"
+            className="flex h-12 w-12 items-center justify-center rounded-xl border border-red-100 bg-white text-red-500 shadow-sm transition-colors duration-150 hover:border-red-500 hover:bg-red-500 hover:text-white"
           >
-            <LogOut size={20} />
+            <LogOut size={19} />
           </button>
         </div>
 
         <button
           type="button"
           onClick={handleLogout}
-          className={`h-14 flex-1 mr-5 rounded-2xl flex items-center justify-between overflow-hidden text-red-500 transition-opacity duration-150 ${
+          className={`mr-5 flex h-12 flex-1 items-center overflow-hidden rounded-lg text-red-500 transition-opacity duration-150 ${
             isExpanded ? "opacity-100" : "opacity-0"
           }`}
         >
-          <span className="text-sm font-black whitespace-nowrap">Keluar</span>
-          {/* Panah dihilangkan karena tidak ada anakan */}
+          <span className="whitespace-nowrap text-[13px] font-bold">
+            Keluar dari Sistem
+          </span>
         </button>
       </div>
     </>
