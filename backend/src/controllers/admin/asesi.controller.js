@@ -64,49 +64,52 @@ exports.downloadTemplate = async (req, res) => {
 
 exports.importAsesiExcel = async (req, res) => {
   try {
-
     if (!req.file) {
       return response.error(res, "File tidak ditemukan", 400);
     }
-
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(sheet);
-
+    
     if (!data.length) {
       return response.error(res, "File Excel kosong", 400);
     }
-
+    
     const role = await Role.findOne({
       where: { role_name: "ASESI" }
     });
-
+    
     if (!role) {
       return response.error(res, "Role ASESI tidak ditemukan", 500);
     }
-
+    
     let totalSuccess = 0;
     let totalFailed = 0;
+    let emailTasks = []; 
 
     for (const row of data) {
       const t = await sequelize.transaction();
-
       try {
         if (!row.nik || !row.email) {
           throw new Error(`Data tidak lengkap untuk NIK ${row.nik}`);
         }
 
-        const { user } = await createUser({
-          username: row.nik,
-          email: row.email,
-          no_hp: row.no_hp || null,
+        // --- PERBAIKAN 1: BERSIHKAN SPASI GHAIB DARI EXCEL ---
+        const emailBersih = String(row.email).trim().toLowerCase();
+        const nikBersih = String(row.nik).trim();
+        const noHpBersih = row.no_hp ? String(row.no_hp).trim() : null;
+        
+        const { user, rawPassword } = await createUser({
+          username: nikBersih,
+          email: emailBersih,
+          no_hp: noHpBersih,
           id_role: role.id_role
         }, { transaction: t });
-
+        
         await ProfileAsesi.create({
           id_user: user.id_user,
-          nik: row.nik,
+          nik: nikBersih,
           nama_lengkap: row.nama_lengkap,
           jenis_kelamin: row.jenis_kelamin,
           tempat_lahir: row.tempat_lahir,
@@ -132,33 +135,44 @@ exports.importAsesiExcel = async (req, res) => {
           fax_perusahaan: row.fax_perusahaan,
           email_perusahaan: row.email_perusahaan
         }, { transaction: t });
-
+        
         await t.commit();
         totalSuccess++;
 
-        // ==============================================================
-        // KODE DIPERBAIKI: LANGSUNG KIRIM EMAIL TANPA CEK IF
-        // ==============================================================
-        try {
-          const rawPassword = await resetUserPassword(user);
-          await sendAccountEmail(row.email, row.nik, rawPassword);
-        } catch (emailErr) {
-          console.error(`Gagal membuat/mengirim email sandi untuk NIK ${row.nik}:`, emailErr.message);
-        }
+        // --- PERBAIKAN 2: SAMAKAN DENGAN PENDAFTARAN MANDIRI ---
+        const processBackgroundEmail = async () => {
+          let statusKirim = "terkirim";
+          let pesanNotif = `Akun asesi berhasil dibuat. Username: ${user.username}`;
 
-        // Buat notifikasi di sistem
-        try {
-          await createNotifikasi({
-            channel: "email", 
-            tujuan: row.nik,
-            pesan: `Akun Asesi berhasil dibuat. Username: ${row.nik}. Password dikirim via email.`,
-            status_kirim: "terkirim",
-            ref_type: "akun", 
-            ref_id: user.id_user
-          });
-        } catch (notifErr) {
-          console.error(`Gagal membuat notif untuk NIK ${row.nik}:`, notifErr.message);
-        }
+          try {
+            // DEBUGGING: Cek di terminal VS Code kamu, apakah emailnya aneh?
+            console.log(`[DEBUG EXCEL] Mencoba kirim email ke: '${user.email}' untuk NIK: '${user.username}'`);
+            
+            // Kita pakai user.email dan user.username (langsung dari database, bukan dari excel)
+            await sendAccountEmail(user.email, user.username, rawPassword);
+            
+            console.log(`[DEBUG EXCEL] Sukses kirim email ke: '${user.email}'`);
+          } catch (emailErr) {
+            console.error(`[DEBUG EXCEL ERROR] Gagal kirim email ke '${user.email}':`, emailErr.message);
+            statusKirim = "gagal";
+            pesanNotif = `Akun asesi berhasil dibuat, tetapi email gagal dikirim. Username: ${user.username}`;
+          }
+          
+          try {
+            await createNotifikasi({
+              channel: "email", 
+              tujuan: user.email, 
+              pesan: pesanNotif,
+              status_kirim: statusKirim,
+              ref_type: "akun", 
+              ref_id: user.id_user
+            });
+          } catch (notifErr) {
+            console.error(`Gagal membuat notif untuk NIK ${user.username}:`, notifErr.message);
+          }
+        };
+
+        emailTasks.push(processBackgroundEmail());
 
       } catch (err) {
         await t.rollback();
@@ -167,11 +181,14 @@ exports.importAsesiExcel = async (req, res) => {
       }
     }
 
+    if (emailTasks.length > 0) {
+      await Promise.allSettled(emailTasks);
+    }
+
     return response.success(
       res,
-      `Import Asesi selesai. Berhasil (termasuk kirim email): ${totalSuccess}, Gagal: ${totalFailed}`
+      `Import Asesi selesai. Berhasil (termasuk diproses email): ${totalSuccess}, Gagal: ${totalFailed}`
     );
-
   } catch (err) {
     return response.error(res, err.message);
   }

@@ -559,8 +559,7 @@ const Asesor = () => {
       setLoading(false);
     }
   };
-
-  const handleImportExcel = async (e) => {
+const handleImportExcel = async (e) => {
     e.preventDefault();
 
     if (!fileExcel) {
@@ -573,8 +572,25 @@ const Asesor = () => {
     setLoading(true);
 
     try {
-      await api.post("/admin/import-asesor", formUpload, { headers: { "Content-Type": "multipart/form-data" } });
-      await notifikasi.sukses("Sukses", "Data Asesor berhasil diimport");
+      const response = await api.post("/admin/import-asesor", formUpload, { headers: { "Content-Type": "multipart/form-data" } });
+      
+      // Ambil respons data yang merincikan berhasil dan gagal
+      const resultData = response.data?.data || response.data;
+      const berhasil = resultData.berhasil || 0;
+      const gagal = resultData.gagal || 0;
+      const msg = `Berhasil (termasuk diproses email): ${berhasil}, Gagal: ${gagal}`;
+
+      if (gagal > 0) {
+        // Tampilkan warning jika terdapat error pada baris tertentu
+        notifikasi.peringatan(
+          "Import Selesai (Ada Catatan)", 
+          `${msg}\n\nCatatan Error:\n${(resultData.rincian_error || []).join('\n')}`
+        );
+      } else {
+        // Tampilkan sukses jika semua baris ter-import
+        notifikasi.sukses("Import Selesai", msg);
+      }
+
       setShowImportModal(false);
       setFileExcel(null);
       await fetchData(pagination.page, searchTerm);

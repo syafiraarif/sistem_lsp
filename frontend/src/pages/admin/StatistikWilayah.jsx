@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { FaMapMarkedAlt, FaChartBar, FaUsers, FaCity } from "react-icons/fa";
-// Sesuaikan import axios/api config Anda
-// import api from "../../config/api"; 
+import api from "../../services/api"; 
 
 const StatistikWilayah = () => {
   const [dataAsesor, setDataAsesor] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // State untuk data yang sudah dikelompokkan
   const [statsProvinsi, setStatsProvinsi] = useState([]);
   const [statsKota, setStatsKota] = useState([]);
 
@@ -18,23 +16,13 @@ const StatistikWilayah = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // UNCOMMENT & SESUAIKAN KODE DI BAWAH INI UNTUK MENGGUNAKAN API ASLI
-      // const response = await api.get("/asesor");
-      // const data = response.data.data;
-      
-      // MOCK DATA SEMENTARA
-      const mockData = [
-        { nama_lengkap: "Asesor 1", provinsi: "Jawa Tengah", kota: "Semarang" },
-        { nama_lengkap: "Asesor 2", provinsi: "Jawa Tengah", kota: "Surakarta" },
-        { nama_lengkap: "Asesor 3", provinsi: "Jawa Timur", kota: "Surabaya" },
-        { nama_lengkap: "Asesor 4", provinsi: "Jawa Barat", kota: "Bandung" },
-        { nama_lengkap: "Asesor 5", provinsi: "Jawa Tengah", kota: "Semarang" },
-        { nama_lengkap: "Asesor 6", provinsi: "DKI Jakarta", kota: "Jakarta Selatan" },
-      ];
-      const data = mockData; // Ganti dengan data dari API asli Anda
+      // Tambahkan limit besar agar semua data asesor terambil untuk statistik
+      const response = await api.get("/admin/asesor?limit=10000");
+      const resBody = response.data !== undefined ? response.data : response;
+      const listData = Array.isArray(resBody.data) ? resBody.data : resBody.data?.data && Array.isArray(resBody.data.data) ? resBody.data.data : Array.isArray(resBody) ? resBody : [];
 
-      setDataAsesor(data);
-      processStats(data);
+      setDataAsesor(listData);
+      processStats(listData);
     } catch (error) {
       console.error("Gagal mengambil data asesor:", error);
     } finally {
@@ -43,7 +31,6 @@ const StatistikWilayah = () => {
   };
 
   const processStats = (data) => {
-    // 1. Daftar 38 Provinsi di Indonesia (Untuk memastikan semua wilayah tampil walau datanya 0)
     const daftarProvinsi = [
       "Aceh", "Sumatera Utara", "Sumatera Barat", "Riau", "Jambi", "Sumatera Selatan", 
       "Bengkulu", "Lampung", "Kepulauan Bangka Belitung", "Kepulauan Riau", "DKI Jakarta", 
@@ -55,32 +42,29 @@ const StatistikWilayah = () => {
       "Papua Pegunungan", "Papua Barat Daya"
     ];
 
-    // Buat objek default dimana semua provinsi bernilai 0
     const provCount = {};
     daftarProvinsi.forEach(prov => provCount[prov] = 0);
 
-    // 2. Hitung jumlah asesor per Provinsi dari data asli
     data.forEach(curr => {
-      const prov = curr.provinsi;
+      // Gunakan field dari database, utamakan domisili, jika kosong gunakan ktp
+      const prov = curr.provinsi_domisili || curr.provinsi_ktp;
       if (prov) {
         provCount[prov] = (provCount[prov] || 0) + 1;
       }
     });
 
-    // Petakan jadi array dan urutkan berdasarkan jumlah TERBANYAK ke terkecil
     const arrProv = Object.keys(provCount).map((key) => ({
       name: key,
       count: provCount[key],
     })).sort((a, b) => b.count - a.count);
 
-    // 3. Hitung jumlah berdasarkan Kota/Kabupaten (Otomatis berdasarkan data)
     const kotaCount = data.reduce((acc, curr) => {
-      const kota = curr.kota || "Belum Ditentukan";
+      // Gunakan field dari database untuk kota
+      const kota = curr.kota_domisili || curr.kota_ktp || "Belum Ditentukan";
       acc[kota] = (acc[kota] || 0) + 1;
       return acc;
     }, {});
 
-    // Urutkan Kota berdasarkan jumlah TERBANYAK ke terkecil
     const arrKota = Object.keys(kotaCount).map((key) => ({
       name: key,
       count: kotaCount[key],
@@ -99,7 +83,6 @@ const StatistikWilayah = () => {
     );
   }
 
-  // Gunakan filter untuk total provinsi/kota yang benar-benar ada data asesornya
   const provinsiAktif = statsProvinsi.filter(p => p.count > 0).length;
   const totalAsesor = dataAsesor.length;
 
@@ -127,26 +110,9 @@ const StatistikWilayah = () => {
 
       {/* SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <SummaryCard 
-          icon={<FaUsers className="text-2xl" />}
-          title="Total Asesor"
-          value={totalAsesor}
-          color="navy"
-        />
-        
-        <SummaryCard 
-          icon={<FaChartBar className="text-2xl" />}
-          title="Total Provinsi"
-          value={provinsiAktif}
-          color="orange"
-        />
-
-        <SummaryCard 
-          icon={<FaCity className="text-2xl" />}
-          title="Total Kota/Kab"
-          value={statsKota.length}
-          color="blue"
-        />
+        <SummaryCard icon={<FaUsers className="text-2xl" />} title="Total Asesor" value={totalAsesor} color="navy" />
+        <SummaryCard icon={<FaChartBar className="text-2xl" />} title="Total Provinsi" value={provinsiAktif} color="orange" />
+        <SummaryCard icon={<FaCity className="text-2xl" />} title="Total Kota/Kab" value={statsKota.length} color="blue" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -154,38 +120,22 @@ const StatistikWilayah = () => {
         <div className="bg-white rounded-xl shadow-sm border border-[#071E3D]/10 overflow-hidden">
           <div className="bg-[#071E3D] px-6 py-4 border-b-4 border-[#CC6B27]">
             <h2 className="font-bold text-[#FAFAFA] flex items-center gap-2 text-[14px] uppercase tracking-wider">
-              <FaMapMarkedAlt className="text-[#CC6B27]" />
-              Sebaran Provinsi (Semua Wilayah)
+              <FaMapMarkedAlt className="text-[#CC6B27]" /> Sebaran Provinsi (Semua Wilayah)
             </h2>
           </div>
-
           <div className="p-5 max-h-[450px] overflow-y-auto custom-scrollbar">
             {statsProvinsi.length > 0 ? statsProvinsi.map((item, index) => {
-              // Jika datanya 0, maka persentase juga 0 (hindari NaN error)
               const percentage = totalAsesor === 0 ? 0 : (item.count / totalAsesor * 100).toFixed(1);
-              
               return (
-                <div 
-                  key={index} 
-                  className={`p-3 rounded-xl border mb-3 last:mb-0 transition-all ${
-                    item.count > 0 
-                      ? 'bg-[#CC6B27]/5 border-[#CC6B27]/20' 
-                      : 'bg-[#FAFAFA] border-[#071E3D]/5'
-                  }`}
-                >
+                <div key={index} className={`p-3 rounded-xl border mb-3 last:mb-0 transition-all ${item.count > 0 ? 'bg-[#CC6B27]/5 border-[#CC6B27]/20' : 'bg-[#FAFAFA] border-[#071E3D]/5'}`}>
                   <div className="flex justify-between text-sm mb-2 gap-4">
-                    <span className="font-bold text-[#071E3D]">
-                      {index + 1}. {item.name}
-                    </span>
+                    <span className="font-bold text-[#071E3D]">{index + 1}. {item.name}</span>
                     <span className={`font-black whitespace-nowrap ${item.count > 0 ? 'text-[#CC6B27]' : 'text-[#182D4A]/40'}`}>
                       {item.count} Asesor ({percentage}%)
                     </span>
                   </div>
                   <div className="w-full bg-[#071E3D]/10 rounded-full h-2.5 overflow-hidden">
-                    <div 
-                      className="bg-[#CC6B27] h-2.5 rounded-full transition-all duration-500" 
-                      style={{ width: `${percentage}%` }}
-                    ></div>
+                    <div className="bg-[#CC6B27] h-2.5 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }}></div>
                   </div>
                 </div>
               );
@@ -202,11 +152,9 @@ const StatistikWilayah = () => {
         <div className="bg-white rounded-xl shadow-sm border border-[#071E3D]/10 overflow-hidden">
           <div className="bg-[#071E3D] px-6 py-4 border-b-4 border-[#CC6B27]">
             <h2 className="font-bold text-[#FAFAFA] flex items-center gap-2 text-[14px] uppercase tracking-wider">
-              <FaCity className="text-[#CC6B27]" />
-              Sebaran Kota/Kabupaten Terbanyak
+              <FaCity className="text-[#CC6B27]" /> Sebaran Kota/Kabupaten Terbanyak
             </h2>
           </div>
-
           <div className="overflow-x-auto max-h-[450px] overflow-y-auto custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-max bg-white">
               <thead className="sticky top-0 z-10">
@@ -219,12 +167,8 @@ const StatistikWilayah = () => {
               <tbody>
                 {statsKota.length > 0 ? statsKota.map((item, index) => (
                   <tr key={index} className="border-b border-[#071E3D]/5 hover:bg-[#CC6B27]/5 transition-colors">
-                    <td className="px-5 py-4 text-center font-bold text-[#071E3D] text-[13.5px]">
-                      {index + 1}
-                    </td>
-                    <td className="px-5 py-4 font-bold text-[#071E3D] text-[13.5px]">
-                      {item.name}
-                    </td>
+                    <td className="px-5 py-4 text-center font-bold text-[#071E3D] text-[13.5px]">{index + 1}</td>
+                    <td className="px-5 py-4 font-bold text-[#071E3D] text-[13.5px]">{item.name}</td>
                     <td className="px-5 py-4 text-center">
                       <span className="inline-flex items-center justify-center min-w-[42px] px-3 py-1.5 rounded-full bg-[#182D4A]/10 text-[#071E3D] font-black text-[12px] border border-[#071E3D]/10">
                         {item.count}
