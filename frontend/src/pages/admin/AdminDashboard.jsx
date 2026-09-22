@@ -6,22 +6,21 @@ import {
   FaUserTie,
   FaUsers,
   FaBuilding,
-  FaCalendarAlt,
+  FaCheckCircle,
+  FaTimesCircle
 } from "react-icons/fa";
 import {
-  BarChart3,
-  CalendarCheck,
   ChevronRight,
   ClipboardList,
-  PieChart,
-  ShieldCheck,
+  CalendarCheck,
   Sparkles,
-  Loader2
+  Loader2,
+  PieChart,
+  BarChart3
 } from "lucide-react";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const currentYear = new Date().getFullYear();
 
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState({ skema: 0, asesor: 0, asesi: 0, tuk: 0 });
@@ -30,7 +29,7 @@ const AdminDashboard = () => {
   const [chartData, setChartData] = useState([]);
   const [passRate, setPassRate] = useState({ kompeten: 0, belum: 0 });
 
-useEffect(() => {
+  useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
@@ -38,20 +37,24 @@ useEffect(() => {
         const dashboard = response.data?.data;
 
         if (dashboard) {
-          setStatsData(dashboard.stats);
+          setStatsData(dashboard.stats || { skema: 0, asesor: 0, asesi: 0, tuk: 0 });
           setChartData(dashboard.chartData || []);
           setPassRate(dashboard.passRate || { kompeten: 0, belum: 0 });
 
-          // Mapping Pendaftaran (Berdasarkan kolom tabel pendaftaran_asesi asli)
+          // Mapping Pendaftaran
           const formattedRegs = (dashboard.recentRegistrations || []).map((reg) => ({
             name: reg.nama_lengkap || "Nama Tidak Diketahui",
             schema: reg.kompetensi_keahlian || "Skema Tidak Diketahui",
-            date: new Date(reg.tanggal_daftar || reg.createdAt || new Date()).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }),
+            date: new Date(reg.tanggal_daftar || reg.createdAt || new Date()).toLocaleDateString("id-ID", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            }),
             status: reg.status || "Menunggu",
           }));
           setRecentRegistrations(formattedRegs);
 
-          // Mapping Jadwal (Berdasarkan kolom tabel jadwal asli)
+          // Mapping Jadwal
           const formattedSchedules = (dashboard.schedules || []).map((j) => {
             const d = new Date(j.tgl_awal || new Date());
             return {
@@ -73,167 +76,248 @@ useEffect(() => {
     fetchDashboardData();
   }, []);
 
-  const stats = [
-    { label: "Total Skema", value: statsData.skema, icon: <FaLayerGroup />, color: "text-orange-500", bg: "bg-orange-50", link: "/admin/skema" },
-    { label: "Total Asesor", value: statsData.asesor, icon: <FaUserTie />, color: "text-[#071E3D]", bg: "bg-slate-50", link: "/admin/asesor" },
-    { label: "Total Asesi", value: statsData.asesi, icon: <FaUsers />, color: "text-green-600", bg: "bg-green-50", link: "/admin/asesi/tambah" },
-    { label: "Data TUK", value: statsData.tuk, icon: <FaBuilding />, color: "text-purple-600", bg: "bg-purple-50", link: "/admin/tuk" },
-  ];
+  // Hitung jumlah riil asesi kompeten & belum kompeten
+  const totalAsesi = statsData.asesi || 0;
+  const persenKompeten = Number(passRate.kompeten || 0);
+  const persenBelum = Number(passRate.belum || (100 - persenKompeten));
+  const jumlahKompeten = Math.round((persenKompeten / 100) * totalAsesi);
+  const jumlahBelum = Math.max(0, totalAsesi - jumlahKompeten);
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
+      <div className="flex min-h-screen items-center justify-center bg-[#FAFAFA]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="animate-spin text-orange-500" size={48} />
-          <p className="font-bold text-[#071E3D]">Memuat Dashboard...</p>
+          <Loader2 className="animate-spin text-[#CC6B27]" size={40} />
+          <p className="text-[14px] font-bold text-[#071E3D]">Memuat Dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        
-        {/* HERO */}
-        <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
-          <div className="absolute right-0 top-0 h-[430px] w-[430px] rounded-full bg-orange-500/10 blur-[110px]" />
-          <div className="absolute -bottom-24 -left-24 h-[380px] w-[380px] rounded-full bg-[#071E3D]/5 blur-[100px]" />
+    <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
+      <div className="flex flex-col gap-6">
 
-          <div className="relative z-10 grid grid-cols-1 gap-6 p-6 lg:p-8 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="flex flex-col justify-center">
-              <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                <ShieldCheck size={15} className="text-orange-500" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">Dashboard Admin</span>
-              </div>
-
-              <h1 className="text-4xl font-black leading-tight text-[#071E3D] lg:text-5xl">
-                Selamat Datang,<br /><span className="text-orange-500">Administrator</span>
-              </h1>
-
-              <p className="mt-5 max-w-2xl text-base font-medium leading-relaxed text-slate-500 lg:text-lg">
-                Pantau ringkasan sertifikasi, statistik pendaftaran, jadwal asesmen, data asesor, asesi, skema, dan TUK dalam satu halaman dashboard yang Real-Time.
+        {/* HEADER SECTION (Gaya Modul Asesor) */}
+        <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
+          <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
+          <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">
+                Ringkasan Sertifikasi
+              </h2>
+              <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">
+                Pantau statistik pendaftaran, skema, asesor, serta status kelulusan asesi secara terpusat.
               </p>
-
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <button onClick={() => navigate("/admin/verifikasi-pendaftaran")} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]">
-                  Lihat Pendaftaran <ChevronRight size={17} />
-                </button>
-                <button onClick={() => navigate("/admin/laporan-sertifikasi")} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white">
-                  Laporan Sertifikasi <ChevronRight size={17} />
-                </button>
-              </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
-              <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
-              <div className="relative z-10">
-                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                  <Sparkles size={28} />
-                </div>
-                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">Ringkasan Tahun {currentYear}</p>
-                <h2 className="mb-4 text-2xl font-black">Sistem Sertifikasi Aktif</h2>
-                <p className="text-sm font-medium leading-relaxed text-white/60">Data dashboard menampilkan gambaran umum proses sertifikasi dan kelulusan secara real-time.</p>
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  <HeroPill label="Kompeten" value={`${passRate.kompeten}%`} />
-                  <HeroPill label="Pendaftar" value={statsData.asesi.toLocaleString()} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* STATS */}
-        <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          {stats.map((item, index) => (
-            <div 
-              key={index} 
-              onClick={() => navigate(item.link)}
-              className="cursor-pointer transition-transform hover:scale-[1.02]"
-            >
-              <MiniStat icon={item.icon} label={item.label} value={item.value.toLocaleString()} color={item.color} bg={item.bg} />
-            </div>
-          ))}
-        </section>
-
-        {/* CHARTS GRID */}
-        <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          {/* Bar Chart */}
-          <div className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm xl:col-span-2">
-            <CardHeader icon={<BarChart3 size={22} />} badge="Statistik Pendaftaran" title={`Pendaftar per Skema`} desc="Ringkasan jumlah kandidat berdasarkan skema sertifikasi." />
-            <div className="space-y-5 p-6">
-              {chartData.map((bar, index) => (
-                <div key={index} className="grid grid-cols-[110px_1fr_54px] items-center gap-4">
-                  <span className="text-xs font-black text-[#071E3D] line-clamp-1">{bar.label}</span>
-                  <div className="h-4 overflow-hidden rounded-full bg-slate-100">
-                    <div className="h-full rounded-full bg-orange-500 transition-all duration-1000" style={{ width: bar.width }} />
-                  </div>
-                  <span className="text-right text-sm font-black text-[#071E3D]">{bar.val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Pie Chart */}
-          <div className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
-            <CardHeader icon={<PieChart size={22} />} badge="Kelulusan" title="Persentase Lulus" desc="Perbandingan kompeten dan belum kompeten." />
-            <div className="flex flex-col items-center p-6 pt-2">
-              <div
-                className="relative mb-6 flex h-[180px] w-[180px] items-center justify-center rounded-full transition-all duration-1000"
-                style={{ background: `conic-gradient(#f97316 0% ${passRate.kompeten}%, #071E3D ${passRate.kompeten}% 100%)` }}
+            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+              <button
+                type="button"
+                onClick={() => navigate("/admin/verifikasi-pendaftaran")}
+                className="flex-1 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 md:flex-none"
               >
-                <div className="flex h-[122px] w-[122px] flex-col items-center justify-center rounded-full bg-white shadow-inner">
-                  <span className="text-3xl font-black text-[#071E3D]">{passRate.kompeten}%</span>
-                  <small className="mt-1 text-[11px] font-bold text-slate-400">Kompeten</small>
+                Verifikasi Pendaftaran
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/admin/laporan-sertifikasi")}
+                className="flex-1 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] hover:shadow-md md:flex-none"
+              >
+                Laporan Sertifikasi
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* STAT CARD KOTAK-KOTAK ANGKA */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard
+            icon={<FaLayerGroup size={20} />}
+            label="Total Skema"
+            value={`${statsData.skema} Skema`}
+            tone="orange"
+            onClick={() => navigate("/admin/skema")}
+          />
+          <StatCard
+            icon={<FaUserTie size={20} />}
+            label="Total Asesor"
+            value={`${statsData.asesor} Asesor`}
+            tone="navy"
+            onClick={() => navigate("/admin/asesor")}
+          />
+          <StatCard
+            icon={<FaUsers size={20} />}
+            label="Total Asesi"
+            value={`${statsData.asesi} Asesi`}
+            tone="green"
+            onClick={() => navigate("/admin/asesi/tambah")}
+          />
+          <StatCard
+            icon={<FaBuilding size={20} />}
+            label="Data TUK"
+            value={`${statsData.tuk} Lokasi`}
+            tone="orange"
+            onClick={() => navigate("/admin/tuk")}
+          />
+        </div>
+
+        {/* SECTION: PENDAFTAR PER SKEMA & TABEL KELULUSAN */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          
+          {/* Pendaftar per Skema */}
+          <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="flex items-center gap-2 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4">
+              <BarChart3 size={18} className="text-[#CC6B27]" />
+              <h2 className="text-[14px] font-bold uppercase tracking-wider text-[#FAFAFA]">
+                Pendaftar per Skema
+              </h2>
+            </div>
+            
+            <div className="p-5 max-h-[380px] overflow-y-auto custom-scrollbar">
+              {chartData.length === 0 ? (
+                <div className="py-12 text-center text-[13.5px] font-medium text-[#182D4A]/50">
+                  Belum ada data pendaftar per skema
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {chartData.map((bar, index) => (
+                    <div key={index} className="rounded-xl border border-[#071E3D]/5 bg-[#FAFAFA] p-3.5 transition-all hover:border-[#CC6B27]/20 hover:bg-[#CC6B27]/5">
+                      <div className="mb-2 flex items-center justify-between text-sm">
+                        <span className="font-bold text-[#071E3D] truncate max-w-[70%]">
+                          {index + 1}. {bar.label}
+                        </span>
+                        <span className="font-black text-[#182D4A] whitespace-nowrap">
+                          {bar.val} Asesi
+                        </span>
+                      </div>
+                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#071E3D]/10">
+                        <div
+                          className="h-full rounded-full bg-[#CC6B27] transition-all duration-500"
+                          style={{ width: bar.width || "0%" }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Tabel Kelulusan Asesi (Pengganti Diagram Bulat) */}
+          <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="flex items-center gap-2 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4">
+              <PieChart size={18} className="text-[#CC6B27]" />
+              <h2 className="text-[14px] font-bold uppercase tracking-wider text-[#FAFAFA]">
+                Rekap Hasil Uji Kompetensi
+              </h2>
+            </div>
+
+            <div className="p-5 flex flex-col gap-5">
+              {/* Mini cards kompeten & belum kompeten */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-xl border border-green-200 bg-green-50/70 p-4">
+                  <div className="flex items-center gap-2 text-green-700">
+                    <FaCheckCircle size={16} />
+                    <span className="text-[11px] font-black uppercase tracking-wider">Kompeten</span>
+                  </div>
+                  <p className="mt-2 text-2xl font-black text-green-700">{jumlahKompeten} <span className="text-xs font-semibold text-green-600">Asesi</span></p>
+                  <p className="mt-0.5 text-xs font-bold text-green-700/80">{persenKompeten}% dari total asesi</p>
+                </div>
+
+                <div className="rounded-xl border border-red-200 bg-red-50/70 p-4">
+                  <div className="flex items-center gap-2 text-red-600">
+                    <FaTimesCircle size={16} />
+                    <span className="text-[11px] font-black uppercase tracking-wider">Belum Kompeten</span>
+                  </div>
+                  <p className="mt-2 text-2xl font-black text-red-600">{jumlahBelum} <span className="text-xs font-semibold text-red-500">Asesi</span></p>
+                  <p className="mt-0.5 text-xs font-bold text-red-600/80">{persenBelum}% dari total asesi</p>
                 </div>
               </div>
-              <div className="flex flex-wrap justify-center gap-4">
-                <LegendDot color="bg-orange-500" label="Kompeten" />
-                <LegendDot color="bg-[#071E3D]" label="Belum Kompeten" />
+
+              {/* Tabel perincian */}
+              <div className="overflow-hidden rounded-lg border border-[#071E3D]/10">
+                <table className="w-full border-collapse bg-white text-left">
+                  <thead>
+                    <tr className="bg-[#FAFAFA] border-b border-[#071E3D]/10 text-[12px] font-bold uppercase tracking-wider text-[#071E3D]">
+                      <th className="px-4 py-3">Status Keputusan</th>
+                      <th className="px-4 py-3 text-center">Jumlah Asesi</th>
+                      <th className="px-4 py-3 text-center">Persentase</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#071E3D]/5 text-[13px]">
+                    <tr className="hover:bg-green-50/30">
+                      <td className="px-4 py-3 font-bold text-green-700 flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                        Kompeten (K)
+                      </td>
+                      <td className="px-4 py-3 text-center font-bold text-[#071E3D]">{jumlahKompeten}</td>
+                      <td className="px-4 py-3 text-center font-bold text-green-600">{persenKompeten}%</td>
+                    </tr>
+                    <tr className="hover:bg-red-50/30">
+                      <td className="px-4 py-3 font-bold text-red-600 flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                        Belum Kompeten (BK)
+                      </td>
+                      <td className="px-4 py-3 text-center font-bold text-[#071E3D]">{jumlahBelum}</td>
+                      <td className="px-4 py-3 text-center font-bold text-red-600">{persenBelum}%</td>
+                    </tr>
+                    <tr className="bg-[#FAFAFA] font-black text-[#071E3D]">
+                      <td className="px-4 py-3">Total Peserta</td>
+                      <td className="px-4 py-3 text-center">{totalAsesi}</td>
+                      <td className="px-4 py-3 text-center">100%</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* TABLE & SCHEDULE GRID */}
-        <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        {/* SECTION: PENDAFTARAN TERBARU & JADWAL TERDEKAT */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           
-          {/* Recent Registrations Table */}
-          <div className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm xl:col-span-2">
-            <div className="flex flex-col gap-4 border-b border-slate-100 p-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <ClipboardList size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">Pendaftaran Terbaru</span>
-                </div>
-                <h2 className="text-2xl font-black text-[#071E3D]">Pendaftaran Masuk</h2>
-                <p className="mt-2 text-sm font-medium text-slate-400">Daftar pendaftar teratas yang masuk ke sistem.</p>
-              </div>
-              <button onClick={() => navigate("/admin/verifikasi-pendaftaran")} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white">
-                Lihat Semua <ChevronRight size={15} />
+          {/* Tabel Pendaftaran Terbaru (2 Kolom) */}
+          <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm lg:col-span-2">
+            <div className="flex flex-col gap-3 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="flex items-center gap-2 text-[14px] font-bold uppercase tracking-wider text-[#FAFAFA]">
+                <ClipboardList size={18} className="text-[#CC6B27]" />
+                Pendaftaran Masuk Terbaru
+              </h2>
+              <button
+                onClick={() => navigate("/admin/verifikasi-pendaftaran")}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FAFAFA] hover:text-[#CC6B27] transition-colors"
+              >
+                Lihat Semua <ChevronRight size={14} />
               </button>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] border-collapse text-left">
+              <table className="w-full min-w-[650px] border-collapse bg-white text-left">
                 <thead>
-                  <tr className="bg-[#071E3D]">
-                    <TableHead>Nama Asesi</TableHead>
-                    <TableHead>Skema</TableHead>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Status</TableHead>
+                  <tr className="border-b border-[#071E3D]/10 bg-[#FAFAFA] text-[12px] font-bold uppercase tracking-wider text-[#071E3D]">
+                    <th className="px-4 py-3.5">Nama Asesi</th>
+                    <th className="px-4 py-3.5">Skema</th>
+                    <th className="px-4 py-3.5">Tanggal</th>
+                    <th className="px-4 py-3.5 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recentRegistrations.length === 0 ? (
-                    <tr><td colSpan="4" className="p-8 text-center text-sm font-bold text-slate-400">Belum ada data pendaftaran</td></tr>
+                    <tr>
+                      <td colSpan="4" className="py-12 text-center text-[13.5px] font-medium text-[#182D4A]/50">
+                        Belum ada data pendaftaran masuk
+                      </td>
+                    </tr>
                   ) : (
-                    recentRegistrations.map((row, index) => (
-                      <tr key={index} className="border-b border-slate-100 transition-all last:border-0 hover:bg-orange-50/30">
-                        <td className="px-5 py-4 text-sm font-black text-[#071E3D]">{row.name}</td>
-                        <td className="px-5 py-4 text-sm font-semibold text-slate-500">{row.schema}</td>
-                        <td className="px-5 py-4 text-sm font-semibold text-slate-500">{row.date}</td>
-                        <td className="px-5 py-4"><StatusBadge status={row.status} /></td>
+                    recentRegistrations.slice(0, 5).map((row, index) => (
+                      <tr key={index} className="border-b border-[#071E3D]/5 transition-colors hover:bg-[#CC6B27]/5">
+                        <td className="px-4 py-3.5 text-[13.5px] font-bold text-[#071E3D]">{row.name}</td>
+                        <td className="px-4 py-3.5 text-[13px] font-semibold text-[#182D4A]/80">{row.schema}</td>
+                        <td className="px-4 py-3.5 text-[13px] text-[#182D4A]/70">{row.date}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <StatusBadge status={row.status} />
+                        </td>
                       </tr>
                     ))
                   )}
@@ -242,116 +326,108 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Schedule Sidebar */}
-          <div className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
-            <div className="border-b border-slate-100 p-6 flex items-center justify-between">
-              <div>
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <CalendarCheck size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">Agenda</span>
-                </div>
-                <h2 className="text-2xl font-black text-[#071E3D]">Jadwal Terdekat</h2>
-              </div>
+          {/* Agenda Jadwal Terdekat (1 Kolom) */}
+          <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="flex items-center gap-2 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4">
+              <CalendarCheck size={18} className="text-[#CC6B27]" />
+              <h2 className="text-[14px] font-bold uppercase tracking-wider text-[#FAFAFA]">
+                Jadwal Terdekat
+              </h2>
             </div>
 
-            <div className="space-y-4 p-5">
+            <div className="space-y-3 p-5 max-h-[380px] overflow-y-auto custom-scrollbar">
               {scheduleData.length === 0 ? (
-                 <p className="text-center text-sm font-bold text-slate-400 py-6">Belum ada jadwal asesmen</p>
+                <p className="py-12 text-center text-[13.5px] font-medium text-[#182D4A]/50">
+                  Belum ada jadwal asesmen terdekat
+                </p>
               ) : (
                 scheduleData.map((item, index) => (
-                  <div key={index} className="group flex items-center gap-4 rounded-[26px] border border-slate-100 bg-slate-50/70 p-4 transition-all hover:border-orange-100 hover:bg-white hover:shadow-sm cursor-pointer" onClick={() => navigate("/admin/jadwal/uji-kompetensi")}>
-                    <div className="flex min-w-[68px] flex-col items-center justify-center rounded-2xl bg-[#071E3D] px-4 py-3 text-white shadow-sm">
-                      <span className="text-2xl font-black leading-none">{item.day}</span>
-                      <span className="mt-1 text-[10px] font-black uppercase tracking-widest text-orange-400">{item.month}</span>
+                  <div
+                    key={index}
+                    onClick={() => navigate("/admin/jadwal/uji-kompetensi")}
+                    className="flex cursor-pointer items-center gap-3.5 rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] p-3 transition-all hover:border-[#CC6B27]/40 hover:bg-[#CC6B27]/5"
+                  >
+                    <div className="flex min-w-[54px] flex-col items-center justify-center rounded-lg bg-[#071E3D] px-2 py-2 text-white">
+                      <span className="text-lg font-black leading-none">{item.day}</span>
+                      <span className="mt-0.5 text-[9px] font-black uppercase tracking-wider text-[#CC6B27]">
+                        {item.month}
+                      </span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="line-clamp-1 text-sm font-black text-[#071E3D]">{item.title}</h3>
-                      <p className="mt-1 text-xs font-semibold text-slate-400 line-clamp-1">{item.time}</p>
+                      <p className="truncate text-[13px] font-bold text-[#071E3D]">{item.title}</p>
+                      <p className="text-[11px] font-semibold text-[#182D4A]/60">{item.time}</p>
                     </div>
-                    <ChevronRight size={17} className="text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-orange-500" />
+                    <ChevronRight size={16} className="text-[#182D4A]/40" />
                   </div>
                 ))
               )}
             </div>
-            <div className="p-4 border-t border-slate-100">
-               <button onClick={() => navigate("/admin/jadwal/uji-kompetensi")} className="w-full rounded-2xl bg-orange-50 px-5 py-3 text-xs font-black uppercase tracking-widest text-orange-500 hover:bg-orange-500 hover:text-white transition-all">Lihat Semua Jadwal</button>
+
+            <div className="border-t border-[#071E3D]/10 p-4">
+              <button
+                type="button"
+                onClick={() => navigate("/admin/jadwal/uji-kompetensi")}
+                className="w-full rounded-lg bg-[#CC6B27]/10 px-4 py-2.5 text-[12px] font-black uppercase tracking-wider text-[#CC6B27] transition-all hover:bg-[#CC6B27] hover:text-white"
+              >
+                Lihat Semua Jadwal
+              </button>
             </div>
           </div>
-        </section>
+        </div>
+
+        {/* SCROLLBAR CUSTOM */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #CC6B27; border-radius: 10px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8561f; }
+        ` }} />
 
       </div>
     </div>
   );
 };
 
-/* --- SUB COMPONENTS --- */
-
-function MiniStat({ icon, label, value, color, bg }) {
-  return (
-    <div className="flex items-center gap-4 rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm">
-      <div className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl text-xl ${bg} ${color}`}>{icon}</div>
-      <div className="min-w-0">
-        <h3 className="text-2xl font-black leading-none text-[#071E3D]">{value}</h3>
-        <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-function CardHeader({ icon, badge, title, desc }) {
-  return (
-    <div className="flex flex-col gap-4 border-b border-slate-100 p-6 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-          <span className="text-orange-500">{icon}</span>
-          <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">{badge}</span>
-        </div>
-        <h2 className="text-2xl font-black text-[#071E3D]">{title}</h2>
-        <p className="mt-2 text-sm font-medium text-slate-400">{desc}</p>
-      </div>
-    </div>
-  );
-}
-
-function HeroPill({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">{label}</p>
-      <p className="mt-1 text-sm font-black text-white">{value}</p>
-    </div>
-  );
-}
-
-function LegendDot({ color, label }) {
-  return (
-    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-      <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
-      {label}
-    </div>
-  );
-}
-
-function TableHead({ children }) {
-  return <th className="border-b-4 border-orange-500 px-5 py-4 text-[11px] font-black uppercase tracking-widest text-white">{children}</th>;
-}
-
-function StatusBadge({ status }) {
-  const styles = {
-    Menunggu: "border-orange-100 bg-orange-50 text-orange-500",
-    Verifikasi: "border-blue-100 bg-blue-50 text-blue-600",
-    Diterima: "border-green-100 bg-green-50 text-green-600",
-    Ditolak: "border-red-100 bg-red-50 text-red-500",
+/* --- STAT CARD KOTAK (PERSIS SEPERTI DI MODUL ASESOR) --- */
+const StatCard = ({ icon, label, value, tone = "orange", onClick }) => {
+  const tones = {
+    orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
+    green: "bg-green-50 text-green-600",
+    red: "bg-red-50 text-red-500",
+    navy: "bg-[#071E3D]/10 text-[#071E3D]"
   };
-  
-  let badgeStyle = styles[status];
-  if (!badgeStyle) {
-    if (status.toLowerCase().includes("terima") || status.toLowerCase().includes("kompeten")) badgeStyle = styles.Diterima;
-    else if (status.toLowerCase().includes("tolak") || status.toLowerCase().includes("belum")) badgeStyle = styles.Ditolak;
-    else badgeStyle = styles.Menunggu;
+
+  return (
+    <div
+      onClick={onClick}
+      className="flex cursor-pointer items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-[#CC6B27]/30"
+    >
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone]}`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#182D4A]/60">{label}</p>
+        <p className="mt-1 text-[20px] font-black text-[#071E3D] leading-none">{value}</p>
+      </div>
+    </div>
+  );
+};
+
+/* --- STATUS BADGE (KONSISTEN DENGAN ASESOR) --- */
+function StatusBadge({ status }) {
+  const s = status?.toLowerCase() || "";
+  let badgeStyle = "border-orange-200 bg-orange-50 text-[#CC6B27]";
+
+  if (s.includes("terima") || s.includes("kompeten") || s.includes("aktif")) {
+    badgeStyle = "border-green-200 bg-green-50 text-green-600";
+  } else if (s.includes("tolak") || s.includes("belum") || s.includes("nonaktif")) {
+    badgeStyle = "border-red-200 bg-red-50 text-red-600";
+  } else if (s.includes("verifikasi") || s.includes("proses")) {
+    badgeStyle = "border-blue-200 bg-blue-50 text-blue-600";
   }
 
   return (
-    <span className={`inline-flex rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-widest ${badgeStyle}`}>
+    <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${badgeStyle}`}>
       {status}
     </span>
   );
