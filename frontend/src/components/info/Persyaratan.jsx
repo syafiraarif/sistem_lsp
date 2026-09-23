@@ -11,7 +11,7 @@ import {
   Loader2,
   AlertTriangle,
   Inbox,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react";
 
 const API_URL = "http://localhost:3000/api/public";
@@ -37,10 +37,7 @@ export default function Persyaratan() {
 
       setSkemaList(finalData);
     } catch (err) {
-      console.error(
-        "Gagal mengambil data persyaratan:",
-        err
-      );
+      console.error("Gagal mengambil data persyaratan:", err);
 
       setError(
         "Daftar persyaratan sedang dalam proses update oleh sistem."
@@ -67,17 +64,17 @@ export default function Persyaratan() {
           <motion.h2
             initial={{
               opacity: 0,
-              y: 12
+              y: 12,
             }}
             whileInView={{
               opacity: 1,
-              y: 0
+              y: 0,
             }}
             viewport={{
-              once: true
+              once: true,
             }}
             transition={{
-              duration: 0.4
+              duration: 0.4,
             }}
             className="text-2xl font-black tracking-tight text-[#071E3D] sm:text-3xl"
           >
@@ -90,18 +87,18 @@ export default function Persyaratan() {
           <motion.p
             initial={{
               opacity: 0,
-              y: 8
+              y: 8,
             }}
             whileInView={{
               opacity: 1,
-              y: 0
+              y: 0,
             }}
             viewport={{
-              once: true
+              once: true,
             }}
             transition={{
               duration: 0.4,
-              delay: 0.08
+              delay: 0.08,
             }}
             className="mx-auto mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-500"
           >
@@ -156,8 +153,7 @@ export default function Persyaratan() {
           ) : filteredData.length > 0 ? (
             <div className="space-y-3">
               {filteredData.map((item, index) => {
-                const listPersyaratan =
-                  item.persyaratans || [];
+                const listPersyaratan = item.persyaratans || [];
                 const isOpen = openIndex === index;
 
                 return (
@@ -172,9 +168,7 @@ export default function Persyaratan() {
                     <button
                       type="button"
                       onClick={() =>
-                        setOpenIndex(
-                          isOpen ? null : index
-                        )
+                        setOpenIndex(isOpen ? null : index)
                       }
                       className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left sm:px-6"
                     >
@@ -227,18 +221,18 @@ export default function Persyaratan() {
                         <motion.div
                           initial={{
                             height: 0,
-                            opacity: 0
+                            opacity: 0,
                           }}
                           animate={{
                             height: "auto",
-                            opacity: 1
+                            opacity: 1,
                           }}
                           exit={{
                             height: 0,
-                            opacity: 0
+                            opacity: 0,
                           }}
                           transition={{
-                            duration: 0.25
+                            duration: 0.25,
                           }}
                           className="overflow-hidden"
                         >
@@ -336,7 +330,7 @@ export default function Persyaratan() {
               </div>
 
               <Link
-                to="/registration"
+                to="/pendaftaran"
                 className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white transition-all duration-300 hover:bg-white hover:text-[#071E3D]"
               >
                 Mulai Pendaftaran

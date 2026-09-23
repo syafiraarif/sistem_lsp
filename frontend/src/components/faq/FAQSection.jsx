@@ -46,6 +46,16 @@ export default function FAQSection() {
     setActiveId((prev) => (prev === id ? null : id));
   };
 
+  const handleHubungiHelpdesk = () => {
+    const nomorWhatsApp = "6281234567890";
+    const pesan = "Halo admin LSP, saya ingin bertanya terkait layanan SIMLSP.";
+    const url = `https://wa.me/${nomorWhatsApp}?text=${encodeURIComponent(
+      pesan
+    )}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <section className="relative overflow-hidden bg-white py-16 sm:py-20 lg:py-24">
       <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-[#CC6B27]/[0.035] blur-[100px]" />
@@ -91,8 +101,7 @@ export default function FAQSection() {
               delay: 0.05,
             }}
             className="flex items-center justify-center gap-2 text-[#CC6B27]"
-          >
-          </motion.div>
+          ></motion.div>
 
           <motion.h2
             initial={{
@@ -161,8 +170,11 @@ export default function FAQSection() {
             once: true,
           }}
           variants={{
-            hidden: {},
+            hidden: {
+              opacity: 0,
+            },
             visible: {
+              opacity: 1,
               transition: {
                 staggerChildren: 0.08,
               },
@@ -234,6 +246,7 @@ export default function FAQSection() {
 
             <button
               type="button"
+              onClick={handleHubungiHelpdesk}
               className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#071E3D] px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors duration-200 hover:bg-[#CC6B27]"
             >
               Hubungi Helpdesk
