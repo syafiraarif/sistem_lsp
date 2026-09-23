@@ -10,13 +10,13 @@ import {
 const PesertaJadwal = () => {
   const { id_jadwal } = useParams();
   const navigate = useNavigate();
-
+  
   const [pesertaList, setPesertaList] = useState([]);
   const [listAsesor, setListAsesor] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [jadwalInfo, setJadwalInfo] = useState(null);
-
+  
   // State untuk Modal Detail
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPeserta, setSelectedPeserta] = useState(null);
@@ -38,7 +38,7 @@ const PesertaJadwal = () => {
         setJadwalInfo(data[0].jadwal);
       }
 
-      // 2. Fetch Asesor Penguji dari jadwal ini (Untuk Dropdown)
+      // 2. Fetch Asesor Penguji dari jadwal ini
       const resAsesor = await api.get(`/admin/jadwal-asesor/${id_jadwal}`);
       let allAssignedAsesor = resAsesor.data?.data || resAsesor.data || [];
       if (!Array.isArray(allAssignedAsesor) && allAssignedAsesor.rows) {
@@ -48,7 +48,6 @@ const PesertaJadwal = () => {
       // Filter: Hanya yang bertugas sebagai asesor penguji dan statusnya aktif
       const asesorPenguji = allAssignedAsesor.filter(a => a.jenis_tugas === 'asesor_penguji' && a.status === 'aktif');
       setListAsesor(asesorPenguji);
-
     } catch (error) {
       console.error("Gagal mengambil data:", error);
     } finally {
@@ -56,7 +55,7 @@ const PesertaJadwal = () => {
     }
   };
 
-  // --- FUNGSI: Assign Asesor ke Peserta ---
+  // Assign Asesor ke Peserta
   const handleAssignAsesor = async (id_peserta, id_asesor) => {
       try {
         Swal.fire({
@@ -64,21 +63,17 @@ const PesertaJadwal = () => {
             allowOutsideClick: false,
             didOpen: () => Swal.showLoading()
         });
-
         await api.put(`/admin/peserta-jadwal/${id_peserta}/assign-asesor`, {
-            id_asesor: id_asesor || null // kirim null jika select box dikosongkan
+            id_asesor: id_asesor || null
         });
-
         Swal.fire('Berhasil', 'Asesor penguji berhasil ditugaskan', 'success');
         
-        // Update state lokal agar UI langsung berubah tanpa reload halaman
         setPesertaList(prev => prev.map(p => {
             if (p.id_peserta === id_peserta) {
                 return { ...p, id_asesor: id_asesor || null };
             }
             return p;
         }));
-
       } catch (error) {
           console.error(error);
           Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan', 'error');
@@ -104,34 +99,19 @@ const PesertaJadwal = () => {
     return targetJadwal.skema?.judul_skema || targetJadwal.Skema?.judul_skema || '-';
   };
 
-  // Helper untuk mendapatkan nama Asesor di Dropdown
   const getDropdownAsesorName = (itemJadwalAsesor) => {
     if (!itemJadwalAsesor) return 'Tanpa Nama';
-
     const user = itemJadwalAsesor.asesor || {};
     const profile =
       itemJadwalAsesor.profileAsesor ||
       itemJadwalAsesor.ProfileAsesor ||
       {};
-
-    if (profile.nama_lengkap) {
-      return profile.nama_lengkap;
-    }
-
-    if (user.nama) {
-      return user.nama;
-    }
-
-    if (user.username && !/^\d+$/.test(user.username)) {
-      return user.username;
-    }
-
-    return user.username
-      ? `Asesor (${user.username})`
-      : 'Tanpa Nama';
+    if (profile.nama_lengkap) return profile.nama_lengkap;
+    if (user.nama) return user.nama;
+    if (user.username && !/^\d+$/.test(user.username)) return user.username;
+    return user.username ? `Asesor (${user.username})` : 'Tanpa Nama';
   };
 
-  // Helper untuk mendapatkan nama Asesor di baris tabel / Modal (dari data pesertaJadwal)
   const getAssignedAsesorName = (userPenguji) => {
     if (!userPenguji) return 'Pilih Asesor Penguji';
     const profile = userPenguji.ProfileAsesor || userPenguji.profile_asesor || {};
@@ -148,7 +128,6 @@ const PesertaJadwal = () => {
     const nik = getAsesiNik(item.user).toLowerCase();
     const nomor = (item.nomor_peserta || '').toLowerCase();
     const term = searchTerm.toLowerCase();
-
     return nomor.includes(term) || nama.includes(term) || nik.includes(term);
   });
 
@@ -195,46 +174,46 @@ const PesertaJadwal = () => {
                 type="button"
                 onClick={fetchData}
                 disabled={loading}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] disabled:opacity-50 md:flex-none"
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 disabled:opacity-50 md:flex-none"
               >
-                <RefreshCcw size={16} /> Refresh
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />} 
+                Refresh
               </button>
             </div>
           </div>
         </div>
 
         {/* STATISTIK 1 BARIS */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard icon={<Users size={20} />} label="Total Peserta" value={pesertaList.length} tone="orange" />
-          <StatCard icon={<CalendarClock size={20} />} label="Proses" value={totalProses} tone="blue" />
-          <StatCard icon={<BadgeCheck size={20} />} label="Kompeten" value={totalKompeten} tone="green" />
-          <StatCard icon={<Award size={20} />} label="Belum Kompeten" value={totalBelumKompeten} tone="red" />
+        <div className="grid grid-cols-2 gap-5 md:grid-cols-4">
+          <StatCard icon={<Users size={22} />} label="Total Peserta" value={`${pesertaList.length} Orang`} tone="navy" />
+          <StatCard icon={<CalendarClock size={22} />} label="Proses" value={`${totalProses} Data`} tone="blue" />
+          <StatCard icon={<BadgeCheck size={22} />} label="Kompeten" value={`${totalKompeten} Lulus`} tone="green" />
+          <StatCard icon={<Award size={22} />} label="Belum Kompeten" value={`${totalBelumKompeten} Gagal`} tone="red" />
         </div>
 
-        {/* CONTENT */}
-        <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+        {/* CONTENT - Disesuaikan dengan layout Skema */}
+        <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-4">
           
-          <div className="flex flex-col gap-4 border-b border-[#071E3D]/10 bg-[#FAFAFA]/50 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
             <div>
               <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
                 <FileText size={18} className="text-[#CC6B27]" />
                 Daftar Peserta & Penugasan
               </h4>
             </div>
-
             <div className="relative w-full sm:max-w-xs group">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
               <input
                 type="text"
                 placeholder="Cari nama, NIK, atau nomor..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-lg border border-[#071E3D]/20 bg-white py-2 pl-9 pr-4 text-[13px] font-semibold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10"
+                className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] focus:bg-white py-2.5 pl-10 pr-4 text-[13px] font-semibold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10"
               />
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
             <table className="w-full min-w-[1100px] border-collapse bg-white text-left">
               <thead>
                 <tr>
@@ -252,7 +231,6 @@ const PesertaJadwal = () => {
                   <TableHead center>Aksi</TableHead>
                 </tr>
               </thead>
-
               <tbody>
                 {filteredData.length === 0 ? (
                   <tr>
@@ -265,7 +243,7 @@ const PesertaJadwal = () => {
                   filteredData.map((row, index) => {
                     const asesiName = getAsesiName(row.user);
                     const asesiNik = getAsesiNik(row.user);
-
+                    
                     return (
                       <tr key={row.id_peserta} className="border-b border-[#071E3D]/5 transition-colors hover:bg-[#CC6B27]/5">
                         <td className="px-5 py-4 text-center text-[13.5px] font-semibold text-[#071E3D]">{index + 1}</td>
@@ -299,7 +277,6 @@ const PesertaJadwal = () => {
                                 {listAsesor.map(a => {
                                     const asId = a.asesor?.id_user;
                                     if (!asId) return null;
-
                                     return (
                                         <option key={asId} value={asId}>
                                           {getDropdownAsesorName(a)}
@@ -336,7 +313,7 @@ const PesertaJadwal = () => {
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
       </div>
 
       {/* --- MODAL DETAIL PESERTA --- */}
@@ -369,14 +346,12 @@ const PesertaJadwal = () => {
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Nama Lengkap Asesi</p>
                   <p className="text-[13.5px] font-bold text-[#071E3D]">{getAsesiName(selectedPeserta.user)}</p>
               </div>
-
               <div className="bg-orange-50 p-4 rounded-lg border border-[#CC6B27]/20">
                   <p className="text-[10px] font-bold text-[#CC6B27] uppercase tracking-widest mb-1">Asesor Penguji</p>
                   <p className="text-[13.5px] font-bold text-[#CC6B27]">
                     {getAssignedAsesorName(selectedPeserta.asesor_penguji)}
                   </p>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-[#FAFAFA] p-4 rounded-lg border border-[#071E3D]/10">
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Nilai Akhir</p>
@@ -387,7 +362,6 @@ const PesertaJadwal = () => {
                   <p className="font-bold text-[#071E3D] uppercase text-[12px] mt-1">{selectedPeserta.status_asesmen?.replace('_', ' ') || 'Terjadwal'}</p>
                 </div>
               </div>
-
               {selectedPeserta.keterangan && (
                 <div className="bg-[#FAFAFA] p-4 rounded-lg border border-[#071E3D]/10">
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Catatan / Keterangan</p>
@@ -425,20 +399,20 @@ const PesertaJadwal = () => {
 
 const StatCard = ({ label, value, icon, tone = "orange" }) => {
   const tones = {
-    orange: "bg-orange-50 text-[#CC6B27]",
+    navy: "bg-[#071E3D]/10 text-[#071E3D]",
+    orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
     green: "bg-green-50 text-green-600",
     red: "bg-red-50 text-red-500",
     blue: "bg-blue-50 text-blue-600",
   };
-
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-[#071E3D]/10 bg-white p-4 shadow-sm">
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tones[tone] || tones.orange}`}>
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone] || tones.orange}`}>
         {icon}
       </div>
       <div className="overflow-hidden">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60 truncate">{label}</p>
-        <p className="mt-0.5 text-xl font-black text-[#071E3D] leading-none truncate">{value}</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#182D4A]/60 truncate">{label}</p>
+        <p className="mt-1 text-[20px] font-black text-[#071E3D] leading-none truncate">{value}</p>
       </div>
     </div>
   );

@@ -156,6 +156,7 @@ const Skema = () => {
     setSelectedFile(null);
     setErrors({});
     setShowFullPreview(false);
+
     setFormData({
       kode_skema: item.kode_skema || "",
       judul_skema: item.judul_skema || "",
@@ -172,6 +173,7 @@ const Skema = () => {
       dokumen: item.dokumen || "",
       status: item.status || "draft"
     });
+
     setPreviewUrl(item.dokumen || null);
     setShowModal(true);
   };
@@ -214,7 +216,6 @@ const Skema = () => {
     }
 
     const dataToSend = new FormData();
-
     Object.keys(formData).forEach((key) => {
       if (key !== "dokumen" && formData[key] !== null && formData[key] !== undefined && formData[key] !== "") {
         dataToSend.append(key, formData[key]);
@@ -224,7 +225,6 @@ const Skema = () => {
     if (selectedFile) dataToSend.append("file_dokumen", selectedFile);
 
     const config = { headers: { "Content-Type": "multipart/form-data" } };
-
     setLoading(true);
 
     try {
@@ -235,7 +235,6 @@ const Skema = () => {
         await api.post("/admin/skema", dataToSend, config);
         await notifikasi.sukses("Berhasil", "Skema baru berhasil ditambahkan");
       }
-
       setShowModal(false);
       setSelectedFile(null);
       setPreviewUrl(null);
@@ -287,246 +286,230 @@ const Skema = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        
-        {/* HEADER SECTION */}
-        <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-          <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
-          <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">
-                Manajemen Skema LSP
-              </h2>
-              <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">
-                Atur kode, judul, status, persyaratan, biaya, dokumen, dan instrumen asesmen setiap skema.
-              </p>
-            </div>
-            
-            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-              <button
-                type="button"
-                onClick={fetchData}
-                disabled={loading}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 disabled:opacity-50 md:flex-none"
-              >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
-                Refresh
-              </button>
-              <button
-                type="button"
-                onClick={openAddModal}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] md:flex-none"
-              >
-                <Plus size={16} />
-                Tambah Skema
-              </button>
-            </div>
+    <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8 flex flex-col gap-6">
+      
+      {/* HEADER SECTION */}
+      <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
+        <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
+        <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+          <div>
+            <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">
+              Manajemen Skema LSP
+            </h2>
+            <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">
+              Atur kode, judul, status, persyaratan, biaya, dokumen, dan instrumen asesmen setiap skema.
+            </p>
           </div>
-        </div>
-
-        {/* STATISTIK */}
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
-          <StatCard icon={<BookOpen size={22} />} label="Total Skema" value={`${data.length} Data`} tone="navy" />
-          <StatCard icon={<BadgeCheck size={22} />} label="Skema Aktif" value={`${totalAktif} Aktif`} tone="green" />
-          <StatCard icon={<FileText size={22} />} label="Draft Skema" value={`${totalDraft} Draft`} tone="orange" />
-          <StatCard icon={<Layers size={22} />} label="Nonaktif" value={`${totalNonaktif} Nonaktif`} tone="red" />
-        </div>
-
-        {/* MERGED CARD: FILTER & TABLE */}
-        <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
           
-          {/* Section: Table Header */}
-          <div className="flex flex-col gap-4 border-b border-[#071E3D]/10 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
-              <ClipboardList size={18} className="text-[#CC6B27]" />
-              Daftar Skema Sertifikasi
-            </h4>
+          <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+            <button
+              type="button"
+              onClick={fetchData}
+              disabled={loading}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 disabled:opacity-50 md:flex-none"
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={openAddModal}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] md:flex-none"
+            >
+              <Plus size={16} />
+              Tambah Skema
+            </button>
           </div>
-
-          {/* Section: Filters */}
-          <div className="grid grid-cols-1 gap-4 p-6 bg-[#FAFAFA]/50 border-b border-[#071E3D]/5 lg:grid-cols-[1fr_250px]">
-            <div className="relative w-full group">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
-              <input
-                type="text"
-                placeholder="Cari kode atau judul skema..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
-                }}
-                className="w-full rounded-lg border border-[#071E3D]/20 bg-white py-2.5 pl-10 pr-4 text-[13px] text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10"
-              />
-            </div>
-
-            <div className="relative w-full group">
-              <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
-              <select
-                value={filterStatus}
-                onChange={(e) => {
-                  setFilterStatus(e.target.value);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
-                }}
-                className="w-full rounded-lg border border-[#071E3D]/20 bg-white py-2.5 pl-10 pr-4 text-[13px] font-bold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 appearance-none"
-              >
-                <option value="">Semua Status</option>
-                <option value="aktif">Aktif</option>
-                <option value="nonaktif">Non-Aktif</option>
-                <option value="draft">Draft</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Section: Table Data */}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1250px] border-collapse bg-white text-left">
-              <thead>
-                <tr>
-                  <TableHead center>No</TableHead>
-                  <TableHead>Kode</TableHead>
-                  <TableHead>Judul Skema</TableHead>
-                  <TableHead center>Status</TableHead>
-                  <TableHead center>Kelola Persyaratan</TableHead>
-                  <TableHead center>Aksi</TableHead>
-                </tr>
-              </thead>
-
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="6" className="py-16 text-center">
-                      <Loader2 className="mx-auto mb-3 animate-spin text-[#CC6B27]" size={36} />
-                      <p className="text-[14px] font-medium text-[#182D4A]">Memuat Data Skema...</p>
-                    </td>
-                  </tr>
-                ) : paginatedData.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="py-16 text-center">
-                      <BookOpen size={48} className="mx-auto mb-3 text-[#071E3D]/20" />
-                      <p className="text-[14px] font-medium text-[#182D4A]">Belum ada data skema ditemukan.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedData.map((item, index) => (
-                    <tr key={item.id_skema} className="border-b border-[#071E3D]/5 transition-colors hover:bg-[#CC6B27]/5">
-                      <td className="px-4 py-3.5 text-center text-[13.5px] font-semibold text-[#071E3D]">
-                        {(pagination.page - 1) * pagination.limit + index + 1}
-                      </td>
-
-                      <td className="px-4 py-3.5">
-                        <span className="font-mono text-[13px] font-bold text-[#CC6B27]">{item.kode_skema}</span>
-                      </td>
-
-                      <td className="px-4 py-3.5">
-                        <div className="max-w-[420px] text-[13.5px] font-bold text-[#071E3D]">{item.judul_skema}</div>
-                        <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/50">
-                          {item.jenis_skema?.toUpperCase()} {item.level_kkni ? `• LEVEL ${item.level_kkni}` : ""}
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-3.5 text-center">
-                        <StatusBadge status={item.status} />
-                      </td>
-
-                      <td className="px-4 py-3.5 text-center">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan`)}
-                            className="w-[145px] rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-3 py-1.5 text-[11px] font-bold text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
-                          >
-                            Persyaratan Dasar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan-tuk`)}
-                            className="w-[145px] rounded-lg border border-[#CC6B27]/30 bg-[#CC6B27]/10 px-3 py-1.5 text-[11px] font-bold text-[#CC6B27] transition-all hover:bg-[#CC6B27] hover:text-white"
-                          >
-                            Persyaratan TUK
-                          </button>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-3.5 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          {/* BUTTON ATUR BIAYA UJI */}
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/admin/skema/${item.id_skema}/biaya-uji`)}
-                            className="rounded-lg bg-emerald-50/80 p-1.5 text-emerald-600 transition-colors hover:bg-emerald-600 hover:text-white"
-                            title="Atur Biaya Uji"
-                          >
-                            <DollarSign size={16} />
-                          </button>
-
-                          {/* BUTTON DETAIL */}
-                          <button
-                            type="button"
-                            onClick={() => handleDetail(item)}
-                            className="rounded-lg bg-[#182D4A]/10 p-1.5 text-[#182D4A] transition-colors hover:bg-[#182D4A] hover:text-white"
-                            title="Detail Skema"
-                          >
-                            <Eye size={16} />
-                          </button>
-
-                          {/* BUTTON EDIT */}
-                          <button
-                            type="button"
-                            onClick={() => handleEdit(item)}
-                            className="rounded-lg bg-[#CC6B27]/10 p-1.5 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white"
-                            title="Edit"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-
-                          {/* BUTTON HAPUS */}
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(item.id_skema)}
-                            className="rounded-lg border border-red-100 bg-red-50 p-1.5 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
-                            title="Hapus"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Section: Pagination */}
-          {filteredData.length > 0 && (
-            <div className="flex flex-col items-center justify-between gap-4 border-t border-[#071E3D]/10 px-6 py-5 text-[13px] font-medium text-[#182D4A] sm:flex-row">
-              <span>
-                Menampilkan {(pagination.page - 1) * pagination.limit + 1} -{" "}
-                {Math.min(pagination.page * pagination.limit, filteredData.length)} dari {filteredData.length} data
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  className="rounded-md border border-[#071E3D]/20 p-1.5 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 hover:text-[#CC6B27] disabled:opacity-50 disabled:hover:border-[#071E3D]/20 disabled:hover:bg-transparent disabled:hover:text-[#182D4A]"
-                  disabled={pagination.page === 1}
-                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <span className="rounded-md border border-[#071E3D]/10 bg-[#FAFAFA] px-4 py-1.5 font-bold text-[#071E3D]">
-                  {pagination.page} / {totalPages}
-                </span>
-                <button
-                  className="rounded-md border border-[#071E3D]/20 p-1.5 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 hover:text-[#CC6B27] disabled:opacity-50 disabled:hover:border-[#071E3D]/20 disabled:hover:bg-transparent disabled:hover:text-[#182D4A]"
-                  disabled={pagination.page >= totalPages}
-                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
-          )}
         </div>
+      </div>
+
+      {/* STATISTIK */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
+        <StatCard icon={<BookOpen size={22} />} label="Total Skema" value={`${data.length} Data`} tone="navy" />
+        <StatCard icon={<BadgeCheck size={22} />} label="Skema Aktif" value={`${totalAktif} Aktif`} tone="green" />
+        <StatCard icon={<FileText size={22} />} label="Draft Skema" value={`${totalDraft} Draft`} tone="orange" />
+        <StatCard icon={<Layers size={22} />} label="Nonaktif" value={`${totalNonaktif} Nonaktif`} tone="red" />
+      </div>
+
+      {/* CARD TABEL - Disesuaikan dengan Skkni */}
+      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-4">
+        
+        {/* Header Tabel */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
+          <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
+            <ClipboardList size={18} className="text-[#CC6B27]" />
+            Daftar Skema Sertifikasi
+          </h4>
+        </div>
+
+        {/* Filters */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_250px] mb-2">
+          <div className="relative w-full group">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
+            <input
+              type="text"
+              placeholder="Cari kode atau judul skema..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] focus:bg-white py-2.5 pl-10 pr-4 text-[13px] text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10"
+            />
+          </div>
+          <div className="relative w-full group">
+            <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
+            <select
+              value={filterStatus}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] focus:bg-white py-2.5 pl-10 pr-4 text-[13px] font-bold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 appearance-none"
+            >
+              <option value="">Semua Status</option>
+              <option value="aktif">Aktif</option>
+              <option value="nonaktif">Non-Aktif</option>
+              <option value="draft">Draft</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Tabel Terbungkus Border Rounded */}
+        <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
+          <table className="w-full min-w-[1250px] border-collapse bg-white text-left">
+            <thead>
+              <tr>
+                <TableHead center>No</TableHead>
+                <TableHead>Kode</TableHead>
+                <TableHead>Judul Skema</TableHead>
+                <TableHead center>Status</TableHead>
+                <TableHead center>Kelola Persyaratan</TableHead>
+                <TableHead center>Aksi</TableHead>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="py-16 text-center">
+                    <Loader2 className="mx-auto mb-3 animate-spin text-[#CC6B27]" size={36} />
+                    <p className="text-[14px] font-medium text-[#182D4A]">Memuat Data Skema...</p>
+                  </td>
+                </tr>
+              ) : paginatedData.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="py-16 text-center">
+                    <BookOpen size={48} className="mx-auto mb-3 text-[#071E3D]/20" />
+                    <p className="text-[14px] font-medium text-[#182D4A]">Belum ada data skema ditemukan.</p>
+                  </td>
+                </tr>
+              ) : (
+                paginatedData.map((item, index) => (
+                  <tr key={item.id_skema} className="border-b border-[#071E3D]/5 transition-colors hover:bg-[#CC6B27]/5">
+                    <td className="px-4 py-3.5 text-center text-[13.5px] font-semibold text-[#071E3D]">
+                      {(pagination.page - 1) * pagination.limit + index + 1}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className="font-mono text-[13px] font-bold text-[#CC6B27]">{item.kode_skema}</span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="max-w-[420px] text-[13.5px] font-bold text-[#071E3D]">{item.judul_skema}</div>
+                      <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/50">
+                        {item.jenis_skema?.toUpperCase()} {item.level_kkni ? `• LEVEL ${item.level_kkni}` : ""}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <StatusBadge status={item.status} />
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan`)}
+                          className="w-[145px] rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-3 py-1.5 text-[11px] font-bold text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+                        >
+                          Persyaratan Dasar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan-tuk`)}
+                          className="w-[145px] rounded-lg border border-[#CC6B27]/30 bg-[#CC6B27]/10 px-3 py-1.5 text-[11px] font-bold text-[#CC6B27] transition-all hover:bg-[#CC6B27] hover:text-white"
+                        >
+                          Persyaratan TUK
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/admin/skema/${item.id_skema}/biaya-uji`)}
+                          className="rounded-lg bg-emerald-50/80 p-1.5 text-emerald-600 transition-colors hover:bg-emerald-600 hover:text-white"
+                          title="Atur Biaya Uji"
+                        >
+                          <DollarSign size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDetail(item)}
+                          className="rounded-lg bg-[#182D4A]/10 p-1.5 text-[#182D4A] transition-colors hover:bg-[#182D4A] hover:text-white"
+                          title="Detail Skema"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(item)}
+                          className="rounded-lg bg-[#CC6B27]/10 p-1.5 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white"
+                          title="Edit"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item.id_skema)}
+                          className="rounded-lg border border-red-100 bg-red-50 p-1.5 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                          title="Hapus"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Section: Pagination */}
+        {filteredData.length > 0 && (
+          <div className="flex flex-col items-center justify-between gap-4 mt-4 text-[13px] font-medium text-[#182D4A] sm:flex-row">
+            <span>
+              Menampilkan {(pagination.page - 1) * pagination.limit + 1} -{" "}
+              {Math.min(pagination.page * pagination.limit, filteredData.length)} dari {filteredData.length} data
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                className="rounded-md border border-[#071E3D]/20 p-1.5 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 hover:text-[#CC6B27] disabled:opacity-50 disabled:hover:border-[#071E3D]/20 disabled:hover:bg-transparent disabled:hover:text-[#182D4A]"
+                disabled={pagination.page === 1}
+                onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span className="rounded-md border border-[#071E3D]/10 bg-[#FAFAFA] px-4 py-1.5 font-bold text-[#071E3D]">
+                {pagination.page} / {totalPages}
+              </span>
+              <button
+                className="rounded-md border border-[#071E3D]/20 p-1.5 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 hover:text-[#CC6B27] disabled:opacity-50 disabled:hover:border-[#071E3D]/20 disabled:hover:bg-transparent disabled:hover:text-[#182D4A]"
+                disabled={pagination.page >= totalPages}
+                onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODAL FORM CREATE/EDIT */}
@@ -545,7 +528,6 @@ const Skema = () => {
                   </h3>
                 </div>
               </div>
-
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
@@ -554,7 +536,6 @@ const Skema = () => {
                 <X size={20} />
               </button>
             </div>
-
             {/* Body Modal */}
             <div className="custom-scrollbar flex-1 overflow-y-auto bg-white p-6">
               <form id="skemaForm" onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -573,7 +554,6 @@ const Skema = () => {
                         />
                         {errors.kode_skema && <ErrorText>{errors.kode_skema}</ErrorText>}
                       </div>
-
                       <div>
                         <Label>Status Skema</Label>
                         <select name="status" value={formData.status} onChange={handleInputChange} className={inputClass("status")}>
@@ -583,20 +563,17 @@ const Skema = () => {
                         </select>
                       </div>
                     </div>
-
                     <div>
                       <Label required>Judul Skema (Indonesia)</Label>
                       <input type="text" name="judul_skema" value={formData.judul_skema} onChange={handleInputChange} required className={inputClass("judul_skema")} />
                       {errors.judul_skema && <ErrorText>{errors.judul_skema}</ErrorText>}
                     </div>
-
                     <div>
                       <Label>Judul Skema (Inggris)</Label>
                       <input type="text" name="judul_skema_en" value={formData.judul_skema_en} onChange={handleInputChange} className={inputClass("judul_skema_en")} />
                       {errors.judul_skema_en && <ErrorText>{errors.judul_skema_en}</ErrorText>}
                     </div>
                   </FormSection>
-
                   <FormSection title="Atribut & Kode Klasifikasi">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
@@ -607,7 +584,6 @@ const Skema = () => {
                           <option value="klaster">Klaster</option>
                         </select>
                       </div>
-
                       <div>
                         <Label required>Level KKNI</Label>
                         <select name="level_kkni" value={formData.level_kkni} onChange={handleInputChange} className={inputClass("level_kkni")} required>
@@ -619,7 +595,6 @@ const Skema = () => {
                         {errors.level_kkni && <ErrorText>{errors.level_kkni}</ErrorText>}
                       </div>
                     </div>
-
                     <div>
                       <Label>Jenjang Kualifikasi</Label>
                       <select name="jenjang_kualifikasi" value={formData.jenjang_kualifikasi} onChange={handleInputChange} className={inputClass("jenjang_kualifikasi")}>
@@ -634,39 +609,33 @@ const Skema = () => {
                         <option value="IX">IX</option>
                       </select>
                     </div>
-
                     <div>
                       <Label>Bidang</Label>
                       <input type="text" name="bidang" value={formData.bidang} onChange={handleInputChange} className={inputClass("bidang")} />
                       {errors.bidang && <ErrorText>{errors.bidang}</ErrorText>}
                     </div>
-
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                       <div>
                         <Label>Kode Sektor</Label>
                         <input type="text" name="kode_sektor" value={formData.kode_sektor} onChange={handleInputChange} className={`${inputClass("kode_sektor")} font-mono`} />
                         {errors.kode_sektor && <ErrorText>{errors.kode_sektor}</ErrorText>}
                       </div>
-
                       <div>
                         <Label>Kode KBLI</Label>
                         <input type="text" name="kode_kbli" value={formData.kode_kbli} onChange={handleInputChange} className={`${inputClass("kode_kbli")} font-mono`} />
                         {errors.kode_kbli && <ErrorText>{errors.kode_kbli}</ErrorText>}
                       </div>
-
                       <div>
                         <Label>Kode KBJI</Label>
                         <input type="text" name="kode_kbji" value={formData.kode_kbji} onChange={handleInputChange} className={`${inputClass("kode_kbji")} font-mono`} />
                         {errors.kode_kbji && <ErrorText>{errors.kode_kbji}</ErrorText>}
                       </div>
                     </div>
-
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
                         <Label>Nomor Revisi</Label>
                         <input type="text" name="nomor_revisi" value={formData.nomor_revisi} onChange={handleInputChange} className={inputClass("nomor_revisi")} />
                       </div>
-
                       <div>
                         <Label>Status Dokumen</Label>
                         <select name="status_dokumen" value={formData.status_dokumen} onChange={handleInputChange} className={inputClass("status_dokumen")}>
@@ -677,7 +646,6 @@ const Skema = () => {
                     </div>
                   </FormSection>
                 </div>
-
                 <div className="flex flex-col gap-6">
                   <FormSection title="Dokumen Skema">
                     <div className="rounded-xl border border-dashed border-[#CC6B27]/40 bg-[#FAFAFA] p-5 text-center">
@@ -687,7 +655,6 @@ const Skema = () => {
                           Unggah Dokumen (PDF)
                         </span>
                       </Label>
-
                       <input
                         type="file"
                         name="file_dokumen"
@@ -695,7 +662,6 @@ const Skema = () => {
                         accept=".pdf,application/pdf"
                         className="mx-auto mt-2 block w-full max-w-xs cursor-pointer rounded-lg border border-[#071E3D]/10 bg-white p-2 text-xs font-semibold text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-[#CC6B27]/10 file:px-4 file:py-2 file:text-xs file:font-bold file:text-[#CC6B27] hover:file:bg-[#CC6B27] hover:file:text-white transition-all"
                       />
-
                       {isEditMode && formData.dokumen && !selectedFile && (
                         <div className="mx-auto mt-3 flex w-fit items-center gap-2 rounded-lg border border-[#071E3D]/10 bg-white px-3 py-2 text-xs font-bold text-[#CC6B27]">
                           <FileText size={14} />
@@ -708,7 +674,6 @@ const Skema = () => {
                       )}
                     </div>
                   </FormSection>
-
                   <div className="flex min-h-[430px] flex-1 flex-col overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white">
                     <div className="flex items-center justify-between border-b border-[#071E3D]/10 bg-[#FAFAFA] px-4 py-3">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-[#071E3D]">Pratinjau Dokumen</span>
@@ -718,7 +683,6 @@ const Skema = () => {
                         </button>
                       )}
                     </div>
-
                     <div className={`relative flex-1 bg-[#FAFAFA] transition-all duration-300 ${showFullPreview ? "h-[540px]" : "h-full"}`}>
                       {previewUrl ? (
                         isPreviewable(previewUrl) ? (
@@ -747,13 +711,11 @@ const Skema = () => {
                 </div>
               </form>
             </div>
-
             {/* Footer Modal */}
             <div className="flex justify-end gap-3 border-t border-[#071E3D]/10 bg-[#FAFAFA] px-6 py-4">
               <button type="button" className="rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-5 py-2.5 text-[13px] font-bold text-[#182D4A] transition-colors hover:bg-[#E2E8F0]" onClick={() => setShowModal(false)}>
                 Batal
               </button>
-
               <button type="submit" form="skemaForm" disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-[#CC6B27] px-5 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] disabled:cursor-not-allowed disabled:opacity-60">
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                 {isEditMode ? "Simpan Perubahan" : "Simpan"}
@@ -775,12 +737,10 @@ const Skema = () => {
                 </h3>
                 <p className="mt-1 text-sm font-medium text-slate-400">Informasi lengkap skema, dokumen, serta pintasan instrumen asesmen.</p>
               </div>
-
               <button type="button" onClick={closeDetailModal} className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500">
                 <X size={20} />
               </button>
             </div>
-
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
               <div className="space-y-6">
                 
@@ -789,11 +749,9 @@ const Skema = () => {
                     <DetailItem label="Kode Skema">
                       <span className="font-mono text-[#CC6B27]">{selectedSkema.kode_skema}</span>
                     </DetailItem>
-
                     <DetailItem label="Status">
                       <StatusBadge status={selectedSkema.status} />
                     </DetailItem>
-
                     <DetailItem label="Judul Skema" wide>
                       <span>{selectedSkema.judul_skema}</span>
                       {selectedSkema.judul_skema_en && <p className="mt-1 text-[13px] font-semibold italic text-[#182D4A]/60">{selectedSkema.judul_skema_en}</p>}
@@ -835,7 +793,6 @@ const Skema = () => {
                           </button>
                         )}
                       </div>
-
                       <div className={`relative flex-1 bg-[#FAFAFA] transition-all duration-300 ${showFullPreview ? "h-[620px]" : "h-[380px]"}`}>
                         {isPreviewable(selectedSkema.dokumen) ? (
                           isImageFile(selectedSkema.dokumen) ? (
@@ -857,10 +814,8 @@ const Skema = () => {
                     </div>
                   </InfoPanel>
                 )}
-
               </div>
             </div>
-
             <div className="flex justify-end border-t border-[#071E3D]/10 bg-[#FAFAFA] p-6">
               <button type="button" onClick={closeDetailModal} className="rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-6 py-2.5 text-[13px] font-bold text-[#182D4A] transition-colors hover:bg-[#E2E8F0]">
                 Tutup Detail
@@ -883,15 +838,6 @@ const Skema = () => {
 
 // --- SUB COMPONENTS ---
 
-function HeroPill({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">{label}</p>
-      <p className="mt-1 text-sm font-black text-white">{value}</p>
-    </div>
-  );
-}
-
 function StatCard({ icon, label, value, tone = "orange" }) {
   const tones = {
     navy: "bg-[#071E3D]/10 text-[#071E3D]",
@@ -900,7 +846,6 @@ function StatCard({ icon, label, value, tone = "orange" }) {
     red: "bg-red-50 text-red-500",
     blue: "bg-blue-50 text-blue-600",
   };
-
   return (
     <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
       <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone] || tones.orange}`}>{icon}</div>
@@ -922,7 +867,6 @@ function TableHead({ children, center }) {
 
 function StatusBadge({ status }) {
   const style = status === "aktif" ? "bg-green-50 text-green-700 border-green-200" : status === "nonaktif" ? "bg-red-50 text-red-700 border-red-200" : "bg-slate-100 text-[#182D4A]/70 border-[#071E3D]/10";
-
   return <span className={`inline-flex rounded-md border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${style}`}>{status || "draft"}</span>;
 }
 
@@ -973,7 +917,6 @@ function NavigationCard({ title, subtitle, onClick, tone = "navy" }) {
     orange: "bg-[#CC6B27]/10 border-[#CC6B27]/20 text-[#CC6B27] hover:bg-[#CC6B27] hover:text-white hover:border-[#CC6B27]",
     navy: "bg-slate-50 border-[#071E3D]/10 text-[#071E3D] hover:bg-[#071E3D] hover:text-white hover:border-[#071E3D]"
   };
-
   return (
     <button type="button" onClick={onClick} className={`group flex flex-col items-center justify-center rounded-xl border p-4 text-center shadow-sm transition-all ${tones[tone]}`}>
       <span className="mb-1 text-[13px] font-black">{title}</span>

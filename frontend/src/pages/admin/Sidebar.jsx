@@ -19,7 +19,7 @@ import {
   FaChevronRight,
   FaThumbtack,
   FaMoneyBillWave,
-  FaStar, 
+  FaStar,
 } from "react-icons/fa";
 import { Menu, X, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,15 +28,12 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const sidebarContentRef = useRef(null);
-
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-
   const [isPinned, setIsPinned] = useState(() => {
     return localStorage.getItem("sidebarPinned") === "true";
   });
-
   const [openMenus, setOpenMenus] = useState({
     standar: false,
     asesi: false,
@@ -49,13 +46,10 @@ const Sidebar = () => {
 
   useEffect(() => {
     const path = location.pathname;
-
     setOpenMenus((prev) => {
       const newState = { ...prev };
-
       const isPathActive = (pathsArray) =>
         pathsArray.some((p) => path.startsWith(p));
-
       newState.standar = isPathActive([
         "/admin/unit-kompetensi",
         "/admin/skkni",
@@ -63,22 +57,18 @@ const Sidebar = () => {
         "/admin/bank-soal",
         "/admin/bank-soal-pg",
       ]);
-
       newState.asesi = isPathActive([
         "/admin/asesi",
         "/admin/verifikasi-pendaftaran",
         "/admin/asesi/belum-kompeten",
       ]);
-
       newState.asesor = isPathActive(["/admin/asesor"]);
-
       return newState;
     });
   }, [location.pathname]);
 
   useEffect(() => {
     const savedScrollPos = sessionStorage.getItem("sidebarScrollPosition");
-
     if (sidebarContentRef.current && savedScrollPos) {
       sidebarContentRef.current.scrollTop = parseInt(savedScrollPos, 10);
     }
@@ -97,9 +87,7 @@ const Sidebar = () => {
         asesi: false,
         asesor: false,
       };
-
       newState[key] = !prev[key];
-
       return newState;
     });
   };
@@ -109,7 +97,6 @@ const Sidebar = () => {
 
   const handleNav = (path) => {
     navigate(path);
-
     if (window.innerWidth < 1024) {
       setIsOpen(false);
     }
@@ -121,7 +108,6 @@ const Sidebar = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("id_user");
     localStorage.removeItem("id_tuk");
-
     navigate("/login", { replace: true });
   };
 
@@ -150,7 +136,6 @@ const Sidebar = () => {
               onClick={() => setIsOpen(false)}
               className="fixed inset-0 bg-[#071E3D]/50 backdrop-blur-sm z-[60] lg:hidden"
             />
-
             <motion.aside
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
@@ -226,15 +211,12 @@ const Sidebar = () => {
               <div className="w-14 h-14 mx-auto mb-4 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
                 <LogOut size={26} />
               </div>
-
               <h2 className="text-xl font-black text-[#071E3D] mb-2">
                 Keluar dari Sistem?
               </h2>
-
               <p className="text-[#182D4A]/70 text-sm font-medium mb-7">
                 Apakah Anda yakin ingin logout dari dashboard Admin?
               </p>
-
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -243,7 +225,6 @@ const Sidebar = () => {
                 >
                   Batal
                 </button>
-
                 <button
                   type="button"
                   onClick={confirmLogout}
@@ -282,23 +263,14 @@ const SidebarContent = ({
       isActive("/admin/skema") ||
       isActive("/admin/bank-soal") ||
       isActive("/admin/bank-soal-pg"),
-
     asesi:
       isActive("/admin/asesi") ||
       isActive("/admin/verifikasi-pendaftaran"),
-
     asesor: isActive("/admin/asesor"),
   };
 
   return (
     <>
-      <style>{`
-        .admin-sidebar-scrollbar::-webkit-scrollbar { width: 6px; }
-        .admin-sidebar-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .admin-sidebar-scrollbar::-webkit-scrollbar-thumb { background: #CC6B27; border-radius: 10px; }
-        .admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8561f; }
-      `}</style>
-
       {/* HEADER LOGO */}
       <div className="h-[100px] border-b border-[#071E3D]/10 flex items-center shrink-0">
         <button
@@ -320,7 +292,6 @@ const SidebarContent = ({
             )}
           </div>
         </button>
-
         <div
           className={`overflow-hidden whitespace-nowrap transition-opacity duration-150 ${
             isExpanded ? "opacity-100" : "opacity-0"
@@ -333,7 +304,6 @@ const SidebarContent = ({
             Dashboard Admin
           </p>
         </div>
-
         {isMobile && (
           <button
             type="button"
@@ -345,11 +315,11 @@ const SidebarContent = ({
         )}
       </div>
 
-      {/* NAVIGATION MENUS */}
+      {/* NAVIGATION MENUS - overflow-x-hidden ditambahkan agar tidak ada scrollbar menyamping */}
       <nav
         ref={sidebarContentRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto py-4 admin-sidebar-scrollbar"
+        className="flex-1 overflow-y-auto overflow-x-hidden py-4"
       >
         <div className="space-y-1">
           <NavItem
@@ -359,7 +329,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/dashboard")}
             isExpanded={isExpanded}
           />
-
           <NavItem
             icon={<FaBullhorn />}
             label="Layanan Pengaduan"
@@ -367,7 +336,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/pengaduan")}
             isExpanded={isExpanded}
           />
-
           <NavItem
             icon={<FaGavel />}
             label="Layanan Banding"
@@ -375,7 +343,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/banding")}
             isExpanded={isExpanded}
           />
-
           <NavItem
             icon={<FaStar />}
             label="Layanan Feedback"
@@ -383,7 +350,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/feedback")}
             isExpanded={isExpanded}
           />
-
           <NavItem
             icon={<FaChartBar />}
             label="Laporan Sertifikasi"
@@ -391,7 +357,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/laporan-sertifikasi")}
             isExpanded={isExpanded}
           />
-
           <NavItem
             icon={<FaBook />}
             label="Dokumen Mutu"
@@ -399,7 +364,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/dokumen-mutu")}
             isExpanded={isExpanded}
           />
-
           <DropdownItem
             icon={<FaAward />}
             label="Standar Kompetensi"
@@ -408,7 +372,6 @@ const SidebarContent = ({
             onClick={() => toggleMenu("standar")}
             isExpanded={isExpanded}
           />
-
           {openMenus.standar && isExpanded && (
             <SubMenu>
               <SubItem
@@ -428,7 +391,6 @@ const SidebarContent = ({
               />
             </SubMenu>
           )}
-
           <NavItem
             icon={<FaCalendarAlt />}
             label="Jadwal Uji Kompetensi"
@@ -436,7 +398,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/jadwal/uji-kompetensi")}
             isExpanded={isExpanded}
           />
-
           <NavItem
             icon={<FaBuilding />}
             label="Tempat Uji Kompetensi"
@@ -444,7 +405,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/tuk")}
             isExpanded={isExpanded}
           />
-
           <DropdownItem
             icon={<FaUserGraduate />}
             label="Data Asesi"
@@ -453,7 +413,6 @@ const SidebarContent = ({
             onClick={() => toggleMenu("asesi")}
             isExpanded={isExpanded}
           />
-
           {openMenus.asesi && isExpanded && (
             <SubMenu>
               <SubItem
@@ -483,7 +442,6 @@ const SidebarContent = ({
               />
             </SubMenu>
           )}
-
           <DropdownItem
             icon={<FaUserTie />}
             label="Data Asesor"
@@ -492,7 +450,6 @@ const SidebarContent = ({
             onClick={() => toggleMenu("asesor")}
             isExpanded={isExpanded}
           />
-
           {openMenus.asesor && isExpanded && (
             <SubMenu>
               <SubItem
@@ -507,7 +464,6 @@ const SidebarContent = ({
               />
             </SubMenu>
           )}
-
           <NavItem
             icon={<FaCommentDots />}
             label="Notifikasi"
@@ -515,7 +471,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/notifikasi")}
             isExpanded={isExpanded}
           />
-
           <NavItem
             icon={<FaMoneyBillWave />}
             label="Validasi Pembayaran"
@@ -523,7 +478,6 @@ const SidebarContent = ({
             onClick={() => handleNav("/admin/pembayaran")}
             isExpanded={isExpanded}
           />
-
           <NavItem
             icon={<FaEye />}
             label="Surveillance"
@@ -546,7 +500,6 @@ const SidebarContent = ({
             <FaSignOutAlt className="text-[18px]" />
           </button>
         </div>
-
         <button
           type="button"
           onClick={handleLogout}
@@ -562,7 +515,6 @@ const SidebarContent = ({
 };
 
 /* --- SUB COMPONENTS --- */
-
 function NavItem({ icon, label, active, onClick, isExpanded }) {
   return (
     <button
@@ -582,7 +534,6 @@ function NavItem({ icon, label, active, onClick, isExpanded }) {
           {icon}
         </div>
       </div>
-
       <div
         className={`min-h-14 flex-1 pr-5 flex items-center justify-between gap-3 overflow-hidden transition-opacity duration-150 ${
           isExpanded ? "opacity-100" : "opacity-0"
@@ -619,7 +570,6 @@ function DropdownItem({ icon, label, active, open, onClick, isExpanded }) {
           {icon}
         </div>
       </div>
-
       <div
         className={`min-h-14 flex-1 pr-5 flex items-center justify-between gap-3 overflow-hidden transition-opacity duration-150 ${
           isExpanded ? "opacity-100" : "opacity-0"
@@ -632,7 +582,6 @@ function DropdownItem({ icon, label, active, open, onClick, isExpanded }) {
         >
           {label}
         </span>
-
         {open ? (
           <FaChevronDown
             className={`text-[10px] shrink-0 ${
@@ -671,7 +620,6 @@ function SubItem({ label, active, onClick }) {
           active ? "bg-[#CC6B27]" : "bg-[#182D4A]/30 group-hover:bg-[#CC6B27]"
         }`}
       />
-
       <span
         className={`text-[12px] leading-snug ${
           active ? "font-bold" : "font-semibold"

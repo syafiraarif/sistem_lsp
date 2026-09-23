@@ -489,7 +489,7 @@ const TambahAsesi = () => {
                           className="px-2 py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all border bg-[#182D4A]/5 text-[#182D4A] border-[#182D4A]/20 hover:bg-[#182D4A] hover:text-white"
                           title="Reset Password Asesi"
                         >
-                          <Key size={14} /> Reset Sandi
+                          <Key size={14} />
                         </button>
 
                         <button onClick={() => { handleEdit(item); setIsDetailMode(true); }} className="p-1.5 text-[#182D4A] bg-[#182D4A]/10 rounded-lg hover:bg-[#182D4A] hover:text-white transition-colors" title="Detail"><Eye size={16} /></button>

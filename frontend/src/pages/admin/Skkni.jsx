@@ -345,8 +345,8 @@ const Skkni = () => {
           </div>
         </div>
 
-        {/* Tabel Terbungkus Border Rounded */}
-        <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10 custom-scrollbar">
+        {/* Tabel Terbungkus Border Rounded - Menghapus class custom-scrollbar agar sama persis seperti modul Pengaduan */}
+        <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
           <table className="w-full min-w-[1000px] border-collapse bg-white text-left">
             <thead>
               <tr>
@@ -672,6 +672,7 @@ const Skkni = () => {
           </div>
         </div>
       )}
+
       {/* MODAL DETAIL */}
       {showDetailModal && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 p-4 backdrop-blur-sm">
@@ -735,12 +736,13 @@ const Skkni = () => {
           </div>
         </div>
       )}
-      {/* SCROLLBAR CUSTOM */}
+
+      {/* SCROLLBAR CUSTOM (Disesuaikan persis dengan kode Pengaduan) */}
       <style dangerouslySetInnerHTML={{ __html: `
-        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 6px; } 
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } 
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #CC6B27; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8561f; }
       ` }} />
     </div>
   );

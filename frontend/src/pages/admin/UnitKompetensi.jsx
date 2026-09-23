@@ -140,11 +140,11 @@ const UnitKompetensi = () => {
   const getUnitSkkniTitle = (u) => u.skkni?.judul_skkni || u.skkni?.no_skkni || "Tidak ada rujukan";
   const getUnitKelompokId = (u) => u.skemaList?.find(s => String(s.id_skema) === String(selectedSkemaId))?.id_kelompok || u.id_kelompok || "";
   const getUnitUrutan = (u) => u.skemaList?.find(s => String(s.id_skema) === String(selectedSkemaId))?.urutan || u.urutan || "";
-
+  
   const getElemenList = (u) => u.elemen || u.unit_elemen || [];
   const getElemenId = (e) => e.id_elemen || e.id;
   const getElemenText = (e) => e.elemen_kompetensi || e.nama_elemen || "-";
-
+  
   const getKukList = (e) => e.kuk || e.unit_kuk || [];
   const getKukText = (k) => k.kriteria_unjuk_kerja || k.kuk || "-";
 
@@ -159,7 +159,6 @@ const UnitKompetensi = () => {
     if (keyword) {
       data = data.filter(u => getUnitKode(u).toLowerCase().includes(keyword) || getUnitJudul(u).toLowerCase().includes(keyword));
     }
-
     return data.sort((a, b) => Number(getUnitUrutan(a) || 9999) - Number(getUnitUrutan(b) || 9999));
   };
 
@@ -196,20 +195,25 @@ const UnitKompetensi = () => {
     setFormKelompok({ nama_kelompok: "", deskripsi: "", urutan: kelompokList.length + 1 });
     setShowKelompokModal(true);
   };
+
   const openEditKelompokModal = (kelompok) => {
     setIsEditingKelompok(true);
     setEditKelompokId(kelompok.id_kelompok);
     setFormKelompok({ nama_kelompok: kelompok.nama_kelompok || "", deskripsi: kelompok.deskripsi || "", urutan: kelompok.urutan || "" });
     setShowKelompokModal(true);
   };
+
   const handleSaveKelompok = async (e) => {
     e.preventDefault();
     if (!formKelompok.nama_kelompok.trim()) return notifikasi.peringatan("Nama kelompok wajib diisi");
+    
     setLoading(true);
     try {
       const payload = { id_skema: selectedSkemaId, ...formKelompok, urutan: formKelompok.urutan || kelompokList.length + 1 };
+      
       if (isEditingKelompok) await api.put(`/admin/kelompok-pekerjaan/${editKelompokId}`, payload);
       else await api.post("/admin/kelompok-pekerjaan", payload);
+      
       await notifikasi.sukses(isEditingKelompok ? "Diperbarui" : "Ditambahkan");
       setShowKelompokModal(false);
       await fetchKelompokBySkema(selectedSkemaId);
@@ -219,10 +223,12 @@ const UnitKompetensi = () => {
       setLoading(false);
     }
   };
+
   const handleDeleteKelompok = async (kelompok) => {
     if (getUnitsByKelompok(kelompok.id_kelompok).length > 0) return notifikasi.peringatan("Hapus/pindahkan unit di dalam kelompok ini terlebih dahulu.");
     const confirmed = await notifikasi.konfirmasi("Hapus kelompok pekerjaan ini?");
     if (!confirmed.isConfirmed) return;
+    
     setLoading(true);
     try {
       await api.delete(`/admin/kelompok-pekerjaan/${kelompok.id_kelompok}`);
@@ -242,6 +248,7 @@ const UnitKompetensi = () => {
     setFormUnit({ id_kelompok: kelompok.id_kelompok, id_skkni: "", kode_unit: "", judul_unit: "", urutan: getUnitsByKelompok(kelompok.id_kelompok).length + 1 });
     setShowUnitModal(true);
   };
+
   const openEditUnitModal = (kelompok, unit) => {
     setActiveKelompok(kelompok);
     setIsEditingUnit(true);
@@ -249,6 +256,7 @@ const UnitKompetensi = () => {
     setFormUnit({ id_kelompok: getUnitKelompokId(unit) || kelompok.id_kelompok, id_skkni: getUnitSkkniId(unit), kode_unit: unit.kode_unit || "", judul_unit: unit.judul_unit || "", urutan: getUnitUrutan(unit) || "" });
     setShowUnitModal(true);
   };
+
   const handleSaveUnit = async (e) => {
     e.preventDefault();
     if (!formUnit.id_skkni) return notifikasi.peringatan("Pilih Standar/SKKNI");
@@ -257,8 +265,10 @@ const UnitKompetensi = () => {
     setLoading(true);
     try {
       const payload = { id_skema: selectedSkemaId, ...formUnit, judul_unit: formUnit.judul_unit.trim(), kode_unit: formUnit.kode_unit.trim() };
+      
       if (isEditingUnit) await api.put(`/admin/unit-kompetensi/${editUnitId}`, payload);
       else await api.post("/admin/unit-kompetensi", payload);
+      
       await notifikasi.sukses("Berhasil");
       setShowUnitModal(false);
       await fetchUnits();
@@ -268,9 +278,11 @@ const UnitKompetensi = () => {
       setLoading(false);
     }
   };
+
   const handleDeleteUnit = async (unit) => {
     const confirmed = await notifikasi.konfirmasi("Hapus Unit ini beserta Elemen & KUK di dalamnya?");
     if (!confirmed.isConfirmed) return;
+    
     try {
       await api.delete(`/admin/unit-kompetensi/${getUnitId(unit)}`);
       notifikasi.sukses("Terhapus");
@@ -286,12 +298,14 @@ const UnitKompetensi = () => {
     setIsEditingElemen(false);
     setShowElemenModal(true);
   };
+
   const handleEditElemen = (unit, elemen) => {
     setFormElemen({ id_unit: getUnitId(unit), nama_elemen: getElemenText(elemen), urutan: elemen.urutan || "" });
     setIsEditingElemen(true);
     setEditElemenId(getElemenId(elemen));
     setShowElemenModal(true);
   };
+
   const handleSaveElemen = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -307,6 +321,7 @@ const UnitKompetensi = () => {
       setLoading(false);
     }
   };
+
   const handleDeleteElemen = async (elemen) => {
     const confirmed = await notifikasi.konfirmasi("Hapus Elemen?");
     if (!confirmed.isConfirmed) return;
@@ -325,12 +340,14 @@ const UnitKompetensi = () => {
     setIsEditingKuk(false);
     setShowKukModal(true);
   };
+
   const handleEditKuk = (elemen, kuk) => {
     setFormKuk({ id_elemen: getElemenId(elemen), kuk: getKukText(kuk), urutan: kuk.urutan || "" });
     setIsEditingKuk(true);
     setEditKukId(kuk.id_kuk || kuk.id);
     setShowKukModal(true);
   };
+
   const handleSaveKuk = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -346,6 +363,7 @@ const UnitKompetensi = () => {
       setLoading(false);
     }
   };
+
   const handleDeleteKuk = async (kuk) => {
     const confirmed = await notifikasi.konfirmasi("Hapus KUK?");
     if (!confirmed.isConfirmed) return;
@@ -361,7 +379,6 @@ const UnitKompetensi = () => {
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
-
         {/* HEADER HERO */}
         <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
           <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
@@ -378,11 +395,11 @@ const UnitKompetensi = () => {
         </div>
 
         {/* --- DATA DINAMIS (STATISTIK) DIBUAT 1 BARIS --- */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Kelompok" value={kelompokList.length} icon={<Briefcase size={20} />} />
-          <StatCard label="Unit" value={filteredUnitCount} icon={<BookOpen size={20} />} />
-          <StatCard label="Elemen" value={totalElemen} icon={<Layers size={20} />} />
-          <StatCard label="KUK" value={totalKuk} icon={<ListChecks size={20} />} />
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
+          <StatCard label="Kelompok" value={`${kelompokList.length} Data`} icon={<Briefcase size={22} />} tone="navy" />
+          <StatCard label="Unit" value={`${filteredUnitCount} Unit`} icon={<BookOpen size={22} />} tone="green" />
+          <StatCard label="Elemen" value={`${totalElemen} Elemen`} icon={<Layers size={22} />} tone="orange" />
+          <StatCard label="KUK" value={`${totalKuk} KUK`} icon={<ListChecks size={22} />} tone="red" />
         </div>
 
         {/* --- BAGIAN FILTER & INFO SKEMA --- */}
@@ -405,7 +422,6 @@ const UnitKompetensi = () => {
                 ))}
               </select>
             </div>
-
             <div className="flex-1">
               <label className="mb-2 block text-[11px] font-bold text-[#071E3D] uppercase tracking-wider">
                 Cari Unit / Kelompok
@@ -422,24 +438,25 @@ const UnitKompetensi = () => {
                 />
               </div>
             </div>
-
             {/* ACTION BUTTONS */}
-            <div className="flex items-end gap-2 shrink-0">
+            <div className="flex items-end gap-3 shrink-0">
               <button
                 type="button"
                 onClick={refreshCurrentData}
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#071E3D]/20 bg-white text-[#071E3D] transition-colors hover:bg-slate-50"
+                disabled={loading}
+                className="inline-flex h-[42px] items-center justify-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-4 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 disabled:opacity-50"
                 title="Refresh"
               >
-                <RefreshCcw size={16} />
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
+                Refresh
               </button>
               <button
                 type="button"
                 onClick={openKelompokModal}
-                className="flex h-10 items-center gap-2 rounded-lg bg-[#CC6B27] px-4 text-[12px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f]"
+                className="inline-flex h-[42px] items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f]"
               >
                 <Plus size={16} />
-                Kelompok
+                Tambah Kelompok
               </button>
             </div>
           </div>
@@ -473,7 +490,6 @@ const UnitKompetensi = () => {
               </h4>
             </div>
           </div>
-
           <div className="p-6 bg-[#FAFAFA]">
             {!selectedSkemaId ? (
               <div className="py-16 text-center">
@@ -535,7 +551,6 @@ const UnitKompetensi = () => {
             )}
           </div>
         </div>
-
       </div>
 
       {/* --- MODALS --- */}
@@ -597,7 +612,6 @@ const UnitKompetensi = () => {
           </form>
         </ModalWrapper>
       )}
-
     </div>
   );
 };
@@ -659,7 +673,6 @@ const KelompokCard = ({
           </button>
         </div>
       </div>
-
       <div className="p-5 bg-[#FAFAFA]/50 space-y-4">
         {units.length > 0 ? (
           units.map((unit, index) => {
@@ -683,7 +696,6 @@ const KelompokCard = ({
                       <p className="text-[11px] font-medium text-slate-400 mt-1">Ref: {getUnitSkkniTitle(unit)}</p>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-2 shrink-0 border-t border-slate-100 pt-3 md:border-0 md:pt-0">
                     <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
                       <span className="text-[11px] font-bold text-slate-500">{elemenList.length} Elemen</span>
@@ -743,6 +755,7 @@ const UnitDetail = ({
   handleDeleteKuk,
 }) => {
   const elemenList = getElemenList(unit);
+
   return (
     <div className="border-t border-[#071E3D]/10 bg-slate-50 p-4">
       <div className="flex justify-between items-center mb-4">
@@ -818,17 +831,24 @@ const UnitDetail = ({
 
 // --- KOMPONEN KECIL LAINNYA ---
 
-const StatCard = ({ label, value, icon }) => (
-  <div className="flex items-center gap-3 rounded-xl border border-[#071E3D]/10 bg-white p-4 shadow-sm">
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-[#CC6B27]">
-      {icon}
+const StatCard = ({ icon, label, value, tone = "orange" }) => {
+  const tones = {
+    navy: "bg-[#071E3D]/10 text-[#071E3D]",
+    orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
+    green: "bg-green-50 text-green-600",
+    red: "bg-red-50 text-red-500",
+    blue: "bg-blue-50 text-blue-600",
+  };
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone] || tones.orange}`}>{icon}</div>
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#182D4A]/60">{label}</p>
+        <p className="mt-1 text-[20px] font-black text-[#071E3D]">{value}</p>
+      </div>
     </div>
-    <div className="overflow-hidden">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60 truncate">{label}</p>
-      <p className="mt-0.5 text-xl font-black text-[#071E3D] leading-none truncate">{value}</p>
-    </div>
-  </div>
-);
+  );
+};
 
 const ModalWrapper = ({ children, onClose }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/40 backdrop-blur-sm" onClick={onClose}>

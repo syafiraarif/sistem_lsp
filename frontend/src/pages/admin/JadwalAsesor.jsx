@@ -1,5 +1,3 @@
-// frontend/src/pages/admin/JadwalAsesor.jsx
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -29,17 +27,16 @@ const TUGAS_OPTIONS = [
 ];
 
 const JadwalAsesor = () => {
-  const { id_jadwal } = useParams(); // Diambil dari URL
+  const { id_jadwal } = useParams();
   const navigate = useNavigate();
-
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-
+  
   // State Data
   const [jadwal, setJadwal] = useState(null);
   const [assignedAsesors, setAssignedAsesors] = useState([]);
   const [availableAsesors, setAvailableAsesors] = useState([]);
-
+  
   // State Form
   const [formData, setFormData] = useState({
     id_user: "",
@@ -53,7 +50,6 @@ const JadwalAsesor = () => {
     }
   }, [id_jadwal]);
 
-  // Fungsi helper untuk mengekstrak array data dari response API yang mungkin nested (berlapis)
   const extractArrayData = (resBody) => {
     if (!resBody) return [];
     if (Array.isArray(resBody.data)) return resBody.data;
@@ -66,16 +62,15 @@ const JadwalAsesor = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-
-      // 1. Ambil detail jadwal (untuk ditampilkan di Header)
+      // 1. Ambil detail jadwal
       try {
         const resJadwal = await api.get(`/admin/jadwal/${id_jadwal}`);
         setJadwal(resJadwal.data?.data || resJadwal.data);
       } catch (e) {
         console.error("Jadwal tidak ditemukan", e);
       }
-
-      // 2. Ambil Asesor yang sudah ditugaskan ke jadwal ini
+      
+      // 2. Ambil Asesor ditugaskan
       let assigned = [];
       try {
         const resAssigned = await api.get(`/admin/jadwal-asesor/${id_jadwal}`);
@@ -85,8 +80,8 @@ const JadwalAsesor = () => {
         assigned = [];
       }
       setAssignedAsesors(assigned);
-
-      // 3. Ambil daftar semua Asesor yang tersedia (untuk dropdown form)
+      
+      // 3. Ambil daftar semua Asesor tersedia
       const resAsesor = await api.get('/admin/asesor');
       const asesorBody = extractArrayData(resAsesor.data);
       setAvailableAsesors(asesorBody);
@@ -107,13 +102,12 @@ const JadwalAsesor = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // FUNGSI: Menugaskan Asesor Baru
+  // Menugaskan Asesor Baru
   const handleAssign = async (e) => {
     e.preventDefault();
     if (!formData.id_user) {
       return Swal.fire('Peringatan', 'Silakan pilih asesor terlebih dahulu', 'warning');
     }
-
     try {
       setSubmitting(true);
       const payload = {
@@ -122,9 +116,7 @@ const JadwalAsesor = () => {
         jenis_tugas: formData.jenis_tugas,
         catatan: formData.catatan || ""
       };
-
       await api.post('/admin/jadwal-asesor', payload);
-
       Swal.fire({
         icon: 'success',
         title: 'Berhasil',
@@ -132,7 +124,6 @@ const JadwalAsesor = () => {
         timer: 1500,
         showConfirmButton: false
       });
-
       setFormData({ ...formData, id_user: "", catatan: "" });
       fetchAllData();
     } catch (error) {
@@ -142,11 +133,11 @@ const JadwalAsesor = () => {
     }
   };
 
-  // FUNGSI: Ubah Status (Aktif/Nonaktif)
+  // Ubah Status (Aktif/Nonaktif)
   const handleToggleStatus = async (id_user, jenis_tugas, currentStatus) => {
     const newStatus = currentStatus === 'aktif' ? 'nonaktif' : 'aktif';
     const actionText = newStatus === 'aktif' ? 'mengaktifkan' : 'menonaktifkan';
-
+    
     const confirm = await Swal.fire({
       title: 'Konfirmasi',
       text: `Yakin ingin ${actionText} tugas asesor ini?`,
@@ -155,7 +146,6 @@ const JadwalAsesor = () => {
       confirmButtonColor: newStatus === 'aktif' ? '#10B981' : '#F59E0B',
       confirmButtonText: 'Ya, Lanjutkan'
     });
-
     if (confirm.isConfirmed) {
       try {
         await api.put(`/admin/jadwal-asesor/${id_jadwal}/${id_user}/${jenis_tugas}`, { status: newStatus });
@@ -167,7 +157,7 @@ const JadwalAsesor = () => {
     }
   };
 
-  // FUNGSI: Hapus Penugasan Asesor
+  // Hapus Penugasan Asesor
   const handleDelete = async (id_user, jenis_tugas) => {
     const confirm = await Swal.fire({
       title: 'Hapus Penugasan?',
@@ -179,7 +169,6 @@ const JadwalAsesor = () => {
       confirmButtonText: 'Ya, Hapus!',
       cancelButtonText: 'Batal'
     });
-
     if (confirm.isConfirmed) {
       try {
         await api.delete(`/admin/jadwal-asesor/${id_jadwal}/${id_user}/${jenis_tugas}`);
@@ -227,24 +216,24 @@ const JadwalAsesor = () => {
             </div>
             
             <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-
               <button
                 type="button"
                 onClick={fetchAllData}
                 disabled={loading}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] disabled:opacity-50 md:flex-none"
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 disabled:opacity-50 md:flex-none"
               >
-                <RefreshCcw size={16} /> Refresh
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />} 
+                Refresh
               </button>
             </div>
           </div>
         </div>
 
         {/* STATISTIK 1 BARIS */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <StatCard icon={<Users size={20} />} label="Total Penugasan" value={totalAssigned} />
-          <StatCard icon={<CheckCircle size={20} />} label="Status Aktif" value={totalAktif} tone="green" />
-          <StatCard icon={<XCircle size={20} />} label="Status Nonaktif" value={totalNonaktif} tone="red" />
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <StatCard icon={<Users size={22} />} label="Total Penugasan" value={`${totalAssigned} Asesor`} tone="navy" />
+          <StatCard icon={<CheckCircle size={22} />} label="Status Aktif" value={`${totalAktif} Aktif`} tone="green" />
+          <StatCard icon={<XCircle size={22} />} label="Status Nonaktif" value={`${totalNonaktif} Nonaktif`} tone="red" />
         </div>
 
         <div className="grid grid-cols-1 gap-6 items-start lg:grid-cols-[380px_1fr]">
@@ -256,7 +245,6 @@ const JadwalAsesor = () => {
                 Form Penugasan Asesor
               </h2>
             </div>
-
             <form onSubmit={handleAssign} className="space-y-5 p-6">
               <div>
                 <label className={labelClass}>Pilih Asesor <span className="text-red-500">*</span></label>
@@ -280,9 +268,7 @@ const JadwalAsesor = () => {
                         asesor.user?.username ||
                         "Tanpa Nama";
                     const emailAsesor = asesor.email || asesor.user?.email || asesor.User?.email || '';
-
                     if (!idAsesor) return null;
-
                     return (
                       <option key={idAsesor} value={idAsesor}>
                         {getNamaAsesor(asesor)} {emailAsesor ? ` - ${emailAsesor}` : ""}
@@ -291,7 +277,6 @@ const JadwalAsesor = () => {
                   })}
                 </select>
               </div>
-
               <div>
                 <label className={labelClass}>Jenis Tugas <span className="text-red-500">*</span></label>
                 <select
@@ -305,7 +290,6 @@ const JadwalAsesor = () => {
                   ))}
                 </select>
               </div>
-
               <div>
                 <label className={labelClass}>Catatan (Opsional)</label>
                 <textarea
@@ -317,7 +301,6 @@ const JadwalAsesor = () => {
                   className={`${inputClass} resize-none`}
                 />
               </div>
-
               <button
                 type="submit"
                 disabled={submitting}
@@ -330,8 +313,9 @@ const JadwalAsesor = () => {
           </aside>
 
           {/* PANEL KANAN: DAFTAR ASESOR YANG DITUGASKAN */}
-          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
-            <div className="flex flex-col gap-4 border-b border-[#071E3D]/10 bg-[#FAFAFA] p-6 sm:flex-row sm:items-center sm:justify-between">
+          {/* Class min-w-0 SANGAT PENTING di sini agar grid item tidak melebar melebihi kontainer induknya */}
+          <section className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-4 min-w-0">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
               <div>
                 <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
                   <ClipboardCheck size={18} className="text-[#CC6B27]" />
@@ -349,7 +333,7 @@ const JadwalAsesor = () => {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
                 <table className="w-full min-w-[650px] border-collapse bg-white text-left">
                   <thead>
                     <tr>
@@ -359,13 +343,12 @@ const JadwalAsesor = () => {
                       <TableHead center>Aksi</TableHead>
                     </tr>
                   </thead>
-
                   <tbody>
                     {assignedAsesors.map((item) => {
                       const user = item.asesor || item.Asesor || {};
                       const profile = user.ProfileAsesor || user.profileAsesor || user.ProfileAsesors?.[0] || {};
                       const isActive = item.status === 'aktif';
-
+                      
                       return (
                         <tr key={`${item.id_user}-${item.jenis_tugas}`} className="border-b border-[#071E3D]/5 transition-colors hover:bg-[#CC6B27]/5">
                           <td className="px-5 py-4">
@@ -381,13 +364,11 @@ const JadwalAsesor = () => {
                               </div>
                             )}
                           </td>
-
                           <td className="px-5 py-4">
                             <span className="inline-flex rounded-full bg-orange-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#CC6B27]">
                               {item.jenis_tugas.replace(/_/g, " ")}
                             </span>
                           </td>
-
                           <td className="px-5 py-4 text-center">
                             <span
                               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
@@ -400,7 +381,6 @@ const JadwalAsesor = () => {
                               {item.status}
                             </span>
                           </td>
-
                           <td className="px-5 py-4 text-center">
                             <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
                               <button
@@ -414,7 +394,6 @@ const JadwalAsesor = () => {
                               >
                                 {isActive ? 'Nonaktifkan' : 'Aktifkan'}
                               </button>
-
                               <button
                                 type="button"
                                 onClick={() => handleDelete(item.id_user, item.jenis_tugas)}
@@ -439,22 +418,20 @@ const JadwalAsesor = () => {
 };
 
 // --- SUB COMPONENTS ---
-
-const StatCard = ({ label, value, icon, tone = "orange" }) => {
+const StatCard = ({ icon, label, value, tone = "orange" }) => {
   const tones = {
-    orange: "bg-orange-50 text-[#CC6B27]",
+    navy: "bg-[#071E3D]/10 text-[#071E3D]",
+    orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
     green: "bg-green-50 text-green-600",
     red: "bg-red-50 text-red-500",
+    blue: "bg-blue-50 text-blue-600",
   };
-
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-[#071E3D]/10 bg-white p-4 shadow-sm">
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tones[tone] || tones.orange}`}>
-        {icon}
-      </div>
-      <div className="overflow-hidden">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60 truncate">{label}</p>
-        <p className="mt-0.5 text-xl font-black text-[#071E3D] leading-none truncate">{value}</p>
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone] || tones.orange}`}>{icon}</div>
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#182D4A]/60">{label}</p>
+        <p className="mt-1 text-[20px] font-black text-[#071E3D] leading-none">{value}</p>
       </div>
     </div>
   );
