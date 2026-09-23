@@ -11,16 +11,30 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   const menuLayanan = [
-    { label: "Pendaftaran", href: "/pendaftaran" },
-    { label: "Surveillance", href: "/surveillance" },
-    { label: "Pengaduan", href: "/pengaduan" },
-    { label: "Feedback", href: "/feedback" }
+    {
+      label: "Pendaftaran",
+      href: "/pendaftaran",
+    },
+    {
+      label: "Surveillance",
+      href: "/surveillance",
+    },
+    {
+      label: "Pengaduan",
+      href: "/pengaduan",
+    },
+    {
+      label: "Feedback",
+      href: "/feedback",
+    },
   ];
 
   const handleHubungiKami = () => {
     const nomorWhatsApp = "6281234567890";
     const pesan = "Halo admin LSP, saya ingin ...";
-    const url = `https://wa.me/${nomorWhatsApp}?text=${encodeURIComponent(pesan)}`;
+    const url = `https://wa.me/${nomorWhatsApp}?text=${encodeURIComponent(
+      pesan
+    )}`;
 
     window.open(url, "_blank", "noopener,noreferrer");
   };
@@ -29,16 +43,24 @@ export default function Navbar() {
     <>
       <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
-          <Link to="/" className="group flex shrink-0 cursor-pointer items-center gap-3">
+          <Link
+            to="/"
+            className="group flex shrink-0 cursor-pointer items-center gap-3"
+          >
             <div className="flex h-12 w-12 items-center justify-center transition-transform duration-500 group-hover:scale-110">
-              <img src={logoApp} alt="Logo SIMLSP" className="h-full w-full object-contain" />
+              <img
+                src={logoApp}
+                alt="Logo SIMLSP"
+                className="h-full w-full object-contain"
+              />
             </div>
 
             <div className="leading-tight">
               <span className="block text-lg font-black text-[#071E3D]">
                 SIMLSP
               </span>
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-orange-500">
+
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-[#CC6B27]">
                 Sertifikasi Profesi
               </span>
             </div>

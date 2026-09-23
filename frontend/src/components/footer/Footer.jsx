@@ -9,7 +9,7 @@ import {
   Facebook,
   Twitter,
   Linkedin,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react";
 
 export default function Footer() {
@@ -20,56 +20,56 @@ export default function Footer() {
     { label: "Beranda", href: "/" },
     { label: "Profil Kami", href: "/profil-kami" },
     { label: "Tentang Aplikasi", href: "/tentang-aplikasi" },
-    { label: "FAQ", href: "/faq" }
+    { label: "FAQ", href: "/faq" },
   ];
 
   const layananLinks = [
     { label: "Pendaftaran", href: "/pendaftaran" },
     { label: "Surveillance", href: "/surveillance" },
     { label: "Pengaduan", href: "/pengaduan" },
-    { label: "Feedback", href: "/feedback" }
+    { label: "Feedback", href: "/feedback" },
   ];
 
   const informasiLinks = [
     {
       label: "Persyaratan",
-      tab: "persyaratan"
+      tab: "persyaratan",
     },
     {
       label: "Jadwal",
-      tab: "jadwal"
+      tab: "jadwal",
     },
     {
       label: "Tempat Uji Kompetensi",
-      tab: "tuk"
+      tab: "tuk",
     },
     {
       label: "Skema Kompetensi",
-      tab: "skema"
-    }
+      tab: "skema",
+    },
   ];
 
   const socialLinks = [
     {
       label: "Instagram",
       icon: Instagram,
-      href: "#"
+      href: "#",
     },
     {
       label: "LinkedIn",
       icon: Linkedin,
-      href: "#"
+      href: "#",
     },
     {
       label: "Twitter",
       icon: Twitter,
-      href: "#"
+      href: "#",
     },
     {
       label: "Facebook",
       icon: Facebook,
-      href: "#"
-    }
+      href: "#",
+    },
   ];
 
   const alamatMaps =
@@ -78,13 +78,13 @@ export default function Footer() {
   const handleInformasiClick = (tab) => {
     navigate("/informasi", {
       state: {
-        activeTab: tab
-      }
+        activeTab: tab,
+      },
     });
 
     window.scrollTo({
       top: 0,
-      behavior: "smooth"
+      behavior: "smooth",
     });
   };
 
@@ -98,20 +98,20 @@ export default function Footer() {
 
   return (
     <footer className="relative overflow-hidden bg-dark pt-20 text-gray-400">
-      <div className="pointer-events-none absolute bottom-0 right-0 h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-primary/10 blur-[120px]" />
+      <div className="pointer-events-none absolute bottom-0 right-0 h-[400px] w-[400px] translate-x-1/2 translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-[120px]" />
 
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-16 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-5">
           <div className="space-y-6 lg:col-span-1">
             <Link to="/" className="group flex w-fit items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary transition-transform duration-300 group-hover:scale-105">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#CC6B27] transition-transform duration-300 group-hover:scale-105">
                 <span className="text-xl font-black italic text-white">
                   S
                 </span>
               </div>
 
               <h3 className="text-2xl font-black tracking-tight text-white">
-                SIM<span className="text-primary">LSP</span>
+                SIM<span className="text-[#CC6B27]">LSP</span>
               </h3>
             </Link>
 
@@ -129,7 +129,7 @@ export default function Footer() {
                   rel={href === "#" ? undefined : "noopener noreferrer"}
                   aria-label={label}
                   whileHover={{ y: -4 }}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-400 transition-all hover:border-primary hover:text-primary"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-400 transition-all hover:border-[#CC6B27] hover:text-[#CC6B27]"
                 >
                   <Icon size={18} />
                 </motion.a>
@@ -151,7 +151,7 @@ export default function Footer() {
                   >
                     <ArrowRight
                       size={14}
-                      className="ml-[-1.25rem] text-primary opacity-0 transition-all group-hover:ml-0 group-hover:opacity-100"
+                      className="ml-[-1.25rem] text-[#CC6B27] opacity-0 transition-all group-hover:ml-0 group-hover:opacity-100"
                     />
 
                     <span>{item.label}</span>
@@ -175,7 +175,7 @@ export default function Footer() {
                   >
                     <ArrowRight
                       size={14}
-                      className="ml-[-1.25rem] text-primary opacity-0 transition-all group-hover:ml-0 group-hover:opacity-100"
+                      className="ml-[-1.25rem] text-[#CC6B27] opacity-0 transition-all group-hover:ml-0 group-hover:opacity-100"
                     />
 
                     <span>{item.label}</span>
@@ -200,7 +200,7 @@ export default function Footer() {
                   >
                     <ArrowRight
                       size={14}
-                      className="ml-[-1.25rem] shrink-0 text-primary opacity-0 transition-all group-hover:ml-0 group-hover:opacity-100"
+                      className="ml-[-1.25rem] shrink-0 text-[#CC6B27] opacity-0 transition-all group-hover:ml-0 group-hover:opacity-100"
                     />
 
                     <span>{item.label}</span>
@@ -223,7 +223,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="group flex items-start gap-4"
                 >
-                  <div className="mt-1 rounded-lg bg-white/5 p-2 text-primary transition-all group-hover:bg-primary group-hover:text-white">
+                  <div className="mt-1 rounded-lg bg-white/5 p-2 text-[#CC6B27] transition-all group-hover:bg-[#CC6B27] group-hover:text-white">
                     <MapPin size={16} />
                   </div>
 
@@ -240,7 +240,7 @@ export default function Footer() {
                   href="mailto:support@simlsp.id"
                   className="group flex items-center gap-4"
                 >
-                  <div className="rounded-lg bg-white/5 p-2 text-primary transition-all group-hover:bg-primary group-hover:text-white">
+                  <div className="rounded-lg bg-white/5 p-2 text-[#CC6B27] transition-all group-hover:bg-[#CC6B27] group-hover:text-white">
                     <Mail size={16} />
                   </div>
 
@@ -256,7 +256,7 @@ export default function Footer() {
                   onClick={handleWhatsApp}
                   className="group flex items-center gap-4 text-left"
                 >
-                  <div className="rounded-lg bg-white/5 p-2 text-primary transition-all group-hover:bg-primary group-hover:text-white">
+                  <div className="rounded-lg bg-white/5 p-2 text-[#CC6B27] transition-all group-hover:bg-[#CC6B27] group-hover:text-white">
                     <Phone size={16} />
                   </div>
 
@@ -272,8 +272,9 @@ export default function Footer() {
         <div className="border-t border-white/10 py-10">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="text-xs font-bold uppercase tracking-widest opacity-50">
-              © {currentYear} SIM<span className="text-primary">LSP</span> —
-              Certified Profession Platform
+              © {currentYear} SIM
+              <span className="text-[#CC6B27]">LSP</span> — Certified Profession
+              Platform
             </div>
 
             <div className="flex gap-8 text-xs font-bold uppercase tracking-widest">
@@ -282,11 +283,11 @@ export default function Footer() {
                 onClick={() =>
                   navigate("/informasi", {
                     state: {
-                      activeTab: "persyaratan"
-                    }
+                      activeTab: "persyaratan",
+                    },
                   })
                 }
-                className="transition-colors hover:text-primary"
+                className="transition-colors hover:text-[#CC6B27]"
               >
                 Privacy Policy
               </button>
@@ -296,11 +297,11 @@ export default function Footer() {
                 onClick={() =>
                   navigate("/informasi", {
                     state: {
-                      activeTab: "persyaratan"
-                    }
+                      activeTab: "persyaratan",
+                    },
                   })
                 }
-                className="transition-colors hover:text-primary"
+                className="transition-colors hover:text-[#CC6B27]"
               >
                 Terms of Service
               </button>

@@ -1,173 +1,322 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  ArrowLeft, 
-  ShieldCheck, 
-  CheckCircle2, 
-  AlertCircle,
-  FileText,
-  UserCheck
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock3,
+  MapPin,
+  Building2,
 } from "lucide-react";
 
 export default function JadwalDetail() {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  // Mengambil data yang dikirim lewat state
   const { schedule } = location.state || {};
 
-  // Jika data tidak ditemukan
   if (!schedule) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
-        <motion.div 
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100"
-        >
-          <AlertCircle size={64} className="mx-auto text-orange-500 mb-6" />
-          <h2 className="text-2xl font-black text-[#071E3D] mb-2">Opps! Data Hilang</h2>
-          <p className="text-slate-500 mb-8 font-medium">Data jadwal tidak tersedia.</p>
-          <button 
-            onClick={() => navigate("/jadwal")}
-            className="px-8 py-4 bg-[#071E3D] text-white rounded-2xl font-black uppercase text-[11px] hover:bg-orange-600 transition-all"
-          >
-            Kembali ke Jadwal
-          </button>
-        </motion.div>
-      </div>
+      <section className="min-h-screen bg-[#FAFAFA] px-6 py-16">
+        <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center">
+          <div className="w-full rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+              <CalendarDays size={25} />
+            </div>
+
+            <h1 className="mt-5 text-xl font-black text-[#071E3D]">
+              Jadwal Tidak Ditemukan
+            </h1>
+
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              Data jadwal yang ingin Anda lihat tidak tersedia atau halaman
+              dibuka tanpa memilih jadwal terlebih dahulu.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => navigate("/jadwal")}
+              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#071E3D] px-5 py-3 text-xs font-bold text-white transition-colors duration-200 hover:bg-[#CC6B27]"
+            >
+              <ArrowLeft size={15} />
+              Kembali ke Jadwal
+            </button>
+          </div>
+        </div>
+      </section>
     );
   }
 
+  const jadwal = schedule;
+
+  const namaSkema =
+    jadwal?.nama_kegiatan ||
+    jadwal?.skema ||
+    jadwal?.nama_skema ||
+    jadwal?.skema?.judul_skema ||
+    "Skema Sertifikasi";
+
+  const namaTuk =
+    jadwal?.tuk?.nama_tuk ||
+    jadwal?.nama_tuk ||
+    jadwal?.tuk ||
+    "Tempat Uji Kompetensi";
+
+  const alamatTuk =
+    jadwal?.alamat ||
+    [
+      jadwal?.tuk?.alamat,
+      jadwal?.tuk?.kota,
+      jadwal?.tuk?.provinsi,
+    ]
+      .filter(Boolean)
+      .join(", ") ||
+    "Alamat belum tersedia";
+
+  const tanggal =
+    jadwal?.tgl_awal ||
+    jadwal?.tanggal ||
+    jadwal?.tanggal_uji ||
+    "";
+
+  const tanggalAkhir =
+    jadwal?.tgl_akhir ||
+    jadwal?.tanggal_selesai ||
+    "";
+
+  const waktu = jadwal?.jam || jadwal?.waktu || "Waktu belum tersedia";
+
+  const jenis =
+    jadwal?.pelaksanaan_uji ||
+    jadwal?.jenis ||
+    jadwal?.metode ||
+    "Metode asesmen belum tersedia";
+
+  const status = jadwal?.status || "Tersedia";
+
+  const formatTanggal = (value) => {
+    if (!value) return "Tanggal belum tersedia";
+
+    const parsed = new Date(value);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+
+    return parsed.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  const formatPeriode = () => {
+    if (!tanggal) {
+      return "Tanggal belum tersedia";
+    }
+
+    if (!tanggalAkhir || tanggalAkhir === tanggal) {
+      return formatTanggal(tanggal);
+    }
+
+    return `${formatTanggal(tanggal)} – ${formatTanggal(tanggalAkhir)}`;
+  };
+
+  const getStatusClass = () => {
+    const value = String(status).toLowerCase();
+
+    if (
+      value.includes("selesai") ||
+      value.includes("tutup") ||
+      value.includes("penuh")
+    ) {
+      return "bg-slate-100 text-slate-600";
+    }
+
+    if (
+      value.includes("batal") ||
+      value.includes("cancel")
+    ) {
+      return "bg-red-50 text-red-600";
+    }
+
+    return "bg-emerald-50 text-emerald-600";
+  };
+
   return (
-    <div className="pt-20 pb-16 bg-slate-50 min-h-screen relative overflow-hidden">
-      {/* Dekorasi Background - Diperhalus */}
-      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-orange-100/20 rounded-full blur-[80px]" />
-      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-100/20 rounded-full blur-[80px]" />
+    <section className="relative min-h-screen overflow-hidden bg-white py-10 sm:py-14 lg:py-16">
+      <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-[#CC6B27]/[0.035] blur-[100px]" />
 
-      <div className="max-w-6xl mx-auto px-6 relative z-10">
-        
-        {/* Tombol Back - Lebih mepet ke konten */}
-        <motion.button 
-          initial={{ x: -10, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
+      <div className="pointer-events-none absolute bottom-0 left-0 h-72 w-72 rounded-full bg-[#071E3D]/[0.025] blur-[90px]" />
+
+      <div className="relative mx-auto max-w-6xl px-5 sm:px-6">
+        <button
+          type="button"
           onClick={() => navigate(-1)}
-          className="group mb-6 flex items-center gap-2 text-[#071E3D] font-black uppercase text-[10px] tracking-widest hover:text-orange-500 transition-all"
+          className="mb-8 inline-flex items-center gap-2 text-xs font-bold text-slate-500 transition-colors duration-200 hover:text-[#071E3D]"
         >
-          <div className="p-2 rounded-full bg-white shadow-sm group-hover:bg-orange-500 group-hover:text-white transition-all">
-            <ArrowLeft size={14} />
+          <ArrowLeft size={16} />
+          Kembali ke Jadwal
+        </button>
+
+        <div className="mx-auto max-w-4xl text-center">
+          <div className="mx-auto mb-4 h-1 w-10 bg-[#CC6B27]" />
+
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#CC6B27]">
+            Detail Jadwal Asesmen
+          </p>
+
+          <h1 className="mt-2 text-3xl font-black tracking-tight text-[#071E3D] sm:text-4xl">
+            {namaSkema}
+          </h1>
+
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+            Informasi lengkap jadwal pelaksanaan uji kompetensi yang telah
+            tersedia pada sistem.
+          </p>
+        </div>
+
+        <div className="mt-10 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_18px_45px_-30px_rgba(7,30,61,0.18)]">
+          <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-5 sm:px-7">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[#CC6B27]">
+                  <ClipboardCheck size={19} />
+                </div>
+
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#CC6B27]">
+                    Skema Sertifikasi
+                  </p>
+
+                  <h2 className="mt-1 text-sm font-black leading-5 text-white sm:text-base">
+                    {namaSkema}
+                  </h2>
+                </div>
+              </div>
+
+              <div
+                className={`inline-flex w-fit items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] ${getStatusClass()}`}
+              >
+                <CheckCircle2 size={13} />
+                {status}
+              </div>
+            </div>
           </div>
-          Kembali
-        </motion.button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* KONTEN UTAMA (KIRI - 8 Kolom) */}
-          <div className="lg:col-span-8">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-sm border border-slate-100 h-full"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-wider">
-                  <ShieldCheck size={14} /> Detail Sertifikasi
+          <div className="p-5 sm:p-7">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <DetailItem
+                icon={CalendarDays}
+                label="Tanggal"
+                value={formatPeriode()}
+              />
+
+              <DetailItem
+                icon={Clock3}
+                label="Waktu"
+                value={waktu}
+              />
+
+              <DetailItem
+                icon={ClipboardCheck}
+                label="Pelaksanaan"
+                value={jenis}
+              />
+
+              <DetailItem
+                icon={Building2}
+                label="Tempat Uji"
+                value={namaTuk}
+              />
+            </div>
+
+            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+                  <MapPin size={17} />
                 </div>
-                <span className="text-[10px] font-bold text-slate-300">ID: #{schedule.id || "00"}</span>
-              </div>
-              
-              <h1 className="text-4xl md:text-5xl font-black text-[#071E3D] mb-8 leading-tight">
-                {schedule.skema}
-              </h1>
 
-              {/* Grid Info Kecil */}
-              <div className="grid grid-cols-2 gap-4 py-8 border-y border-slate-50 mb-8">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest flex items-center gap-2">
-                    <Calendar size={12} className="text-orange-500" /> Tanggal
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                    Lokasi Pelaksanaan
                   </p>
-                  <p className="text-lg font-bold text-[#071E3D]">{schedule.tanggal}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest flex items-center gap-2">
-                    <Clock size={12} className="text-orange-500" /> Waktu
+
+                  <h3 className="mt-1 text-sm font-black text-[#071E3D]">
+                    {namaTuk}
+                  </h3>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    {alamatTuk}
                   </p>
-                  <p className="text-lg font-bold text-[#071E3D]">{schedule.waktu || "10:00:00"}</p>
                 </div>
               </div>
+            </div>
 
-              {/* Lokasi TUK - Lebih compact */}
+            <div className="mt-6 flex flex-col gap-4 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest flex items-center gap-2">
-                  <MapPin size={12} className="text-orange-500" /> Lokasi Uji Kompetensi (TUK)
+                <p className="text-xs font-bold text-[#071E3D]">
+                  Siap mengikuti uji kompetensi?
                 </p>
-                <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex items-center gap-4">
-                  <div className="p-3 bg-white rounded-2xl shadow-sm text-orange-500 shrink-0">
-                    <MapPin size={20} />
-                  </div>
-                  <div>
-                    <p className="text-md font-black text-[#071E3D] leading-none mb-1">{schedule.tuk}</p>
-                    <p className="text-xs text-slate-500 font-medium">{schedule.alamat}</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
 
-          {/* SIDEBAR (KANAN - 4 Kolom) */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Kartu Status */}
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-[#071E3D] rounded-[2rem] p-8 text-white shadow-xl relative overflow-hidden group"
-            >
-              <div className="absolute top-[-20px] right-[-20px] p-8 opacity-5 group-hover:rotate-12 transition-transform">
-                <UserCheck size={140} />
+                <p className="mt-1 text-[11px] leading-5 text-slate-400">
+                  Pastikan data dan persyaratan pendaftaran sudah dipersiapkan
+                  sebelum melanjutkan.
+                </p>
               </div>
-              
-              <p className="text-orange-400 text-[10px] font-black uppercase tracking-widest mb-1">Status</p>
-              <h4 className="text-3xl font-black mb-6 uppercase italic tracking-tighter">{schedule.status || "OPEN"}</h4>
-              
-              <button 
+
+              <button
+                type="button"
                 onClick={() => navigate("/pendaftaran")}
-                className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-black uppercase text-[11px] tracking-widest transition-all active:scale-95 shadow-lg shadow-orange-500/20"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white transition-colors duration-200 hover:bg-[#071E3D]"
               >
                 Ikuti Asesmen
+                <ArrowRight size={15} />
               </button>
-            </motion.div>
-
-            {/* Kartu Panduan - List lebih rapat */}
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm"
-            >
-              <h4 className="font-black text-[#071E3D] mb-5 flex items-center gap-2 text-xs uppercase tracking-widest">
-                <FileText size={16} className="text-orange-500" /> Panduan
-              </h4>
-              <ul className="space-y-3">
-                {[
-                  "Kartu Identitas (KTP)",
-                  "Hadir 30 menit awal",
-                  "Kemeja Rapi (Putih)",
-                  "Alat Tulis & Laptop"
-                ].map((item, idx) => (
-                  <li key={idx} className="flex items-center gap-3 text-xs font-bold text-slate-600">
-                    <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
+            </div>
           </div>
+        </div>
 
+        <div className="mt-5 rounded-xl border border-slate-200 bg-[#FAFAFA] px-5 py-4 sm:px-6">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#071E3D]/5 text-[#071E3D]">
+              <ClipboardCheck size={15} />
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#071E3D]">
+                Informasi
+              </p>
+
+              <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                Jadwal dapat berubah sesuai kebijakan pelaksanaan. Pastikan
+                informasi terbaru diperiksa sebelum mengikuti asesmen.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DetailItem({ icon: Icon, label, value }) {
+  return (
+    <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+          <Icon size={15} />
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400">
+            {label}
+          </p>
+
+          <p className="mt-1 text-xs font-bold leading-5 text-[#071E3D]">
+            {value}
+          </p>
         </div>
       </div>
     </div>
