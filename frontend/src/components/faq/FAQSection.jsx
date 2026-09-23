@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { HelpCircle } from "lucide-react";
+import {
+  ArrowRight,
+  HelpCircle,
+} from "lucide-react";
 import FAQItem from "./FAQItem";
 
 export default function FAQSection() {
-  // State untuk menyimpan ID yang sedang terbuka
   const [activeId, setActiveId] = useState(null);
 
   const faqList = [
@@ -40,80 +42,167 @@ export default function FAQSection() {
     },
   ];
 
-  // Fungsi untuk handle klik
   const toggleFAQ = (id) => {
-    setActiveId(activeId === id ? null : id);
+    setActiveId((prev) => (prev === id ? null : id));
+  };
+
+  const handleHubungiHelpdesk = () => {
+    const nomorWhatsApp = "6281234567890";
+    const pesan = "Halo admin LSP, saya ingin bertanya terkait layanan SIMLSP.";
+    const url = `https://wa.me/${nomorWhatsApp}?text=${encodeURIComponent(
+      pesan
+    )}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
-    <section className="relative py-32 bg-white overflow-hidden">
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-orange-500/[0.03] rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#071E3D]/[0.03] rounded-full blur-[100px] translate-y-1/3 -translate-x-1/4 pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(#071E3D08_1px,transparent_1px)] [background-size:40px_40px] opacity-40 pointer-events-none" />
+    <section className="relative overflow-hidden bg-white py-16 sm:py-20 lg:py-24">
+      <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-[#CC6B27]/[0.035] blur-[100px]" />
 
-      <div className="relative max-w-4xl mx-auto px-6 z-10">
-        <div className="text-center mb-24">
+      <div className="pointer-events-none absolute bottom-0 left-0 h-72 w-72 rounded-full bg-[#071E3D]/[0.025] blur-[90px]" />
+
+      <div className="relative z-10 mx-auto max-w-4xl px-5 sm:px-6">
+        <div className="mx-auto max-w-3xl text-center">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-[0.3em] mb-8 border border-orange-100"
+            initial={{
+              opacity: 0,
+              y: 10,
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0,
+            }}
+            viewport={{
+              once: true,
+            }}
+            transition={{
+              duration: 0.4,
+            }}
+            className="mb-4 flex justify-center"
           >
-            <HelpCircle size={14} />
-            Support Center
+            <div className="h-1 w-10 bg-[#CC6B27]" />
           </motion.div>
 
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 10,
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0,
+            }}
+            viewport={{
+              once: true,
+            }}
+            transition={{
+              duration: 0.4,
+              delay: 0.05,
+            }}
+            className="flex items-center justify-center gap-2 text-[#CC6B27]"
+          ></motion.div>
+
           <motion.h2
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-4xl md:text-5xl font-black text-[#071E3D] tracking-tight mb-8"
+            initial={{
+              opacity: 0,
+              y: 15,
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0,
+            }}
+            viewport={{
+              once: true,
+            }}
+            transition={{
+              duration: 0.45,
+              delay: 0.08,
+            }}
+            className="mt-3 text-3xl font-black tracking-tight text-[#071E3D] sm:text-4xl md:text-[42px]"
           >
-            Frequently Asked <span className="text-orange-500 relative inline-block">
+            Frequently Asked{" "}
+            <span className="relative inline-block text-[#CC6B27]">
               Questions
-              <svg className="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 100 8" preserveAspectRatio="none">
-                <path d="M0 5C20 2 40 2 60 5C80 8 100 8 100 5" stroke="#F97316" strokeWidth="4" fill="none" strokeLinecap="round" />
+              <svg
+                className="absolute -bottom-3 left-0 h-[9px] w-full"
+                viewBox="0 0 100 9"
+                preserveAspectRatio="none"
+              >
+                <path
+                  d="M1 5.5C18 2.5 33 2.5 49 5C65 7.5 82 8 99 4.5"
+                  stroke="#CC6B27"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeLinecap="round"
+                />
               </svg>
             </span>
           </motion.h2>
 
           <motion.p
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="text-slate-500 text-lg font-medium max-w-2xl mx-auto leading-relaxed"
+            initial={{
+              opacity: 0,
+              y: 12,
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0,
+            }}
+            viewport={{
+              once: true,
+            }}
+            transition={{
+              duration: 0.45,
+              delay: 0.12,
+            }}
+            className="mx-auto mt-5 max-w-2xl text-sm font-medium leading-6 text-slate-500 sm:text-base"
           >
-            Temukan jawaban atas pertanyaan yang paling sering diajukan terkait
-            sertifikasi kompetensi melalui SIMLSP.
+            Temukan jawaban atas pertanyaan yang paling sering diajukan
+            terkait sertifikasi kompetensi melalui SIMLSP.
           </motion.p>
         </div>
 
         <motion.div
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
+          viewport={{
+            once: true,
+          }}
           variants={{
-            hidden: { opacity: 0 },
+            hidden: {
+              opacity: 0,
+            },
             visible: {
               opacity: 1,
-              transition: { staggerChildren: 0.1 },
+              transition: {
+                staggerChildren: 0.08,
+              },
             },
           }}
-          className="space-y-5"
+          className="mt-10 space-y-3 sm:mt-12"
         >
           {faqList.map((faq) => (
             <motion.div
               key={faq.id}
               variants={{
-                hidden: { opacity: 0, y: 10 },
-                visible: { opacity: 1, y: 0 },
+                hidden: {
+                  opacity: 0,
+                  y: 12,
+                },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: 0.35,
+                  },
+                },
               }}
             >
-              <FAQItem 
-                question={faq.question} 
-                answer={faq.answer} 
-                isOpen={activeId === faq.id} 
+              <FAQItem
+                question={faq.question}
+                answer={faq.answer}
+                isOpen={activeId === faq.id}
                 onClick={() => toggleFAQ(faq.id)}
               />
             </motion.div>
@@ -121,16 +210,48 @@ export default function FAQSection() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="mt-20 text-center"
+          initial={{
+            opacity: 0,
+            y: 10,
+          }}
+          whileInView={{
+            opacity: 1,
+            y: 0,
+          }}
+          viewport={{
+            once: true,
+          }}
+          transition={{
+            duration: 0.4,
+            delay: 0.2,
+          }}
+          className="mt-10"
         >
-          <div className="inline-flex items-center gap-2 p-1 pr-6 rounded-full bg-slate-50 border border-slate-100">
-            <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">?</div>
-            <p className="text-slate-500 text-sm font-black uppercase tracking-widest">
-              Masih bingung? <button className="text-orange-500 hover:text-[#071E3D] transition-colors ml-1">Hubungi Helpdesk</button>
-            </p>
+          <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+                <HelpCircle size={17} />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-[#071E3D]">
+                  Masih memiliki pertanyaan?
+                </p>
+
+                <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                  Hubungi helpdesk untuk mendapatkan informasi lebih lanjut.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleHubungiHelpdesk}
+              className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#071E3D] px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors duration-200 hover:bg-[#CC6B27]"
+            >
+              Hubungi Helpdesk
+              <ArrowRight size={14} />
+            </button>
           </div>
         </motion.div>
       </div>

@@ -8,32 +8,33 @@ export default function LoginDropdown() {
   const roles = [
     {
       label: "Asesor",
-      role: "asesor"
+      role: "asesor",
     },
     {
       label: "Peserta (Asesi)",
-      role: "asesi"
+      role: "asesi",
     },
     {
       label: "Administrator",
-      role: "admin"
+      role: "admin",
     },
     {
       label: "Komite Teknis",
-      role: "asesor"
+      role: "asesor",
     },
     {
       label: "TUK",
-      role: "tuk"
-    }
+      role: "tuk",
+    },
   ];
 
   const handleLogin = (role) => {
     setOpen(false);
+
     navigate("/login", {
       state: {
-        role
-      }
+        role,
+      },
     });
   };
 
@@ -42,7 +43,7 @@ export default function LoginDropdown() {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="rounded-lg bg-orange-500 px-5 py-2 font-semibold text-white transition-all hover:bg-orange-600"
+        className="rounded-lg bg-[#CC6B27] px-5 py-2 font-semibold text-white transition-all hover:bg-[#A8561F]"
       >
         Login
       </button>
@@ -62,7 +63,7 @@ export default function LoginDropdown() {
                 key={`${item.role}-${index}`}
                 type="button"
                 onClick={() => handleLogin(item.role)}
-                className="block w-full px-5 py-3 text-left text-sm text-gray-700 transition-colors hover:bg-orange-50 hover:text-orange-600"
+                className="block w-full px-5 py-3 text-left text-sm text-gray-700 transition-colors hover:bg-[#CC6B27]/10 hover:text-[#CC6B27]"
               >
                 Login sebagai {item.label}
               </button>
