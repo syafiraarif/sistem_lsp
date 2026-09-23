@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { ArrowRight, Loader2, Info } from "lucide-react";
+import {
+  ArrowRight,
+  Info,
+  Loader2,
+} from "lucide-react";
 import AssessorCard from "./AssessorCard";
 
 const API_URL = "http://localhost:3000/api/public";
@@ -22,7 +26,10 @@ export default function AssessorList() {
 
         const response = await axios.get(`${API_URL}/asesor`);
 
-        if (response.data.success && Array.isArray(response.data.data)) {
+        if (
+          response.data?.success &&
+          Array.isArray(response.data?.data)
+        ) {
           setAssessors(response.data.data);
         } else {
           setAssessors([]);
@@ -38,85 +45,183 @@ export default function AssessorList() {
     fetchAssessors();
   }, []);
 
+  const displayedAssessors = assessors.slice(0, 4);
+
   return (
-    <section className="relative py-32 bg-white overflow-hidden">
-      <div className="absolute top-0 right-[-10%] w-[800px] h-[800px] bg-orange-500/[0.03] rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] pointer-events-none" />
-
-      <div className="relative max-w-7xl mx-auto px-6 z-10">
-        <div className="text-center mb-24">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-3 px-5 py-2 rounded-2xl bg-[#071E3D]/[0.03] backdrop-blur-sm border border-[#071E3D]/5 text-orange-600 text-[10px] font-black uppercase tracking-[0.4em] mb-8"
-          >
-            <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-            LSP Expert Panel
-          </motion.div>
-
+    <section className="border-t border-[#071E3D]/10 bg-white py-20 md:py-24">
+      <div className="mx-auto max-w-7xl px-6">
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 20,
+          }}
+          whileInView={{
+            opacity: 1,
+            y: 0,
+          }}
+          viewport={{
+            once: true,
+          }}
+          className="mb-12 text-center"
+        >
           <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-4xl md:text-6xl font-black text-[#071E3D] leading-tight tracking-tight"
+            initial={{
+              opacity: 0,
+              y: 20,
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0,
+            }}
+            viewport={{
+              once: true,
+            }}
+            className="text-3xl font-black leading-tight tracking-tight text-[#071E3D] md:text-4xl"
           >
             Tim Asesor{" "}
-            <span className="text-orange-500 relative inline-block">
+            <span className="relative inline-block text-[#CC6B27]">
               Profesional
+
+              <svg
+                className="absolute -bottom-3 left-0 w-full"
+                height="9"
+                viewBox="0 0 100 9"
+                preserveAspectRatio="none"
+              >
+                <path
+                  d="M0 5C20 2.5 40 2.5 60 5C78 7.5 91 7.5 100 5"
+                  stroke="#CC6B27"
+                  strokeWidth="4"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              </svg>
             </span>
           </motion.h2>
-        </div>
+
+          <motion.p
+            initial={{
+              opacity: 0,
+              y: 15,
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0,
+            }}
+            viewport={{
+              once: true,
+            }}
+            transition={{
+              delay: 0.1,
+            }}
+            className="mx-auto mt-7 max-w-2xl text-[14px] font-medium leading-relaxed text-[#182D4A]/60 md:text-[15px]"
+          >
+            Kenali asesor yang terlibat dalam proses sertifikasi
+            kompetensi di LSP kami.
+          </motion.p>
+        </motion.div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="animate-spin text-orange-500 mb-4" size={40} />
-            <p className="text-slate-400 font-bold text-xs tracking-widest uppercase">
-              Sinkronisasi Data...
+          <div className="flex flex-col items-center justify-center py-16">
+            <Loader2
+              className="mb-4 animate-spin text-[#CC6B27]"
+              size={34}
+            />
+
+            <p className="text-[11px] font-bold uppercase tracking-widest text-[#182D4A]/50">
+              Memuat Data Asesor
             </p>
           </div>
-        ) : error || assessors.length === 0 ? (
-          <div className="text-center py-20 px-6 rounded-[3rem] border border-dashed border-slate-200">
-            <Info size={48} className="mx-auto text-slate-200 mb-4" />
-            <p className="text-slate-400 font-bold">
-              {error || "Data belum tersedia."}
+        ) : error || displayedAssessors.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[#071E3D]/15 bg-[#FAFAFA] px-6 py-14 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-white text-[#071E3D]/25">
+              <Info size={24} />
+            </div>
+
+            <p className="text-[14px] font-bold text-[#071E3D]">
+              {error || "Data asesor belum tersedia."}
+            </p>
+
+            <p className="mt-1 text-[12px] font-medium text-[#182D4A]/60">
+              Silakan coba kembali beberapa saat lagi.
             </p>
           </div>
         ) : (
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+            viewport={{
+              once: true,
             }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10"
+            variants={{
+              hidden: {
+                opacity: 0,
+              },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.12,
+                },
+              },
+            }}
+            className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
           >
             <AnimatePresence>
-              {assessors.slice(0, 6).map((assessor) => (
-                <AssessorCard key={assessor.id} {...assessor} />
+              {displayedAssessors.map((assessor) => (
+                <motion.div
+                  key={assessor.id}
+                  variants={{
+                    hidden: {
+                      opacity: 0,
+                      y: 20,
+                    },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                    },
+                  }}
+                  transition={{
+                    duration: 0.4,
+                  }}
+                >
+                  <AssessorCard {...assessor} />
+                </motion.div>
               ))}
             </AnimatePresence>
           </motion.div>
         )}
 
-        <motion.div className="mt-24 text-center">
-          <button
-            onClick={() => navigate("/explore-assessors")}
-            className="group relative inline-flex items-center gap-4 px-12 py-5 bg-[#071E3D] text-white overflow-hidden rounded-2xl font-black text-xs tracking-[0.2em] uppercase transition-all duration-500 shadow-2xl shadow-[#071E3D]/20 hover:scale-105"
+        {!loading && !error && assessors.length > 4 && (
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 15,
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0,
+            }}
+            viewport={{
+              once: true,
+            }}
+            className="mt-10 flex justify-center"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <button
+              type="button"
+              onClick={() =>
+                navigate("/explore-assessors")
+              }
+              className="group inline-flex items-center gap-2 rounded-lg bg-[#071E3D] px-5 py-3 text-[12px] font-bold text-white shadow-sm transition-all hover:bg-[#CC6B27]"
+            >
+              Lihat Semua Asesor
 
-            <span className="relative z-10 flex items-center gap-4">
-              Eksplor Seluruh Asesor
               <ArrowRight
-                size={18}
-                className="group-hover:translate-x-2 transition-transform duration-300"
+                size={15}
+                className="transition-transform duration-200 group-hover:translate-x-1"
               />
-            </span>
-          </button>
-        </motion.div>
+            </button>
+          </motion.div>
+        )}
       </div>
     </section>
   );

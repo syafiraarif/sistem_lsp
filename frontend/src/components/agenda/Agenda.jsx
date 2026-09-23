@@ -1,67 +1,160 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { CalendarRange, Sparkles } from "lucide-react";
+import {
+  CalendarCheck,
+  ClipboardCheck,
+  ShieldCheck
+} from "lucide-react";
 import AgendaCarousel from "./AgendaCarousel";
 
 export default function Agenda() {
+  const highlights = [
+    {
+      icon: <CalendarCheck size={18} />,
+      title: "Jadwal Terintegrasi",
+      desc: "Informasi pelaksanaan uji kompetensi dalam satu sistem."
+    },
+    {
+      icon: <ClipboardCheck size={18} />,
+      title: "Proses Sertifikasi",
+      desc: "Pantau agenda sertifikasi sesuai jadwal yang tersedia."
+    },
+    {
+      icon: <ShieldCheck size={18} />,
+      title: "Sesuai Standar",
+      desc: "Pelaksanaan sertifikasi mengikuti ketentuan yang berlaku."
+    }
+  ];
+
   return (
-    <section className="relative py-32 lg:py-48 bg-[#071E3D] overflow-hidden">
-      <div className="absolute -top-20 -left-20 w-[600px] h-[600px] bg-orange-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/3 w-[500px] h-[500px] bg-blue-400/10 rounded-full blur-[130px] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:40px_40px] opacity-40" />
-      <div className="relative max-w-7xl mx-auto px-6 z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-8 items-center">
+    <section className="relative overflow-hidden bg-[#071E3D] py-24 lg:py-32">
+      <div className="pointer-events-none absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-[#CC6B27]/10 blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-40 -right-32 h-[520px] w-[520px] rounded-full bg-blue-400/10 blur-[120px]" />
+
+      <div className="pointer-events-none absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/[0.02]" />
+
+      <div className="relative z-10 mx-auto max-w-7xl px-6">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-14">
           <motion.div
-            initial={{ opacity: 0, x: -40 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
+            initial={{
+              opacity: 0,
+              x: -25
+            }}
+            whileInView={{
+              opacity: 1,
+              x: 0
+            }}
+            viewport={{
+              once: true
+            }}
+            transition={{
+              duration: 0.5
+            }}
             className="lg:col-span-5"
           >
-            <div className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-orange-400 mb-8">
-              <Sparkles size={14} className="animate-pulse" />
-              <span className="text-[10px] font-black tracking-[0.3em] uppercase">
-                Event & Schedule
-              </span>
-            </div>
+            <div className="mb-6 h-1 w-12 bg-[#CC6B27]" />
 
-            <h2 className="text-5xl md:text-6xl font-black text-white leading-tight mb-8">
-              Agenda <span className="text-orange-500">&</span> Jadwal 
+            <h2 className="text-4xl font-black leading-[1.08] tracking-tight text-white md:text-5xl xl:text-6xl">
+              Agenda{" "}
+              <span className="text-[#CC6B27]">&</span>{" "}
+              Jadwal
               <br />
-              <span className="relative">
+              <span className="relative inline-block">
                 Uji Kompetensi
-                <svg className="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 100 8" preserveAspectRatio="none">
-                  <path d="M0 5C20 2 40 2 60 5C80 8 100 8 100 5" stroke="#F97316" strokeWidth="4" fill="none" strokeLinecap="round" />
+                <svg
+                  className="absolute -bottom-2 left-0 w-full"
+                  height="8"
+                  viewBox="0 0 100 8"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d="M0 5C20 2.5 38 2.5 57 4C74 5.5 88 7 100 4"
+                    stroke="#CC6B27"
+                    strokeWidth="4"
+                    fill="none"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </span>
             </h2>
 
-            <p className="text-blue-100/60 text-lg leading-relaxed max-w-xl mb-12">
-              Akses informasi resmi pelaksanaan sertifikasi kompetensi nasional yang 
-              terintegrasi dan dikelola secara profesional sesuai standar BNSP.
+            <p className="mt-7 max-w-xl text-[14px] font-medium leading-7 text-blue-100/60 md:text-base">
+              Akses informasi pelaksanaan sertifikasi kompetensi
+              nasional dan temukan jadwal uji kompetensi yang
+              tersedia melalui sistem informasi LSP.
             </p>
 
-            <div className="flex items-center gap-6">
-              <div className="flex -space-x-3">
-                {[1,2,3,4].map(i => (
-                  <div key={i} className="w-10 h-10 rounded-full border-2 border-[#071E3D] bg-blue-900 flex items-center justify-center">
-                    <span className="text-[8px] text-white/30 font-bold tracking-tighter">LSP</span>
-                  </div>
+            <div className="mt-9 border-t border-white/10 pt-7">
+              <div className="space-y-5">
+                {highlights.map((item, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{
+                      opacity: 0,
+                      y: 12
+                    }}
+                    whileInView={{
+                      opacity: 1,
+                      y: 0
+                    }}
+                    viewport={{
+                      once: true
+                    }}
+                    transition={{
+                      duration: 0.4,
+                      delay: index * 0.08
+                    }}
+                    className="flex items-start gap-4"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#CC6B27]/20 bg-[#CC6B27]/10 text-[#CC6B27]">
+                      {item.icon}
+                    </div>
+
+                    <div className="pt-0.5">
+                      <h3 className="text-[12px] font-bold uppercase tracking-wider text-white">
+                        {item.title}
+                      </h3>
+
+                      <p className="mt-1 max-w-sm text-[11px] font-medium leading-relaxed text-blue-100/45">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
-              <p className="text-white/50 text-xs font-bold uppercase tracking-widest leading-none">
-                <span className="text-white">1,200+</span> Peserta Terdaftar <br /> 
-                <span className="text-[9px] opacity-60">Bulan Februari</span>
-              </p>
             </div>
 
-            <div className="mt-12 flex items-center gap-3 text-white/30 text-[10px] font-black uppercase tracking-[0.25em]">
-              <CalendarRange size={16} />
-              Geser untuk melihat jadwal lainnya
+            <div className="mt-9 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
+              <span className="h-px w-8 bg-[#CC6B27]" />
+              Lihat jadwal yang tersedia
             </div>
           </motion.div>
-          <div className="lg:col-span-7 w-full overflow-visible">
-            <AgendaCarousel />
-          </div>
+
+          <motion.div
+            initial={{
+              opacity: 0,
+              x: 30
+            }}
+            whileInView={{
+              opacity: 1,
+              x: 0
+            }}
+            viewport={{
+              once: true
+            }}
+            transition={{
+              duration: 0.55
+            }}
+            className="relative lg:col-span-7"
+          >
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.035]" />
+
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-[410px] w-[410px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#CC6B27]/10" />
+
+            <div className="relative">
+              <AgendaCarousel />
+            </div>
+          </motion.div>
         </div>
       </div>
     </section>

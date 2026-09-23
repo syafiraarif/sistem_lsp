@@ -9,7 +9,7 @@ import {
   Eye,
   Building2,
   CalendarDays,
-  FileBadge2
+  CheckCircle2
 } from "lucide-react";
 
 import about1 from "../../assets/images/about/about-1.jpg";
@@ -22,25 +22,29 @@ const slides = [
     image: about1,
     title: "Lembaga Sertifikasi Profesi",
     highlight: "Pustaka Ilmiah Elektronik",
-    description: "Profesional, kompeten, dan berorientasi pada peningkatan mutu sumber daya manusia."
+    description:
+      "Profesional, kompeten, dan berorientasi pada peningkatan mutu sumber daya manusia."
   },
   {
     image: about2,
     title: "Sertifikasi Kompetensi",
     highlight: "yang Terukur",
-    description: "Mendorong pengakuan kompetensi sesuai standar kebutuhan profesi dan industri."
+    description:
+      "Mendorong pengakuan kompetensi sesuai standar kebutuhan profesi dan industri."
   },
   {
     image: about3,
     title: "Penguatan Kompetensi",
     highlight: "Profesional",
-    description: "Mendukung tenaga profesional dalam bidang pustaka dan terbitan ilmiah."
+    description:
+      "Mendukung tenaga profesional dalam bidang pustaka dan terbitan ilmiah."
   },
   {
     image: about4,
     title: "Pustaka Ilmiah",
     highlight: "Berkualitas",
-    description: "Berkomitmen mendukung kualitas publikasi ilmiah Indonesia yang berdaya saing."
+    description:
+      "Berkomitmen mendukung kualitas publikasi ilmiah Indonesia yang berdaya saing."
   }
 ];
 
@@ -82,11 +86,15 @@ export default function About() {
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    setCurrentSlide(
+      (prev) => (prev - 1 + slides.length) % slides.length
+    );
   };
 
   const toggleAccordion = (index) => {
-    setOpenAccordion((prev) => (prev === index ? null : index));
+    setOpenAccordion((prev) =>
+      prev === index ? null : index
+    );
   };
 
   const handleDragStart = (_, info) => {
@@ -114,7 +122,10 @@ export default function About() {
       <section className="relative overflow-hidden bg-[#071E3D]">
         <motion.div
           drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
+          dragConstraints={{
+            left: 0,
+            right: 0
+          }}
           dragElastic={0.08}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
@@ -125,17 +136,30 @@ export default function About() {
               key={currentSlide}
               src={slides[currentSlide].image}
               alt={slides[currentSlide].title}
-              initial={{ opacity: 0, scale: 1.04 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.02 }}
-              transition={{ duration: 0.6 }}
+              initial={{
+                opacity: 0,
+                scale: 1.04
+              }}
+              animate={{
+                opacity: 1,
+                scale: 1
+              }}
+              exit={{
+                opacity: 0,
+                scale: 1.02
+              }}
+              transition={{
+                duration: 0.6
+              }}
               className="absolute inset-0 h-full w-full object-cover"
               draggable="false"
             />
           </AnimatePresence>
 
-          <div className="absolute inset-0 bg-[#071E3D]/35" />
+          <div className="absolute inset-0 bg-[#071E3D]/30" />
+
           <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
+
           <div className="absolute inset-0 bg-gradient-to-t from-[#071E3D]/80 via-transparent to-black/10" />
 
           <div className="absolute inset-0 flex items-center">
@@ -143,23 +167,28 @@ export default function About() {
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentSlide}
-                  initial={{ opacity: 0, y: 25 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.45 }}
+                  initial={{
+                    opacity: 0,
+                    y: 25
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: -20
+                  }}
+                  transition={{
+                    duration: 0.45
+                  }}
                   className="max-w-3xl"
                 >
-                  <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-orange-400/30 bg-orange-500/15 px-5 py-2.5 backdrop-blur-md">
-                    <Building2 size={15} className="text-orange-400" />
-
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-300">
-                      Tentang Kami
-                    </span>
-                  </div>
+                  <div className="mb-7 h-1 w-12 bg-[#CC6B27]" />
 
                   <h1 className="text-4xl font-black leading-[1.05] text-white md:text-6xl lg:text-7xl">
                     {slides[currentSlide].title}
-                    <span className="mt-2 block text-orange-500">
+                    <span className="mt-2 block text-[#CC6B27]">
                       {slides[currentSlide].highlight}
                     </span>
                   </h1>
@@ -176,18 +205,18 @@ export default function About() {
             type="button"
             onClick={prevSlide}
             aria-label="Foto sebelumnya"
-            className="absolute left-5 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-md transition-all hover:border-orange-400 hover:bg-orange-500 md:left-8"
+            className="absolute left-5 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg border border-white/20 bg-black/25 text-white backdrop-blur-md transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27] md:left-8"
           >
-            <ChevronLeft size={22} />
+            <ChevronLeft size={21} />
           </button>
 
           <button
             type="button"
             onClick={nextSlide}
             aria-label="Foto berikutnya"
-            className="absolute right-5 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-md transition-all hover:border-orange-400 hover:bg-orange-500 md:right-8"
+            className="absolute right-5 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg border border-white/20 bg-black/25 text-white backdrop-blur-md transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27] md:right-8"
           >
-            <ChevronRight size={22} />
+            <ChevronRight size={21} />
           </button>
 
           <div className="absolute bottom-7 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
@@ -197,49 +226,65 @@ export default function About() {
                 type="button"
                 onClick={() => setCurrentSlide(index)}
                 aria-label={`Lihat foto ${index + 1}`}
-                className={`h-2.5 rounded-full transition-all duration-300 ${
+                className={`h-1.5 rounded-full transition-all duration-300 ${
                   currentSlide === index
-                    ? "w-9 bg-orange-500"
-                    : "w-2.5 bg-white/40 hover:bg-white/70"
+                    ? "w-8 bg-[#CC6B27]"
+                    : "w-1.5 bg-white/40 hover:bg-white/70"
                 }`}
               />
             ))}
           </div>
-
-          <div className="absolute bottom-7 right-6 z-20 hidden rounded-full border border-white/15 bg-black/20 px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-white/60 backdrop-blur-md md:block">
-            Swipe untuk melihat foto
-          </div>
         </motion.div>
       </section>
 
-      <section className="relative overflow-hidden py-24">
-        <div className="pointer-events-none absolute right-0 top-20 h-[500px] w-[500px] rounded-full bg-orange-500/[0.04] blur-[130px]" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-[450px] w-[450px] rounded-full bg-[#071E3D]/[0.03] blur-[120px]" />
+      <section className="relative overflow-hidden bg-white py-24 lg:py-28">
+        <div className="pointer-events-none absolute right-0 top-0 h-[500px] w-[500px] rounded-full bg-[#CC6B27]/[0.04] blur-[120px]" />
+
+        <div className="pointer-events-none absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-[#071E3D]/[0.03] blur-[110px]" />
 
         <div className="relative mx-auto max-w-7xl px-6">
-          <div className="grid grid-cols-1 items-start gap-14 lg:grid-cols-[1fr_0.75fr]">
+          <div className="grid grid-cols-1 items-start gap-14 lg:grid-cols-[1fr_0.65fr] lg:gap-20">
             <motion.div
-              initial={{ opacity: 0, y: 25 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
+              initial={{
+                opacity: 0,
+                y: 25
+              }}
+              whileInView={{
+                opacity: 1,
+                y: 0
+              }}
+              viewport={{
+                once: true
+              }}
+              transition={{
+                duration: 0.6
+              }}
             >
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                <FileBadge2 size={15} className="text-orange-500" />
+              <div className="mb-6 h-1 w-12 bg-[#CC6B27]" />
 
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">
-                  Lembaga Sertifikasi Profesi Pustaka Ilmiah Elektronik
-                </span>
-              </div>
-
-              <h2 className="text-3xl font-black leading-tight text-[#071E3D] md:text-4xl">
-                Lembaga Sertifikasi Profesi
-                <span className="block text-orange-500">
+              <h2 className="text-4xl font-black leading-[1.08] tracking-tight text-[#071E3D] md:text-5xl">
+                Tentang Lembaga
+                <br />
+                <span className="relative inline-block text-[#CC6B27]">
                   Pustaka Ilmiah Elektronik
+                  <svg
+                    className="absolute -bottom-2 left-0 w-full"
+                    height="8"
+                    viewBox="0 0 100 8"
+                    preserveAspectRatio="none"
+                  >
+                    <path
+                      d="M0 5C20 2.5 40 2.5 60 5C80 7.5 100 7 100 4"
+                      stroke="#CC6B27"
+                      strokeWidth="4"
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+                  </svg>
                 </span>
               </h2>
 
-              <div className="mt-8 space-y-6 text-sm font-medium leading-[1.9] text-slate-500 md:text-base">
+              <div className="mt-8 space-y-6 text-justify text-sm font-medium leading-[1.9] text-slate-500 md:text-base">
                 <p>
                   Lembaga Sertifikasi Profesi Pustaka Ilmiah Elektronik
                   (LSP-PIE) adalah lembaga sertifikasi pihak ketiga resmi
@@ -279,11 +324,22 @@ export default function About() {
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 25 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1"
+              initial={{
+                opacity: 0,
+                x: 25
+              }}
+              whileInView={{
+                opacity: 1,
+                x: 0
+              }}
+              viewport={{
+                once: true
+              }}
+              transition={{
+                duration: 0.6,
+                delay: 0.1
+              }}
+              className="space-y-4"
             >
               <InfoCard
                 icon={Award}
@@ -302,33 +358,60 @@ export default function About() {
                 title="Jenis Lembaga"
                 value="LSP Pihak Ketiga"
               />
+
+              <div className="mt-7 border-t border-slate-100 pt-7">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+                    <Building2 size={18} />
+                  </div>
+
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                      Fokus Sertifikasi
+                    </p>
+
+                    <p className="mt-1 text-sm font-black text-[#071E3D]">
+                      Perpustakaan & Terbitan Ilmiah
+                    </p>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      <section className="bg-[#F8FAFC] py-24">
-        <div className="mx-auto max-w-5xl px-6">
+      <section className="relative overflow-hidden bg-[#F8FAFC] py-24 lg:py-28">
+        <div className="pointer-events-none absolute right-0 top-0 h-[450px] w-[450px] rounded-full bg-[#CC6B27]/[0.04] blur-[120px]" />
+
+        <div className="relative mx-auto max-w-5xl px-6">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-10 text-center"
+            initial={{
+              opacity: 0,
+              y: 20
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0
+            }}
+            viewport={{
+              once: true
+            }}
+            transition={{
+              duration: 0.5
+            }}
+            className="mb-10"
           >
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-              <ShieldCheck size={15} className="text-orange-500" />
+            <div className="mb-5 h-1 w-12 bg-[#CC6B27]" />
 
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">
-                Arah & Komitmen
-              </span>
-            </div>
-
-            <h2 className="text-3xl font-black text-[#071E3D] md:text-4xl">
-              Visi, Tujuan & Misi
+            <h2 className="text-4xl font-black leading-tight text-[#071E3D] md:text-5xl">
+              Visi, Tujuan{" "}
+              <span className="text-[#CC6B27]">&</span> Misi
             </h2>
 
-            <p className="mx-auto mt-4 max-w-2xl text-sm font-medium leading-relaxed text-slate-500 md:text-base">
-              Landasan yang menjadi arah pengembangan LSP Pustaka Ilmiah Elektronik.
+            <p className="mt-5 max-w-2xl text-sm font-medium leading-7 text-slate-500 md:text-base">
+              Landasan yang menjadi arah dan komitmen dalam pengembangan
+              LSP Pustaka Ilmiah Elektronik.
             </p>
           </motion.div>
 
@@ -340,70 +423,108 @@ export default function About() {
               return (
                 <motion.div
                   key={item.title}
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.08 }}
-                  className={`overflow-hidden rounded-[28px] border bg-white shadow-sm transition-all duration-300 ${
+                  initial={{
+                    opacity: 0,
+                    y: 15
+                  }}
+                  whileInView={{
+                    opacity: 1,
+                    y: 0
+                  }}
+                  viewport={{
+                    once: true
+                  }}
+                  transition={{
+                    delay: index * 0.08
+                  }}
+                  className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-all duration-300 ${
                     isOpen
-                      ? "border-orange-200 shadow-[0_20px_50px_-30px_rgba(204,107,39,0.35)]"
+                      ? "border-[#CC6B27]/30 shadow-[0_18px_45px_-30px_rgba(204,107,39,0.35)]"
                       : "border-slate-100"
                   }`}
                 >
                   <button
                     type="button"
                     onClick={() => toggleAccordion(index)}
-                    className="flex w-full items-center justify-between gap-5 px-6 py-6 text-left"
+                    className="flex w-full items-center justify-between gap-5 px-5 py-5 text-left md:px-6"
                   >
                     <div className="flex items-center gap-4">
                       <div
-                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-all duration-300 ${
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-all duration-300 ${
                           isOpen
-                            ? "bg-orange-500 text-white"
-                            : "bg-orange-50 text-orange-500"
+                            ? "bg-[#CC6B27] text-white"
+                            : "bg-[#CC6B27]/10 text-[#CC6B27]"
                         }`}
                       >
-                        <Icon size={21} />
+                        <Icon size={19} />
                       </div>
 
-                      <span className="text-base font-black text-[#071E3D] md:text-lg">
-                        {item.title}
-                      </span>
+                      <div>
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#CC6B27]">
+                          Arah Lembaga
+                        </p>
+
+                        <h3 className="mt-1 text-base font-black text-[#071E3D] md:text-lg">
+                          {item.title}
+                        </h3>
+                      </div>
                     </div>
 
                     <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300 ${
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all duration-300 ${
                         isOpen
                           ? "rotate-90 bg-[#071E3D] text-white"
                           : "bg-slate-50 text-slate-400"
                       }`}
                     >
-                      <ChevronRight size={18} />
+                      <ChevronRight size={17} />
                     </div>
                   </button>
 
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
+                        initial={{
+                          height: 0,
+                          opacity: 0
+                        }}
+                        animate={{
+                          height: "auto",
+                          opacity: 1
+                        }}
+                        exit={{
+                          height: 0,
+                          opacity: 0
+                        }}
+                        transition={{
+                          duration: 0.3
+                        }}
                       >
-                        <div className="border-t border-slate-100 px-6 pb-7 pt-5">
+                        <div className="border-t border-slate-100 px-5 pb-6 pt-5 md:px-6">
                           {Array.isArray(item.content) ? (
-                            <ol className="space-y-4 pl-5">
-                              {item.content.map((mission, missionIndex) => (
-                                <li
-                                  key={missionIndex}
-                                  className="text-sm font-medium leading-relaxed text-slate-600 md:text-base"
-                                >
-                                  {mission}
-                                </li>
-                              ))}
-                            </ol>
+                            <div className="space-y-3">
+                              {item.content.map(
+                                (mission, missionIndex) => (
+                                  <div
+                                    key={missionIndex}
+                                    className="flex items-start gap-3"
+                                  >
+                                    <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center">
+                                      <CheckCircle2
+                                        size={15}
+                                        className="text-[#CC6B27]"
+                                      />
+                                    </div>
+
+                                    <p className="text-justify text-sm font-medium leading-7 text-slate-600 md:text-base">
+                                      {mission}
+                                    </p>
+                                  </div>
+                                )
+                              )}
+                            </div>
                           ) : (
-                            <p className="text-sm font-medium leading-relaxed text-slate-600 md:text-base">
+                            <p className="max-w-4xl text-justify text-sm font-medium leading-7 text-slate-600 md:text-base">
                               {item.content}
                             </p>
                           )}
@@ -419,21 +540,27 @@ export default function About() {
       </section>
 
       <section className="relative overflow-hidden bg-[#071E3D] py-20">
-        <div className="pointer-events-none absolute right-0 top-0 h-[300px] w-[300px] rounded-full bg-orange-500/10 blur-[100px]" />
+        <div className="pointer-events-none absolute right-0 top-0 h-[300px] w-[300px] rounded-full bg-[#CC6B27]/10 blur-[100px]" />
 
         <div className="relative mx-auto max-w-5xl px-6 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            initial={{
+              opacity: 0,
+              y: 15
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0
+            }}
+            viewport={{
+              once: true
+            }}
           >
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-400">
-              LSP Pustaka Ilmiah Elektronik
-            </span>
+            <div className="mx-auto mb-5 h-1 w-12 bg-[#CC6B27]" />
 
-            <h2 className="mt-4 text-3xl font-black text-white md:text-4xl">
+            <h2 className="text-3xl font-black text-white md:text-4xl">
               Kompetensi yang Terukur,
-              <span className="text-orange-500">
+              <span className="text-[#CC6B27]">
                 {" "}Profesionalisme yang Terjaga.
               </span>
             </h2>
@@ -451,14 +578,14 @@ export default function About() {
 
 function InfoCard({ icon: Icon, title, value }) {
   return (
-    <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-orange-500">
+    <div className="group rounded-xl border border-slate-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#CC6B27]/20 hover:shadow-[0_18px_40px_-25px_rgba(7,30,61,0.18)]">
+      <div className="flex items-center gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27] transition-all duration-300 group-hover:bg-[#CC6B27] group-hover:text-white">
           <Icon size={19} />
         </div>
 
         <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+          <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
             {title}
           </p>
 

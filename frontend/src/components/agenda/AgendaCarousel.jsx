@@ -1,37 +1,29 @@
-import React, { useRef, useState, useEffect } from "react";
-import { ArrowLeft, ArrowRight, Loader2, Info } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, Info, Loader2 } from "lucide-react";
 import axios from "axios";
 import AgendaCard from "./AgendaCard";
 
 const API_URL = "http://localhost:3000/api/public";
 
 export default function AgendaCarousel() {
-
   const sliderRef = useRef(null);
 
   const [agendaList, setAgendaList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const CARD_WIDTH = 360;
-  const GAP = 48;
-  const TOTAL_WIDTH = CARD_WIDTH + GAP;
-
   const [activeIndex, setActiveIndex] = useState(0);
 
-  /* ================= FETCH DATA ================= */
+  const CARD_WIDTH = 390;
+  const GAP = 28;
+  const TOTAL_WIDTH = CARD_WIDTH + GAP;
 
   useEffect(() => {
-
     const fetchAgenda = async () => {
-
       try {
-
         setLoading(true);
         setError(null);
 
         const response = await axios.get(`${API_URL}/jadwal`);
-
         const data = response.data;
 
         if (!data || data.length === 0) {
@@ -40,7 +32,6 @@ export default function AgendaCarousel() {
         }
 
         const mappedData = data.map((item) => {
-
           const dateObj = new Date(item.tgl_awal);
 
           const formattedDate = isNaN(dateObj.getTime())
@@ -67,188 +58,157 @@ export default function AgendaCarousel() {
         });
 
         setAgendaList(mappedData);
-
         setActiveIndex(mappedData.length * 2);
-
       } catch (err) {
-
         console.error("Gagal load Agenda:", err);
-
         setError("Jadwal asesmen belum tersedia saat ini.");
-
       } finally {
-
         setLoading(false);
-
       }
-
     };
 
     fetchAgenda();
-
   }, []);
-
-  /* ================= DUPLICATE ARRAY UNTUK INFINITE ================= */
 
   const extendedList =
     agendaList.length > 0
       ? [...agendaList, ...agendaList, ...agendaList, ...agendaList]
       : [];
 
-  /* ================= SET POSISI AWAL ================= */
-
   useEffect(() => {
-
     if (sliderRef.current && agendaList.length > 0) {
-
       sliderRef.current.style.scrollBehavior = "auto";
-
-      sliderRef.current.scrollLeft = agendaList.length * 2 * TOTAL_WIDTH;
-
+      sliderRef.current.scrollLeft =
+        agendaList.length * 2 * TOTAL_WIDTH;
     }
-
-  }, [agendaList]);
-
-  /* ================= HANDLE INFINITE ================= */
+  }, [agendaList, TOTAL_WIDTH]);
 
   const handleInfiniteScroll = () => {
-
     if (!sliderRef.current || agendaList.length === 0) return;
 
     const scrollLeft = sliderRef.current.scrollLeft;
-
     const index = Math.round(scrollLeft / TOTAL_WIDTH);
 
     setActiveIndex(index);
 
     if (scrollLeft >= agendaList.length * 3 * TOTAL_WIDTH) {
-
       sliderRef.current.style.scrollBehavior = "auto";
-
-      sliderRef.current.scrollLeft = agendaList.length * 2 * TOTAL_WIDTH;
-
+      sliderRef.current.scrollLeft =
+        agendaList.length * 2 * TOTAL_WIDTH;
     } else if (scrollLeft <= agendaList.length * TOTAL_WIDTH) {
-
       sliderRef.current.style.scrollBehavior = "auto";
-
-      sliderRef.current.scrollLeft = agendaList.length * 2 * TOTAL_WIDTH;
-
+      sliderRef.current.scrollLeft =
+        agendaList.length * 2 * TOTAL_WIDTH;
     }
-
   };
 
-  /* ================= BUTTON SCROLL ================= */
-
   const scrollByStep = (direction) => {
-
     if (!sliderRef.current) return;
 
     sliderRef.current.style.scrollBehavior = "smooth";
 
     const targetIndex =
-      direction === "next" ? activeIndex + 1 : activeIndex - 1;
+      direction === "next"
+        ? activeIndex + 1
+        : activeIndex - 1;
 
-    sliderRef.current.scrollLeft = targetIndex * TOTAL_WIDTH;
-
+    sliderRef.current.scrollLeft =
+      targetIndex * TOTAL_WIDTH;
   };
 
-  /* ================= LOADING ================= */
-
   if (loading) {
-
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-white/70">
-        <Loader2 className="animate-spin text-orange-500 mb-6" size={48} />
-        <p className="font-bold text-sm tracking-[0.2em] uppercase">
+      <div className="flex min-h-[420px] flex-col items-center justify-center text-white/60">
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-[#CC6B27]/20 bg-[#CC6B27]/10">
+          <Loader2
+            className="animate-spin text-[#CC6B27]"
+            size={22}
+          />
+        </div>
+
+        <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.2em]">
           Memuat Agenda Terbaru...
         </p>
       </div>
     );
-
   }
 
-  /* ================= EMPTY ================= */
-
   if (error || agendaList.length === 0) {
-
     return (
-      <div className="flex flex-col items-center justify-center py-16 px-6 mx-auto max-w-lg text-center border border-white/10 bg-white/5 rounded-[2.5rem] backdrop-blur-md">
+      <div className="flex min-h-[420px] flex-col items-center justify-center px-6 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-[#CC6B27]/20 bg-[#CC6B27]/10">
+          <Info
+            size={24}
+            className="text-[#CC6B27]"
+          />
+        </div>
 
-        <Info size={40} className="mb-4 text-orange-500/80" />
-
-        <p className="font-bold text-white tracking-widest uppercase text-sm mb-2">
+        <p className="mt-5 text-xs font-bold uppercase tracking-[0.16em] text-white">
           {error || "Belum Ada Jadwal Tersedia"}
         </p>
 
-        <p className="text-white/50 text-xs">
+        <p className="mt-2 max-w-sm text-[11px] leading-5 text-white/40">
           Silakan cek kembali nanti atau hubungi helpdesk kami.
         </p>
-
       </div>
     );
-
   }
 
-  /* ================= CAROUSEL ================= */
-
   return (
+    <div className="relative">
+      <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/[0.03]" />
 
-    <div className="relative group/carousel">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.04]" />
 
       <button
+        type="button"
         onClick={() => scrollByStep("prev")}
-        className="absolute -left-16 top-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-full bg-white/10 backdrop-blur-2xl text-white hover:bg-orange-500 hover:scale-110 transition-all flex items-center justify-center shadow-2xl"
+        aria-label="Jadwal sebelumnya"
+        className="absolute left-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg border border-white/10 bg-[#071E3D]/90 text-white/70 shadow-lg transition-all duration-300 hover:border-[#CC6B27] hover:bg-[#CC6B27] hover:text-white md:left-4"
       >
-        <ArrowLeft size={28} />
+        <ArrowLeft size={17} />
       </button>
 
       <button
+        type="button"
         onClick={() => scrollByStep("next")}
-        className="absolute -right-16 top-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-full bg-white/10 backdrop-blur-2xl text-white hover:bg-orange-500 hover:scale-110 transition-all flex items-center justify-center shadow-2xl"
+        aria-label="Jadwal berikutnya"
+        className="absolute right-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg border border-white/10 bg-[#071E3D]/90 text-white/70 shadow-lg transition-all duration-300 hover:border-[#CC6B27] hover:bg-[#CC6B27] hover:text-white md:right-4"
       >
-        <ArrowRight size={28} />
+        <ArrowRight size={17} />
       </button>
 
       <div
         ref={sliderRef}
         onScroll={handleInfiniteScroll}
-        className="flex gap-12 overflow-x-auto pb-10 px-[20%] md:px-[35%] scroll-smooth"
+        className="flex gap-7 overflow-x-auto px-[12%] pb-4 pt-8 md:px-[20%]"
         style={{
           scrollSnapType: "x mandatory",
           msOverflowStyle: "none",
           scrollbarWidth: "none"
         }}
       >
-
         {extendedList.map((item, index) => {
-
           const isActive = index === activeIndex;
 
           return (
-
             <div
               key={`${item.id}-${index}`}
-              className={`snap-center transition-all duration-700 ease-in-out
-                ${
-                  isActive
-                    ? "scale-100 opacity-100 blur-0 z-10"
-                    : "scale-90 opacity-30 blur-[2px]"
-                }`}
-              style={{ minWidth: CARD_WIDTH }}
+              className={`snap-center transition-all duration-500 ease-out ${
+                isActive
+                  ? "z-10 scale-100 opacity-100"
+                  : "scale-[0.94] opacity-25"
+              }`}
+              style={{
+                minWidth: CARD_WIDTH,
+                maxWidth: CARD_WIDTH
+              }}
             >
-
               <AgendaCard {...item} />
-
             </div>
-
           );
-
         })}
-
       </div>
-
     </div>
-
   );
-
 }

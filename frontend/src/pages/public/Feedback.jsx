@@ -13,7 +13,9 @@ import {
   AlertTriangle,
   Star,
   HeartHandshake,
-  ThumbsUp
+  ThumbsUp,
+  Info,
+  ShieldCheck
 } from "lucide-react";
 
 export default function FeedbackPublic() {
@@ -41,10 +43,12 @@ export default function FeedbackPublic() {
     }
 
     if (!pesan || pesan.trim().length < 10) {
-      newErrors.pesan = "Isi ulasan/feedback terlalu singkat (minimal 10 karakter).";
+      newErrors.pesan =
+        "Isi ulasan/feedback terlalu singkat (minimal 10 karakter).";
     }
 
     setErrors(newErrors);
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -53,36 +57,56 @@ export default function FeedbackPublic() {
 
     if (name === "nama_lengkap") {
       const sanitized = value.replace(/[0-9]/g, "");
-      setFormData({ ...formData, [name]: sanitized });
+
+      setFormData((prev) => ({
+        ...prev,
+        [name]: sanitized
+      }));
     } else {
-      setFormData({ ...formData, [name]: value });
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value
+      }));
     }
 
     if (errors[name]) {
-      setErrors({ ...errors, [name]: null });
+      setErrors((prev) => ({
+        ...prev,
+        [name]: null
+      }));
     }
   };
 
   const handleRating = (value) => {
-    setFormData({ ...formData, rating: value });
+    setFormData((prev) => ({
+      ...prev,
+      rating: value
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) {
-      return notifikasi.peringatan(
+      await notifikasi.peringatan(
         "Validasi Gagal",
         "Periksa kembali data feedback yang Anda masukkan."
       );
+      return;
     }
 
     setLoading(true);
 
     try {
-      const response = await api.post("/public/feedback", formData);
+      const response = await api.post(
+        "/public/feedback",
+        formData
+      );
 
-      if (response.status === 200 || response.status === 201) {
+      if (
+        response.status === 200 ||
+        response.status === 201
+      ) {
         await notifikasi.sukses(
           "Feedback Berhasil Dikirim",
           "Terima kasih telah memberikan feedback untuk layanan SIMLSP."
@@ -99,7 +123,9 @@ export default function FeedbackPublic() {
         setHoveredRating(0);
       }
     } catch (err) {
-      const errorMsg = err.response?.data?.message || "Gagal mengirim feedback.";
+      const errorMsg =
+        err.response?.data?.message ||
+        "Gagal mengirim feedback.";
 
       await notifikasi.gagal(
         "Feedback Gagal Dikirim",
@@ -110,242 +136,337 @@ export default function FeedbackPublic() {
     }
   };
 
+  const ratingLabel = {
+    1: "Sangat Kurang",
+    2: "Kurang",
+    3: "Cukup",
+    4: "Baik",
+    5: "Sangat Baik, Terima Kasih!"
+  };
+
   return (
-    <section className="relative min-h-screen overflow-hidden bg-white py-20">
-      <div className="pointer-events-none absolute right-0 top-0 h-[600px] w-[600px] rounded-full bg-orange-500/[0.04] blur-[140px]" />
-      <div className="pointer-events-none absolute bottom-0 left-0 h-[500px] w-[500px] rounded-full bg-[#071E3D]/[0.04] blur-[120px]" />
+    <section className="relative min-h-screen overflow-hidden bg-white py-16 lg:py-24">
+      <div className="pointer-events-none absolute right-0 top-0 h-[520px] w-[520px] rounded-full bg-[#CC6B27]/[0.04] blur-[120px]" />
+
+      <div className="pointer-events-none absolute bottom-0 left-0 h-[420px] w-[420px] rounded-full bg-[#071E3D]/[0.03] blur-[110px]" />
 
       <div className="relative mx-auto max-w-7xl px-6">
-        <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-12">
+        <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-12 lg:gap-14">
           <div className="lg:col-span-8">
-            <header className="mb-10">
+            <header className="mb-8">
+              <div className="mb-5 h-1 w-12 bg-[#CC6B27]" />
+
               <motion.h1
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="mb-4 text-4xl font-black tracking-tight text-[#071E3D]"
+                initial={{
+                  opacity: 0,
+                  x: -20
+                }}
+                animate={{
+                  opacity: 1,
+                  x: 0
+                }}
+                transition={{
+                  duration: 0.45
+                }}
+                className="text-4xl font-black tracking-tight text-[#071E3D] md:text-5xl"
               >
-                Layanan <span className="text-orange-500">Feedback & Ulasan</span>
+                Layanan{" "}
+                <span className="text-[#CC6B27]">
+                  Feedback & Ulasan
+                </span>
               </motion.h1>
 
-              <p className="font-medium leading-relaxed text-slate-500">
-                Suara Anda sangat berarti. Bagikan pengalaman Anda selama menggunakan layanan SIMLSP.
+              <p className="mt-4 max-w-2xl text-sm font-medium leading-7 text-slate-500 md:text-base">
+                Suara Anda sangat berarti. Bagikan pengalaman
+                Anda selama menggunakan layanan SIMLSP.
               </p>
             </header>
 
-            <div className="rounded-[3rem] border border-slate-100 bg-white p-8 shadow-[0_30px_70px_-20px_rgba(7,30,61,0.08)] md:p-14">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="rounded-xl bg-orange-50 p-3 text-orange-500">
-                    <User size={24} />
+            <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-[0_20px_50px_-30px_rgba(7,30,61,0.18)]">
+              <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-5 md:px-8">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/15 text-[#CC6B27]">
+                    <MessageSquare size={19} />
                   </div>
 
-                  <h2 className="text-xl font-black text-[#071E3D]">
-                    Kirim Ulasan & Feedback Anda
-                  </h2>
-                </div>
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#CC6B27]">
+                      Form Feedback
+                    </p>
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div className="md:col-span-2">
-                    <InputGroup
-                      label="Nama Lengkap*"
-                      name="nama_lengkap"
-                      value={formData.nama_lengkap}
-                      onChange={handleChange}
-                      placeholder="Masukkan nama lengkap Anda"
-                      error={errors.nama_lengkap}
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <SelectGroup
-                      label="Bertindak Sebagai*"
-                      name="peran"
-                      value={formData.peran}
-                      onChange={handleChange}
-                      error={errors.peran}
-                    >
-                      <option value="">Pilih Kategori</option>
-                      <option value="asesi">Asesi (Peserta Sertifikasi)</option>
-                      <option value="asesor">Asesor (Penguji)</option>
-                      <option value="masyarakat_umum">Masyarakat Umum</option>
-                    </SelectGroup>
+                    <h2 className="mt-1 text-base font-black text-white md:text-lg">
+                      Kirim Ulasan & Feedback
+                    </h2>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex flex-col items-center justify-center gap-3 rounded-[2rem] border border-slate-100 bg-slate-50 p-6">
-                  <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50">
-                    Tingkat Kepuasan Anda
-                  </label>
+              <div className="p-6 md:p-8">
+                <form onSubmit={handleSubmit}>
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <div className="md:col-span-2">
+                      <InputGroup
+                        label="Nama Lengkap*"
+                        name="nama_lengkap"
+                        value={formData.nama_lengkap}
+                        onChange={handleChange}
+                        placeholder="Nama lengkap Anda"
+                        error={errors.nama_lengkap}
+                      />
+                    </div>
 
-                  <div className="flex gap-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => handleRating(star)}
-                        onMouseEnter={() => setHoveredRating(star)}
-                        onMouseLeave={() => setHoveredRating(0)}
-                        className="transition-transform focus:outline-none hover:scale-110"
+                    <div className="md:col-span-2">
+                      <SelectGroup
+                        label="Bertindak Sebagai*"
+                        name="peran"
+                        value={formData.peran}
+                        onChange={handleChange}
+                        error={errors.peran}
                       >
-                        <Star
-                          size={40}
-                          className={`transition-colors duration-300 ${
-                            (hoveredRating || formData.rating) >= star
-                              ? "fill-yellow-400 text-yellow-400 drop-shadow-md"
-                              : "fill-transparent text-slate-300"
-                          }`}
-                        />
-                      </button>
-                    ))}
+                        <option value="">
+                          Pilih Kategori
+                        </option>
+
+                        <option value="asesi">
+                          Asesi (Peserta Sertifikasi)
+                        </option>
+
+                        <option value="asesor">
+                          Asesor (Penguji)
+                        </option>
+
+                        <option value="masyarakat_umum">
+                          Masyarakat Umum
+                        </option>
+                      </SelectGroup>
+                    </div>
                   </div>
 
-                  <span className="mt-1 text-xs font-bold text-slate-500">
-                    {formData.rating === 1 && "Sangat Kurang"}
-                    {formData.rating === 2 && "Kurang"}
-                    {formData.rating === 3 && "Cukup"}
-                    {formData.rating === 4 && "Baik"}
-                    {formData.rating === 5 && "Sangat Baik, Terima Kasih!"}
-                  </span>
-                </div>
+                  <div className="mt-6 rounded-lg border border-slate-100 bg-slate-50 p-6">
+                    <div className="mb-5 flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+                        <Star size={17} />
+                      </div>
 
-                <div className="flex flex-col gap-2.5">
-                  <label className="ml-1 text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50">
-                    Pesan / Ulasan*
-                  </label>
+                      <div>
+                        <h3 className="text-xs font-black text-[#071E3D]">
+                          Tingkat Kepuasan
+                        </h3>
 
-                  <textarea
-                    name="pesan"
-                    value={formData.pesan}
-                    onChange={handleChange}
-                    rows="5"
-                    placeholder="Berikan kritik, saran, atau pujian Anda mengenai layanan kami..."
-                    className={`resize-none rounded-2xl border bg-slate-50 px-6 py-4 text-sm font-bold text-[#071E3D] transition-all focus:outline-none focus:ring-4 ${
-                      errors.pesan
-                        ? "border-red-400 focus:border-red-500 focus:ring-red-500/5"
-                        : "border-slate-100 focus:border-orange-500 focus:bg-white focus:ring-orange-500/5"
-                    }`}
-                  />
+                        <p className="mt-1 text-[10px] font-medium text-slate-400">
+                          Berikan penilaian terhadap layanan SIMLSP.
+                        </p>
+                      </div>
+                    </div>
 
-                  {errors.pesan && (
-                    <div className="mt-1 flex items-center gap-1.5 px-1">
-                      <AlertTriangle size={12} className="text-red-500" />
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="flex gap-1.5 sm:gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => handleRating(star)}
+                            onMouseEnter={() =>
+                              setHoveredRating(star)
+                            }
+                            onMouseLeave={() =>
+                              setHoveredRating(0)
+                            }
+                            className="rounded-lg p-1 transition-transform focus:outline-none hover:scale-110"
+                          >
+                            <Star
+                              size={30}
+                              className={`transition-colors duration-200 ${
+                                (hoveredRating ||
+                                  formData.rating) >=
+                                star
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "fill-transparent text-slate-300"
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
 
-                      <span className="text-[10px] font-bold uppercase tracking-tighter text-red-500">
-                        {errors.pesan}
+                      <span className="mt-3 text-[10px] font-bold text-slate-500">
+                        {ratingLabel[formData.rating]}
                       </span>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                <div className="flex justify-end pt-4">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={`rounded-2xl bg-[#071E3D] px-10 py-5 text-xs font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-[#071E3D]/20 transition-all duration-300 hover:bg-orange-500 ${
-                      loading ? "cursor-not-allowed opacity-70" : ""
-                    }`}
-                  >
-                    {loading ? (
-                      "Mengirim..."
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        Kirim Feedback
-                        <Send size={16} />
+                  <div className="mt-5 flex flex-col gap-2">
+                    <label className="ml-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#071E3D]/60">
+                      Pesan / Ulasan*
+                    </label>
+
+                    <textarea
+                      name="pesan"
+                      value={formData.pesan}
+                      onChange={handleChange}
+                      rows="6"
+                      placeholder="Berikan kritik, saran, atau pujian Anda mengenai layanan kami."
+                      className={`w-full resize-none rounded-lg border bg-slate-50 px-4 py-3.5 text-sm font-semibold text-[#071E3D] transition-all placeholder:text-slate-300 focus:bg-white focus:outline-none focus:ring-4 ${
+                        errors.pesan
+                          ? "border-red-300 focus:border-red-400 focus:ring-red-500/5"
+                          : "border-slate-200 focus:border-[#CC6B27] focus:ring-[#CC6B27]/5"
+                      }`}
+                    />
+
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[9px] font-medium text-slate-400">
+                        Minimal 10 karakter
                       </span>
+
+                      <span className="text-[9px] font-medium text-slate-400">
+                        {formData.pesan.length} karakter
+                      </span>
+                    </div>
+
+                    {errors.pesan && (
+                      <div className="flex items-center gap-1.5 px-1">
+                        <AlertTriangle
+                          size={11}
+                          className="text-red-500"
+                        />
+
+                        <span className="text-[9px] font-bold text-red-500">
+                          {errors.pesan}
+                        </span>
+                      </div>
                     )}
-                  </button>
-                </div>
-              </form>
+                  </div>
+
+                  <div className="mt-8 flex items-center justify-end border-t border-slate-100 pt-6">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`flex items-center gap-2 rounded-lg px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white transition-all duration-300 ${
+                        loading
+                          ? "cursor-not-allowed bg-[#CC6B27]/60"
+                          : "bg-[#CC6B27] hover:bg-[#A8561F]"
+                      }`}
+                    >
+                      {loading ? (
+                        "Mengirim..."
+                      ) : (
+                        <>
+                          Kirim Feedback
+                          <Send size={15} />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-8 lg:sticky lg:top-32 lg:col-span-4">
-            <div className="rounded-[2.5rem] border border-orange-100 bg-orange-50 p-8 shadow-sm">
-              <div className="mb-8 flex items-center gap-3 text-orange-600">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-orange-500 shadow-sm">
-                  <span className="animate-pulse">
-                    <HeartHandshake size={20} />
-                  </span>
-                </div>
+          <aside className="space-y-5 lg:sticky lg:top-28 lg:col-span-4">
+            <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-[0_18px_45px_-30px_rgba(7,30,61,0.18)]">
+              <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#CC6B27]/15 text-[#CC6B27]">
+                    <Info size={17} />
+                  </div>
 
-                <h3 className="text-xs font-black uppercase tracking-widest">
-                  Pusat Feedback
-                </h3>
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#CC6B27]">
+                      Sebelum Mengirim
+                    </p>
+
+                    <h3 className="mt-1 text-sm font-black text-white">
+                      Pusat Feedback
+                    </h3>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-6">
+              <div className="divide-y divide-slate-100">
                 <InfoItem
                   icon={ThumbsUp}
+                  title="Saran"
                   text="Saran Anda membantu kami meningkatkan kualitas sistem dan layanan."
                 />
 
                 <InfoItem
                   icon={MessageSquare}
-                  text="Kritik yang membangun sangat kami hargai untuk evaluasi kedepan."
+                  title="Kritik"
+                  text="Kritik yang membangun sangat kami hargai untuk evaluasi layanan."
                 />
 
                 <InfoItem
                   icon={CheckCircle2}
-                  text="Ulasan Anda akan dipertimbangkan untuk ditampilkan pada beranda website."
+                  title="Ulasan"
+                  text="Ulasan Anda dapat menjadi bahan evaluasi untuk pengembangan layanan."
+                />
+
+                <InfoItem
+                  icon={ShieldCheck}
+                  title="Data"
+                  text="Feedback diproses melalui sistem SIMLSP."
                 />
               </div>
             </div>
 
-            <Link to="/faq" className="group relative block">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="overflow-hidden rounded-[2.5rem] bg-[#071E3D] p-1 shadow-2xl shadow-[#071E3D]/20"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-
-                <div className="relative flex flex-col items-center rounded-[2.3rem] border border-white/5 bg-[#071E3D] p-8 text-center">
-                  <div className="relative mb-6">
-                    <div className="absolute inset-0 bg-orange-500 blur-2xl opacity-20 transition-opacity group-hover:opacity-40" />
-
-                    <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg transition-transform duration-500 group-hover:rotate-12">
-                      <HelpCircle size={32} strokeWidth={2.5} />
-                    </div>
+            <Link
+              to="/faq"
+              className="group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_18px_45px_-30px_rgba(7,30,61,0.16)] transition-all duration-300 hover:-translate-y-1 hover:border-[#CC6B27]/30 hover:shadow-[0_22px_50px_-28px_rgba(204,107,39,0.25)]"
+            >
+              <div className="border-t-4 border-[#CC6B27] px-5 py-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#071E3D]/10 text-[#071E3D] transition-all duration-300 group-hover:bg-[#CC6B27] group-hover:text-white">
+                    <HelpCircle size={20} />
                   </div>
 
-                  <h4 className="mb-3 text-sm font-black uppercase tracking-[0.2em] text-white">
-                    Pusat Bantuan
-                  </h4>
+                  <div>
+                    <h4 className="text-sm font-black text-[#071E3D]">
+                      Butuh Bantuan?
+                    </h4>
 
-                  <p className="mb-8 px-4 text-[11px] font-medium leading-relaxed text-slate-400">
-                    Bingung alur pengaduan? Klik untuk panduan lengkap & FAQ.
-                  </p>
+                    <p className="mt-1 text-[11px] font-medium leading-5 text-slate-500">
+                      Lihat panduan lengkap mengenai
+                      proses memberikan feedback dan ulasan.
+                    </p>
+                  </div>
+                </div>
 
-                  <div className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 py-4 transition-all duration-500 group-hover:bg-orange-500">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">
-                      Buka FAQ
-                    </span>
+                <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400 transition-colors group-hover:text-[#071E3D]">
+                    Panduan Feedback
+                  </span>
 
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#071E3D]/5 text-[#071E3D] transition-all duration-300 group-hover:bg-[#CC6B27] group-hover:text-white">
                     <ChevronRight
-                      size={16}
-                      className="text-orange-400 transition-all group-hover:translate-x-1 group-hover:text-white"
+                      size={15}
+                      className="transition-transform duration-300 group-hover:translate-x-0.5"
                     />
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </Link>
-          </div>
+          </aside>
         </div>
       </div>
     </section>
   );
 }
 
-function InfoItem({ icon: Icon, text }) {
+function InfoItem({ icon: Icon, title, text }) {
   return (
-    <div className="group/item flex gap-4">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-orange-500 shadow-sm transition-all duration-300 group-hover/item:bg-orange-500 group-hover/item:text-white">
+    <div className="flex gap-3.5 px-5 py-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
         <Icon size={16} />
       </div>
 
-      <p className="text-[11px] font-bold leading-relaxed text-slate-600">
-        {text}
-      </p>
+      <div>
+        <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#071E3D]">
+          {title}
+        </p>
+
+        <p className="mt-1 text-[10px] font-medium leading-5 text-slate-500">
+          {text}
+        </p>
+      </div>
     </div>
   );
 }
@@ -361,12 +482,10 @@ function InputGroup({
   maxLength
 }) {
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="ml-1 flex items-center justify-between">
-        <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50">
-          {label}
-        </label>
-      </div>
+    <div className="flex flex-col gap-2">
+      <label className="ml-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#071E3D]/60">
+        {label}
+      </label>
 
       <input
         type={type}
@@ -375,18 +494,21 @@ function InputGroup({
         onChange={onChange}
         placeholder={placeholder}
         maxLength={maxLength}
-        className={`rounded-2xl border bg-slate-50 px-6 py-4 text-sm font-bold text-[#071E3D] transition-all focus:outline-none focus:ring-4 ${
+        className={`w-full rounded-lg border bg-slate-50 px-4 py-3.5 text-sm font-semibold text-[#071E3D] transition-all placeholder:text-slate-300 focus:bg-white focus:outline-none focus:ring-4 ${
           error
-            ? "border-red-400 focus:border-red-500 focus:ring-red-500/5"
-            : "border-slate-100 focus:border-orange-500 focus:bg-white focus:ring-orange-500/5"
+            ? "border-red-300 focus:border-red-400 focus:ring-red-500/5"
+            : "border-slate-200 focus:border-[#CC6B27] focus:ring-[#CC6B27]/5"
         }`}
       />
 
       {error && (
-        <div className="mt-1 flex items-center gap-1.5 px-1">
-          <AlertTriangle size={12} className="text-red-500" />
+        <div className="flex items-center gap-1.5 px-1">
+          <AlertTriangle
+            size={11}
+            className="text-red-500"
+          />
 
-          <span className="text-[10px] font-bold uppercase tracking-tighter text-red-500">
+          <span className="text-[9px] font-bold text-red-500">
             {error}
           </span>
         </div>
@@ -395,51 +517,48 @@ function InputGroup({
   );
 }
 
-function SelectGroup({ label, children, onChange, value, name, error }) {
+function SelectGroup({
+  label,
+  children,
+  onChange,
+  value,
+  name,
+  error
+}) {
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="ml-1 flex items-center justify-between">
-        <label className="text-[10px] font-black uppercase tracking-[0.25em] text-[#071E3D] opacity-50">
-          {label}
-        </label>
-      </div>
+    <div className="flex flex-col gap-2">
+      <label className="ml-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#071E3D]/60">
+        {label}
+      </label>
 
       <div className="relative">
         <select
           name={name}
           value={value}
           onChange={onChange}
-          className={`w-full appearance-none rounded-2xl border bg-slate-50 px-6 py-4 text-sm font-bold text-[#071E3D] transition-all focus:outline-none ${
+          className={`w-full appearance-none rounded-lg border bg-slate-50 px-4 py-3.5 pr-11 text-sm font-semibold text-[#071E3D] transition-all focus:bg-white focus:outline-none focus:ring-4 ${
             error
-              ? "border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-500/5"
-              : "border-slate-100 focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/5"
+              ? "border-red-300 focus:border-red-400 focus:ring-red-500/5"
+              : "cursor-pointer border-slate-200 focus:border-[#CC6B27] focus:ring-[#CC6B27]/5"
           }`}
         >
           {children}
         </select>
 
-        <div className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-slate-400">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </div>
+        <ChevronRight
+          size={16}
+          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-400"
+        />
       </div>
 
       {error && (
-        <div className="mt-1 flex items-center gap-1.5 px-1">
-          <AlertTriangle size={12} className="text-red-500" />
+        <div className="flex items-center gap-1.5 px-1">
+          <AlertTriangle
+            size={11}
+            className="text-red-500"
+          />
 
-          <span className="text-[10px] font-bold uppercase tracking-tighter text-red-500">
+          <span className="text-[9px] font-bold text-red-500">
             {error}
           </span>
         </div>

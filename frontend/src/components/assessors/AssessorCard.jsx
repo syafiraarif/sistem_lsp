@@ -1,160 +1,200 @@
 import React from "react";
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
+  ArrowUpRight,
   Award,
   Building2,
-  ShieldCheck,
-  ArrowUpRight,
 } from "lucide-react";
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
 export default function AssessorCard({
   id,
-  name,
-  competency,
-  institution,
-  status,
-  image,
-  license,
-  email,
-  kota,
-  provinsi,
+  id_asesor,
+  nama,
+  nama_lengkap,
+  foto,
+  foto_profil,
+  bidang_keahlian,
+  unit_kerja,
+  nama_tuk,
+  tuk,
+  tempat,
+  no_reg_asesor,
+  status_asesor,
 }) {
-  const isActive = status === "Aktif";
+  const navigate = useNavigate();
 
-  const assessorData = {
-    id,
-    name,
-    competency,
-    institution,
-    status,
-    image,
-    license,
-    email,
-    kota,
-    provinsi,
+  const assessorId =
+    id ||
+    id_asesor;
+
+  const displayName =
+    nama_lengkap ||
+    nama ||
+    "Nama Asesor";
+
+  const expertise =
+    bidang_keahlian ||
+    "Bidang keahlian belum tersedia";
+
+  const unitKerja =
+    unit_kerja ||
+    nama_tuk ||
+    tuk ||
+    tempat ||
+    "Belum tersedia";
+
+  const isActive =
+    !status_asesor ||
+    String(status_asesor).toLowerCase() === "aktif";
+
+  const imagePath =
+    foto_profil ||
+    foto ||
+    "";
+
+  const getImageUrl = (path) => {
+    if (!path) {
+      return "";
+    }
+
+    const value = String(path);
+
+    if (
+      value.startsWith("http://") ||
+      value.startsWith("https://") ||
+      value.startsWith("data:")
+    ) {
+      return value;
+    }
+
+    const baseUrl = API_BASE.replace(/\/api\/?$/, "");
+
+    return `${baseUrl}/${value.replace(/^\/+/, "")}`;
+  };
+
+  const imageUrl = getImageUrl(imagePath);
+
+  const getInitial = () => {
+    const words = displayName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (words.length >= 2) {
+      return `${words[0][0]}${words[1][0]}`.toUpperCase();
+    }
+
+    return displayName.charAt(0).toUpperCase() || "A";
+  };
+
+  const handleDetail = () => {
+    if (!assessorId) {
+      return;
+    }
+
+    navigate(`/explore-assessors/${assessorId}`);
   };
 
   return (
-    <motion.div
-      variants={{
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0 },
-      }}
-      whileHover={{ y: -12 }}
-      className="group relative bg-white rounded-[2.5rem] p-8
-                 border border-slate-100
-                 shadow-[0_10px_40px_-15px_rgba(7,30,61,0.12)]
-                 hover:shadow-[0_25px_60px_-15px_rgba(7,30,61,0.25)]
-                 transition-all duration-500 flex flex-col h-full"
-    >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-[#071E3D]/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    <article className="group flex h-full flex-col overflow-hidden rounded-[28px] border-2 border-[#CC6B27]/25 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#CC6B27]/45 hover:shadow-lg">
+      <div className="flex flex-col items-center text-center">
+        <div className="flex h-[146px] w-[146px] items-center justify-center overflow-hidden rounded-[24px] border-2 border-[#CC6B27]/25 bg-[#FAFAFA]">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={displayName}
+              className="h-full w-full object-cover"
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+                event.currentTarget.nextElementSibling?.classList.remove(
+                  "hidden"
+                );
+              }}
+            />
+          ) : null}
 
-      <div className="flex flex-col items-center">
-        <div className="relative mb-6">
           <div
-            className="w-28 h-28 rounded-3xl bg-[#071E3D]/10
-                          border border-[#071E3D]/20
-                          flex items-center justify-center p-1.5
-                          transition-all duration-500
-                          group-hover:border-orange-500"
+            className={`${
+              imageUrl ? "hidden" : "flex"
+            } h-full w-full items-center justify-center`}
           >
-            <div className="w-full h-full rounded-2xl bg-white flex items-center justify-center shadow-sm overflow-hidden">
-              {image ? (
-                <img
-                  src={image}
-                  alt={name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-[#071E3D] font-black text-4xl select-none group-hover:text-orange-500 transition-colors">
-                  {(name || "A").charAt(0)}
-                </span>
-              )}
-            </div>
+            <span className="text-[42px] font-black text-[#071E3D]">
+              {getInitial()}
+            </span>
           </div>
-
-          {isActive && (
-            <motion.div
-              animate={{ y: [0, -4, 0] }}
-              transition={{ repeat: Infinity, duration: 3 }}
-              className="absolute -bottom-2 -right-2
-                         bg-orange-500 text-white p-2
-                         rounded-xl shadow-lg border-2 border-white"
-            >
-              <ShieldCheck size={16} strokeWidth={3} />
-            </motion.div>
-          )}
         </div>
 
-        <h3 className="text-xl font-bold text-[#071E3D] text-center mb-2">
-          {name || "Asesor LSP"}
+        <h3 className="mt-5 line-clamp-2 text-[18px] font-black leading-snug text-[#071E3D]">
+          {displayName}
         </h3>
 
         <p
-          className={`text-[10px] font-black uppercase tracking-[0.25em]
-          ${isActive ? "text-[#071E3D]" : "text-slate-300"}`}
+          className={`mt-0.5 text-[9px] font-black uppercase tracking-[0.2em] ${
+            isActive
+              ? "text-[#182D4A]/60"
+              : "text-red-500"
+          }`}
         >
-          {isActive ? "Asesor Tersertifikasi" : "Non-Aktif"}
+          {isActive
+            ? "Asesor Tersertifikasi"
+            : "Non-Aktif"}
         </p>
       </div>
 
-      <div className="my-8 h-[1px] w-full bg-slate-50" />
+      <div className="my-6 border-t border-[#071E3D]/10" />
 
-      <div className="space-y-6 flex-grow">
-        <div className="flex gap-4">
-          <div
-            className="p-2.5 rounded-xl bg-[#071E3D]/10 text-[#071E3D]
-                          group-hover:bg-orange-50 group-hover:text-orange-500 transition-all"
-          >
-            <Award size={18} />
-          </div>
+      <div className="space-y-4">
+        <InfoRow
+          icon={<Award size={18} />}
+          label="Bidang Keahlian"
+          value={expertise}
+        />
 
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-              Bidang Keahlian
-            </p>
-
-            <p className="text-sm font-bold text-slate-700 line-clamp-1">
-              {competency || "Asesor Kompetensi"}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-4">
-          <div
-            className="p-2.5 rounded-xl bg-[#071E3D]/10 text-[#071E3D]
-                          group-hover:bg-orange-50 group-hover:text-orange-500 transition-all"
-          >
-            <Building2 size={18} />
-          </div>
-
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-              Unit Kerja / TUK
-            </p>
-
-            <p className="text-sm font-bold text-slate-700 line-clamp-1">
-              {institution || "LSP Teknologi Informasi"}
-            </p>
-          </div>
-        </div>
+        <InfoRow
+          icon={<Building2 size={18} />}
+          label="Unit Kerja / TUK"
+          value={unitKerja}
+        />
       </div>
 
-      <div className="mt-10">
-        <Link
-          to={`/assessor/${id}`}
-          state={assessorData}
-          className="w-full py-4 rounded-2xl
-                    bg-[#071E3D] text-white
-                    font-black text-xs tracking-widest uppercase
-                    flex items-center justify-center gap-2
-                    hover:bg-orange-600 hover:shadow-xl hover:shadow-orange-500/20 transition-all duration-300"
+      <div className="mt-auto pt-6">
+        <button
+          type="button"
+          onClick={handleDetail}
+          disabled={!assessorId}
+          className="group/button flex w-full items-center justify-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-white transition-all duration-200 hover:bg-[#CC6B27] disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           Detail Profile
-          <ArrowUpRight size={16} />
-        </Link>
+
+          <ArrowUpRight
+            size={15}
+            className="transition-transform duration-200 group-hover/button:translate-x-0.5 group-hover/button:-translate-y-0.5"
+          />
+        </button>
       </div>
-    </motion.div>
+    </article>
+  );
+}
+
+function InfoRow({ icon, label, value }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#CC6B27]/10 text-[#CC6B27]">
+        {icon}
+      </div>
+
+      <div className="min-w-0 pt-0.5">
+        <p className="text-[9px] font-black uppercase tracking-widest text-[#182D4A]/45">
+          {label}
+        </p>
+
+        <p className="mt-1 line-clamp-2 text-[12px] font-bold leading-relaxed text-[#071E3D]">
+          {value || "-"}
+        </p>
+      </div>
+    </div>
   );
 }
