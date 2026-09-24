@@ -24,8 +24,7 @@ import {
 import { notifikasi } from "../../components/ui/notifikasi";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
-const WILAYAH_PUBLIC_BASE =
-  "https://emsifa.github.io/api-wilayah-indonesia/api";
+const WILAYAH_PUBLIC_BASE = "https://emsifa.github.io/api-wilayah-indonesia/api";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -127,7 +126,6 @@ export default function ProfileAsesi() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [files, setFiles] = useState({});
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -260,7 +258,9 @@ export default function ProfileAsesi() {
   const fetchKebangsaan = async () => {
     try {
       const res = await api.get("/public/dropdown/kebangsaan");
-      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      const data = Array.isArray(res.data)
+        ? res.data
+        : res.data?.data || [];
       setKebangsaanList(data);
     } catch {
       setKebangsaanList([]);
@@ -430,10 +430,7 @@ export default function ProfileAsesi() {
       kelurahan_nama: kelurahanNama || "",
     });
 
-    const ttdPath =
-      data.ttd_path ||
-      data.ttd ||
-      "";
+    const ttdPath = data.ttd_path || data.ttd || "";
 
     setPreviewTtd(resolveFileUrl(ttdPath));
     setIsEditingTtd(!resolveFileUrl(ttdPath));
@@ -443,8 +440,6 @@ export default function ProfileAsesi() {
 
   const initPage = async () => {
     try {
-      setLoading(true);
-
       const token = localStorage.getItem("token");
 
       if (!token) {
@@ -465,7 +460,6 @@ export default function ProfileAsesi() {
           "Gagal memuat data profile asesi."
       );
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };
@@ -796,13 +790,12 @@ export default function ProfileAsesi() {
     100
   );
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
   return (
     <div className="flex min-h-screen bg-[#FAFAFA]">
-      <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <SidebarAsesi
+        isOpen={sidebarOpen}
+        setIsOpen={setSidebarOpen}
+      />
 
       <main className="flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
         <div className="mx-auto w-full max-w-[1500px] space-y-5">
@@ -1014,9 +1007,6 @@ export default function ProfileAsesi() {
 
                   {isEditingTtd ? (
                     <div className="overflow-hidden rounded-lg border border-[#071E3D]/10 bg-white">
-                      {!hasSignature && (
-                        <div className="pointer-events-none absolute" />
-                      )}
                       <SignatureCanvas
                         ref={sigRef}
                         penColor="#071E3D"
@@ -1401,7 +1391,9 @@ function ProfileSection({ title, subtitle, icon, children }) {
         </h2>
       </div>
       <div className="border-b border-[#071E3D]/10 bg-white px-5 py-3 md:px-6">
-        <p className="text-[12px] font-medium text-[#182D4A]/60">{subtitle}</p>
+        <p className="text-[12px] font-medium text-[#182D4A]/60">
+          {subtitle}
+        </p>
       </div>
       <div className="p-5 md:p-6">{children}</div>
     </section>
@@ -1511,7 +1503,12 @@ function SelectJenisKelamin({ label, name, form, handleChange }) {
   );
 }
 
-function SelectPendidikanTerakhir({ label, name, form, handleChange }) {
+function SelectPendidikanTerakhir({
+  label,
+  name,
+  form,
+  handleChange,
+}) {
   return (
     <div>
       <label className="mb-1.5 block text-[12px] font-bold text-[#071E3D]">
@@ -1537,7 +1534,13 @@ function SelectPendidikanTerakhir({ label, name, form, handleChange }) {
   );
 }
 
-function SelectKebangsaan({ label, name, form, handleChange, list }) {
+function SelectKebangsaan({
+  label,
+  name,
+  form,
+  handleChange,
+  list,
+}) {
   const safeList = Array.isArray(list) ? list : [];
 
   return (
@@ -1553,7 +1556,15 @@ function SelectKebangsaan({ label, name, form, handleChange, list }) {
       >
         <option value="">Pilih Kebangsaan</option>
         {safeList.map((item, index) => (
-          <option key={`${item.value || item.id || index}-${index}`} value={item.value || item.label || item.name || ""}>
+          <option
+            key={`${item.value || item.id || index}-${index}`}
+            value={
+              item.value ||
+              item.label ||
+              item.name ||
+              ""
+            }
+          >
             {item.label || item.name || item.value || "-"}
           </option>
         ))}
@@ -1562,7 +1573,13 @@ function SelectKebangsaan({ label, name, form, handleChange, list }) {
   );
 }
 
-function SelectWilayah({ label, list, value, onChange, disabled = false }) {
+function SelectWilayah({
+  label,
+  list,
+  value,
+  onChange,
+  disabled = false,
+}) {
   const safeList = Array.isArray(list) ? list : [];
 
   return (
@@ -1584,30 +1601,16 @@ function SelectWilayah({ label, list, value, onChange, disabled = false }) {
           const name = getItemName(item);
 
           return (
-            <option key={`${id}-${index}`} value={id} data-name={name}>
+            <option
+              key={`${id}-${index}`}
+              value={id}
+              data-name={name}
+            >
               {name || "-"}
             </option>
           );
         })}
       </select>
-    </div>
-  );
-}
-
-function LoadingScreen() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-[#FAFAFA]">
-      <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-8 shadow-sm">
-        <Loader2 size={26} className="animate-spin text-[#CC6B27]" />
-        <div>
-          <h2 className="text-[15px] font-black text-[#071E3D]">
-            Memuat Profile
-          </h2>
-          <p className="mt-1 text-[11px] font-medium text-[#182D4A]/60">
-            Mohon tunggu sebentar...
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
