@@ -19,10 +19,6 @@ export default function LoginDropdown() {
       role: "admin",
     },
     {
-      label: "Komite Teknis",
-      role: "asesor",
-    },
-    {
       label: "TUK",
       role: "tuk",
     },
