@@ -18,17 +18,8 @@ import Asesor from "../pages/admin/Asesor";
 import Notifikasi from "../pages/admin/Notifikasi";
 import Pengaduan from "../pages/admin/Pengaduan";
 import ProfileAdmin from "../pages/admin/ProfileAdmin";
-import Banding from "../pages/admin/Banding";
-import BankSoal from "../pages/admin/BankSoal";
-import BankSoalPG from "../pages/admin/BankSoalPG";
-import Surveillance from "../pages/admin/Surveillance";
 import CariAsesi from "../pages/admin/CariAsesi";
 import StatistikWilayah from "../pages/admin/StatistikWilayah";
-import IA01Observasi from "../pages/admin/IA01Observasi";
-import IA03Pertanyaan from "../pages/admin/IA03Pertanyaan";
-import Mapa from "../pages/admin/Mapa";
-import Mapa01 from "../pages/admin/Mapa01";
-import Mapa02 from "../pages/admin/Mapa02";
 import AsesiTerjadwal from "../pages/admin/AsesiTerjadwal";
 import AsesiKompeten from "../pages/admin/AsesiKompeten";
 import PesertaJadwal from "../pages/admin/PesertaJadwal";
@@ -37,7 +28,6 @@ import AsesiBelumKompeten from "../pages/admin/AsesiBelumKompeten";
 import ValidasiPembayaran from "../pages/admin/ValidasiPembayaran";
 import FeedbackAdmin from "../pages/admin/Feedback";
 import LaporanSertifikasi from "../pages/admin/LaporanSertifikasi";
-
 
 /* PROTECTED */
 const getUser = () => {
@@ -68,14 +58,6 @@ export default function AdminRoutes() {
           <Route path="skema/:id/persyaratan" element={<SkemaPersyaratan />} />
           <Route path="skema/:id/persyaratan-tuk" element={<SkemaPersyaratanTuk />} />
           <Route path="skema/:id/biaya-uji" element={<BiayaUji />} />
-          
-          {/* STRUKTUR BARU UNTUK INSTRUMEN MENGINDUK KE SKEMA */}
-          <Route path="skema/:id/ia01" element={<IA01Observasi />} />
-          <Route path="skema/:id/ia03" element={<IA03Pertanyaan />} />
-          <Route path="skema/:id/mapa" element={<Mapa />} />
-          <Route path="mapa" element={<Mapa />} />
-          <Route path="mapa01/:id" element={<Mapa01 />} /> 
-          <Route path="mapa02/:id" element={<Mapa02 />} />
 
           {/* RUTE LAINNYA */}
           <Route path="dokumen-mutu" element={<DokumenMutu />} />
@@ -91,10 +73,6 @@ export default function AdminRoutes() {
           <Route path="pengaduan" element={<Pengaduan />} />
           <Route path="feedback" element={<FeedbackAdmin />} />
           <Route path="profil-lsp" element={<ProfileAdmin />} />
-          <Route path="banding" element={<Banding />} />
-          <Route path="bank-soal" element={<BankSoal />} />
-          <Route path="bank-soal-pg" element={<BankSoalPG />} />
-          <Route path="surveillance" element={<Surveillance />} />
           <Route path="asesi/cari" element={<CariAsesi />} />
 
           <Route path="asesi/terjadwal" element={<AsesiTerjadwal />} />
@@ -105,7 +83,7 @@ export default function AdminRoutes() {
           <Route path="jadwal/:id_jadwal/peserta" element={<PesertaJadwal />} />
           <Route path="skema/:id/kelompok-pekerjaan" element={<KelompokPekerjaan />} />
 
-          {/* RUTE LAPORAN SERTIFIKASI (PATH DIUBAH DI SINI) */}
+          {/* RUTE LAPORAN SERTIFIKASI */}
           <Route path="laporan-sertifikasi" element={<LaporanSertifikasi />} />
         </Route>
       </Routes>

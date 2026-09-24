@@ -13,7 +13,6 @@ import {
   Save,
   Loader2,
   DollarSign,
-  Sparkles,
   ClipboardList,
   BadgeCheck,
   Wallet,
@@ -24,10 +23,12 @@ const BiayaUji = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // --- STATE ---
   const [loading, setLoading] = useState(true);
   const [skemaDetail, setSkemaDetail] = useState(null);
   const [biayaList, setBiayaList] = useState([]);
 
+  // Modal State
   const [showModal, setShowModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -40,9 +41,9 @@ const BiayaUji = () => {
 
   const [formData, setFormData] = useState(initialForm);
 
+  // --- FETCH DATA ---
   const fetchData = async () => {
     setLoading(true);
-
     try {
       const resSkema = await api.get(`/admin/skema/${id}`);
       setSkemaDetail(resSkema.data?.data || resSkema.data);
@@ -65,18 +66,36 @@ const BiayaUji = () => {
     if (id) fetchData();
   }, [id]);
 
+  // --- HELPERS & FORMATTERS ---
   const formatNumberInput = (value) => {
-  const numberString = value.replace(/\D/g, "");
-  return numberString.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const numberString = value.replace(/\D/g, "");
+    return numberString.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
   const parseNumberInput = (value) => {
     return value.replace(/\./g, "");
   };
 
+  const formatRupiah = (angka) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(angka || 0);
+  };
+
+  const formatEnum = (text) => {
+    if (!text) return "-";
+    return text
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
+  // --- HANDLERS ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
     if (name === "nominal") {
       setFormData({
         ...formData,
@@ -98,14 +117,12 @@ const BiayaUji = () => {
 
   const handleEdit = (item) => {
     setIsEdit(true);
-
     setFormData({
       id_biaya: item.id_biaya,
       metode_uji: item.metode_uji,
       nominal: formatNumberInput(String(item.nominal)),
       keterangan: item.keterangan || "",
     });
-
     setShowModal(true);
   };
 
@@ -123,20 +140,10 @@ const BiayaUji = () => {
 
       if (isEdit) {
         await api.put(`/admin/biaya-uji/${formData.id_biaya}`, payload);
-
-        Swal.fire(
-          "Berhasil",
-          "Data biaya berhasil diperbarui",
-          "success"
-        );
+        Swal.fire("Berhasil", "Data biaya berhasil diperbarui", "success");
       } else {
         await api.post("/admin/biaya-uji", payload);
-
-        Swal.fire(
-          "Berhasil",
-          "Data biaya berhasil ditambahkan",
-          "success"
-        );
+        Swal.fire("Berhasil", "Data biaya berhasil ditambahkan", "success");
       }
 
       setShowModal(false);
@@ -144,8 +151,7 @@ const BiayaUji = () => {
     } catch (error) {
       Swal.fire(
         "Gagal",
-        error.response?.data?.message ||
-          "Terjadi kesalahan saat menyimpan",
+        error.response?.data?.message || "Terjadi kesalahan saat menyimpan",
         "error"
       );
     } finally {
@@ -160,7 +166,9 @@ const BiayaUji = () => {
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
+      cancelButtonColor: "#182D4A",
       confirmButtonText: "Ya, Hapus",
+      cancelButtonText: "Batal",
     });
 
     if (confirm.isConfirmed) {
@@ -178,253 +186,128 @@ const BiayaUji = () => {
     }
   };
 
-  const formatRupiah = (angka) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    }).format(angka);
-  };
-
-  const formatEnum = (text) => {
-    if (!text) return "-";
-
-    return text
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
-
-  const totalNominal = biayaList.reduce(
-    (total, item) => total + Number(item.nominal || 0),
-    0
-  );
-
-  const totalLuring = biayaList.filter(
-    (item) => item.metode_uji === "luring"
-  ).length;
+  // --- STATS CALCULATION ---
+  const totalNominal = biayaList.reduce((total, item) => total + Number(item.nominal || 0), 0);
+  const totalLuring = biayaList.filter((item) => item.metode_uji === "luring").length;
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
-        <div className="rounded-[32px] border border-slate-100 bg-white p-10 text-center shadow-sm">
-          <Loader2 className="mx-auto mb-4 animate-spin text-orange-500" size={42} />
-          <p className="font-black text-[#071E3D]">Memuat data biaya uji...</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#FAFAFA]">
+        <div className="text-center">
+          <Loader2 className="mx-auto mb-4 animate-spin text-[#CC6B27]" size={42} />
+          <p className="font-bold text-[#071E3D]">Memuat data biaya uji...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        {/* HERO */}
-        <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
-          <div className="absolute right-0 top-0 h-[430px] w-[430px] rounded-full bg-orange-500/10 blur-[110px]" />
-          <div className="absolute -bottom-24 -left-24 h-[380px] w-[380px] rounded-full bg-[#071E3D]/5 blur-[100px]" />
-
-          <div className="relative z-10 grid grid-cols-1 gap-6 p-6 lg:p-8 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="flex flex-col justify-center">
-              <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                <DollarSign size={15} className="text-orange-500" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                  Biaya Uji
-                </span>
-              </div>
-
-              <h1 className="text-4xl font-black leading-tight text-[#071E3D] lg:text-5xl">
-                Pengaturan
-                <br />
-                <span className="text-orange-500">Biaya Uji</span>
-              </h1>
-
-              <p className="mt-5 max-w-2xl text-base font-medium leading-relaxed text-slate-500 lg:text-lg">
-                Atur rincian biaya yang dibebankan kepada asesi berdasarkan
-                jenis biaya dan metode uji untuk skema sertifikasi.
-              </p>
-
-              <p className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-black text-[#071E3D]">
-                Skema:{" "}
-                <span className="text-orange-500">
-                  {skemaDetail?.judul_skema || "Memuat..."}
-                </span>
-              </p>
-
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => navigate("/admin/skema")}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
-                >
-                  <ArrowLeft size={17} />
-                  Kembali
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleAdd}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
-                >
-                  <Plus size={17} />
-                  Tambah Biaya
-                </button>
-              </div>
-            </div>
-
-            <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
-              <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
-
-              <div className="relative z-10">
-                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                  <Sparkles size={28} />
-                </div>
-
-                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
-                  Ringkasan Biaya
-                </p>
-
-                <h2 className="mb-4 text-2xl font-black">
-                  {biayaList.length} Data Biaya
-                </h2>
-
-                <p className="text-sm font-medium leading-relaxed text-white/60">
-                  Total nominal dihitung dari seluruh biaya yang terdaftar pada
-                  skema ini.
-                </p>
-
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  <HeroPill label="Jumlah" value={`${biayaList.length}`} />
-                  <HeroPill label="Luring" value={`${totalLuring}`} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* STATS */}
-        <section className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          <MiniStat
-            icon={<ClipboardList size={22} />}
-            label="Total Biaya"
-            value={`${biayaList.length} Data`}
-          />
-          <MiniStat
-            icon={<Wallet size={22} />}
-            label="Total Nominal"
-            value={formatRupiah(totalNominal)}
-            tone="green"
-          />
-          <MiniStat
-            icon={<BadgeCheck size={22} />}
-            label="Metode Luring"
-            value={`${totalLuring} Data`}
-            tone="navy"
-          />
-        </section>
-
-        {/* CONTENT */}
-        <section className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-center lg:justify-between">
+    <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
+      <div className="flex flex-col gap-6">
+        
+        {/* HEADER SECTION */}
+        <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
+          <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
+          <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <div>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                <FileText size={15} className="text-orange-500" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                  Daftar Biaya
-                </span>
+              <div className="mb-3 inline-flex items-center gap-1.5 rounded-lg bg-[#CC6B27]/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[#CC6B27]">
+                <FileText size={14} /> Skema: {skemaDetail?.judul_skema || "Memuat..."}
               </div>
-
-              <h2 className="text-2xl font-black text-[#071E3D]">
-                Rincian Biaya Skema
-              </h2>
-
-              <p className="mt-2 text-sm font-medium text-slate-400">
-                Atur rincian biaya yang dibebankan kepada asesi berdasarkan
-                metodenya.
+              <h2 className="m-0 mb-1 text-[24px] md:text-[28px] font-black text-[#071E3D]">Pengaturan Biaya Uji</h2>
+              <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">
+                Atur rincian biaya yang dibebankan kepada asesi berdasarkan jenis biaya dan metode uji.
               </p>
             </div>
+            
+            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+              <button
+                type="button"
+                onClick={handleAdd}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-5 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] md:flex-none"
+              >
+                <Plus size={16} /> Tambah Biaya
+              </button>
+            </div>
+          </div>
+        </div>
 
-            <button
-              type="button"
-              onClick={handleAdd}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
-            >
-              <Plus size={16} />
-              Tambah Biaya
-            </button>
+        {/* STAT CARDS */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <StatCard icon={<ClipboardList size={22} />} label="Total Data Biaya" value={`${biayaList.length} Item`} tone="navy" />
+          <StatCard icon={<Wallet size={22} />} label="Total Nominal" value={formatRupiah(totalNominal)} tone="green" />
+          <StatCard icon={<BadgeCheck size={22} />} label="Metode Luring" value={`${totalLuring} Item`} tone="orange" />
+        </div>
+
+        {/* CONTENT CARD */}
+        <div className="rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
+          
+          {/* Header Table */}
+          <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+            <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
+              <DollarSign size={18} className="text-[#CC6B27]" />
+              Daftar Rincian Biaya Skema
+            </h4>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[950px] border-collapse text-left">
+          {/* Table */}
+          <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
+            <table className="w-full min-w-[900px] border-collapse bg-white text-left">
               <thead>
-                <tr className="bg-[#071E3D]">
-                  <TableHead center>No</TableHead>
-                  <TableHead>Metode Uji</TableHead>
-                  <TableHead>Nominal</TableHead>
-                  <TableHead>Keterangan</TableHead>
-                  <TableHead center>Aksi</TableHead>
+                <tr>
+                  <th className="w-12 border-b-4 border-[#CC6B27] bg-[#071E3D] px-4 py-3.5 text-center text-[12px] font-semibold uppercase tracking-wider text-[#FAFAFA]">No</th>
+                  <th className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-4 py-3.5 text-[12px] font-semibold uppercase tracking-wider text-[#FAFAFA]">Metode Uji</th>
+                  <th className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-4 py-3.5 text-[12px] font-semibold uppercase tracking-wider text-[#FAFAFA]">Nominal</th>
+                  <th className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-4 py-3.5 text-[12px] font-semibold uppercase tracking-wider text-[#FAFAFA]">Keterangan</th>
+                  <th className="w-28 border-b-4 border-[#CC6B27] bg-[#071E3D] px-4 py-3.5 text-center text-[12px] font-semibold uppercase tracking-wider text-[#FAFAFA]">Aksi</th>
                 </tr>
               </thead>
-
               <tbody>
                 {biayaList.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="p-16 text-center">
-                      <FileText
-                        size={48}
-                        className="mx-auto mb-4 text-slate-300"
-                      />
-                      <p className="font-black text-[#071E3D]">
-                        Belum ada data biaya untuk skema ini.
-                      </p>
+                    <td colSpan="5" className="py-16 text-center">
+                      <FileText size={48} className="mx-auto mb-3 text-[#071E3D]/20" />
+                      <p className="text-[14px] font-medium text-[#182D4A]">Belum ada data biaya untuk skema ini.</p>
                     </td>
                   </tr>
                 ) : (
                   biayaList.map((item, index) => (
-                    <tr
-                      key={item.id_biaya}
-                      className="border-b border-slate-100 transition-all last:border-0 hover:bg-orange-50/30"
-                    >
-                      <td className="px-5 py-4 text-center text-sm font-bold text-slate-500">
+                    <tr key={item.id_biaya} className="border-b border-[#071E3D]/5 transition-colors hover:bg-[#CC6B27]/5">
+                      <td className="px-4 py-3 text-center text-[13.5px] font-semibold text-[#071E3D]">
                         {index + 1}
                       </td>
-
-                      <td className="px-5 py-4 text-sm font-semibold text-slate-600">
-                        <span
-                          className={`inline-flex rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
                             item.metode_uji === "daring"
-                              ? "bg-blue-50 text-blue-600"
+                              ? "bg-blue-50 text-blue-600 border-blue-200"
                               : item.metode_uji === "hybrid"
-                              ? "bg-purple-50 text-purple-600"
-                              : "bg-green-50 text-green-600"
+                              ? "bg-purple-50 text-purple-600 border-purple-200"
+                              : "bg-green-50 text-green-600 border-green-200"
                           }`}
                         >
                           {formatEnum(item.metode_uji)}
                         </span>
                       </td>
-
-                      <td className="px-5 py-4 text-sm font-black text-orange-500">
+                      <td className="px-4 py-3 font-mono text-[13.5px] font-bold text-[#CC6B27]">
                         {formatRupiah(item.nominal)}
                       </td>
-
-                      <td className="px-5 py-4 text-sm font-semibold text-slate-500">
+                      <td className="px-4 py-3 text-[13px] font-medium text-[#182D4A]/80">
                         {item.keterangan || "-"}
                       </td>
-
-                      <td className="px-5 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex justify-center gap-2">
                           <button
                             type="button"
                             onClick={() => handleEdit(item)}
-                            className="rounded-xl bg-blue-50 p-2 text-blue-600 transition-all hover:bg-blue-600 hover:text-white"
-                            title="Edit"
+                            className="rounded-lg bg-[#CC6B27]/10 p-1.5 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white"
+                            title="Edit Data"
                           >
                             <Edit2 size={16} />
                           </button>
-
                           <button
                             type="button"
                             onClick={() => handleDelete(item.id_biaya)}
-                            className="rounded-xl bg-red-50 p-2 text-red-500 transition-all hover:bg-red-500 hover:text-white"
-                            title="Hapus"
+                            className="rounded-lg bg-red-50 p-1.5 text-red-600 border border-red-100 transition-colors hover:bg-red-600 hover:text-white"
+                            title="Hapus Data"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -436,101 +319,105 @@ const BiayaUji = () => {
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
       </div>
 
-      {/* MODAL */}
+      {/* MODAL FORM */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md overflow-hidden rounded-[34px] border border-slate-100 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 p-6">
-              <div>
-                <h3 className="text-xl font-black text-[#071E3D]">
-                  {isEdit ? "Edit Biaya Uji" : "Tambah Biaya Uji"}
-                </h3>
-                <p className="mt-1 text-sm font-medium text-slate-400">
-                  Lengkapi jenis biaya, metode uji, nominal, dan keterangan.
-                </p>
+          <div className="flex w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#071E3D]/10 bg-[#FAFAFA] px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-[#CC6B27]/10 p-2 text-[#CC6B27]">
+                  <DollarSign size={20} />
+                </div>
+                <div>
+                  <h3 className="m-0 text-[16px] font-bold text-[#071E3D]">
+                    {isEdit ? "Edit Biaya Uji" : "Tambah Biaya Uji"}
+                  </h3>
+                </div>
               </div>
-
               <button
                 type="button"
+                className="rounded-lg p-1.5 text-[#182D4A] transition-colors hover:bg-red-50 hover:text-red-600"
                 onClick={() => setShowModal(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5 p-6">
-              <div>
-                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Metode Uji <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="metode_uji"
-                  value={formData.metode_uji}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-                >
-                  <option value="luring">Luring </option>
-                  <option value="daring">Daring </option>
-                </select>
+            {/* Modal Body (Form) */}
+            <form onSubmit={handleSubmit} className="flex flex-col">
+              <div className="space-y-4 bg-white p-6">
+                <div>
+                  <label className="mb-1 block text-[12px] font-bold text-[#071E3D]">
+                    Metode Uji <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="metode_uji"
+                    value={formData.metode_uji}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-4 py-2.5 text-[13px] font-medium text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
+                  >
+                    <option value="luring">Luring</option>
+                    <option value="daring">Daring</option>
+                    <option value="hybrid">Hybrid</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[12px] font-bold text-[#071E3D]">
+                    Nominal Biaya (Rp) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="nominal"
+                    value={formData.nominal}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Contoh: 1.500.000"
+                    className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-4 py-2.5 text-[13px] font-bold text-[#071E3D] outline-none placeholder:text-[#182D4A]/40 transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[12px] font-bold text-[#071E3D]">
+                    Keterangan
+                  </label>
+                  <textarea
+                    name="keterangan"
+                    value={formData.keterangan}
+                    onChange={handleInputChange}
+                    rows="3"
+                    placeholder="Tambahkan catatan jika ada (opsional)..."
+                    className="w-full resize-none rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-4 py-2.5 text-[13px] font-medium text-[#071E3D] outline-none placeholder:text-[#182D4A]/40 transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Nominal Biaya (Rp) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="nominal"
-                  value={formData.nominal}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Contoh: 1.500.000"
-                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Keterangan
-                </label>
-                <textarea
-                  name="keterangan"
-                  value={formData.keterangan}
-                  onChange={handleInputChange}
-                  rows="3"
-                  placeholder="Tambahkan catatan jika perlu..."
-                  className="w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-semibold text-[#071E3D] outline-none placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-3 border-t border-[#071E3D]/10 bg-[#FAFAFA] px-6 py-4">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="rounded-2xl border border-slate-100 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+                  className="rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-5 py-2.5 text-[13px] font-bold text-[#182D4A] transition-colors hover:bg-[#E2E8F0]"
                 >
                   Batal
                 </button>
-
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="flex items-center gap-2 rounded-lg bg-[#CC6B27] px-5 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {submitting ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Save size={16} />
-                  )}
-                  Simpan
+                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  Simpan Data
                 </button>
               </div>
             </form>
+
           </div>
         </div>
       )}
@@ -538,54 +425,28 @@ const BiayaUji = () => {
   );
 };
 
-function HeroPill({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-black text-white">{value}</p>
-    </div>
-  );
-}
+// --- SUB COMPONENTS ---
 
-function MiniStat({ icon, label, value, tone = "orange" }) {
+const StatCard = ({ icon, label, value, tone = "orange" }) => {
   const tones = {
-    orange: "bg-orange-50 text-orange-500",
+    orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
     green: "bg-green-50 text-green-600",
-    navy: "bg-slate-50 text-[#071E3D]",
+    red: "bg-red-50 text-red-500",
+    blue: "bg-blue-50 text-blue-600",
+    navy: "bg-[#071E3D]/10 text-[#071E3D]"
   };
 
   return (
-    <div className="flex items-center gap-4 rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm">
-      <div
-        className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl ${
-          tones[tone] || tones.orange
-        }`}
-      >
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone]}`}>
         {icon}
       </div>
-
       <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-          {label}
-        </p>
-        <p className="mt-1 text-lg font-black text-[#071E3D]">{value}</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#182D4A]/60">{label}</p>
+        <p className="mt-1 text-[20px] font-black text-[#071E3D]">{value}</p>
       </div>
     </div>
   );
-}
-
-function TableHead({ children, center }) {
-  return (
-    <th
-      className={`border-b-4 border-orange-500 px-5 py-4 text-[11px] font-black uppercase tracking-widest text-white ${
-        center ? "text-center" : "text-left"
-      }`}
-    >
-      {children}
-    </th>
-  );
-}
+};
 
 export default BiayaUji;

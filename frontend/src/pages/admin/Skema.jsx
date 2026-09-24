@@ -1,3 +1,4 @@
+// frontend/src/pages/admin/Skema.jsx
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +17,6 @@ import {
   Eye,
   ArrowRight,
   Filter,
-  Sparkles,
   Layers,
   BadgeCheck,
   FileSearch,
@@ -148,6 +148,11 @@ const Skema = () => {
     setSelectedSkema(item);
     setShowFullPreview(false);
     setShowDetailModal(true);
+  };
+
+  const closeDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedSkema(null);
   };
 
   const handleEdit = (item) => {
@@ -297,7 +302,7 @@ const Skema = () => {
               Manajemen Skema LSP
             </h2>
             <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">
-              Atur kode, judul, status, persyaratan, biaya, dokumen, dan instrumen asesmen setiap skema.
+              Atur kode, judul, status, persyaratan, biaya, dan dokumen setiap skema.
             </p>
           </div>
           
@@ -331,7 +336,7 @@ const Skema = () => {
         <StatCard icon={<Layers size={22} />} label="Nonaktif" value={`${totalNonaktif} Nonaktif`} tone="red" />
       </div>
 
-      {/* CARD TABEL - Disesuaikan dengan Skkni */}
+      {/* CARD TABEL */}
       <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-4">
         
         {/* Header Tabel */}
@@ -735,12 +740,13 @@ const Skema = () => {
                   <BookOpen size={21} className="text-[#CC6B27]" />
                   Detail Skema Kompetensi
                 </h3>
-                <p className="mt-1 text-sm font-medium text-slate-400">Informasi lengkap skema, dokumen, serta pintasan instrumen asesmen.</p>
+                <p className="mt-1 text-sm font-medium text-slate-400">Informasi lengkap terkait rincian atribut skema dan dokumen pendukung.</p>
               </div>
               <button type="button" onClick={closeDetailModal} className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500">
                 <X size={20} />
               </button>
             </div>
+            
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
               <div className="space-y-6">
                 
@@ -773,14 +779,7 @@ const Skema = () => {
                   </div>
                 </InfoPanel>
 
-                <InfoPanel title="Navigasi Instrumen & Asesmen">
-                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                    <NavigationCard title="FR.IA.01" subtitle="Observasi" onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/ia01`)} tone="blue" />
-                    <NavigationCard title="FR.IA.03" subtitle="Pertanyaan" onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/ia03`)} tone="indigo" />
-                    <NavigationCard title="FR.MAPA" subtitle="Manajemen" onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/mapa`)} tone="orange" />
-                    <NavigationCard title="Kelompok" subtitle="Pekerjaan" onClick={() => navigate(`/admin/skema/${selectedSkema.id_skema}/kelompok-pekerjaan`)} tone="navy" />
-                  </div>
-                </InfoPanel>
+                {/* BAGIAN INSTRUMEN DIHAPUS DARI SINI */}
 
                 {selectedSkema.dokumen && (
                   <InfoPanel title="Preview Dokumen Skema">
@@ -816,6 +815,7 @@ const Skema = () => {
                 )}
               </div>
             </div>
+            
             <div className="flex justify-end border-t border-[#071E3D]/10 bg-[#FAFAFA] p-6">
               <button type="button" onClick={closeDetailModal} className="rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-6 py-2.5 text-[13px] font-bold text-[#182D4A] transition-colors hover:bg-[#E2E8F0]">
                 Tutup Detail
@@ -907,22 +907,6 @@ function DetailItem({ label, children, wide }) {
       <p className="mb-1.5 text-[11px] font-bold text-[#071E3D]">{label}</p>
       <div className="text-[13.5px] font-medium text-[#182D4A]/80">{children}</div>
     </div>
-  );
-}
-
-function NavigationCard({ title, subtitle, onClick, tone = "navy" }) {
-  const tones = {
-    blue: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600",
-    indigo: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white hover:border-indigo-600",
-    orange: "bg-[#CC6B27]/10 border-[#CC6B27]/20 text-[#CC6B27] hover:bg-[#CC6B27] hover:text-white hover:border-[#CC6B27]",
-    navy: "bg-slate-50 border-[#071E3D]/10 text-[#071E3D] hover:bg-[#071E3D] hover:text-white hover:border-[#071E3D]"
-  };
-  return (
-    <button type="button" onClick={onClick} className={`group flex flex-col items-center justify-center rounded-xl border p-4 text-center shadow-sm transition-all ${tones[tone]}`}>
-      <span className="mb-1 text-[13px] font-black">{title}</span>
-      <span className="mb-3 text-[11px] font-bold opacity-75">{subtitle}</span>
-      <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-    </button>
   );
 }
 

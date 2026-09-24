@@ -39,7 +39,6 @@ const AdminDashboard = () => {
           setChartData(dashboard.chartData || []);
           setPassRate(dashboard.passRate || { kompeten: 0, belum: 0 });
 
-          // Mapping Pendaftaran
           const formattedRegs = (dashboard.recentRegistrations || []).map((reg) => ({
             name: reg.nama_lengkap || "Nama Tidak Diketahui",
             schema: reg.kompetensi_keahlian || "Skema Tidak Diketahui",
@@ -52,16 +51,12 @@ const AdminDashboard = () => {
           }));
           setRecentRegistrations(formattedRegs);
 
-          // Mapping & Filter Jadwal Paling Mendekati Hari Ini
           const rawSchedules = dashboard.schedules || [];
           const now = new Date();
           now.setHours(0, 0, 0, 0);
 
-          // Pisahkan jadwal yang akan datang/hari ini dan jadwal lampau
           const upcoming = rawSchedules.filter((j) => new Date(j.tgl_awal || 0) >= now);
           
-          // Jika ada jadwal mendatang, urutkan dari yang terdekat (ASC)
-          // Jika tidak ada jadwal mendatang, ambil jadwal terbaru dari yang lampau (DESC)
           const sortedSchedules = (upcoming.length > 0 ? upcoming : rawSchedules).sort((a, b) => {
             const dateA = new Date(a.tgl_awal || 0).getTime();
             const dateB = new Date(b.tgl_awal || 0).getTime();
@@ -89,7 +84,6 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Hitung jumlah riil asesi kompeten & belum kompeten
   const totalAsesi = statsData.asesi || 0;
   const persenKompeten = Number(passRate.kompeten || 0);
   const persenBelum = Number(passRate.belum || (100 - persenKompeten));
@@ -111,7 +105,6 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
       <div className="flex flex-col gap-6">
 
-        {/* HEADER SECTION */}
         <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
           <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
           <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
@@ -136,7 +129,6 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* STAT CARD KOTAK-KOTAK ANGKA (Icon Lucide-React Line) */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
             icon={<Layers size={22} />}
@@ -168,10 +160,8 @@ const AdminDashboard = () => {
           />
         </div>
 
-        {/* SECTION: PENDAFTAR PER SKEMA & TABEL KELULUSAN */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           
-          {/* Pendaftar per Skema */}
           <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
             <div className="flex items-center gap-2 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4">
               <BarChart3 size={18} className="text-[#CC6B27]" />
@@ -210,7 +200,6 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Tabel Kelulusan Asesi */}
           <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
             <div className="flex items-center gap-2 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4">
               <PieChart size={18} className="text-[#CC6B27]" />
@@ -278,17 +267,14 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* SECTION: PENDAFTARAN TERBARU & JADWAL TERDEKAT */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           
-          {/* Tabel Pendaftaran Terbaru (2 Kolom) */}
           <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm lg:col-span-2">
             <div className="flex flex-col gap-3 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-3.5 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="flex items-center gap-2 text-[14px] font-bold uppercase tracking-wider text-[#FAFAFA]">
                 <ClipboardList size={18} className="text-[#CC6B27]" />
                 Pendaftaran Masuk Terbaru
               </h2>
-              {/* Tombol aksi jelas dan tegas */}
               <button
                 type="button"
                 onClick={() => navigate("/admin/verifikasi-pendaftaran")}
@@ -332,7 +318,6 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Agenda Jadwal Terdekat (1 Kolom) */}
           <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4">
@@ -349,7 +334,6 @@ const AdminDashboard = () => {
                   </p>
                 ) : (
                   scheduleData.slice(0, 4).map((item, index) => (
-                    /* Item jadwal murni tampilan informatif (non-clickable) */
                     <div
                       key={index}
                       className="flex select-none items-center gap-3.5 rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] p-3"
@@ -382,7 +366,6 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* SCROLLBAR CUSTOM */}
         <style dangerouslySetInnerHTML={{ __html: `
           .custom-scrollbar::-webkit-scrollbar { width: 6px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -395,7 +378,6 @@ const AdminDashboard = () => {
   );
 };
 
-/* --- STAT CARD KOTAK --- */
 const StatCard = ({ icon, label, value, tone = "orange", onClick }) => {
   const tones = {
     orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
@@ -420,7 +402,6 @@ const StatCard = ({ icon, label, value, tone = "orange", onClick }) => {
   );
 };
 
-/* --- STATUS BADGE --- */
 function StatusBadge({ status }) {
   const s = status?.toLowerCase() || "";
   let badgeStyle = "border-orange-200 bg-orange-50 text-[#CC6B27]";

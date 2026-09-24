@@ -35,10 +35,8 @@ const AdminNavbar = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-[#FAFAFA] px-6 pb-2 pt-6 md:px-8">
-      {/* KOTAK NAVBAR - max-w-7xl dihapus dan diganti w-full agar sejajar dengan dashboard */}
       <div className="flex w-full items-center justify-between gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm md:p-6">
         
-        {/* BAGIAN KIRI: Salam & Konteks */}
         <div className="flex min-w-0 flex-col justify-center">
           <h1 className="m-0 truncate text-[20px] font-black leading-tight text-[#071E3D] md:text-[26px]">
             Selamat datang, <span className="text-[#CC6B27]">{userData.name}</span>
@@ -49,14 +47,12 @@ const AdminNavbar = () => {
           </p>
         </div>
 
-        {/* BAGIAN KANAN: Profil Widget */}
         <button
           type="button"
           onClick={() => navigate("/admin/profil-lsp")}
           title="Ke Halaman Profil"
           className="group flex shrink-0 items-center gap-3 rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] p-2 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/5 hover:shadow-sm"
         >
-          {/* Detail Teks (Hidden di Mobile) */}
           <div className="hidden min-w-0 flex-col items-end px-2 sm:flex">
             <span className="block max-w-[150px] truncate text-[13px] font-bold text-[#071E3D]">
               {userData.name}
@@ -66,12 +62,10 @@ const AdminNavbar = () => {
             </span>
           </div>
 
-          {/* Avatar Kotak */}
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#071E3D] text-[15px] font-bold text-white shadow-sm">
             {initial}
           </div>
 
-          {/* Panah (Hidden di Mobile) */}
           <ChevronRight
             size={16}
             className="mr-1 hidden text-[#182D4A]/30 transition-transform group-hover:translate-x-1 group-hover:text-[#CC6B27] md:block"
