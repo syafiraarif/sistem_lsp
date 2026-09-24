@@ -1,5 +1,3 @@
-// frontend/src/pages/asesi/ProfileView.jsx
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { useNavigate } from "react-router-dom";
@@ -9,9 +7,9 @@ import {
   AlertCircle,
   BadgeCheck,
   BriefcaseBusiness,
-  ChevronRight,
+  Camera,
   Eraser,
-  Globe,
+  FileSignature,
   GraduationCap,
   Hash,
   ImagePlus,
@@ -24,13 +22,15 @@ import {
   RefreshCcw,
   Save,
   ShieldCheck,
-  Sparkles,
   Upload,
+  UploadCloud,
   User,
   XCircle,
 } from "lucide-react";
+import { notifikasi } from "../../components/ui/notifikasi";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -68,12 +68,9 @@ export default function ProfileView() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [savingTTD, setSavingTTD] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [refreshKey, setRefreshKey] = useState(Date.now());
 
-  const imageBase = API_BASE.replace("/api", "");
+  const imageBase = API_BASE.replace(/\/api\/?$/, "");
 
   useEffect(() => {
     loadProfile();
@@ -83,27 +80,42 @@ export default function ProfileView() {
         URL.revokeObjectURL(photoPreview);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getImageSrc = (path) => {
-    if (!path) return "";
-    if (String(path).startsWith("http")) return path;
+    if (!path) {
+      return "";
+    }
+
+    if (String(path).startsWith("http")) {
+      return path;
+    }
 
     const clean = String(path).replace(/^\/+/, "");
+
     return `${imageBase}/${clean}`;
   };
 
   const resolveFileUrl = (path) => {
-    if (!path) return "";
-    if (String(path).startsWith("http")) return path;
+    if (!path) {
+      return "";
+    }
+
+    if (String(path).startsWith("http")) {
+      return path;
+    }
+
     return getImageSrc(path);
   };
 
-  const loadProfile = async () => {
+  const loadProfile = async ({
+    showLoading = true,
+    showSuccess = false,
+  } = {}) => {
     try {
-      setError("");
-      setSuccess("");
+      if (showLoading) {
+        setLoading(true);
+      }
 
       const token = localStorage.getItem("token");
 
@@ -121,7 +133,8 @@ export default function ProfileView() {
         throw profileRes.reason;
       }
 
-      const profileData = profileRes.value?.data?.data || null;
+      const profileData =
+        profileRes.value?.data?.data || null;
 
       if (!profileData) {
         throw new Error("Profil asesi tidak ditemukan.");
@@ -136,23 +149,41 @@ export default function ProfileView() {
       }
 
       setWilayah({
-        provinsi: profileData.provinsi || profileData.provinsi_nama || "-",
-        kota: profileData.kota || profileData.kota_nama || "-",
+        provinsi:
+          profileData.provinsi ||
+          profileData.provinsi_nama ||
+          "-",
+        kota:
+          profileData.kota ||
+          profileData.kota_nama ||
+          "-",
         kecamatan:
-          profileData.kecamatan || profileData.kecamatan_nama || "-",
+          profileData.kecamatan ||
+          profileData.kecamatan_nama ||
+          "-",
         kelurahan:
-          profileData.kelurahan || profileData.kelurahan_nama || "-",
+          profileData.kelurahan ||
+          profileData.kelurahan_nama ||
+          "-",
       });
 
       setRefreshKey(Date.now());
+
+      if (showSuccess) {
+        await notifikasi.sukses(
+          "Berhasil",
+          "Data profile asesi berhasil diperbarui."
+        );
+      }
     } catch (err) {
       console.error("Gagal ambil profile:", err);
 
-      setError(
+      await notifikasi.gagal(
+        "Gagal Memuat Profile",
         err.response?.data?.message ||
           err.response?.data?.error ||
           err.message ||
-          "Gagal memuat profile."
+          "Gagal memuat profile asesi."
       );
 
       setProfile(null);
@@ -165,16 +196,29 @@ export default function ProfileView() {
   const handleRefresh = async () => {
     setRefreshing(true);
     setSelectedPhoto(null);
+
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview);
+    }
+
     setPhotoPreview("");
-    await loadProfile();
+
+    await loadProfile({
+      showLoading: false,
+      showSuccess: true,
+    });
   };
 
   const formatTanggal = (date) => {
-    if (!date) return "-";
+    if (!date) {
+      return "-";
+    }
 
     const parsed = new Date(date);
 
-    if (Number.isNaN(parsed.getTime())) return "-";
+    if (Number.isNaN(parsed.getTime())) {
+      return "-";
+    }
 
     return parsed.toLocaleDateString("id-ID", {
       day: "2-digit",
@@ -200,23 +244,33 @@ export default function ProfileView() {
     );
   }, [files, profile]);
 
-  const handlePhotoSelect = (e) => {
-    const file = e.target.files?.[0];
+  const handlePhotoSelect = (event) => {
+    const file = event.target.files?.[0];
 
-    setError("");
-    setSuccess("");
+    if (!file) {
+      return;
+    }
 
-    if (!file) return;
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+      "image/webp",
+    ];
 
     if (!allowedTypes.includes(file.type)) {
-      setError("Foto profile harus berupa JPG, PNG, JPEG, atau WEBP.");
+      notifikasi.peringatan(
+        "Format Foto Tidak Sesuai",
+        "Foto profile harus berupa JPG, PNG, JPEG, atau WEBP."
+      );
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      setError("Ukuran foto profile maksimal 2 MB.");
+      notifikasi.peringatan(
+        "Ukuran Foto Terlalu Besar",
+        "Ukuran foto profile maksimal 2 MB."
+      );
       return;
     }
 
@@ -244,31 +298,45 @@ export default function ProfileView() {
 
   const uploadFotoProfile = async () => {
     if (!selectedPhoto) {
-      setError("Pilih foto terlebih dahulu.");
+      await notifikasi.peringatan(
+        "Foto Belum Dipilih",
+        "Silakan pilih foto profile terlebih dahulu."
+      );
       return;
     }
 
     try {
       setUploadingPhoto(true);
-      setError("");
-      setSuccess("");
 
       const formData = new FormData();
       formData.append("foto_profil", selectedPhoto);
 
-      await api.put("/asesi/profile/upload-dokumen", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      await api.put(
+        "/asesi/profile/upload-dokumen",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      clearSelectedPhoto();
+
+      await loadProfile({
+        showLoading: false,
+        showSuccess: false,
       });
 
-      setSuccess("Foto profile berhasil diperbarui.");
-      clearSelectedPhoto();
-      await loadProfile();
+      await notifikasi.sukses(
+        "Berhasil",
+        "Foto profile berhasil diperbarui."
+      );
     } catch (err) {
       console.error("Upload foto error:", err);
 
-      setError(
+      await notifikasi.gagal(
+        "Gagal Mengupload Foto",
         err.response?.data?.message ||
           err.response?.data?.error ||
           "Gagal mengupload foto profile."
@@ -280,28 +348,42 @@ export default function ProfileView() {
 
   const saveTTD = async () => {
     if (!sigRef.current || sigRef.current.isEmpty()) {
-      setError("Tanda tangan masih kosong.");
+      await notifikasi.peringatan(
+        "Tanda Tangan Kosong",
+        "Silakan buat tanda tangan terlebih dahulu."
+      );
       return;
     }
 
     try {
       setSavingTTD(true);
-      setError("");
-      setSuccess("");
 
-      const ttdBase64 = sigRef.current.getCanvas().toDataURL("image/png");
+      const ttdBase64 =
+        sigRef.current.getCanvas().toDataURL("image/png");
 
-      await api.put("/asesi/profile/upload-ttd", {
-        ttd_base64: ttdBase64,
+      await api.put(
+        "/asesi/profile/upload-ttd",
+        {
+          ttd_base64: ttdBase64,
+        }
+      );
+
+      sigRef.current.clear();
+
+      await loadProfile({
+        showLoading: false,
+        showSuccess: false,
       });
 
-      setSuccess("Tanda tangan berhasil disimpan.");
-      sigRef.current.clear();
-      await loadProfile();
+      await notifikasi.sukses(
+        "Berhasil",
+        "Tanda tangan berhasil disimpan."
+      );
     } catch (err) {
       console.error("Simpan TTD error:", err);
 
-      setError(
+      await notifikasi.gagal(
+        "Gagal Menyimpan TTD",
         err.response?.data?.message ||
           err.response?.data?.error ||
           "Gagal menyimpan tanda tangan."
@@ -323,210 +405,422 @@ export default function ProfileView() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex">
-        <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <div className="flex min-h-screen bg-[#FAFAFA]">
+        <SidebarAsesi
+          isOpen={sidebarOpen}
+          setIsOpen={setSidebarOpen}
+        />
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 flex items-center justify-center">
-          <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 text-center max-w-md">
-            <div className="w-20 h-20 rounded-[28px] bg-orange-50 text-orange-500 flex items-center justify-center mx-auto mb-5">
-              <AlertCircle size={38} />
+        <main className="flex flex-1 items-center justify-center p-4 md:p-6 lg:p-8">
+          <div className="w-full max-w-md rounded-xl border border-[#071E3D]/10 bg-white p-10 text-center shadow-sm">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+              <AlertCircle size={30} />
             </div>
 
-            <h2 className="text-2xl font-black text-[#071E3D] mb-2">
+            <h2 className="text-[22px] font-black text-[#071E3D]">
               Profile Tidak Ditemukan
             </h2>
 
-            <p className="text-slate-500 font-medium mb-6">
-              {error || "Data profile belum tersedia atau gagal dimuat."}
+            <p className="mt-2 text-[13px] font-medium leading-6 text-[#182D4A]/65">
+              Data profile belum tersedia atau gagal dimuat.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="px-6 py-4 rounded-2xl bg-[#071E3D] hover:bg-orange-500 text-white font-black text-xs uppercase tracking-widest transition-all inline-flex items-center justify-center gap-2"
-              >
-                {refreshing ? (
-                  <Loader2 size={17} className="animate-spin" />
-                ) : (
-                  <RefreshCcw size={17} />
-                )}
-                Coba Lagi
-              </button>
-
-              <button
-                onClick={() => navigate("/asesi/profile/edit")}
-                className="px-6 py-4 rounded-2xl bg-orange-500 hover:bg-[#071E3D] text-white font-black text-xs uppercase tracking-widest transition-all inline-flex items-center justify-center gap-2"
-              >
-                Lengkapi Profile
-                <ChevronRight size={17} />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-[#071E3D] px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-white transition-all hover:bg-[#CC6B27] disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {refreshing ? (
+                <Loader2
+                  size={15}
+                  className="animate-spin"
+                />
+              ) : (
+                <RefreshCcw size={15} />
+              )}
+              Coba Lagi
+            </button>
           </div>
         </main>
       </div>
     );
   }
 
+  const displayName =
+    profile.nama_lengkap ||
+    profile.nama ||
+    profile.username ||
+    "Asesi";
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
-      <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+    <div className="flex min-h-screen bg-[#FAFAFA]">
+      <SidebarAsesi
+        isOpen={sidebarOpen}
+        setIsOpen={setSidebarOpen}
+      />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
-        <div className="w-full max-w-[1500px] mx-auto space-y-6">
-          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
-            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
-            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
+      <main className="flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-[1500px] space-y-5">
+          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="border-b border-[#071E3D]/10 px-5 py-5 md:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h1 className="text-[24px] font-black text-[#071E3D] md:text-[28px]">
+                    Data Profile {displayName}
+                  </h1>
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
-              <div className="flex flex-col justify-center">
-                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <ShieldCheck size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Profile Asesi
-                  </span>
+                  <p className="mt-1 text-[13px] font-medium text-[#182D4A]/70">
+                    Lihat data identitas, pendidikan, alamat,
+                    pekerjaan, foto profil, dan tanda tangan digital.
+                  </p>
                 </div>
 
-                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
-                  Profile
-                  <br />
-                  <span className="text-orange-500">Asesi</span>
-                </h1>
-
-                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Lihat data diri, pendidikan, alamat, pekerjaan, foto profile,
-                  dan tanda tangan digital dalam satu halaman.
-                </p>
-
-                <div className="mt-7 flex flex-col sm:flex-row gap-3">
+                <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => navigate("/asesi/profile/edit")}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+                    onClick={() =>
+                      navigate("/asesi/profile/edit")
+                    }
+                    className="rounded-lg border border-[#CC6B27]/40 bg-white px-4 py-2.5 text-[12px] font-bold text-[#CC6B27] shadow-sm transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27] hover:text-white"
                   >
-                    <Pencil size={17} />
-                    Edit Profile
+                    <span className="flex items-center gap-2">
+                      <Pencil size={15} />
+                      Edit
+                    </span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleRefresh}
                     disabled={refreshing}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-orange-500 hover:text-white disabled:opacity-60"
+                    className="rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[12px] font-bold text-[#071E3D] shadow-sm transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
                   >
-                    {refreshing ? (
-                      <Loader2 size={17} className="animate-spin" />
-                    ) : (
-                      <RefreshCcw size={17} />
-                    )}
-                    Refresh
+                    <span className="flex items-center justify-center gap-2">
+                      {refreshing ? (
+                        <Loader2
+                          size={15}
+                          className="animate-spin"
+                        />
+                      ) : (
+                        <RefreshCcw size={15} />
+                      )}
+                      Refresh
+                    </span>
                   </button>
                 </div>
               </div>
+            </div>
 
-              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
-                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+            <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-3 md:p-6">
+              <ProfileStat
+                icon={<User size={21} />}
+                label="Nama Asesi"
+                value={displayName}
+              />
 
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                    <Sparkles size={28} />
-                  </div>
+              <ProfileStat
+                icon={<BadgeCheck size={21} />}
+                label="Status Foto"
+                value={
+                  profilePhoto
+                    ? "Sudah tersedia"
+                    : "Belum tersedia"
+                }
+                tone={profilePhoto ? "green" : "orange"}
+              />
 
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
-                    Ringkasan Profile
-                  </p>
-
-                  <h2 className="text-2xl font-black leading-tight">
-                    {profile.nama_lengkap || "Asesi"}
-                  </h2>
-
-                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    Foto profile: {profilePhoto ? "sudah tersedia" : "belum ada"}.
-                    Tanda tangan digital:{" "}
-                    {ttdUrl ? "sudah tersedia" : "belum dibuat"}.
-                  </p>
-
-                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
-                    <HeroPill label="Foto" value={profilePhoto ? "Ada" : "Belum"} />
-                    <HeroPill label="TTD" value={ttdUrl ? "Ada" : "Belum"} />
-                  </div>
-                </div>
-              </div>
+              <ProfileStat
+                icon={<ShieldCheck size={21} />}
+                label="Tanda Tangan"
+                value={
+                  ttdUrl
+                    ? "Sudah tersedia"
+                    : "Belum dibuat"
+                }
+                tone={ttdUrl ? "green" : "orange"}
+              />
             </div>
           </section>
 
-          {error && <AlertMessage type="error" text={error} />}
-          {success && <AlertMessage type="success" text={success} />}
+          <section className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+              <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5">
+                <h2 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-wider text-white">
+                  <Camera
+                    size={17}
+                    className="text-[#CC6B27]"
+                  />
+                  Foto Profil
+                </h2>
+              </div>
 
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <MiniStat
-              icon={<User size={22} />}
-              label="Nama Lengkap"
-              value={profile.nama_lengkap || "-"}
-            />
+              <div className="border-b border-[#071E3D]/10 bg-white px-5 py-3">
+                <p className="text-[12px] font-medium text-[#182D4A]/60">
+                  Foto identitas yang tersimpan pada profile asesi.
+                </p>
+              </div>
 
-            <MiniStat
-              icon={<Hash size={22} />}
-              label="NIK"
-              value={profile.nik || "-"}
-            />
+              <div className="p-5">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-[190px_1fr] md:items-center">
+                  <div className="relative h-[220px] overflow-hidden rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA]">
+                    {profilePhoto ? (
+                      <img
+                        src={`${profilePhoto}${
+                          profilePhoto.includes("?")
+                            ? "&"
+                            : "?"
+                        }t=${refreshKey}`}
+                        alt="Foto Profil"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center p-5 text-center">
+                        <div>
+                          <User
+                            size={38}
+                            className="mx-auto mb-3 text-[#071E3D]/20"
+                          />
 
-            <MiniStat
-              icon={ttdUrl ? <BadgeCheck size={22} /> : <XCircle size={22} />}
-              label="TTD"
-              value={ttdUrl ? "Sudah Tersedia" : "Belum Dibuat"}
-            />
+                          <p className="text-[13px] font-bold text-[#071E3D]">
+                            Belum Ada Foto
+                          </p>
+
+                          <p className="mt-1 text-[11px] font-medium text-[#182D4A]/60">
+                            Foto profil belum tersedia.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <div className="rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
+                        Status Foto
+                      </p>
+
+                      <p className="mt-1.5 flex items-center gap-2 text-[13px] font-bold text-[#071E3D]">
+                        {profilePhoto ? (
+                          <BadgeCheck
+                            size={15}
+                            className="text-green-600"
+                          />
+                        ) : (
+                          <XCircle
+                            size={15}
+                            className="text-[#CC6B27]"
+                          />
+                        )}
+
+                        {profilePhoto
+                          ? "Foto sudah tersedia"
+                          : "Foto belum tersedia"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4">
+                      <div className="flex items-start gap-3">
+                        <UploadCloud
+                          size={18}
+                          className="mt-0.5 shrink-0 text-[#CC6B27]"
+                        />
+
+                        <div>
+                          <p className="text-[12px] font-bold text-[#071E3D]">
+                            Pengelolaan Foto
+                          </p>
+
+                          <p className="mt-1 text-[11px] font-medium leading-5 text-[#182D4A]/60">
+                            Untuk mengganti foto profil, gunakan halaman
+                            Edit Profile.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate("/asesi/profile/edit")
+                      }
+                      className="rounded-lg bg-[#CC6B27] px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white transition-all hover:bg-[#071E3D]"
+                    >
+                      Ganti Foto
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+              <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5">
+                <h2 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-wider text-white">
+                  <FileSignature
+                    size={17}
+                    className="text-[#CC6B27]"
+                  />
+                  Tanda Tangan Digital
+                </h2>
+              </div>
+
+              <div className="border-b border-[#071E3D]/10 bg-white px-5 py-3">
+                <p className="text-[12px] font-medium text-[#182D4A]/60">
+                  Tanda tangan yang digunakan pada dokumen asesi.
+                </p>
+              </div>
+
+              <div className="p-5">
+                {ttdUrl ? (
+                  <div className="rounded-lg border border-green-100 bg-green-50 p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <BadgeCheck
+                        size={16}
+                        className="text-green-600"
+                      />
+
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-green-600">
+                        TTD Tersimpan
+                      </p>
+                    </div>
+
+                    <div className="flex min-h-[185px] items-center justify-center rounded-lg border border-green-100 bg-white p-5">
+                      <img
+                        src={`${ttdUrl}${
+                          ttdUrl.includes("?")
+                            ? "&"
+                            : "?"
+                        }t=${refreshKey}`}
+                        alt="Tanda Tangan"
+                        className="max-h-[145px] max-w-full object-contain"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex min-h-[185px] items-center justify-center rounded-lg border border-dashed border-[#CC6B27]/30 bg-[#CC6B27]/5 p-5 text-center">
+                    <div>
+                      <PenLine
+                        size={30}
+                        className="mx-auto mb-3 text-[#CC6B27]"
+                      />
+
+                      <p className="text-[13px] font-bold text-[#071E3D]">
+                        Tanda Tangan Belum Tersedia
+                      </p>
+
+                      <p className="mt-1 text-[11px] font-medium text-[#182D4A]/60">
+                        Buat tanda tangan melalui halaman Edit Profile.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate("/asesi/profile/edit")
+                  }
+                  className="mt-4 w-full rounded-lg bg-[#071E3D] px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white transition-all hover:bg-[#CC6B27]"
+                >
+                  {ttdUrl
+                    ? "Ganti Tanda Tangan"
+                    : "Buat Tanda Tangan"}
+                </button>
+              </div>
+            </section>
           </section>
 
-          <DataDiriCard
-            profile={profile}
-            profilePhoto={profilePhoto}
-            ttdUrl={ttdUrl}
-            refreshKey={refreshKey}
-            formatTanggal={formatTanggal}
-            fileInputRef={fileInputRef}
-            selectedPhoto={selectedPhoto}
-            handlePhotoSelect={handlePhotoSelect}
-            clearSelectedPhoto={clearSelectedPhoto}
-            uploadFotoProfile={uploadFotoProfile}
-            uploadingPhoto={uploadingPhoto}
-            sigRef={sigRef}
-            saveTTD={saveTTD}
-            clearTTD={clearTTD}
-            savingTTD={savingTTD}
-          />
+          <ProfileSection
+            title="Informasi Identitas"
+            subtitle="Data identitas pribadi yang tersimpan pada profile."
+            icon={<User size={17} />}
+          >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <InfoBox label="Nama Lengkap">
+                {profile.nama_lengkap || "-"}
+              </InfoBox>
 
-          <Card title="Pendidikan" icon={<GraduationCap size={22} />}>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <InfoBox label="NIK">
+                {profile.nik || "-"}
+              </InfoBox>
+
+              <InfoBox label="Jenis Kelamin">
+                {formatJenisKelamin(profile.jenis_kelamin)}
+              </InfoBox>
+
+              <InfoBox label="Kebangsaan">
+                {profile.kebangsaan || "-"}
+              </InfoBox>
+
+              <InfoBox label="Tempat Lahir">
+                {profile.tempat_lahir || "-"}
+              </InfoBox>
+
+              <InfoBox label="Tanggal Lahir">
+                {formatTanggal(profile.tanggal_lahir)}
+              </InfoBox>
+            </div>
+          </ProfileSection>
+
+          <ProfileSection
+            title="Pendidikan"
+            subtitle="Informasi pendidikan terakhir dan institusi asal."
+            icon={<GraduationCap size={17} />}
+          >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
               <InfoBox label="Pendidikan Terakhir">
                 {profile.pendidikan_terakhir || "-"}
               </InfoBox>
 
               <InfoBox label="Universitas / Sekolah">
-                {profile.universitas || "-"}
+                {profile.universitas ||
+                  profile.institut_asal ||
+                  "-"}
               </InfoBox>
 
-              <InfoBox label="Jurusan">{profile.jurusan || "-"}</InfoBox>
+              <InfoBox label="Jurusan">
+                {profile.jurusan || "-"}
+              </InfoBox>
 
               <InfoBox label="Tahun Lulus">
                 {profile.tahun_lulus || "-"}
               </InfoBox>
             </div>
-          </Card>
+          </ProfileSection>
 
-          <Card title="Alamat" icon={<MapPin size={22} />}>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              <InfoBox label="Provinsi">{wilayah.provinsi || "-"}</InfoBox>
+          <ProfileSection
+            title="Alamat"
+            subtitle="Alamat tempat tinggal sesuai data profile asesi."
+            icon={<MapPin size={17} />}
+          >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <InfoBox label="Provinsi">
+                {wilayah.provinsi || "-"}
+              </InfoBox>
 
-              <InfoBox label="Kota/Kabupaten">{wilayah.kota || "-"}</InfoBox>
+              <InfoBox label="Kota / Kabupaten">
+                {wilayah.kota || "-"}
+              </InfoBox>
 
-              <InfoBox label="Kecamatan">{wilayah.kecamatan || "-"}</InfoBox>
+              <InfoBox label="Kecamatan">
+                {wilayah.kecamatan || "-"}
+              </InfoBox>
 
-              <InfoBox label="Kelurahan/Desa">
+              <InfoBox label="Kelurahan / Desa">
                 {wilayah.kelurahan || "-"}
               </InfoBox>
 
-              <InfoBox label="Kode Pos">{profile.kode_pos || "-"}</InfoBox>
+              <InfoBox label="RT">
+                {profile.rt || "-"}
+              </InfoBox>
+
+              <InfoBox label="RW">
+                {profile.rw || "-"}
+              </InfoBox>
+
+              <InfoBox label="Kode Pos">
+                {profile.kode_pos || "-"}
+              </InfoBox>
 
               <InfoBox
                 label="Alamat Lengkap"
@@ -535,13 +829,21 @@ export default function ProfileView() {
                 {profile.alamat || "-"}
               </InfoBox>
             </div>
-          </Card>
+          </ProfileSection>
 
-          <Card title="Pekerjaan" icon={<BriefcaseBusiness size={22} />}>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              <InfoBox label="Pekerjaan">{profile.pekerjaan || "-"}</InfoBox>
+          <ProfileSection
+            title="Pekerjaan"
+            subtitle="Informasi pekerjaan atau aktivitas profesional asesi."
+            icon={<BriefcaseBusiness size={17} />}
+          >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <InfoBox label="Pekerjaan">
+                {profile.pekerjaan || "-"}
+              </InfoBox>
 
-              <InfoBox label="Jabatan">{profile.jabatan || "-"}</InfoBox>
+              <InfoBox label="Jabatan">
+                {profile.jabatan || "-"}
+              </InfoBox>
 
               <InfoBox label="Nama Perusahaan">
                 {profile.nama_perusahaan || "-"}
@@ -549,385 +851,149 @@ export default function ProfileView() {
 
               <InfoBox label="Telepon Perusahaan">
                 <span className="inline-flex items-center gap-2">
-                  <Phone size={15} className="text-orange-500" />
+                  <Phone
+                    size={14}
+                    className="text-[#CC6B27]"
+                  />
                   {profile.telp_perusahaan || "-"}
                 </span>
               </InfoBox>
 
-              <InfoBox label="Fax Perusahaan (Opsional)">
+              <InfoBox label="Fax Perusahaan">
                 {profile.fax_perusahaan || "-"}
               </InfoBox>
 
               <InfoBox label="Email Perusahaan">
                 <span className="inline-flex items-center gap-2">
-                  <Mail size={15} className="text-orange-500" />
+                  <Mail
+                    size={14}
+                    className="text-[#CC6B27]"
+                  />
                   {profile.email_perusahaan || "-"}
                 </span>
               </InfoBox>
 
-              <InfoBox label="Alamat Perusahaan" className="xl:col-span-3">
+              <InfoBox
+                label="Alamat Perusahaan"
+                className="md:col-span-2 xl:col-span-3"
+              >
                 {profile.alamat_perusahaan || "-"}
               </InfoBox>
             </div>
-          </Card>
+          </ProfileSection>
         </div>
       </main>
     </div>
   );
 }
 
-function DataDiriCard({
-  profile,
-  profilePhoto,
-  ttdUrl,
-  refreshKey,
-  formatTanggal,
-  fileInputRef,
-  selectedPhoto,
-  handlePhotoSelect,
-  clearSelectedPhoto,
-  uploadFotoProfile,
-  uploadingPhoto,
-  sigRef,
-  saveTTD,
-  clearTTD,
-  savingTTD,
+function ProfileStat({
+  icon,
+  label,
+  value,
+  tone = "orange",
+}) {
+  const tones = {
+    orange: {
+      icon: "bg-[#CC6B27]/10 text-[#CC6B27]",
+      value: "text-[#071E3D]",
+    },
+    green: {
+      icon: "bg-green-50 text-green-600",
+      value: "text-green-600",
+    },
+  };
+
+  const current = tones[tone] || tones.orange;
+
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-4 shadow-sm">
+      <div
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${current.icon}`}
+      >
+        {icon}
+      </div>
+
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
+          {label}
+        </p>
+
+        <p
+          className={`mt-1 truncate text-[15px] font-black ${current.value}`}
+        >
+          {value || "-"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ProfileSection({
+  title,
+  subtitle,
+  icon,
+  children,
 }) {
   return (
-    <section className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-slate-100 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
-          <User size={22} />
-        </div>
-
-        <div>
-          <h2 className="text-xl font-black text-[#071E3D]">
-            Data Diri, Foto & TTD
-          </h2>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-            Detail Profile
-          </p>
-        </div>
+    <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+      <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5 md:px-6">
+        <h2 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-wider text-white">
+          <span className="text-[#CC6B27]">
+            {icon}
+          </span>
+          {title}
+        </h2>
       </div>
 
-      <div className="p-6">
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_430px] gap-6 items-stretch">
-          <div className="rounded-[28px] border border-slate-100 bg-slate-50 p-6 min-h-full">
-            <div className="relative overflow-hidden rounded-[28px] bg-[#071E3D] p-6 flex items-center justify-center min-h-[300px]">
-              <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-orange-500/20 blur-3xl" />
-              <div className="absolute -left-20 -bottom-20 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
+      <div className="border-b border-[#071E3D]/10 bg-white px-5 py-3 md:px-6">
+        <p className="text-[12px] font-medium text-[#182D4A]/60">
+          {subtitle}
+        </p>
+      </div>
 
-              <div className="relative z-10 flex h-40 w-40 items-center justify-center rounded-[34px] border border-white/10 bg-white/10 p-2">
-                {profilePhoto ? (
-                  <img
-                    src={profilePhoto}
-                    alt="Foto Profil"
-                    className="h-full w-full rounded-[28px] object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center rounded-[28px] bg-white/10 text-white/50">
-                    <User size={46} />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              className="hidden"
-              onChange={handlePhotoSelect}
-            />
-
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingPhoto}
-              className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:bg-slate-300"
-            >
-              <ImagePlus size={16} />
-              Pilih Foto Profile
-            </button>
-
-            {selectedPhoto && (
-              <div className="mt-4 rounded-[24px] border border-orange-100 bg-orange-50 p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                  Foto Baru
-                </p>
-
-                <p className="mt-1 text-sm font-black text-[#071E3D] break-words">
-                  {selectedPhoto.name}
-                </p>
-
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={uploadFotoProfile}
-                    disabled={uploadingPhoto}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#071E3D] px-4 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-orange-500 disabled:bg-slate-300"
-                  >
-                    {uploadingPhoto ? (
-                      <Loader2 size={15} className="animate-spin" />
-                    ) : (
-                      <Upload size={15} />
-                    )}
-                    Upload Foto
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={clearSelectedPhoto}
-                    disabled={uploadingPhoto}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white border border-orange-100 px-4 py-3 text-xs font-black uppercase tracking-widest text-orange-600 hover:bg-red-50 hover:text-red-600"
-                  >
-                    <Eraser size={15} />
-                    Batal
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InfoBox label="Nama Lengkap">
-                {profile.nama_lengkap || "-"}
-              </InfoBox>
-
-              <InfoBox label="NIK">{profile.nik || "-"}</InfoBox>
-
-              <InfoBox label="Jenis Kelamin">
-                {formatJenisKelamin(profile.jenis_kelamin)}
-              </InfoBox>
-
-              <InfoBox label="Tempat / Tanggal Lahir">
-                {`${profile.tempat_lahir || "-"} / ${formatTanggal(
-                  profile.tanggal_lahir
-                )}`}
-              </InfoBox>
-
-              <InfoBox label="Kebangsaan">
-                <span className="inline-flex items-center gap-2">
-                  <Globe size={15} className="text-orange-500" />
-                  {profile.kebangsaan || "-"}
-                </span>
-              </InfoBox>
-
-              <InfoBox label="Status Foto Profile">
-                <span
-                  className={`inline-flex items-center gap-2 ${
-                    profilePhoto ? "text-emerald-600" : "text-orange-500"
-                  }`}
-                >
-                  {profilePhoto ? <BadgeCheck size={15} /> : <XCircle size={15} />}
-                  {profilePhoto ? "Sudah tersedia" : "Belum tersedia"}
-                </span>
-              </InfoBox>
-
-              <InfoBox label="Status TTD" className="md:col-span-2">
-                <span
-                  className={`inline-flex items-center gap-2 ${
-                    ttdUrl ? "text-emerald-600" : "text-orange-500"
-                  }`}
-                >
-                  {ttdUrl ? <BadgeCheck size={15} /> : <XCircle size={15} />}
-                  {ttdUrl ? "Sudah tersedia" : "Belum dibuat"}
-                </span>
-              </InfoBox>
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-slate-100 bg-slate-50 p-5 min-h-full">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
-                <PenLine size={20} />
-              </div>
-
-              <div>
-                <h3 className="font-black text-[#071E3D]">
-                  Tanda Tangan Digital
-                </h3>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Buat / Ganti TTD
-                </p>
-              </div>
-            </div>
-
-            {ttdUrl ? (
-              <div className="rounded-[24px] border border-emerald-100 bg-emerald-50 p-4 mb-5">
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-3">
-                  TTD Tersimpan
-                </p>
-
-                <div className="rounded-2xl bg-white border border-emerald-100 p-4 flex items-center justify-center min-h-[120px]">
-                  <img
-                    src={`${ttdUrl}${ttdUrl.includes("?") ? "&" : "?"}t=${refreshKey}`}
-                    alt="Tanda Tangan Tersimpan"
-                    className="max-h-[100px] object-contain"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-[24px] border border-orange-100 bg-orange-50 p-4 mb-5 flex gap-3 text-orange-600">
-                <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-black">TTD belum tersedia</p>
-                  <p className="text-sm font-semibold mt-1">
-                    Silakan tanda tangan di canvas putih lalu klik Simpan TTD.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="mb-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Canvas TTD Baru
-              </p>
-              <p className="text-sm font-semibold text-slate-500 mt-1">
-                Gunakan mouse atau layar sentuh.
-              </p>
-            </div>
-
-            <div className="rounded-[24px] overflow-hidden border-2 border-dashed border-slate-200 bg-white">
-              <SignatureCanvas
-                ref={sigRef}
-                penColor="#071E3D"
-                canvasProps={{
-                  className: "w-full h-[190px] bg-white block",
-                }}
-              />
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 mt-5">
-              <button
-                type="button"
-                onClick={saveTTD}
-                disabled={savingTTD}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:bg-slate-300"
-              >
-                {savingTTD ? (
-                  <Loader2 size={17} className="animate-spin" />
-                ) : (
-                  <Save size={17} />
-                )}
-                {savingTTD ? "Menyimpan..." : "Simpan TTD"}
-              </button>
-
-              <button
-                type="button"
-                onClick={clearTTD}
-                disabled={savingTTD}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-6 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-red-50 hover:text-red-600"
-              >
-                <Eraser size={17} />
-                Bersihkan
-              </button>
-            </div>
-          </div>
-        </div>
+      <div className="p-5 md:p-6">
+        {children}
       </div>
     </section>
   );
 }
 
-function Card({ title, icon, children }) {
-  return (
-    <section className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-slate-100 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
-          {icon}
-        </div>
-
-        <div>
-          <h2 className="text-xl font-black text-[#071E3D]">{title}</h2>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-            Informasi Profile
-          </p>
-        </div>
-      </div>
-
-      <div className="p-6">{children}</div>
-    </section>
-  );
-}
-
-function InfoBox({ label, children, className = "" }) {
+function InfoBox({
+  label,
+  children,
+  className = "",
+}) {
   return (
     <div
-      className={`rounded-2xl bg-slate-50 border border-slate-100 p-4 ${className}`}
+      className={`rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4 ${className}`}
     >
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
         {label}
       </p>
 
-      <div className="text-[#071E3D] font-black text-sm leading-relaxed">
+      <div className="text-[13px] font-bold leading-5 text-[#071E3D]">
         {children}
       </div>
     </div>
   );
 }
 
-function MiniStat({ icon, label, value }) {
-  return (
-    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-      <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center">
-        {icon}
-      </div>
-
-      <div className="min-w-0">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          {label}
-        </p>
-
-        <h3 className="text-[#071E3D] font-black text-base truncate mt-1">
-          {value}
-        </h3>
-      </div>
-    </div>
-  );
-}
-
-function HeroPill({ label, value }) {
-  return (
-    <div className="rounded-2xl bg-white/10 border border-white/10 p-4">
-      <p className="text-[10px] font-black uppercase tracking-widest text-white/40">
-        {label}
-      </p>
-
-      <p className="text-lg font-black text-white mt-1">{value}</p>
-    </div>
-  );
-}
-
-function AlertMessage({ type, text }) {
-  const isError = type === "error";
-
-  return (
-    <div
-      className={`rounded-[24px] border p-5 flex items-start gap-3 ${
-        isError
-          ? "bg-red-50 border-red-100 text-red-600"
-          : "bg-emerald-50 border-emerald-100 text-emerald-600"
-      }`}
-    >
-      {isError ? (
-        <AlertCircle size={20} className="shrink-0 mt-0.5" />
-      ) : (
-        <BadgeCheck size={20} className="shrink-0 mt-0.5" />
-      )}
-
-      <p className="font-bold text-sm">{text}</p>
-    </div>
-  );
-}
-
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-10 flex items-center gap-4">
-        <Loader2 size={28} className="animate-spin text-orange-500" />
+    <div className="flex min-h-screen items-center justify-center bg-[#FAFAFA]">
+      <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-8 shadow-sm">
+        <Loader2
+          size={26}
+          className="animate-spin text-[#CC6B27]"
+        />
+
         <div>
-          <h2 className="font-black text-[#071E3D]">Memuat Profile</h2>
-          <p className="text-sm text-slate-400 font-semibold mt-1">
+          <h2 className="text-[15px] font-black text-[#071E3D]">
+            Memuat Profile
+          </h2>
+
+          <p className="mt-1 text-[11px] font-medium text-[#182D4A]/60">
             Mohon tunggu sebentar...
           </p>
         </div>
@@ -937,12 +1003,19 @@ function LoadingScreen() {
 }
 
 function formatJenisKelamin(value) {
-  if (!value) return "-";
+  if (!value) {
+    return "-";
+  }
 
   const lower = String(value).toLowerCase();
 
-  if (lower === "laki-laki") return "Laki-laki";
-  if (lower === "perempuan") return "Perempuan";
+  if (lower === "laki-laki") {
+    return "Laki-laki";
+  }
+
+  if (lower === "perempuan") {
+    return "Perempuan";
+  }
 
   return value;
 }

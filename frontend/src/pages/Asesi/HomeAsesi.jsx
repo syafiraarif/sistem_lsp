@@ -1,5 +1,3 @@
-// frontend/src/pages/asesi/HomeAsesi.jsx
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -8,15 +6,17 @@ import {
   User,
   BookOpen,
   ClipboardList,
-  Key,
+  KeyRound,
   ChevronRight,
   ShieldCheck,
-  Sparkles,
   FileText,
   CalendarCheck,
+  RefreshCcw,
+  Loader2,
 } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -35,25 +35,30 @@ api.interceptors.request.use((config) => {
 const HomeAsesi = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const token = localStorage.getItem("token");
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
 
-        if (!token) {
-          navigate("/login");
-          return;
-        }
+      const token = localStorage.getItem("token");
 
-        const res = await api.get("/asesi/profile");
-        setProfile(res.data?.data || null);
-      } catch (error) {
-        console.error("Gagal mengambil profile:", error);
+      if (!token) {
+        navigate("/login");
+        return;
       }
-    };
 
+      const res = await api.get("/asesi/profile");
+      setProfile(res.data?.data || null);
+    } catch (error) {
+      console.error("Gagal mengambil profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadProfile();
   }, [navigate]);
 
@@ -61,25 +66,25 @@ const HomeAsesi = () => {
 
   const cards = [
     {
-      icon: <User size={24} />,
+      icon: <User size={20} />,
       title: "Profile",
       desc: "Lihat dan lengkapi data pribadi asesi.",
       path: "/asesi/profile",
     },
     {
-      icon: <BookOpen size={24} />,
+      icon: <BookOpen size={20} />,
       title: "Skema Sertifikasi",
-      desc: "Pilih jadwal dan skema sertifikasi tersedia.",
+      desc: "Pilih jadwal dan skema sertifikasi yang tersedia.",
       path: "/asesi/jadwal",
     },
     {
-      icon: <ClipboardList size={24} />,
+      icon: <ClipboardList size={20} />,
       title: "Asesmen",
       desc: "Pantau proses APL01, APL02, dan asesmen.",
       path: "/asesi/jadwal-saya",
     },
     {
-      icon: <Key size={24} />,
+      icon: <KeyRound size={20} />,
       title: "Ubah Password",
       desc: "Perbarui password akun Anda secara aman.",
       path: "/asesi/ubah-password",
@@ -87,119 +92,139 @@ const HomeAsesi = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
-      <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+    <div className="flex min-h-screen bg-[#FAFAFA]">
+      <SidebarAsesi
+        isOpen={sidebarOpen}
+        setIsOpen={setSidebarOpen}
+      />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
-        <div className="w-full max-w-[1500px] mx-auto space-y-6">
-          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
-            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
-            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
+      <main className="flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-[1500px] space-y-5">
+          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="border-b border-[#071E3D]/10 px-5 py-5 md:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h1 className="text-[24px] font-black text-[#071E3D] md:text-[28px]">
+                    Dashboard {displayName}
+                  </h1>
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
-              <div className="flex flex-col justify-center">
-                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <ShieldCheck size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Dashboard Asesi
+                  <p className="mt-1 text-[13px] font-medium text-[#182D4A]/70">
+                    Kelola profile, skema sertifikasi, asesmen, dan aktivitas
+                    Anda melalui dashboard asesi.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={loadProfile}
+                  disabled={loading}
+                  className="rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[12px] font-bold text-[#071E3D] shadow-sm transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    {loading ? (
+                      <Loader2
+                        size={15}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <RefreshCcw size={15} />
+                    )}
+                    Refresh
                   </span>
-                </div>
-
-                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
-                  Selamat Datang,
-                  <br />
-                  <span className="text-orange-500">{displayName}</span>
-                </h1>
-
-                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Kelola proses sertifikasi, lengkapi profile, pilih skema, dan
-                  pantau asesmen Anda melalui satu dashboard yang rapi.
-                </p>
-
-                <div className="mt-7 flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={() => navigate("/asesi/jadwal")}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
-                  >
-                    Pilih Skema
-                    <ChevronRight size={17} />
-                  </button>
-
-                  <button
-                    onClick={() => navigate("/asesi/jadwal-saya")}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
-                  >
-                    Lihat Asesmen
-                    <ChevronRight size={17} />
-                  </button>
-                </div>
+                </button>
               </div>
+            </div>
 
-              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
-                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+            <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-3 md:p-6">
+              <MiniStat
+                icon={<FileText size={22} />}
+                label="APL01 & APL02"
+                value="Form Asesmen"
+              />
 
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                    <Sparkles size={28} />
-                  </div>
+              <MiniStat
+                icon={<CalendarCheck size={22} />}
+                label="Jadwal"
+                value="Pantau Sertifikasi"
+              />
 
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
-                    Dashboard Asesi
-                  </p>
-
-                  <h2 className="text-2xl font-black leading-tight">
-                    Kelola Sertifikasi
-                  </h2>
-
-                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    Pastikan profile dan dokumen Anda sudah lengkap sebelum
-                    mengajukan asesmen.
-                  </p>
-
-                  <div className="mt-auto pt-6 grid grid-cols-1 gap-3">
-                    <HeroPill label="Role" value="Asesi" />
-                  </div>
-                </div>
-              </div>
+              <MiniStat
+                icon={<ShieldCheck size={22} />}
+                label="Keamanan"
+                value="Akun Terproteksi"
+              />
             </div>
           </section>
 
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <MiniStat
-              icon={<FileText size={22} />}
-              label="APL01 & APL02"
-              value="Form Asesmen"
-            />
-            <MiniStat
-              icon={<CalendarCheck size={22} />}
-              label="Jadwal"
-              value="Pantau Sertifikasi"
-            />
-            <MiniStat
-              icon={<ShieldCheck size={22} />}
-              label="Keamanan"
-              value="Akun Terproteksi"
-            />
-          </section>
-
-          <section className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-100">
-              <h2 className="text-xl font-black text-[#071E3D]">Menu Utama</h2>
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-                Akses fitur utama dashboard asesi
-              </p>
-            </div>
-
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-              {cards.map((item) => (
-                <MenuCard
-                  key={item.title}
-                  icon={item.icon}
-                  title={item.title}
-                  desc={item.desc}
-                  onClick={() => navigate(item.path)}
+          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5 md:px-6">
+              <h2 className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-white">
+                <ClipboardList
+                  size={17}
+                  className="text-[#CC6B27]"
                 />
-              ))}
+                Menu Utama
+              </h2>
+            </div>
+
+            <div className="p-5 md:p-6">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {cards.map((item) => (
+                  <MenuCard
+                    key={item.title}
+                    icon={item.icon}
+                    title={item.title}
+                    desc={item.desc}
+                    onClick={() => navigate(item.path)}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-[#071E3D]/10 px-5 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+              <div>
+                <h2 className="flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
+                  <ShieldCheck
+                    size={18}
+                    className="text-[#CC6B27]"
+                  />
+                  Informasi Asesi
+                </h2>
+
+                <p className="mt-1 text-[12px] font-medium text-[#182D4A]/60">
+                  Informasi singkat akun dan proses sertifikasi Anda.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate("/asesi/profile")}
+                className="rounded-lg border border-[#CC6B27]/40 bg-white px-4 py-2.5 text-[12px] font-bold text-[#CC6B27] transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27] hover:text-white"
+              >
+                Kelola Profile
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-3 md:p-6">
+              <InfoCard
+                icon={<User size={20} />}
+                label="Nama Asesi"
+                value={displayName}
+              />
+
+              <InfoCard
+                icon={<BookOpen size={20} />}
+                label="Skema"
+                value="Pilih Skema"
+              />
+
+              <InfoCard
+                icon={<CalendarCheck size={20} />}
+                label="Asesmen"
+                value="Pantau Asesmen"
+              />
             </div>
           </section>
         </div>
@@ -210,57 +235,85 @@ const HomeAsesi = () => {
 
 const MiniStat = ({ icon, label, value }) => {
   return (
-    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
         {icon}
       </div>
 
       <div className="min-w-0">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
           {label}
         </p>
-        <p className="text-[#071E3D] font-black mt-1 truncate">{value}</p>
+
+        <p className="mt-1 truncate text-[19px] font-black text-[#071E3D]">
+          {value}
+        </p>
       </div>
     </div>
   );
 };
 
-const MenuCard = ({ icon, title, desc, onClick }) => {
+const MenuCard = ({
+  icon,
+  title,
+  desc,
+  onClick,
+}) => {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="group text-left rounded-[24px] border border-slate-100 bg-slate-50/70 p-5 transition-all hover:bg-white hover:border-orange-200 hover:shadow-xl hover:shadow-orange-500/5"
+      className="group w-full rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4 text-left transition-all hover:border-[#CC6B27]/40 hover:bg-[#CC6B27]/5"
     >
-      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-orange-500 border border-slate-100 transition-all group-hover:bg-orange-50 group-hover:border-orange-100">
-        {icon}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+          {icon}
+        </div>
+
+        <ChevronRight
+          size={16}
+          className="mt-1 text-[#071E3D]/25 transition-transform group-hover:translate-x-1 group-hover:text-[#CC6B27]"
+        />
       </div>
 
-      <h3 className="text-base font-black text-[#071E3D] mb-2">{title}</h3>
+      <h3 className="mt-3 text-[13px] font-bold text-[#071E3D]">
+        {title}
+      </h3>
 
-      <p className="text-sm font-medium leading-relaxed text-slate-500 min-h-[44px]">
+      <p className="mt-1.5 min-h-[42px] text-[11px] font-medium leading-relaxed text-[#182D4A]/65">
         {desc}
       </p>
 
-      <div className="mt-5 flex items-center gap-2 text-orange-500 font-black text-[10px] uppercase tracking-widest">
+      <div className="mt-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#CC6B27]">
         Buka Menu
-        <ChevronRight
-          size={15}
-          className="transition-transform group-hover:translate-x-1"
-        />
+        <ChevronRight size={13} />
       </div>
     </button>
   );
 };
 
-function HeroPill({ label, value }) {
+const InfoCard = ({
+  icon,
+  label,
+  value,
+}) => {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-black text-white">{value}</p>
+    <div className="flex items-center gap-4 rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+        {icon}
+      </div>
+
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
+          {label}
+        </p>
+
+        <p className="mt-1 truncate text-[13px] font-bold text-[#071E3D]">
+          {value}
+        </p>
+      </div>
     </div>
   );
-}
+};
 
 export default HomeAsesi;
