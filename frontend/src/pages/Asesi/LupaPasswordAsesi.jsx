@@ -1,11 +1,7 @@
-// frontend/src/pages/asesi/LupaPasswordAsesi.jsx
-
 import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import SidebarAsesi from "../../components/sidebar/SidebarAsesi";
 import {
   BadgeCheck,
-  ChevronRight,
   Eye,
   EyeOff,
   KeyRound,
@@ -14,31 +10,13 @@ import {
   RefreshCcw,
   Save,
   ShieldCheck,
-  Sparkles,
-  XCircle,
 } from "lucide-react";
-import axios from "axios";
-
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
-
-const api = axios.create({
-  baseURL: API_BASE,
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return config;
-});
+import { notifikasi } from "../../components/ui/notifikasi";
+import api from "../../services/api";
 
 export default function LupaPasswordAsesi() {
-  const navigate = useNavigate();
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
 
   const [form, setForm] = useState({
     password_lama: "",
@@ -46,42 +24,53 @@ export default function LupaPasswordAsesi() {
     konfirmasi_password: "",
   });
 
-  const [showPassword, setShowPassword] = useState({
-    password_lama: false,
-    password_baru: false,
-    konfirmasi_password: false,
-  });
+  const [showPassword, setShowPassword] =
+    useState({
+      password_lama: false,
+      password_baru: false,
+      konfirmasi_password: false,
+    });
 
-  const [loading, setLoading] = useState(false);
-  const [pesan, setPesan] = useState("");
-  const [error, setError] = useState("");
+  const [loading, setLoading] =
+    useState(false);
 
-  const displayName = getDisplayName();
+  const displayName =
+    getDisplayName();
 
-  const passwordStrength = useMemo(() => {
-    return getPasswordStrength(form.password_baru);
-  }, [form.password_baru]);
+  const passwordStrength =
+    useMemo(() => {
+      return getPasswordStrength(
+        form.password_baru
+      );
+    }, [
+      form.password_baru,
+    ]);
 
-  const passwordMatch =
+  const passwordMatch = Boolean(
     form.konfirmasi_password &&
-    form.password_baru === form.konfirmasi_password;
+      form.password_baru ===
+        form.konfirmasi_password
+  );
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const {
+      name,
+      value,
+    } = e.target;
 
     setForm((prev) => ({
       ...prev,
       [name]: value,
     }));
-
-    if (pesan) setPesan("");
-    if (error) setError("");
   };
 
-  const toggleShowPassword = (field) => {
+  const toggleShowPassword = (
+    field
+  ) => {
     setShowPassword((prev) => ({
       ...prev,
-      [field]: !prev[field],
+      [field]:
+        !prev[field],
     }));
   };
 
@@ -97,77 +86,113 @@ export default function LupaPasswordAsesi() {
       password_baru: false,
       konfirmasi_password: false,
     });
-
-    setPesan("");
-    setError("");
   };
 
-  const handleSubmit = async (e) => {
+  const handleRefresh = async () => {
+    if (loading) {
+      return;
+    }
+
+    resetForm();
+
+    await notifikasi.sukses(
+      "Berhasil",
+      "Form ubah sandi berhasil disegarkan."
+    );
+  };
+
+  const handleSubmit = async (
+    e
+  ) => {
     e.preventDefault();
 
     if (!form.password_lama) {
-      setError("Password lama wajib diisi");
+      await notifikasi.peringatan(
+        "Peringatan",
+        "Password lama wajib diisi."
+      );
       return;
     }
 
     if (!form.password_baru) {
-      setError("Password baru wajib diisi");
+      await notifikasi.peringatan(
+        "Peringatan",
+        "Password baru wajib diisi."
+      );
       return;
     }
 
-    if (form.password_baru.length < 6) {
-      setError("Password baru minimal 6 karakter");
+    if (
+      form.password_baru.length <
+      6
+    ) {
+      await notifikasi.peringatan(
+        "Peringatan",
+        "Password baru minimal 6 karakter."
+      );
       return;
     }
 
-    if (!form.konfirmasi_password) {
-      setError("Konfirmasi password wajib diisi");
+    if (
+      !form.konfirmasi_password
+    ) {
+      await notifikasi.peringatan(
+        "Peringatan",
+        "Konfirmasi password wajib diisi."
+      );
       return;
     }
 
-    if (form.password_baru !== form.konfirmasi_password) {
-      setError("Konfirmasi password tidak sama dengan password baru");
+    if (
+      form.password_baru !==
+      form.konfirmasi_password
+    ) {
+      await notifikasi.peringatan(
+        "Peringatan",
+        "Konfirmasi password tidak sama dengan password baru."
+      );
       return;
     }
 
     try {
       setLoading(true);
-      setError("");
-      setPesan("");
 
-      const res = await api.put("/asesi/ubah-password", {
-        old_password: form.password_lama,
-        new_password: form.password_baru,
+      await api.put(
+        "/asesi/ubah-password",
+        {
+          old_password:
+            form.password_lama,
+          new_password:
+            form.password_baru,
+          confirm_password:
+            form.konfirmasi_password,
+          password_lama:
+            form.password_lama,
+          password_baru:
+            form.password_baru,
+          konfirmasi_password:
+            form.konfirmasi_password,
+          passwordLama:
+            form.password_lama,
+          passwordBaru:
+            form.password_baru,
+        }
+      );
 
-        // fallback kalau backend menerima naming lain
-        confirm_password: form.konfirmasi_password,
-        password_lama: form.password_lama,
-        password_baru: form.password_baru,
-        konfirmasi_password: form.konfirmasi_password,
-        passwordLama: form.password_lama,
-        passwordBaru: form.password_baru,
-      });
+      resetForm();
 
-      setPesan(res.data?.message || "Password asesi berhasil diperbarui");
-
-      setForm({
-        password_lama: "",
-        password_baru: "",
-        konfirmasi_password: "",
-      });
-
-      setShowPassword({
-        password_lama: false,
-        password_baru: false,
-        konfirmasi_password: false,
-      });
+      await notifikasi.sukses(
+        "Berhasil",
+        "Sandi asesi berhasil diperbarui."
+      );
     } catch (err) {
       console.error(err);
 
-      setError(
+      await notifikasi.gagal(
+        "Gagal",
         err.response?.data?.message ||
           err.response?.data?.error ||
-          "Gagal mengubah password asesi"
+          "Gagal mengubah sandi asesi."
       );
     } finally {
       setLoading(false);
@@ -175,266 +200,347 @@ export default function LupaPasswordAsesi() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
-      <SidebarAsesi isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+    <div className="flex min-h-screen bg-[#FAFAFA]">
+      <SidebarAsesi
+        isOpen={sidebarOpen}
+        setIsOpen={setSidebarOpen}
+      />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
-        <div className="w-full max-w-[1500px] mx-auto space-y-6">
-          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
-            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
-            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
-
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
-              <div className="flex flex-col justify-center">
-                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <KeyRound size={15} className="text-orange-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Ubah Password
-                  </span>
-                </div>
-
-                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
-                  Perbarui Password
-                  <br />
-                  <span className="text-orange-500">{displayName}</span>
-                </h1>
-
-                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Jaga keamanan akun asesi dengan mengganti password secara
-                  berkala. Gunakan kombinasi karakter yang kuat dan mudah Anda
-                  ingat.
-                </p>
-
-                <div className="mt-7 flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      document
-                        .getElementById("form-ubah-password")
-                        ?.scrollIntoView({ behavior: "smooth" })
-                    }
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
-                  >
-                    Ubah Sekarang
-                    <ChevronRight size={17} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate("/asesi")}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
-                  >
-                    Dashboard
-                    <ChevronRight size={17} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
-                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
-
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                    <Sparkles size={28} />
-                  </div>
-
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
-                    Keamanan Akun
-                  </p>
-
-                  <h2 className="text-2xl font-black leading-tight">
-                    Akun Terproteksi
-                  </h2>
-
-                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    Setelah password diperbarui, gunakan password baru saat
-                    login berikutnya. Jangan bagikan password kepada siapapun.
-                  </p>
-
-                  <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
-                    <HeroPill label="Role" value="Asesi" />
-                    <HeroPill label="Status" value="Aman" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {pesan && (
-            <AlertBox
-              type="success"
-              icon={<BadgeCheck size={20} />}
-              message={pesan}
-            />
-          )}
-
-          {error && (
-            <AlertBox
-              type="error"
-              icon={<XCircle size={20} />}
-              message={error}
-            />
-          )}
-
-          {loading && (
-            <AlertBox
-              type="loading"
-              icon={<Loader2 size={20} className="animate-spin" />}
-              message="Memproses perubahan password..."
-            />
-          )}
-
-          <section className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 items-start">
-            <form
-              id="form-ubah-password"
-              onSubmit={handleSubmit}
-              className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm"
-            >
-              <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <main className="flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-[1500px] space-y-5">
+          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="border-b border-[#071E3D]/10 px-5 py-5 md:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                    <LockKeyhole size={15} className="text-orange-500" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                      Form Keamanan
+                  <h1 className="text-[24px] font-black text-[#071E3D] md:text-[28px]">
+                    Ubah Sandi Asesi
+                  </h1>
+
+                  <p className="mt-1 text-[13px] font-medium text-[#182D4A]/70">
+                    Perbarui sandi akun asesi secara berkala untuk menjaga keamanan akun{" "}
+                    <span className="font-bold text-[#071E3D]">
+                      {displayName}
                     </span>
-                  </div>
-
-                  <h2 className="text-xl font-black text-[#071E3D]">
-                    Ubah Password Asesi
-                  </h2>
-
-                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-                    Masukkan password lama, baru, dan konfirmasi
+                    .
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={resetForm}
+                  onClick={handleRefresh}
                   disabled={loading}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:bg-slate-200"
+                  className="rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[12px] font-bold text-[#071E3D] shadow-sm transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
                 >
-                  <RefreshCcw size={16} />
-                  Reset
+                  <span className="flex items-center justify-center gap-2">
+                    {loading ? (
+                      <Loader2
+                        size={15}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <RefreshCcw
+                        size={15}
+                      />
+                    )}
+                    Refresh
+                  </span>
                 </button>
               </div>
+            </div>
 
-              <div className="p-6 space-y-5">
+            <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-3 md:p-6">
+              <MiniStat
+                icon={
+                  <LockKeyhole
+                    size={22}
+                  />
+                }
+                label="Role"
+                value="Asesi"
+              />
+
+              <MiniStat
+                icon={
+                  <ShieldCheck
+                    size={22}
+                  />
+                }
+                label="Keamanan"
+                value="Terproteksi"
+                tone="green"
+              />
+
+              <MiniStat
+                icon={
+                  <BadgeCheck
+                    size={22}
+                  />
+                }
+                label="Status Form"
+                value={
+                  form.password_baru
+                    ? passwordStrength.label
+                    : "Belum Diisi"
+                }
+              />
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1fr_360px]">
+            <form
+              id="form-ubah-sandi"
+              onSubmit={handleSubmit}
+              className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm"
+            >
+              <div className="border-b border-[#071E3D]/10 px-5 py-4 md:px-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
+                      <LockKeyhole
+                        size={18}
+                        className="text-[#CC6B27]"
+                      />
+                      Form Ubah Sandi
+                    </h2>
+
+                    <p className="mt-1 text-[12px] font-medium text-[#182D4A]/60">
+                      Masukkan sandi lama dan sandi baru untuk memperbarui keamanan akun.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    disabled={loading}
+                    className="rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[12px] font-bold text-[#071E3D] transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <RefreshCcw
+                        size={15}
+                      />
+                      Reset
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-5 p-5 md:p-6">
                 <PasswordInput
-                  label="Password Lama"
+                  label="Sandi Lama"
                   name="password_lama"
-                  value={form.password_lama}
-                  show={showPassword.password_lama}
-                  onChange={handleChange}
-                  onToggle={() => toggleShowPassword("password_lama")}
-                  placeholder="Masukkan password lama"
+                  value={
+                    form.password_lama
+                  }
+                  show={
+                    showPassword.password_lama
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  onToggle={() =>
+                    toggleShowPassword(
+                      "password_lama"
+                    )
+                  }
+                  placeholder="Masukkan sandi lama"
                 />
 
                 <PasswordInput
-                  label="Password Baru"
+                  label="Sandi Baru"
                   name="password_baru"
-                  value={form.password_baru}
-                  show={showPassword.password_baru}
-                  onChange={handleChange}
-                  onToggle={() => toggleShowPassword("password_baru")}
-                  placeholder="Masukkan password baru"
+                  value={
+                    form.password_baru
+                  }
+                  show={
+                    showPassword.password_baru
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  onToggle={() =>
+                    toggleShowPassword(
+                      "password_baru"
+                    )
+                  }
+                  placeholder="Masukkan sandi baru"
                 />
 
-                <PasswordStrength strength={passwordStrength} />
+                <PasswordStrength
+                  strength={
+                    passwordStrength
+                  }
+                />
 
                 <PasswordInput
-                  label="Konfirmasi Password Baru"
+                  label="Konfirmasi Sandi Baru"
                   name="konfirmasi_password"
-                  value={form.konfirmasi_password}
-                  show={showPassword.konfirmasi_password}
-                  onChange={handleChange}
-                  onToggle={() => toggleShowPassword("konfirmasi_password")}
-                  placeholder="Ulangi password baru"
+                  value={
+                    form.konfirmasi_password
+                  }
+                  show={
+                    showPassword.konfirmasi_password
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  onToggle={() =>
+                    toggleShowPassword(
+                      "konfirmasi_password"
+                    )
+                  }
+                  placeholder="Ulangi sandi baru"
                 />
 
                 {form.konfirmasi_password && (
                   <div
-                    className={`rounded-[24px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
+                    className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-[12px] font-semibold ${
                       passwordMatch
-                        ? "border-green-100 bg-green-50 text-green-700"
-                        : "border-red-100 bg-red-50 text-red-600"
+                        ? "border-green-200 bg-green-50 text-green-700"
+                        : "border-red-200 bg-red-50 text-red-600"
                     }`}
                   >
                     {passwordMatch ? (
-                      <BadgeCheck size={20} />
+                      <BadgeCheck
+                        size={17}
+                        className="shrink-0"
+                      />
                     ) : (
-                      <XCircle size={20} />
+                      <ShieldCheck
+                        size={17}
+                        className="shrink-0"
+                      />
                     )}
 
                     <span>
                       {passwordMatch
-                        ? "Konfirmasi password sudah sesuai"
-                        : "Konfirmasi password belum sama"}
+                        ? "Konfirmasi sandi sudah sesuai"
+                        : "Konfirmasi sandi belum sama"}
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/50 p-6 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm font-medium text-slate-500">
-                  Pastikan password baru sudah benar sebelum menyimpan
-                  perubahan.
-                </p>
+              <div className="flex flex-col gap-3 border-t border-[#071E3D]/10 bg-[#FAFAFA] p-5 md:flex-row md:items-center md:justify-between md:p-6">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/50">
+                    Keamanan Akun
+                  </p>
+
+                  <p className="mt-1 text-[12px] font-medium leading-relaxed text-[#182D4A]/60">
+                    Pastikan sandi baru sudah benar sebelum menyimpan perubahan.
+                  </p>
+                </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="rounded-lg bg-[#CC6B27] px-5 py-2.5 text-[12px] font-bold text-white shadow-sm transition-all hover:bg-[#A8561F] disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
-                  {loading ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Save size={16} />
-                  )}
-                  Simpan Password
+                  <span className="flex items-center justify-center gap-2">
+                    {loading ? (
+                      <Loader2
+                        size={15}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <Save size={15} />
+                    )}
+                    Simpan Sandi
+                  </span>
                 </button>
               </div>
             </form>
 
             <aside className="space-y-5">
-              <InfoCard
-                icon={<ShieldCheck size={22} />}
-                title="Tips Password Aman"
-                items={[
-                  "Gunakan minimal 6 karakter.",
-                  "Campurkan huruf besar, huruf kecil, angka, dan simbol.",
-                  "Jangan gunakan tanggal lahir atau nama sendiri.",
-                  "Jangan bagikan password kepada pihak lain.",
-                ]}
-              />
-
-              <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-                  <KeyRound size={22} />
+              <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+                <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5">
+                  <h2 className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-white">
+                    <ShieldCheck
+                      size={17}
+                      className="text-[#CC6B27]"
+                    />
+                    Tips Keamanan
+                  </h2>
                 </div>
 
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Status Form
-                </p>
+                <div className="space-y-3 p-5">
+                  <SecurityTip text="Gunakan minimal 6 karakter." />
 
-                <h3 className="mt-2 text-2xl font-black text-[#071E3D]">
-                  {passwordStrength.label}
-                </h3>
+                  <SecurityTip text="Gunakan kombinasi huruf besar, huruf kecil, angka, dan simbol." />
 
-                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
-                  Kekuatan password akan meningkat jika memakai kombinasi
-                  karakter yang lebih beragam.
-                </p>
+                  <SecurityTip text="Hindari menggunakan nama, tanggal lahir, atau informasi pribadi." />
+
+                  <SecurityTip text="Jangan membagikan sandi kepada pihak lain." />
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+                    <KeyRound
+                      size={18}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/50">
+                      Kekuatan Sandi
+                    </p>
+
+                    <h3 className="mt-0.5 text-[16px] font-black text-[#071E3D]">
+                      {passwordStrength.label}
+                    </h3>
+                  </div>
+                </div>
 
                 <div className="mt-5">
-                  <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-[10px] font-semibold text-[#182D4A]/50">
+                      Tingkat keamanan
+                    </span>
+
+                    <span className="text-[10px] font-bold text-[#071E3D]">
+                      {passwordStrength.score}
+                      /4
+                    </span>
+                  </div>
+
+                  <div className="h-2 overflow-hidden rounded-lg bg-slate-100">
                     <div
-                      className={`h-full rounded-full transition-all ${passwordStrength.colorClass}`}
-                      style={{ width: `${passwordStrength.percent}%` }}
+                      className={`h-full transition-all ${passwordStrength.colorClass}`}
+                      style={{
+                        width: `${passwordStrength.percent}%`,
+                      }}
                     />
                   </div>
                 </div>
-              </div>
+
+                <p className="mt-3 text-[11px] font-medium leading-relaxed text-[#182D4A]/60">
+                  Semakin beragam karakter yang digunakan, semakin kuat tingkat keamanan sandi.
+                </p>
+              </section>
+
+              <section className="rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+                    <UserIcon />
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/50">
+                      Akun Asesi
+                    </p>
+
+                    <p className="mt-1 text-[13px] font-bold text-[#071E3D]">
+                      {displayName}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-[11px] font-medium leading-relaxed text-[#182D4A]/60">
+                  Setelah perubahan berhasil, gunakan sandi baru saat login berikutnya.
+                </p>
+              </section>
             </aside>
           </section>
         </div>
@@ -454,132 +560,191 @@ function PasswordInput({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+      <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/60">
         {label}
       </label>
 
       <div className="relative">
         <input
-          type={show ? "text" : "password"}
+          type={
+            show
+              ? "text"
+              : "password"
+          }
           name={name}
           value={value}
           onChange={onChange}
-          placeholder={placeholder}
-          className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 pr-14 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+          placeholder={
+            placeholder
+          }
+          className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-3.5 py-3 pr-12 text-[13px] font-medium text-[#071E3D] outline-none transition-all placeholder:text-[#182D4A]/40 focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
         />
 
         <button
           type="button"
           onClick={onToggle}
-          className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-orange-50 hover:text-orange-500"
+          className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#182D4A]/50 transition-all hover:bg-[#CC6B27]/10 hover:text-[#CC6B27]"
         >
-          {show ? <EyeOff size={18} /> : <Eye size={18} />}
+          {show ? (
+            <EyeOff
+              size={17}
+            />
+          ) : (
+            <Eye
+              size={17}
+            />
+          )}
         </button>
       </div>
     </div>
   );
 }
 
-function PasswordStrength({ strength }) {
+function PasswordStrength({
+  strength,
+}) {
   return (
-    <div className="rounded-[24px] border border-slate-100 bg-slate-50/60 p-5">
-      <div className="mb-3 flex items-center justify-between gap-4">
+    <div className="rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Kekuatan Password
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/50">
+            Kekuatan Sandi
           </p>
 
-          <p className="mt-1 text-sm font-black text-[#071E3D]">
+          <p className="mt-1 text-[12px] font-bold text-[#071E3D]">
             {strength.label}
           </p>
         </div>
 
-        <span className="rounded-full bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-          {strength.score}/4
+        <span className="text-[11px] font-bold text-[#182D4A]/60">
+          {strength.score}
+          /4
         </span>
       </div>
 
-      <div className="h-3 overflow-hidden rounded-full bg-white">
+      <div className="mt-3 h-2 overflow-hidden rounded-lg bg-white">
         <div
-          className={`h-full rounded-full transition-all ${strength.colorClass}`}
-          style={{ width: `${strength.percent}%` }}
+          className={`h-full transition-all ${strength.colorClass}`}
+          style={{
+            width: `${strength.percent}%`,
+          }}
         />
       </div>
     </div>
   );
 }
 
-function InfoCard({ icon, title, items }) {
+function SecurityTip({
+  text,
+}) {
   return (
-    <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-        {icon}
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+        <BadgeCheck size={15} />
       </div>
 
-      <h3 className="text-2xl font-black text-[#071E3D]">{title}</h3>
-
-      <div className="mt-5 space-y-3">
-        {items.map((item) => (
-          <div key={item} className="flex items-start gap-3">
-            <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-500">
-              <BadgeCheck size={13} />
-            </div>
-
-            <p className="text-sm font-medium leading-relaxed text-slate-500">
-              {item}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function HeroPill({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
-        {label}
+      <p className="text-[12px] font-medium leading-relaxed text-[#182D4A]/70">
+        {text}
       </p>
-
-      <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );
 }
 
-function AlertBox({ type, icon, message }) {
-  const styles = {
-    success: "border-green-100 bg-green-50 text-green-700",
-    error: "border-red-100 bg-red-50 text-red-600",
-    loading: "border-blue-100 bg-blue-50 text-blue-600",
+function MiniStat({
+  icon,
+  label,
+  value,
+  tone = "orange",
+}) {
+  const tones = {
+    orange:
+      "bg-[#CC6B27]/10 text-[#CC6B27]",
+    green:
+      "bg-green-50 text-green-600",
+    blue:
+      "bg-blue-50 text-blue-600",
   };
 
   return (
-    <div
-      className={`rounded-[24px] border px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
-        styles[type] || styles.loading
-      }`}
-    >
-      <div className="shrink-0">{icon}</div>
-      <span>{message}</span>
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+      <div
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${
+          tones[tone] ||
+          tones.orange
+        }`}
+      >
+        {icon}
+      </div>
+
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
+          {label}
+        </p>
+
+        <p className="mt-1 truncate text-[19px] font-black text-[#071E3D]">
+          {value}
+        </p>
+      </div>
     </div>
   );
 }
 
-function getPasswordStrength(password) {
+function UserIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle
+        cx="12"
+        cy="7"
+        r="4"
+      />
+    </svg>
+  );
+}
+
+function getPasswordStrength(
+  password
+) {
   let score = 0;
 
-  if (password.length >= 6) score += 1;
-  if (/[A-Z]/.test(password)) score += 1;
-  if (/[0-9]/.test(password)) score += 1;
-  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+  if (
+    password.length >= 6
+  ) {
+    score += 1;
+  }
+
+  if (/[A-Z]/.test(password)) {
+    score += 1;
+  }
+
+  if (/[0-9]/.test(password)) {
+    score += 1;
+  }
+
+  if (
+    /[^A-Za-z0-9]/.test(
+      password
+    )
+  ) {
+    score += 1;
+  }
 
   if (!password) {
     return {
       score: 0,
       label: "Belum Diisi",
       percent: 0,
-      colorClass: "bg-slate-300",
+      colorClass:
+        "bg-slate-300",
     };
   }
 
@@ -588,7 +753,8 @@ function getPasswordStrength(password) {
       score,
       label: "Lemah",
       percent: 25,
-      colorClass: "bg-red-500",
+      colorClass:
+        "bg-red-500",
     };
   }
 
@@ -597,7 +763,8 @@ function getPasswordStrength(password) {
       score,
       label: "Cukup",
       percent: 50,
-      colorClass: "bg-yellow-500",
+      colorClass:
+        "bg-yellow-500",
     };
   }
 
@@ -606,7 +773,8 @@ function getPasswordStrength(password) {
       score,
       label: "Baik",
       percent: 75,
-      colorClass: "bg-blue-500",
+      colorClass:
+        "bg-blue-500",
     };
   }
 
@@ -614,14 +782,21 @@ function getPasswordStrength(password) {
     score,
     label: "Kuat",
     percent: 100,
-    colorClass: "bg-green-500",
+    colorClass:
+      "bg-green-500",
   };
 }
 
 function getDisplayName() {
   try {
-    const storedUser = localStorage.getItem("user");
-    const user = storedUser ? JSON.parse(storedUser) : null;
+    const storedUser =
+      localStorage.getItem(
+        "user"
+      );
+
+    const user = storedUser
+      ? JSON.parse(storedUser)
+      : null;
 
     return (
       user?.nama ||
@@ -630,7 +805,7 @@ function getDisplayName() {
       user?.name ||
       "Asesi"
     );
-  } catch (err) {
+  } catch {
     return "Asesi";
   }
 }

@@ -22,7 +22,6 @@ import {
   RefreshCcw,
   Search,
   ShieldCheck,
-  Sparkles,
   Tag,
   XCircle,
 } from "lucide-react";
@@ -48,7 +47,6 @@ export default function JadwalSaya() {
 
   const hasLoadedRef = useRef(false);
   const requestRunningRef = useRef(false);
-
   const navigate = useNavigate();
 
   const API =
@@ -62,7 +60,9 @@ export default function JadwalSaya() {
   });
 
   useEffect(() => {
-    if (hasLoadedRef.current) return;
+    if (hasLoadedRef.current) {
+      return;
+    }
 
     hasLoadedRef.current = true;
     loadData();
@@ -95,23 +95,43 @@ export default function JadwalSaya() {
   };
 
   const normalizePaymentStatus = (status) => {
-    const value = String(status || "belum bayar")
+    const value = String(
+      status || "belum bayar"
+    )
       .toLowerCase()
       .trim()
       .replace(/\s+/g, "_");
 
-    if (value === "belum_bayar") return "belum bayar";
-    if (value === "menunggu_validasi_admin") {
+    if (value === "belum_bayar") {
+      return "belum bayar";
+    }
+
+    if (
+      value === "menunggu_validasi_admin" ||
+      value === "menunggu_validasi"
+    ) {
       return "menunggu_validasi";
     }
-    if (value === "menunggu_validasi") {
-      return "menunggu_validasi";
+
+    if (value === "pending") {
+      return "pending";
     }
-    if (value === "pending") return "pending";
-    if (value === "paid") return "paid";
-    if (value === "ditolak") return "ditolak";
-    if (value === "expired") return "expired";
-    if (value === "cancelled") return "cancelled";
+
+    if (value === "paid") {
+      return "paid";
+    }
+
+    if (value === "ditolak") {
+      return "ditolak";
+    }
+
+    if (value === "expired") {
+      return "expired";
+    }
+
+    if (value === "cancelled") {
+      return "cancelled";
+    }
 
     return value || "belum bayar";
   };
@@ -126,16 +146,17 @@ export default function JadwalSaya() {
     );
   };
 
-  const getSelectedJadwal = (id_jadwal) => {
+  const getSelectedJadwal = (idJadwal) => {
     return myJadwal.find(
       (item) =>
-        Number(item.id_jadwal) === Number(id_jadwal)
+        Number(item.id_jadwal) ===
+        Number(idJadwal)
     );
   };
 
-  const getIdPesertaByJadwal = (id_jadwal) => {
+  const getIdPesertaByJadwal = (idJadwal) => {
     const selected =
-      getSelectedJadwal(id_jadwal);
+      getSelectedJadwal(idJadwal);
 
     return (
       selected?.id_peserta ||
@@ -146,23 +167,26 @@ export default function JadwalSaya() {
     );
   };
 
-  const isSudahDipilih = (id_jadwal) => {
+  const isSudahDipilih = (idJadwal) => {
     return myJadwal.some(
       (item) =>
         Number(item.id_jadwal) ===
-        Number(id_jadwal)
+        Number(idJadwal)
     );
   };
 
   const getPembayaranData = (item) => {
     const idSkema = getIdSkema(item);
+
     return pembayaran[idSkema] || null;
   };
 
   const getStatusPembayaran = (item) => {
     const data = getPembayaranData(item);
 
-    if (!data) return "belum bayar";
+    if (!data) {
+      return "belum bayar";
+    }
 
     return normalizePaymentStatus(data.status);
   };
@@ -177,8 +201,12 @@ export default function JadwalSaya() {
     );
   };
 
-  const loadData = async (showMainLoading = true) => {
-    if (requestRunningRef.current) return;
+  const loadData = async (
+    showMainLoading = true
+  ) => {
+    if (requestRunningRef.current) {
+      return;
+    }
 
     requestRunningRef.current = true;
 
@@ -198,21 +226,23 @@ export default function JadwalSaya() {
         return;
       }
 
-      const [jadwalRes, sayaRes] =
-        await Promise.all([
-          axios.get(
-            `${API}/asesi/jadwal/tersedia`,
-            {
-              headers: getHeaders(),
-            }
-          ),
-          axios.get(
-            `${API}/asesi/jadwal-saya`,
-            {
-              headers: getHeaders(),
-            }
-          ),
-        ]);
+      const [
+        jadwalRes,
+        sayaRes,
+      ] = await Promise.all([
+        axios.get(
+          `${API}/asesi/jadwal/tersedia`,
+          {
+            headers: getHeaders(),
+          }
+        ),
+        axios.get(
+          `${API}/asesi/jadwal-saya`,
+          {
+            headers: getHeaders(),
+          }
+        ),
+      ]);
 
       const jadwalData =
         jadwalRes.data?.data || [];
@@ -222,7 +252,9 @@ export default function JadwalSaya() {
 
       const selected = sayaData
         .map(normalizePesertaJadwal)
-        .filter((item) => item.id_jadwal);
+        .filter(
+          (item) => item.id_jadwal
+        );
 
       setJadwal(jadwalData);
       setMyJadwal(selected);
@@ -266,75 +298,105 @@ export default function JadwalSaya() {
     const uniqueSkemaIds = [
       ...new Set(
         jadwalData
-          .map((item) => getIdSkema(item))
+          .map((item) =>
+            getIdSkema(item)
+          )
           .filter(Boolean)
       ),
     ];
 
     const requests =
-      uniqueSkemaIds.map(async (idSkema) => {
-        try {
-          const res = await axios.get(
-            `${API}/asesi/pembayaran/${idSkema}/status`,
-            {
-              headers: getHeaders(),
+      uniqueSkemaIds.map(
+        async (idSkema) => {
+          try {
+            const res =
+              await axios.get(
+                `${API}/asesi/pembayaran/${idSkema}/status`,
+                {
+                  headers:
+                    getHeaders(),
+                }
+              );
+
+            const data =
+              res.data?.data || {};
+
+            result[idSkema] = {
+              id_pembayaran:
+                data.id_pembayaran ||
+                null,
+              id_user:
+                data.id_user ||
+                null,
+              id_peserta:
+                data.id_peserta ||
+                null,
+              id_skema:
+                data.id_skema ||
+                idSkema,
+              status:
+                normalizePaymentStatus(
+                  data.status
+                ),
+              metode_pembayaran:
+                data.metode_pembayaran ||
+                null,
+              jalur_pembayaran:
+                data.jalur_pembayaran ||
+                null,
+              nominal:
+                data.nominal || 0,
+              waktu_batas:
+                data.waktu_batas ||
+                null,
+              waktu_pembayaran:
+                data.waktu_pembayaran ||
+                null,
+              bukti_bayar:
+                data.bukti_bayar ||
+                null,
+              catatan_admin:
+                data.catatan_admin ||
+                null,
+            };
+          } catch (err) {
+            if (
+              err.response?.status ===
+              429
+            ) {
+              throw err;
             }
-          );
 
-          const data =
-            res.data?.data || {};
-
-          result[idSkema] = {
-            id_pembayaran:
-              data.id_pembayaran || null,
-            id_user: data.id_user || null,
-            id_peserta:
-              data.id_peserta || null,
-            id_skema:
-              data.id_skema || idSkema,
-            status:
-              normalizePaymentStatus(
-                data.status
-              ),
-            metode_pembayaran:
-              data.metode_pembayaran || null,
-            jalur_pembayaran:
-              data.jalur_pembayaran || null,
-            nominal:
-              data.nominal || 0,
-            waktu_batas:
-              data.waktu_batas || null,
-            waktu_pembayaran:
-              data.waktu_pembayaran || null,
-            bukti_bayar:
-              data.bukti_bayar || null,
-            catatan_admin:
-              data.catatan_admin || null,
-          };
-        } catch (err) {
-          if (err.response?.status === 429) {
-            throw err;
+            result[idSkema] = {
+              id_pembayaran: null,
+              id_skema: idSkema,
+              status:
+                "belum bayar",
+              metode_pembayaran:
+                null,
+              jalur_pembayaran:
+                null,
+              nominal: 0,
+              waktu_batas:
+                null,
+              waktu_pembayaran:
+                null,
+              bukti_bayar:
+                null,
+              catatan_admin:
+                null,
+            };
           }
-
-          result[idSkema] = {
-            id_pembayaran: null,
-            id_skema: idSkema,
-            status: "belum bayar",
-            metode_pembayaran: null,
-            jalur_pembayaran: null,
-            nominal: 0,
-            waktu_batas: null,
-            waktu_pembayaran: null,
-            bukti_bayar: null,
-            catatan_admin: null,
-          };
         }
-      });
+      );
 
     try {
       await Promise.all(requests);
     } catch (err) {
-      if (err.response?.status === 429) {
+      if (
+        err.response?.status ===
+        429
+      ) {
         throw err;
       }
     }
@@ -347,52 +409,67 @@ export default function JadwalSaya() {
   ) => {
     const result = {};
 
-    const requests = selectedData.map(
-      async (item) => {
-        const idPeserta =
-          getIdPeserta(item);
+    const requests =
+      selectedData.map(
+        async (item) => {
+          const idPeserta =
+            getIdPeserta(item);
 
-        if (!idPeserta) return;
-
-        try {
-          const res = await axios.get(
-            `${API}/asesi/apl01/${idPeserta}`,
-            {
-              headers: getHeaders(),
-            }
-          );
-
-          const apl01 =
-            res.data?.data?.apl01;
-
-          result[idPeserta] = {
-            exists: !!apl01,
-            submitted:
-              apl01?.status === "submit",
-            status:
-              apl01?.status || "belum_ada",
-            id_apl01:
-              apl01?.id_apl01 || null,
-          };
-        } catch (err) {
-          if (err.response?.status === 429) {
-            throw err;
+          if (!idPeserta) {
+            return;
           }
 
-          result[idPeserta] = {
-            exists: false,
-            submitted: false,
-            status: "belum_ada",
-            id_apl01: null,
-          };
+          try {
+            const res =
+              await axios.get(
+                `${API}/asesi/apl01/${idPeserta}`,
+                {
+                  headers:
+                    getHeaders(),
+                }
+              );
+
+            const apl01 =
+              res.data?.data?.apl01;
+
+            result[idPeserta] = {
+              exists: !!apl01,
+              submitted:
+                apl01?.status ===
+                "submit",
+              status:
+                apl01?.status ||
+                "belum_ada",
+              id_apl01:
+                apl01?.id_apl01 ||
+                null,
+            };
+          } catch (err) {
+            if (
+              err.response?.status ===
+              429
+            ) {
+              throw err;
+            }
+
+            result[idPeserta] = {
+              exists: false,
+              submitted: false,
+              status:
+                "belum_ada",
+              id_apl01: null,
+            };
+          }
         }
-      }
-    );
+      );
 
     try {
       await Promise.all(requests);
     } catch (err) {
-      if (err.response?.status === 429) {
+      if (
+        err.response?.status ===
+        429
+      ) {
         throw err;
       }
     }
@@ -405,53 +482,67 @@ export default function JadwalSaya() {
   ) => {
     const result = {};
 
-    const requests = selectedData.map(
-      async (item) => {
-        const idPeserta =
-          getIdPeserta(item);
+    const requests =
+      selectedData.map(
+        async (item) => {
+          const idPeserta =
+            getIdPeserta(item);
 
-        if (!idPeserta) return;
-
-        try {
-          const res = await axios.get(
-            `${API}/asesi/apl02/${idPeserta}`,
-            {
-              headers: getHeaders(),
-            }
-          );
-
-          const apl02 =
-            res.data?.data;
-
-          result[idPeserta] = {
-            exists: !!apl02,
-            submitted:
-              apl02?.status ===
-              "submitted",
-            status:
-              apl02?.status || "belum_ada",
-            id_apl02:
-              apl02?.id_apl02 || null,
-          };
-        } catch (err) {
-          if (err.response?.status === 429) {
-            throw err;
+          if (!idPeserta) {
+            return;
           }
 
-          result[idPeserta] = {
-            exists: false,
-            submitted: false,
-            status: "belum_ada",
-            id_apl02: null,
-          };
+          try {
+            const res =
+              await axios.get(
+                `${API}/asesi/apl02/${idPeserta}`,
+                {
+                  headers:
+                    getHeaders(),
+                }
+              );
+
+            const apl02 =
+              res.data?.data;
+
+            result[idPeserta] = {
+              exists: !!apl02,
+              submitted:
+                apl02?.status ===
+                "submitted",
+              status:
+                apl02?.status ||
+                "belum_ada",
+              id_apl02:
+                apl02?.id_apl02 ||
+                null,
+            };
+          } catch (err) {
+            if (
+              err.response?.status ===
+              429
+            ) {
+              throw err;
+            }
+
+            result[idPeserta] = {
+              exists: false,
+              submitted: false,
+              status:
+                "belum_ada",
+              id_apl02: null,
+            };
+          }
         }
-      }
-    );
+      );
 
     try {
       await Promise.all(requests);
     } catch (err) {
-      if (err.response?.status === 429) {
+      if (
+        err.response?.status ===
+        429
+      ) {
         throw err;
       }
     }
@@ -464,49 +555,61 @@ export default function JadwalSaya() {
   ) => {
     const result = {};
 
-    const requests = selectedData.map(
-      async (item) => {
-        const idPeserta =
-          getIdPeserta(item);
+    const requests =
+      selectedData.map(
+        async (item) => {
+          const idPeserta =
+            getIdPeserta(item);
 
-        if (!idPeserta) return;
-
-        try {
-          const res = await axios.get(
-            `${API}/asesi/presensi/status/${idPeserta}`,
-            {
-              headers: getHeaders(),
-            }
-          );
-
-          const data =
-            res.data?.data || {};
-
-          result[idPeserta] = {
-            hadir:
-              data?.is_submitted === true,
-            status:
-              data?.is_submitted
-                ? "hadir"
-                : "belum",
-          };
-        } catch (err) {
-          if (err.response?.status === 429) {
-            throw err;
+          if (!idPeserta) {
+            return;
           }
 
-          result[idPeserta] = {
-            hadir: false,
-            status: "belum",
-          };
+          try {
+            const res =
+              await axios.get(
+                `${API}/asesi/presensi/status/${idPeserta}`,
+                {
+                  headers:
+                    getHeaders(),
+                }
+              );
+
+            const data =
+              res.data?.data || {};
+
+            result[idPeserta] = {
+              hadir:
+                data?.is_submitted ===
+                true,
+              status:
+                data?.is_submitted
+                  ? "hadir"
+                  : "belum",
+            };
+          } catch (err) {
+            if (
+              err.response?.status ===
+              429
+            ) {
+              throw err;
+            }
+
+            result[idPeserta] = {
+              hadir: false,
+              status: "belum",
+            };
+          }
         }
-      }
-    );
+      );
 
     try {
       await Promise.all(requests);
     } catch (err) {
-      if (err.response?.status === 429) {
+      if (
+        err.response?.status ===
+        429
+      ) {
         throw err;
       }
     }
@@ -519,47 +622,60 @@ export default function JadwalSaya() {
   ) => {
     const result = {};
 
-    const requests = selectedData.map(
-      async (item) => {
-        const idPeserta =
-          getIdPeserta(item);
+    const requests =
+      selectedData.map(
+        async (item) => {
+          const idPeserta =
+            getIdPeserta(item);
 
-        if (!idPeserta) return;
-
-        try {
-          const res = await axios.get(
-            `${API}/asesi/fr-ia05/status/${idPeserta}`,
-            {
-              headers: getHeaders(),
-            }
-          );
-
-          const data =
-            res.data?.data || {};
-
-          result[idPeserta] = {
-            submitted:
-              data?.submitted === true,
-            status:
-              data?.status || "belum",
-          };
-        } catch (err) {
-          if (err.response?.status === 429) {
-            throw err;
+          if (!idPeserta) {
+            return;
           }
 
-          result[idPeserta] = {
-            submitted: false,
-            status: "belum",
-          };
+          try {
+            const res =
+              await axios.get(
+                `${API}/asesi/fr-ia05/status/${idPeserta}`,
+                {
+                  headers:
+                    getHeaders(),
+                }
+              );
+
+            const data =
+              res.data?.data || {};
+
+            result[idPeserta] = {
+              submitted:
+                data?.submitted ===
+                true,
+              status:
+                data?.status ||
+                "belum",
+            };
+          } catch (err) {
+            if (
+              err.response?.status ===
+              429
+            ) {
+              throw err;
+            }
+
+            result[idPeserta] = {
+              submitted: false,
+              status: "belum",
+            };
+          }
         }
-      }
-    );
+      );
 
     try {
       await Promise.all(requests);
     } catch (err) {
-      if (err.response?.status === 429) {
+      if (
+        err.response?.status ===
+        429
+      ) {
         throw err;
       }
     }
@@ -567,73 +683,89 @@ export default function JadwalSaya() {
     setFria05Status(result);
   };
 
-  const loadStatusHasilAsesmen = async (
-    selectedData
-  ) => {
-    const result = {};
+  const loadStatusHasilAsesmen =
+    async (selectedData) => {
+      const result = {};
 
-    const requests = selectedData.map(
-      async (item) => {
-        const idPeserta =
-          getIdPeserta(item);
+      const requests =
+        selectedData.map(
+          async (item) => {
+            const idPeserta =
+              getIdPeserta(item);
 
-        if (!idPeserta) return;
-
-        try {
-          const res = await axios.get(
-            `${API}/asesi/hasil-saya/detail?id_peserta=${idPeserta}`,
-            {
-              headers: getHeaders(),
+            if (!idPeserta) {
+              return;
             }
-          );
 
-          const data =
-            res.data?.data || {};
+            try {
+              const res =
+                await axios.get(
+                  `${API}/asesi/hasil-saya/detail?id_peserta=${idPeserta}`,
+                  {
+                    headers:
+                      getHeaders(),
+                  }
+                );
 
-          result[idPeserta] = {
-            tersedia: true,
-            status:
-              data.status_asesmen ||
-              data.hasil ||
-              "belum_tersedia",
-          };
-        } catch (err) {
-          if (err.response?.status === 429) {
-            throw err;
+              const data =
+                res.data?.data || {};
+
+              result[idPeserta] = {
+                tersedia: true,
+                status:
+                  data.status_asesmen ||
+                  data.hasil ||
+                  "belum_tersedia",
+              };
+            } catch (err) {
+              if (
+                err.response
+                  ?.status ===
+                429
+              ) {
+                throw err;
+              }
+
+              result[idPeserta] = {
+                tersedia: false,
+                status:
+                  "belum_tersedia",
+              };
+            }
           }
+        );
 
-          result[idPeserta] = {
-            tersedia: false,
-            status: "belum_tersedia",
-          };
+      try {
+        await Promise.all(requests);
+      } catch (err) {
+        if (
+          err.response?.status ===
+          429
+        ) {
+          throw err;
         }
       }
-    );
 
-    try {
-      await Promise.all(requests);
-    } catch (err) {
-      if (err.response?.status === 429) {
-        throw err;
-      }
-    }
-
-    setHasilAsesmenStatus(result);
-  };
+      setHasilAsesmenStatus(
+        result
+      );
+    };
 
   const pilihJadwal = async (
-    id_jadwal
+    idJadwal
   ) => {
-    setChoosingId(id_jadwal);
+    setChoosingId(idJadwal);
 
     try {
-      const res = await axios.post(
-        `${API}/asesi/jadwal/pilih`,
-        { id_jadwal },
-        {
-          headers: getHeaders(),
-        }
-      );
+      const res =
+        await axios.post(
+          `${API}/asesi/jadwal/pilih`,
+          { id_jadwal: idJadwal },
+          {
+            headers:
+              getHeaders(),
+          }
+        );
 
       alert(
         "Jadwal berhasil dipilih. Silakan lanjut pembayaran."
@@ -646,7 +778,7 @@ export default function JadwalSaya() {
         prev.some(
           (item) =>
             Number(item.id_jadwal) ===
-            Number(id_jadwal)
+            Number(idJadwal)
         )
           ? prev
           : [
@@ -657,7 +789,8 @@ export default function JadwalSaya() {
                   data.id_peserta_jadwal ||
                   data.id ||
                   data.id_pendaftaran,
-                id_jadwal,
+                id_jadwal:
+                  idJadwal,
                 id_skema:
                   data.id_skema,
                 status:
@@ -676,14 +809,17 @@ export default function JadwalSaya() {
       if (
         message
           ?.toLowerCase()
-          .includes("sudah terdaftar")
+          .includes(
+            "sudah terdaftar"
+          )
       ) {
         alert(
           "Anda sudah memilih jadwal ini."
         );
         await loadData(false);
       } else if (
-        err.response?.status === 429
+        err.response?.status ===
+        429
       ) {
         alert(
           "Terlalu banyak request. Tunggu sebentar lalu coba lagi."
@@ -715,7 +851,8 @@ export default function JadwalSaya() {
 
     if (
       statusBayar === "pending" ||
-      statusBayar === "menunggu_validasi"
+      statusBayar ===
+        "menunggu_validasi"
     ) {
       alert(
         "Pembayaran sedang menunggu validasi admin. Tidak bisa bayar ulang."
@@ -803,8 +940,10 @@ export default function JadwalSaya() {
 
     const idJadwal =
       selectedFRIA05Item.id_jadwal ||
-      selectedFRIA05Item.jadwal?.id_jadwal ||
-      selectedFRIA05Item.Jadwal?.id_jadwal;
+      selectedFRIA05Item.jadwal
+        ?.id_jadwal ||
+      selectedFRIA05Item.Jadwal
+        ?.id_jadwal;
 
     if (!idJadwal) {
       alert(
@@ -850,12 +989,16 @@ export default function JadwalSaya() {
   };
 
   const formatTanggal = (date) => {
-    if (!date) return "-";
+    if (!date) {
+      return "-";
+    }
 
     const parsed = new Date(date);
 
     if (
-      Number.isNaN(parsed.getTime())
+      Number.isNaN(
+        parsed.getTime()
+      )
     ) {
       return "-";
     }
@@ -893,23 +1036,24 @@ export default function JadwalSaya() {
       const statusBayar =
         getStatusPembayaran(item);
 
+      const searchableText = [
+        skema.judul_skema,
+        skema.kode_skema,
+        tuk.nama_tuk,
+        item.nama_kegiatan,
+        item.pelaksanaan_uji,
+        item.status,
+        item.lokasi,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
       const matchSearch =
         !keyword ||
-        skema.judul_skema
-          ?.toLowerCase()
-          .includes(keyword) ||
-        skema.kode_skema
-          ?.toLowerCase()
-          .includes(keyword) ||
-        tuk.nama_tuk
-          ?.toLowerCase()
-          .includes(keyword) ||
-        item.nama_kegiatan
-          ?.toLowerCase()
-          .includes(keyword) ||
-        item.pelaksanaan_uji
-          ?.toLowerCase()
-          .includes(keyword);
+        searchableText.includes(
+          keyword
+        );
 
       const matchFilter =
         filter === "semua" ||
@@ -923,9 +1067,11 @@ export default function JadwalSaya() {
             statusBayar ===
               "menunggu_validasi")) ||
         (filter === "paid" &&
-          statusBayar === "paid") ||
+          statusBayar ===
+            "paid") ||
         (filter === "ditolak" &&
-          statusBayar === "ditolak");
+          statusBayar ===
+            "ditolak");
 
       return (
         matchSearch &&
@@ -943,149 +1089,134 @@ export default function JadwalSaya() {
   const totalDipilih =
     myJadwal.length;
 
-  const totalPaid = jadwal.filter(
-    (item) =>
-      getStatusPembayaran(item) ===
-      "paid"
-  ).length;
+  const totalPaid =
+    jadwal.filter(
+      (item) =>
+        getStatusPembayaran(
+          item
+        ) === "paid"
+    ).length;
 
   const totalMenunggu =
-    jadwal.filter((item) => {
-      const status =
-        getStatusPembayaran(item);
+    jadwal.filter(
+      (item) => {
+        const status =
+          getStatusPembayaran(
+            item
+          );
 
-      return (
-        status === "pending" ||
-        status ===
-          "menunggu_validasi"
-      );
-    }).length;
+        return (
+          status === "pending" ||
+          status ===
+            "menunggu_validasi"
+        );
+      }
+    ).length;
 
   const totalTersedia =
     jadwal.length;
 
   if (loading) {
-    return <LoadingScreen />;
+    return <LoadingState />;
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className="min-h-screen bg-[#FAFAFA] flex">
       <SidebarAsesi
         isOpen={isOpen}
         setIsOpen={setIsOpen}
       />
 
-      <main className="flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 overflow-x-hidden">
-        <div className="w-full max-w-[1500px] mx-auto space-y-6">
-          <section className="relative overflow-hidden rounded-[36px] border border-slate-100 bg-white shadow-sm">
-            <div className="absolute top-0 right-0 w-[430px] h-[430px] bg-orange-500/10 rounded-full blur-[110px]" />
-            <div className="absolute -bottom-24 -left-24 w-[380px] h-[380px] bg-[#071E3D]/5 rounded-full blur-[100px]" />
+      <main className="flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-[1500px] space-y-5">
+          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="border-b border-[#071E3D]/10 px-5 py-5 md:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="mb-3 h-1 w-10 rounded-full bg-[#CC6B27]" />
 
-            <div className="relative z-10 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 p-6 lg:p-8">
-              <div className="flex flex-col justify-center">
-                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <CalendarDays
-                    size={15}
-                    className="text-orange-500"
-                  />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Jadwal Saya
-                  </span>
+                  <h1 className="text-[24px] font-black text-[#071E3D] md:text-[28px]">
+                    Jadwal{" "}
+                    <span className="text-[#CC6B27]">
+                      Saya
+                    </span>
+                  </h1>
+
+                  <p className="mt-1 max-w-3xl text-[13px] font-medium leading-5 text-[#182D4A]/70">
+                    Pantau jadwal sertifikasi,
+                    status pembayaran, dan tahapan
+                    asesmen yang harus Anda selesaikan.
+                  </p>
                 </div>
 
-                <h1 className="text-4xl lg:text-5xl font-black leading-tight text-[#071E3D]">
-                  Kelola Jadwal
-                  <br />
-                  <span className="text-orange-500">
-                    Sertifikasi Anda
-                  </span>
-                </h1>
-
-                <p className="mt-5 max-w-2xl text-base lg:text-lg font-medium leading-relaxed text-slate-500">
-                  Pilih jadwal uji kompetensi,
-                  lanjutkan pembayaran, dan
-                  akses APL01, APL02, presensi,
-                  FR.IA.05, serta hasil akhir
-                  sesuai dengan tahapan yang
-                  berlaku.
-                </p>
-
-                <div className="mt-7 flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={handleRefresh}
-                    disabled={refreshing}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
-                  >
-                    {refreshing ? (
-                      <Loader2
-                        size={17}
-                        className="animate-spin"
-                      />
-                    ) : (
-                      <RefreshCcw
-                        size={17}
-                      />
-                    )}
-                    Refresh Jadwal
-                  </button>
-
+                <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() =>
                       navigate("/asesi")
                     }
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+                    className="rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[12px] font-bold text-[#071E3D] shadow-sm transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white"
                   >
                     Dashboard
-                    <ChevronRight
-                      size={17}
-                    />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[12px] font-bold text-[#071E3D] shadow-sm transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      {refreshing ? (
+                        <Loader2
+                          size={15}
+                          className="animate-spin"
+                        />
+                      ) : (
+                        <RefreshCcw
+                          size={15}
+                        />
+                      )}
+                      Refresh
+                    </span>
                   </button>
                 </div>
               </div>
+            </div>
 
-              <div className="relative overflow-hidden rounded-[32px] bg-[#071E3D] p-6 text-white shadow-2xl shadow-[#071E3D]/15">
-                <div className="absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-500/20 blur-3xl" />
+            <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-3 md:p-6">
+              <StatCard
+                icon={
+                  <CalendarDays
+                    size={22}
+                  />
+                }
+                label="Total Jadwal"
+                value={`${totalTersedia} Jadwal`}
+                tone="orange"
+              />
 
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-orange-400">
-                    <Sparkles
-                      size={28}
-                    />
-                  </div>
+              <StatCard
+                icon={
+                  <BadgeCheck
+                    size={22}
+                  />
+                }
+                label="Jadwal Dipilih"
+                value={`${totalDipilih} Dipilih`}
+                tone="green"
+              />
 
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-white/50">
-                    Ringkasan Jadwal
-                  </p>
-
-                  <h2 className="text-2xl font-black leading-tight">
-                    {totalTersedia} Jadwal
-                    Tersedia
-                  </h2>
-
-                  <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
-                    Pantau status jadwal dan
-                    pembayaran Anda sebelum
-                    lanjut ke proses asesmen.
-                  </p>
-
-                  <div className="mt-auto pt-6 grid grid-cols-3 gap-3">
-                    <HeroPill
-                      label="Dipilih"
-                      value={`${totalDipilih}`}
-                    />
-                    <HeroPill
-                      label="Validasi"
-                      value={`${totalMenunggu}`}
-                    />
-                    <HeroPill
-                      label="Paid"
-                      value={`${totalPaid}`}
-                    />
-                  </div>
-                </div>
-              </div>
+              <StatCard
+                icon={
+                  <CheckCircle
+                    size={22}
+                  />
+                }
+                label="Menunggu Validasi"
+                value={`${totalMenunggu} Pembayaran`}
+                tone="orange"
+              />
             </div>
           </section>
 
@@ -1095,279 +1226,244 @@ export default function JadwalSaya() {
             />
           )}
 
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <MiniStat
-              icon={
-                <CalendarDays
-                  size={22}
+          <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+            <div className="border-b-4 border-[#CC6B27] bg-[#071E3D] px-5 py-3.5 md:px-6">
+              <h2 className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-white">
+                <CalendarCheck
+                  size={17}
+                  className="text-[#CC6B27]"
                 />
-              }
-              label="Total Jadwal"
-              value={`${totalTersedia} Jadwal`}
-            />
+                Daftar Jadwal Sertifikasi
+              </h2>
+            </div>
 
-            <MiniStat
-              icon={
-                <BadgeCheck
-                  size={22}
-                />
-              }
-              label="Jadwal Dipilih"
-              value={`${totalDipilih} Dipilih`}
-            />
+            <div className="border-b border-[#071E3D]/10 bg-white px-5 py-4 md:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-[12px] font-medium text-[#182D4A]/60">
+                    Cari berdasarkan skema,
+                    kegiatan, TUK, atau
+                    pelaksanaan uji.
+                  </p>
 
-            <MiniStat
-              icon={
-                <CheckCircle
-                  size={22}
-                />
-              }
-              label="Menunggu Validasi"
-              value={`${totalMenunggu} Pembayaran`}
-            />
-          </section>
-
-          <section className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div>
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2">
-                  <Filter
-                    size={15}
-                    className="text-orange-500"
-                  />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">
-                    Filter Jadwal
-                  </span>
+                  <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-[#182D4A]/40">
+                    {filteredJadwal.length} jadwal ditemukan
+                  </p>
                 </div>
 
-                <h2 className="text-xl font-black text-[#071E3D]">
-                  Daftar Jadwal
-                  Sertifikasi
-                </h2>
-
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-                  Cari berdasarkan skema,
-                  kegiatan, TUK, atau
-                  pelaksanaan uji
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {refreshing ? (
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                  />
-                ) : (
-                  <RefreshCcw
-                    size={16}
-                  />
-                )}
-                Refresh
-              </button>
-            </div>
-
-            <div className="p-6 grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4">
-              <div className="relative">
-                <Search
-                  size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-                />
-
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) =>
-                    setSearch(e.target.value)
-                  }
-                  placeholder="Cari skema, kode, kegiatan, atau TUK..."
-                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-12 py-4 text-sm font-semibold text-[#071E3D] outline-none transition-all placeholder:text-slate-300 focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-                />
-              </div>
-
-              <select
-                value={filter}
-                onChange={(e) =>
-                  setFilter(e.target.value)
-                }
-                className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-[#071E3D] outline-none transition-all focus:border-orange-200 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
-              >
-                <option value="semua">
-                  Semua
-                </option>
-                <option value="dipilih">
-                  Dipilih
-                </option>
-                <option value="belum">
-                  Belum Dipilih
-                </option>
-                <option value="validasi">
-                  Menunggu Validasi
-                </option>
-                <option value="paid">
-                  Paid
-                </option>
-                <option value="ditolak">
-                  Ditolak
-                </option>
-              </select>
-            </div>
-          </section>
-
-          <section className="space-y-5">
-            {filteredJadwal.length ===
-            0 ? (
-              <EmptyState
-                search={search}
-              />
-            ) : (
-              filteredJadwal.map(
-                (item, index) => {
-                  const skema =
-                    item.skema ||
-                    item.Skema ||
-                    {};
-
-                  const tuk =
-                    item.tuk ||
-                    item.Tuk ||
-                    {};
-
-                  const idPeserta =
-                    getIdPesertaByJadwal(
-                      item.id_jadwal
-                    );
-
-                  const sudahDipilih =
-                    isSudahDipilih(
-                      item.id_jadwal
-                    );
-
-                  const sedangMemilih =
-                    choosingId ===
-                    item.id_jadwal;
-
-                  const pembayaranData =
-                    getPembayaranData(
-                      item
-                    );
-
-                  const statusPembayaran =
-                    getStatusPembayaran(
-                      item
-                    );
-
-                  const sudahPaid =
-                    statusPembayaran ===
-                    "paid";
-
-                  const menungguValidasi =
-                    statusPembayaran ===
-                      "pending" ||
-                    statusPembayaran ===
-                      "menunggu_validasi";
-
-                  const pembayaranDitolak =
-                    statusPembayaran ===
-                    "ditolak";
-
-                  return (
-                    <ScheduleCard
-                      key={
-                        item.id_jadwal ||
-                        index
-                      }
-                      item={item}
-                      skema={skema}
-                      tuk={tuk}
-                      idPeserta={
-                        idPeserta
-                      }
-                      sudahDipilih={
-                        sudahDipilih
-                      }
-                      sedangMemilih={
-                        sedangMemilih
-                      }
-                      pembayaranData={
-                        pembayaranData
-                      }
-                      statusPembayaran={
-                        statusPembayaran
-                      }
-                      sudahPaid={
-                        sudahPaid
-                      }
-                      menungguValidasi={
-                        menungguValidasi
-                      }
-                      pembayaranDitolak={
-                        pembayaranDitolak
-                      }
-                      apl01Data={
-                        apl01Status[
-                          idPeserta
-                        ] || {}
-                      }
-                      apl02Data={
-                        apl02Status[
-                          idPeserta
-                        ] || {}
-                      }
-                      presensiData={
-                        presensiStatus[
-                          idPeserta
-                        ] || {}
-                      }
-                      fria05Data={
-                        fria05Status[
-                          idPeserta
-                        ] || {}
-                      }
-                      hasilAsesmenData={
-                        hasilAsesmenStatus[
-                          idPeserta
-                        ] || {}
-                      }
-                      formatTanggal={
-                        formatTanggal
-                      }
-                      pilihJadwal={
-                        pilihJadwal
-                      }
-                      pergiBayar={
-                        pergiBayar
-                      }
-                      pergiAPL01={
-                        pergiAPL01
-                      }
-                      pergiAPL02={
-                        pergiAPL02
-                      }
-                      pergiPresensi={
-                        pergiPresensi
-                      }
-                      pergiFRIA05={
-                        pergiFRIA05
-                      }
-                      pergiHasilAkhir={
-                        pergiHasilAkhir
-                      }
+                <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+                  <div className="group relative w-full sm:w-[310px]">
+                    <Search
+                      size={17}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]"
                     />
-                  );
-                }
-              )
-            )}
+
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) =>
+                        setSearch(
+                          e.target.value
+                        )
+                      }
+                      placeholder="Cari Jadwal, Skema, TUK..."
+                      className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] py-2.5 pl-10 pr-4 text-[13px] font-medium text-[#071E3D] outline-none transition-all placeholder:text-[#182D4A]/40 focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
+                    />
+                  </div>
+
+                  <select
+                    value={filter}
+                    onChange={(e) =>
+                      setFilter(
+                        e.target.value
+                      )
+                    }
+                    className="rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-4 py-2.5 text-[13px] font-bold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white"
+                  >
+                    <option value="semua">
+                      Semua Status
+                    </option>
+                    <option value="dipilih">
+                      Dipilih
+                    </option>
+                    <option value="belum">
+                      Belum Bayar
+                    </option>
+                    <option value="validasi">
+                      Menunggu Validasi
+                    </option>
+                    <option value="paid">
+                      Paid
+                    </option>
+                    <option value="ditolak">
+                      Ditolak
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 md:p-6">
+              {loading ? (
+                <LoadingState />
+              ) : filteredJadwal.length ===
+                0 ? (
+                <EmptyState
+                  search={search}
+                />
+              ) : (
+                <div className="space-y-3">
+                  {filteredJadwal.map(
+                    (
+                      item,
+                      index
+                    ) => {
+                      const skema =
+                        item.skema ||
+                        item.Skema ||
+                        {};
+
+                      const tuk =
+                        item.tuk ||
+                        item.Tuk ||
+                        {};
+
+                      const idPeserta =
+                        getIdPesertaByJadwal(
+                          item.id_jadwal
+                        );
+
+                      const sudahDipilih =
+                        isSudahDipilih(
+                          item.id_jadwal
+                        );
+
+                      const sedangMemilih =
+                        choosingId ===
+                        item.id_jadwal;
+
+                      const pembayaranData =
+                        getPembayaranData(
+                          item
+                        );
+
+                      const statusPembayaran =
+                        getStatusPembayaran(
+                          item
+                        );
+
+                      const sudahPaid =
+                        statusPembayaran ===
+                        "paid";
+
+                      const menungguValidasi =
+                        statusPembayaran ===
+                          "pending" ||
+                        statusPembayaran ===
+                          "menunggu_validasi";
+
+                      const pembayaranDitolak =
+                        statusPembayaran ===
+                        "ditolak";
+
+                      return (
+                        <ScheduleCard
+                          key={
+                            item.id_jadwal ||
+                            index
+                          }
+                          item={item}
+                          skema={
+                            skema
+                          }
+                          tuk={tuk}
+                          idPeserta={
+                            idPeserta
+                          }
+                          sudahDipilih={
+                            sudahDipilih
+                          }
+                          sedangMemilih={
+                            sedangMemilih
+                          }
+                          pembayaranData={
+                            pembayaranData
+                          }
+                          statusPembayaran={
+                            statusPembayaran
+                          }
+                          sudahPaid={
+                            sudahPaid
+                          }
+                          menungguValidasi={
+                            menungguValidasi
+                          }
+                          pembayaranDitolak={
+                            pembayaranDitolak
+                          }
+                          apl01Data={
+                            apl01Status[
+                              idPeserta
+                            ] || {}
+                          }
+                          apl02Data={
+                            apl02Status[
+                              idPeserta
+                            ] || {}
+                          }
+                          presensiData={
+                            presensiStatus[
+                              idPeserta
+                            ] || {}
+                          }
+                          fria05Data={
+                            fria05Status[
+                              idPeserta
+                            ] || {}
+                          }
+                          hasilAsesmenData={
+                            hasilAsesmenStatus[
+                              idPeserta
+                            ] || {}
+                          }
+                          formatTanggal={
+                            formatTanggal
+                          }
+                          pilihJadwal={
+                            pilihJadwal
+                          }
+                          pergiBayar={
+                            pergiBayar
+                          }
+                          pergiAPL01={
+                            pergiAPL01
+                          }
+                          pergiAPL02={
+                            pergiAPL02
+                          }
+                          pergiPresensi={
+                            pergiPresensi
+                          }
+                          pergiFRIA05={
+                            pergiFRIA05
+                          }
+                          pergiHasilAkhir={
+                            pergiHasilAkhir
+                          }
+                        />
+                      );
+                    }
+                  )}
+                </div>
+              )}
+            </div>
           </section>
         </div>
 
         <FRIA05AsesiWarning
-          open={showFRIA05Warning}
+          open={
+            showFRIA05Warning
+          }
           duration={120}
           onClose={() => {
             setShowFRIA05Warning(
@@ -1417,7 +1513,8 @@ function ScheduleCard({
     "Skema tidak tersedia";
 
   const kodeSkema =
-    skema.kode_skema || "SKEMA";
+    skema.kode_skema ||
+    "SKEMA";
 
   const kegiatan =
     item.nama_kegiatan ||
@@ -1449,13 +1546,15 @@ function ScheduleCard({
     item.tgl_akhir ||
     item.jadwal?.tgl_akhir;
 
-  const mulai = tglAwal
-    ? new Date(tglAwal)
-    : null;
+  const mulai =
+    tglAwal
+      ? new Date(tglAwal)
+      : null;
 
-  const selesai = tglAkhir
-    ? new Date(tglAkhir)
-    : null;
+  const selesai =
+    tglAkhir
+      ? new Date(tglAkhir)
+      : null;
 
   if (selesai) {
     selesai.setHours(
@@ -1496,381 +1595,396 @@ function ScheduleCard({
     fria05Data?.submitted ===
     true;
 
-  const hasilSudahTerbit = [
-    "kompeten",
-    "belum_kompeten",
-  ].includes(
-    (
-      hasilAsesmenData?.status ||
-      ""
-    ).toLowerCase()
-  );
+  const hasilSudahTerbit =
+    [
+      "kompeten",
+      "belum_kompeten",
+    ].includes(
+      String(
+        hasilAsesmenData?.status ||
+          ""
+      ).toLowerCase()
+    );
 
   const unlockHasilAkhir =
     sudahPaid &&
     hasilSudahTerbit;
 
+  const statusInfo =
+    getPaymentLabel(
+      statusPembayaran
+    );
+
   return (
-    <article className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-orange-500/5">
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_330px]">
-        <div className="p-6">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-            <div>
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-full bg-orange-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-orange-500">
-                  {kodeSkema}
-                </span>
-
-                {sudahDipilih ? (
-                  <StatusBadge
-                    type="success"
-                    label="Dipilih"
-                  />
-                ) : (
-                  <StatusBadge
-                    type="light"
-                    label="Tersedia"
-                  />
-                )}
-
-                {menungguValidasi && (
-                  <StatusBadge
-                    type="warning"
-                    label="Menunggu Validasi"
-                  />
-                )}
-
-                {sudahPaid && (
-                  <StatusBadge
-                    type="success"
-                    label="Paid"
-                  />
-                )}
-
-                {pembayaranDitolak && (
-                  <StatusBadge
-                    type="danger"
-                    label="Ditolak"
-                  />
-                )}
-
-                {isApl01Done && (
-                  <StatusBadge
-                    type="success"
-                    label="APL01 Selesai"
-                  />
-                )}
-              </div>
-
-              <h3 className="text-2xl font-black text-[#071E3D]">
-                {title}
-              </h3>
-
-              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
-                {kegiatan}
-              </p>
-            </div>
-
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-              <BookOpen size={26} />
+    <article className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
+      <div className="border-b border-[#071E3D]/10 px-5 py-5 md:px-6">
+        <div className="flex items-center gap-4">
+          <div className="flex w-11 shrink-0 items-center justify-center">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+              <BookOpen size={21} />
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <DetailItem
-              icon={
-                <MapPin
-                  size={18}
-                />
-              }
-              label="TUK"
-              value={
-                tuk.nama_tuk || "-"
-              }
-            />
+          <div className="w-px self-stretch shrink-0 bg-[#071E3D]/10" />
 
-            <DetailItem
-              icon={
-                <MonitorCheck
-                  size={18}
-                />
-              }
-              label="Pelaksanaan"
-              value={
-                item.pelaksanaan_uji ||
-                "-"
-              }
-            />
-
-            <DetailItem
-              icon={
-                <CalendarCheck
-                  size={18}
-                />
-              }
-              label="Tanggal"
-              value={tanggal}
-            />
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-400">
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2">
-              <Tag size={14} />
-              ID Jadwal: {idJadwal || "-"}
-            </span>
-
-            {sudahDipilih && (
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2">
-                <Tag size={14} />
-                ID Peserta: {idPeserta || "-"}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#CC6B27]">
+                {kodeSkema}
               </span>
-            )}
 
-            {pembayaranData?.id_pembayaran && (
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2">
-                <Tag size={14} />
-                ID Pembayaran:{" "}
-                {
-                  pembayaranData.id_pembayaran
+              <span className="text-[#071E3D]/20">
+                •
+              </span>
+
+              {sudahDipilih ? (
+                <StatusBadge
+                  type="success"
+                  label="Dipilih"
+                />
+              ) : (
+                <StatusBadge
+                  type="light"
+                  label="Tersedia"
+                />
+              )}
+
+              <span className="text-[#071E3D]/20">
+                •
+              </span>
+
+              <StatusBadge
+                type={
+                  statusPembayaran ===
+                  "paid"
+                    ? "success"
+                    : statusPembayaran ===
+                        "ditolak"
+                      ? "danger"
+                      : statusPembayaran ===
+                            "pending" ||
+                          statusPembayaran ===
+                            "menunggu_validasi"
+                        ? "warning"
+                        : "light"
                 }
-              </span>
-            )}
+                label={statusInfo}
+              />
+            </div>
+
+            <h3 className="mt-1.5 text-[18px] font-black leading-snug text-[#071E3D] md:text-[20px]">
+              {title}
+            </h3>
+
+            <p className="mt-1.5 text-[12px] font-medium leading-relaxed text-[#182D4A]/70">
+              {kegiatan}
+            </p>
+          </div>
+
+          <div className="hidden shrink-0 sm:block">
+            <span className="inline-flex items-center gap-2 rounded-lg bg-[#FAFAFA] px-3 py-2 text-[10px] font-bold text-[#182D4A]/60">
+              <Tag
+                size={13}
+                className="text-[#CC6B27]"
+              />
+              ID {idJadwal || "-"}
+            </span>
           </div>
         </div>
+      </div>
 
-        <div className="border-t xl:border-t-0 xl:border-l border-slate-100 bg-slate-50/60 p-6 flex flex-col justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Aksi Jadwal
-            </p>
+      <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2 xl:grid-cols-4 md:p-6">
+        <DetailItem
+          icon={
+            <CalendarCheck size={18} />
+          }
+          label="Tanggal"
+          value={tanggal}
+        />
 
-            <h4 className="mt-2 text-lg font-black text-[#071E3D]">
-              Kelola Proses
-            </h4>
+        <DetailItem
+          icon={
+            <MapPin size={18} />
+          }
+          label="Tempat Uji Kompetensi"
+          value={
+            tuk.nama_tuk ||
+            "-"
+          }
+        />
 
-            <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
-              Pilih jadwal, lakukan pembayaran,
-              lalu lanjutkan pengisian form asesmen
-              secara berurutan sesuai alur.
-            </p>
-          </div>
+        <DetailItem
+          icon={
+            <MonitorCheck size={18} />
+          }
+          label="Pelaksanaan Uji"
+          value={
+            item.pelaksanaan_uji ||
+            "-"
+          }
+        />
 
-          {!sudahDipilih ? (
-            <button
-              disabled={
-                sedangMemilih
+        <DetailItem
+          icon={
+            <CreditCard size={18} />
+          }
+          label="Pembayaran"
+          value={
+            statusInfo
+          }
+        />
+      </div>
+
+      <div className="border-t border-[#071E3D]/10 bg-[#FAFAFA] px-5 py-4 md:px-6">
+        <div className="flex flex-wrap items-center gap-2">
+          {sudahDipilih && (
+            <span className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-[10px] font-bold text-[#182D4A]/60">
+              <Tag size={13} />
+              ID Peserta:{" "}
+              {idPeserta || "-"}
+            </span>
+          )}
+
+          {pembayaranData?.id_pembayaran && (
+            <span className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-[10px] font-bold text-[#182D4A]/60">
+              <Tag size={13} />
+              ID Pembayaran:{" "}
+              {
+                pembayaranData.id_pembayaran
               }
-              onClick={() =>
-                pilihJadwal(
-                  item.id_jadwal
-                )
-              }
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              {sedangMemilih ? (
-                <>
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                  />
-                  Memilih
-                </>
-              ) : (
-                <>
-                  <ShieldCheck
-                    size={16}
-                  />
-                  Pilih Jadwal
-                </>
-              )}
-            </button>
-          ) : menungguValidasi ? (
-            <button
-              type="button"
-              disabled
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-xs font-black uppercase tracking-widest text-amber-700 cursor-not-allowed"
-            >
-              <Loader2
-                size={16}
-                className="animate-spin"
-              />
-              Menunggu Validasi
-              Admin
-            </button>
-          ) : pembayaranDitolak ? (
-            <div className="grid grid-cols-1 gap-3">
-              <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-[11px] font-bold text-red-700 leading-relaxed">
-                Pembayaran ditolak
-                admin.
-                {pembayaranData?.catatan_admin
-                  ? ` Catatan: ${pembayaranData.catatan_admin}`
-                  : " Silakan lakukan pembayaran ulang."}
-              </div>
+            </span>
+          )}
 
-              <button
-                type="button"
-                onClick={() =>
-                  pergiBayar(item)
-                }
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
-              >
-                <CreditCard
+          {isApl01Done && (
+            <StatusBadge
+              type="success"
+              label="APL01 Selesai"
+            />
+          )}
+
+          {isApl02Done && (
+            <StatusBadge
+              type="success"
+              label="APL02 Selesai"
+            />
+          )}
+
+          {isPresensiDone && (
+            <StatusBadge
+              type="success"
+              label="Presensi Selesai"
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-[#071E3D]/10 bg-white px-5 py-5 md:px-6">
+        <div className="mb-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/60">
+            Tahapan Asesmen
+          </p>
+
+          <p className="mt-1 text-[13px] font-bold text-[#071E3D]">
+            Lanjutkan proses sesuai
+            tahapan yang tersedia.
+          </p>
+        </div>
+
+        {!sudahDipilih ? (
+          <button
+            type="button"
+            disabled={sedangMemilih}
+            onClick={() =>
+              pilihJadwal(
+                item.id_jadwal
+              )
+            }
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-5 py-3 text-[12px] font-bold text-white shadow-sm transition-all hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {sedangMemilih ? (
+              <>
+                <Loader2
+                  size={16}
+                  className="animate-spin"
+                />
+                Memilih Jadwal
+              </>
+            ) : (
+              <>
+                <ShieldCheck
                   size={16}
                 />
-                Bayar Ulang
-              </button>
+                Pilih Jadwal
+              </>
+            )}
+          </button>
+        ) : menungguValidasi ? (
+          <button
+            type="button"
+            disabled
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-5 py-3 text-[12px] font-bold text-amber-700"
+          >
+            <Loader2
+              size={16}
+              className="animate-spin"
+            />
+            Menunggu Validasi Admin
+          </button>
+        ) : pembayaranDitolak ? (
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_220px]">
+            <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-[11px] font-semibold leading-relaxed text-red-700">
+              Pembayaran ditolak admin.
+              {pembayaranData?.catatan_admin
+                ? ` Catatan: ${pembayaranData.catatan_admin}`
+                : " Silakan lakukan pembayaran ulang."}
             </div>
-          ) : sudahPaid ? (
-            <div className="grid grid-cols-1 gap-3">
-              <ActionButton
-                title={
-                  isApl01Done
-                    ? "Lihat APL01"
-                    : "Isi APL01"
-                }
-                onClick={() =>
-                  pergiAPL01(item)
-                }
-              />
 
-              {unlockApl02 ? (
-                <ActionButton
-                  title="Isi / Lihat APL02"
-                  onClick={() =>
-                    pergiAPL02(item)
-                  }
-                />
-              ) : (
-                <LockedMessage
-                  text="APL02 akan tersedia setelah APL01 selesai disubmit."
-                />
-              )}
-
-              {unlockPresensi ? (
-                <ActionButton
-                  title="Presensi Ujian"
-                  onClick={() =>
-                    pergiPresensi(item)
-                  }
-                />
-              ) : (
-                <LockedMessage
-                  text="Presensi akan terbuka setelah APL01 dan APL02 selesai serta jadwal ujian sudah dimulai."
-                />
-              )}
-
-              {unlockFRIA05 ? (
-                fria05Submitted ? (
-                  <LockedMessage
-                    text="FR.IA.05 telah disubmit. Menunggu penilaian asesor."
-                  />
-                ) : (
-                  <ActionButton
-                    title="Mulai FR.IA.05"
-                    onClick={() =>
-                      pergiFRIA05(item)
-                    }
-                  />
-                )
-              ) : (
-                <LockedMessage
-                  text="FR.IA.05 akan terbuka setelah Anda melakukan presensi."
-                />
-              )}
-
-              {unlockHasilAkhir ? (
-                <ActionButton
-                  title="Lihat Hasil Akhir"
-                  onClick={() =>
-                    pergiHasilAkhir(item)
-                  }
-                />
-              ) : (
-                <LockedMessage
-                  text="Hasil akhir akan diumumkan setelah asesor menyelesaikan penilaian FR.IA.05."
-                />
-              )}
-            </div>
-          ) : (
             <button
               type="button"
               onClick={() =>
                 pergiBayar(item)
               }
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-[#071E3D]"
+              className="flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-5 py-3 text-[12px] font-bold text-white transition-all hover:bg-[#071E3D]"
             >
-              <CreditCard
-                size={16}
-              />
-              Bayar Sekarang
+              <CreditCard size={16} />
+              Bayar Ulang
             </button>
-          )}
-        </div>
+          </div>
+        ) : sudahPaid ? (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <ActionButton
+              title={
+                isApl01Done
+                  ? "Lihat APL01"
+                  : "Isi APL01"
+              }
+              onClick={() =>
+                pergiAPL01(item)
+              }
+            />
+
+            {unlockApl02 ? (
+              <ActionButton
+                title="Isi / Lihat APL02"
+                onClick={() =>
+                  pergiAPL02(item)
+                }
+              />
+            ) : (
+              <LockedMessage text="APL02 tersedia setelah APL01 selesai disubmit." />
+            )}
+
+            {unlockPresensi ? (
+              <ActionButton
+                title="Presensi Ujian"
+                onClick={() =>
+                  pergiPresensi(item)
+                }
+              />
+            ) : (
+              <LockedMessage text="Presensi terbuka setelah APL01 dan APL02 selesai serta jadwal sudah dimulai." />
+            )}
+
+            {unlockFRIA05 ? (
+              fria05Submitted ? (
+                <LockedMessage text="FR.IA.05 telah disubmit. Menunggu penilaian asesor." />
+              ) : (
+                <ActionButton
+                  title="Mulai FR.IA.05"
+                  onClick={() =>
+                    pergiFRIA05(item)
+                  }
+                />
+              )
+            ) : (
+              <LockedMessage text="FR.IA.05 terbuka setelah presensi selesai." />
+            )}
+
+            {unlockHasilAkhir ? (
+              <ActionButton
+                title="Lihat Hasil Akhir"
+                onClick={() =>
+                  pergiHasilAkhir(item)
+                }
+              />
+            ) : (
+              <LockedMessage text="Hasil akhir tersedia setelah penilaian asesor selesai." />
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() =>
+              pergiBayar(item)
+            }
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-5 py-3 text-[12px] font-bold text-white shadow-sm transition-all hover:bg-[#071E3D]"
+          >
+            <CreditCard size={16} />
+            Bayar Sekarang
+          </button>
+        )}
       </div>
     </article>
   );
 }
 
-function LoadingScreen() {
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-5">
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl p-10 text-center max-w-sm w-full">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-[#071E3D] flex items-center justify-center mb-5">
-          <Loader2
-            className="animate-spin text-white"
-            size={34}
-          />
-        </div>
-
-        <h2 className="text-[#071E3D] font-black text-xl">
-          Memuat Jadwal
-        </h2>
-
-        <p className="text-slate-500 text-sm mt-2 font-medium">
-          Mengambil data jadwal sertifikasi Anda.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({
+function DetailItem({
   icon,
   label,
   value,
 }) {
   return (
-    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+    <div className="rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#CC6B27]">
         {icon}
       </div>
 
-      <div className="min-w-0">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          {label}
-        </p>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
+        {label}
+      </p>
 
-        <p className="text-[#071E3D] font-black mt-1 truncate">
-          {value}
-        </p>
-      </div>
+      <p className="mt-1 line-clamp-2 text-[13px] font-bold leading-5 text-[#071E3D]">
+        {value || "-"}
+      </p>
     </div>
   );
 }
 
-function HeroPill({
+function StatCard({
+  icon,
   label,
   value,
+  tone = "orange",
 }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">
-        {label}
-      </p>
+  const tones = {
+    orange:
+      "bg-[#CC6B27]/10 text-[#CC6B27]",
+    green:
+      "bg-green-50 text-green-600",
+    red:
+      "bg-red-50 text-red-500",
+  };
 
-      <p className="mt-1 text-sm font-black text-white">
-        {value}
-      </p>
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+      <div
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${
+          tones[tone] ||
+          tones.orange
+        }`}
+      >
+        {icon}
+      </div>
+
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
+          {label}
+        </p>
+
+        <p className="mt-1 truncate text-[19px] font-black text-[#071E3D]">
+          {value}
+        </p>
+      </div>
     </div>
   );
 }
@@ -1881,46 +1995,24 @@ function StatusBadge({
 }) {
   const styles = {
     success:
-      "bg-green-50 text-green-600",
+      "border-green-200 bg-green-50 text-green-600",
     warning:
-      "bg-amber-50 text-amber-600",
+      "border-amber-200 bg-amber-50 text-amber-600",
     danger:
-      "bg-red-50 text-red-600",
+      "border-red-200 bg-red-50 text-red-600",
     light:
-      "bg-slate-50 text-slate-500",
+      "border-slate-200 bg-slate-50 text-slate-500",
   };
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
+      className={`inline-flex items-center rounded-full border px-3 py-1 text-[9px] font-bold uppercase tracking-wider ${
         styles[type] ||
         styles.light
       }`}
     >
       {label}
     </span>
-  );
-}
-
-function DetailItem({
-  icon,
-  label,
-  value,
-}) {
-  return (
-    <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-4">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-orange-500">
-        {icon}
-      </div>
-
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm font-black text-[#071E3D] line-clamp-2 capitalize">
-        {value || "-"}
-      </p>
-    </div>
   );
 }
 
@@ -1934,13 +2026,13 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 text-xs font-black uppercase tracking-widest transition-all ${
+      className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 py-3 text-[11px] font-bold transition-all ${
         disabled
-          ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
-          : "border border-slate-100 bg-white text-[#071E3D] hover:bg-[#071E3D] hover:text-white"
+          ? "cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400"
+          : "border border-[#CC6B27] bg-[#CC6B27] text-white shadow-sm hover:border-[#A8561F] hover:bg-[#A8561F]"
       }`}
     >
-      <FileText size={16} />
+      <FileText size={15} />
       {title}
     </button>
   );
@@ -1950,12 +2042,31 @@ function LockedMessage({
   text,
 }) {
   return (
-    <div className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3.5 text-[11px] font-bold text-slate-500 text-center leading-relaxed">
+    <div className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-center text-[10px] font-semibold leading-relaxed text-slate-500">
       <Lock
-        size={14}
+        size={13}
         className="shrink-0 text-slate-400"
       />
       {text}
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="rounded-lg border border-dashed border-[#071E3D]/15 bg-[#FAFAFA] p-12 text-center">
+      <Loader2
+        size={32}
+        className="mx-auto mb-3 animate-spin text-[#CC6B27]"
+      />
+
+      <h3 className="text-[16px] font-bold text-[#071E3D]">
+        Memuat Jadwal
+      </h3>
+
+      <p className="mt-1 text-[12px] font-medium text-[#182D4A]/60">
+        Sistem sedang mengambil data jadwal sertifikasi Anda.
+      </p>
     </div>
   );
 }
@@ -1964,14 +2075,13 @@ function ErrorAlert({
   message,
 }) {
   return (
-    <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-4 text-sm font-semibold flex items-center gap-3 text-red-600">
+    <div className="flex items-center gap-3 rounded-lg border border-red-100 bg-red-50 px-5 py-4 text-[12px] font-semibold text-red-600">
       <AlertCircle
-        size={20}
+        size={18}
         className="shrink-0"
       />
-      <span>
-        {message}
-      </span>
+
+      <span>{message}</span>
     </div>
   );
 }
@@ -1980,26 +2090,53 @@ function EmptyState({
   search,
 }) {
   return (
-    <div className="rounded-[32px] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
-      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-        {search ? (
-          <XCircle size={30} />
-        ) : (
-          <Inbox size={30} />
-        )}
-      </div>
+    <div className="rounded-lg border border-dashed border-[#071E3D]/15 bg-[#FAFAFA] px-6 py-14 text-center">
+      {search ? (
+        <XCircle
+          size={42}
+          className="mx-auto mb-4 text-[#CC6B27]/50"
+        />
+      ) : (
+        <Inbox
+          size={42}
+          className="mx-auto mb-4 text-[#071E3D]/20"
+        />
+      )}
 
-      <h3 className="text-2xl font-black text-[#071E3D]">
+      <h3 className="text-[16px] font-bold text-[#071E3D]">
         {search
           ? "Jadwal Tidak Ditemukan"
           : "Belum Ada Jadwal"}
       </h3>
 
-      <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
+      <p className="mx-auto mt-2 max-w-md text-[12px] font-medium leading-relaxed text-[#182D4A]/60">
         {search
           ? "Coba gunakan kata kunci lain untuk mencari jadwal sertifikasi."
           : "Saat ini belum ada jadwal sertifikasi yang tersedia."}
       </p>
     </div>
+  );
+}
+
+function getPaymentLabel(
+  status
+) {
+  const labels = {
+    "belum bayar":
+      "Belum Bayar",
+    pending: "Pending",
+    menunggu_validasi:
+      "Menunggu Validasi",
+    paid: "Paid",
+    ditolak: "Ditolak",
+    expired: "Expired",
+    cancelled:
+      "Dibatalkan",
+  };
+
+  return (
+    labels[status] ||
+    status ||
+    "Belum Bayar"
   );
 }
