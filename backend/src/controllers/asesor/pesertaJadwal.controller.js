@@ -11,8 +11,6 @@ const {
   FrIa02,
   FrIa03,
   FrIa05Penilaian,
-  FrMapa01,
-  FrMapa02,
   FrAk01,
   FrAk02,
   FrAk05,
@@ -20,6 +18,9 @@ const {
   FrAk07,
   HasilKeputusanAsesmen
 } = require("../../models");
+
+const FrMapa01 = require("../../models/frMapa01.model");
+const FrMapa02 = require("../../models/frMapa02.model");
 
 const normalizeStatusAsesmen = (status) => {
   if (!status) {
