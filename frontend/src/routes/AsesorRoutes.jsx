@@ -1,5 +1,9 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
 import DashboardAsesor from "../pages/Asesor/DashboardAsesor";
 import ProfileAsesor from "../pages/Asesor/ProfileAsesor";
@@ -29,144 +33,224 @@ import FRIA02 from "../pages/Asesor/komiteTeknis/FRIA02";
 import FRIA05 from "../pages/Asesor/komiteTeknis/FRIA05";
 import FRIA03Komite from "../pages/Asesor/komiteTeknis/FRIA03Komite";
 
-
 export default function AsesorRoutes() {
-    return (
-        <Routes>
-            <Route index element={<Navigate to="/asesor/dashboard" replace />} />
+  return (
+    <Routes>
+      <Route
+        index
+        element={
+          <Navigate
+            to="/asesor/dashboard"
+            replace
+          />
+        }
+      />
 
-            <Route path="dashboard" element={<DashboardAsesor />} />
-            <Route path="profile" element={<ProfileAsesor />} />
+      <Route
+        path="dashboard"
+        element={
+          <DashboardAsesor />
+        }
+      />
 
-            <Route
-                path="jadwal-saya"
-                element={<JadwalSayaAsesor />}
-            />
+      <Route
+        path="profile"
+        element={
+          <ProfileAsesor />
+        }
+      />
 
-            <Route
-                path="jadwal-saya/:id_jadwal/peserta"
-                element={<PesertaJadwalAsesor />}
-            />
+      <Route
+        path="jadwal-saya"
+        element={
+          <JadwalSayaAsesor />
+        }
+      />
 
-            <Route
-                path="jadwal-saya/:id_jadwal/peserta/:id_peserta"
-                element={<DetailPesertaAsesor />}
-            />
+      <Route
+        path="jadwal-saya/:id_jadwal/peserta"
+        element={
+          <PesertaJadwalAsesor />
+        }
+      />
 
-            <Route
-                path="presensi/:id_jadwal"
-                element={<PresensiAsesor />}
-            />
+      <Route
+        path="jadwal-saya/:id_jadwal/peserta/:id_peserta"
+        element={
+          <DetailPesertaAsesor />
+        }
+      />
 
-            <Route
-                path="mapa01/:id_jadwal/:id_peserta"
-                element={<MAPA01Asesor />}
-            />
+      <Route
+        path="presensi/:id_jadwal"
+        element={
+          <PresensiAsesor />
+        }
+      />
 
-            <Route
-                path="mapa02/:id_jadwal/:id_peserta"
-                element={<MAPA02Asesor />}
-            />
+      <Route
+        path="mapa01/:id_jadwal/:id_peserta"
+        element={
+          <MAPA01Asesor />
+        }
+      />
 
-            <Route
-                path="verifikasi-tuk"
-                element={<JadwalVerifikasiTuk />}
-            />
+      <Route
+        path="mapa02/:id_jadwal/:id_peserta"
+        element={
+          <MAPA02Asesor />
+        }
+      />
 
-            <Route
-                path="komite-teknis"
-                element={<JadwalKomiteTeknis />}
-            />
+      <Route
+        path="verifikasi-tuk"
+        element={
+          <JadwalVerifikasiTuk />
+        }
+      />
 
-            <Route
-                path="komite-teknis/:id_jadwal/fr-ia02"
-                element={<FRIA02 />}
-            />
+      <Route
+        path="komite-teknis"
+        element={
+          <JadwalKomiteTeknis />
+        }
+      />
 
-            <Route
-                path="komite-teknis/:id_jadwal/paket-soal"
-                element={<FRIA05 />}
-            />
+      <Route
+        path="komite-teknis/:id_jadwal/fr-ia02"
+        element={
+          <FRIA02 />
+        }
+      />
 
-            <Route
-                path="komite-teknis/:id_jadwal/fr-ia03"
-                element={<FRIA03Komite />}
-            />
+      <Route
+        path="komite-teknis/:id_jadwal/paket-soal"
+        element={
+          <FRIA05 />
+        }
+      />
 
-            <Route
-                path="fr-ia01/:id_jadwal/:id_peserta"
-                element={<FRIA01Asesor />}
-            />
+      <Route
+        path="komite-teknis/:id_jadwal/fr-ia03"
+        element={
+          <FRIA03Komite />
+        }
+      />
 
-            <Route
-                path="fr-ia02/:id_jadwal/:id_peserta"
-                element={<FRIA02Asesor />}
-            />
+      <Route
+        path="fr-ia01/:id_jadwal/:id_peserta"
+        element={
+          <FRIA01Asesor />
+        }
+      />
 
-            <Route
-                path="fr-ia03/asesor/:id_jadwal/:id_peserta"
-                element={<FRIA03Asesor />}
-            />
+      <Route
+        path="fr-ia02/:id_jadwal/:id_peserta"
+        element={
+          <FRIA02Asesor />
+        }
+      />
 
-            <Route
-                path="fr-ia05/:id_jadwal/:id_peserta"
-                element={<FRIA05Asesor />}
-            />
+      <Route
+        path="fr-ia02/:id_jadwal"
+        element={
+          <FRIA02 />
+        }
+      />
 
-            <Route
-                path="fr-ak01/:id_jadwal/:id_peserta"
-                element={<FRAK01Asesor />}
-            />
+      <Route
+        path="fr-ia03/asesor/:id_jadwal/:id_peserta"
+        element={
+          <FRIA03Asesor />
+        }
+      />
 
-            <Route
-                path="fr-ak02/:id_jadwal/:id_peserta"
-                element={<FRAK02Asesor />}
-            />
+      <Route
+        path="fr-ia05/:id_jadwal/:id_peserta"
+        element={
+          <FRIA05Asesor />
+        }
+      />
 
-            <Route
-                path="fr-ak05/:id_jadwal/:id_peserta"
-                element={<FRAK05Asesor />}
-            />
+      <Route
+        path="fr-ak01/:id_jadwal/:id_peserta"
+        element={
+          <FRAK01Asesor />
+        }
+      />
 
-            <Route
-                path="fr-ak06/:id_jadwal/:id_peserta"
-                element={<FRAK06Asesor />}
-            />
+      <Route
+        path="fr-ak02/:id_jadwal/:id_peserta"
+        element={
+          <FRAK02Asesor />
+        }
+      />
 
-            <Route
-                path="fr-ak07/:id_jadwal/:id_peserta"
-                element={<FRAK07Asesor />}
-            />
+      <Route
+        path="fr-ak05/:id_jadwal/:id_peserta"
+        element={
+          <FRAK05Asesor />
+        }
+      />
 
-            <Route
-                path="mkva"
-                element={<JadwalMkva />}
-            />
+      <Route
+        path="fr-ak06/:id_jadwal/:id_peserta"
+        element={
+          <FRAK06Asesor />
+        }
+      />
 
-            <Route
-                path="mkva/:id_jadwal/isi"
-                element={<IsiMKVA />}
-            />
+      <Route
+        path="fr-ak07/:id_jadwal/:id_peserta"
+        element={
+          <FRAK07Asesor />
+        }
+      />
 
-            <Route
-                path="mkva/jadwal/:id_jadwal"
-                element={<IsiMKVA />}
-            />
+      <Route
+        path="mkva"
+        element={
+          <JadwalMkva />
+        }
+      />
 
-            <Route
-                path="mkva/jadwal/:id_jadwal/isi"
-                element={<IsiMKVA />}
-            />
+      <Route
+        path="mkva/:id_jadwal/isi"
+        element={
+          <IsiMKVA />
+        }
+      />
 
-            <Route
-                path="ubah-password"
-                element={<UbahSandiAsesor />}
-            />
+      <Route
+        path="mkva/jadwal/:id_jadwal"
+        element={
+          <IsiMKVA />
+        }
+      />
 
-            <Route
-                path="*"
-                element={<Navigate to="/asesor/dashboard" replace />}
-            />
-        </Routes>
-    );
+      <Route
+        path="mkva/jadwal/:id_jadwal/isi"
+        element={
+          <IsiMKVA />
+        }
+      />
+
+      <Route
+        path="ubah-password"
+        element={
+          <UbahSandiAsesor />
+        }
+      />
+
+      <Route
+        path="*"
+        element={
+          <Navigate
+            to="/asesor/dashboard"
+            replace
+          />
+        }
+      />
+    </Routes>
+  );
 }

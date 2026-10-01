@@ -5,23 +5,24 @@ const {
   TukSkema,
   User,
   ProfileAsesor,
-  JadwalAsesor
+  JadwalAsesor,
+  PesertaJadwal
 } = require("../../models");
 
-
-// ======================================
-// HELPER GET TUK ID
-// ======================================
+const {
+  fn,
+  col
+} = require("sequelize");
 
 const getTukId = async (req) => {
-
   let tukId = req.user?.id_tuk;
 
   if (!tukId) {
-
     const userId = req.user?.id_user;
 
-    if (!userId) return null;
+    if (!userId) {
+      return null;
+    }
 
     const tuk = await Tuk.findOne({
       where: {
@@ -37,34 +38,132 @@ const getTukId = async (req) => {
   return tukId;
 };
 
-
-// ======================================
-// HELPER GET TUK LOGIN
-// ======================================
-
 const getTukLogin = async (req) => {
-
   const tukId = await getTukId(req);
 
-  if (!tukId) return null;
+  if (!tukId) {
+    return null;
+  }
 
   const tuk = await Tuk.findByPk(tukId);
 
-  if (!tuk) return null;
+  if (!tuk) {
+    return null;
+  }
 
   return tuk;
 };
 
+const getParticipantCountMap = async (jadwalIds) => {
+  if (!Array.isArray(jadwalIds) || jadwalIds.length === 0) {
+    return new Map();
+  }
 
-// ======================================
-// GET SKEMA TUK
-// HANYA TUK MANDIRI
-// ======================================
+  const rows = await PesertaJadwal.findAll({
+    where: {
+      id_jadwal: jadwalIds
+    },
+    attributes: [
+      "id_jadwal",
+      [
+        fn(
+          "COUNT",
+          col("id_peserta")
+        ),
+        "jumlah_peserta"
+      ]
+    ],
+    group: [
+      "id_jadwal"
+    ],
+    raw: true
+  });
+
+  const map = new Map();
+
+  rows.forEach((row) => {
+    map.set(
+      Number(row.id_jadwal),
+      Number(row.jumlah_peserta) || 0
+    );
+  });
+
+  return map;
+};
+
+const getAsesorList = (data) => {
+  const plain = data.get({
+    plain: true
+  });
+
+  plain.asesorList =
+    Array.isArray(
+      plain.jadwal_asesors
+    )
+      ? plain.jadwal_asesors
+      : [];
+
+  delete plain.jadwal_asesors;
+
+  return plain;
+};
+
+const buildJadwalInclude = () => {
+  return [
+    {
+      model: Tuk,
+      as: "tuk",
+      attributes: [
+        "id_tuk",
+        "nama_tuk",
+        "jenis_tuk",
+        "email"
+      ]
+    },
+    {
+      model: Skema,
+      as: "skema",
+      attributes: [
+        "id_skema",
+        "kode_skema",
+        "judul_skema",
+        "jenis_skema"
+      ]
+    },
+    {
+      model: JadwalAsesor,
+      required: false,
+      include: [
+        {
+          model: User,
+          as: "asesor",
+          attributes: [
+            "id_user",
+            "username",
+            "email",
+            "no_hp"
+          ]
+        },
+        {
+          model: ProfileAsesor,
+          as: "profileAsesor",
+          attributes: [
+            "nama_lengkap",
+            "gelar_depan",
+            "gelar_belakang",
+            "no_reg_asesor",
+            "no_lisensi",
+            "bidang_keahlian",
+            "foto_profil"
+          ]
+        }
+      ]
+    }
+  ];
+};
 
 const getSkemaTuk = async (req, res) => {
-
   try {
-
     const tuk = await getTukLogin(req);
 
     if (!tuk) {
@@ -74,12 +173,7 @@ const getSkemaTuk = async (req, res) => {
       });
     }
 
-    // ======================================
-    // HANYA TUK MANDIRI
-    // ======================================
-
     if (tuk.jenis_tuk !== "mandiri") {
-
       return res.status(403).json({
         success: false,
         message:
@@ -87,18 +181,15 @@ const getSkemaTuk = async (req, res) => {
       });
     }
 
-    // ======================================
-    // AMBIL SKEMA KHUSUS MANDIRI
-    // ======================================
-
     const data = await Skema.findAll({
-
       where: {
         status: "aktif"
       },
-
       order: [
-        ["judul_skema", "ASC"]
+        [
+          "judul_skema",
+          "ASC"
+        ]
       ]
     });
 
@@ -107,10 +198,11 @@ const getSkemaTuk = async (req, res) => {
       total: data.length,
       data
     });
-
   } catch (err) {
-
-    console.error("GET SKEMA ERROR:", err);
+    console.error(
+      "GET SKEMA ERROR:",
+      err
+    );
 
     return res.status(500).json({
       success: false,
@@ -119,24 +211,15 @@ const getSkemaTuk = async (req, res) => {
   }
 };
 
-
-// ======================================
-// CREATE JADWAL
-// HANYA TUK MANDIRI
-// STATUS AUTO DRAFT
-// ======================================
-
 const createJadwal = async (req, res) => {
-
   const transaction =
     await Jadwal.sequelize.transaction();
 
   try {
-
-    const tuk = await getTukLogin(req);
+    const tuk =
+      await getTukLogin(req);
 
     if (!tuk) {
-
       await transaction.rollback();
 
       return res.status(404).json({
@@ -146,12 +229,7 @@ const createJadwal = async (req, res) => {
       });
     }
 
-    // ======================================
-    // HANYA TUK MANDIRI
-    // ======================================
-
     if (tuk.jenis_tuk !== "mandiri") {
-
       await transaction.rollback();
 
       return res.status(403).json({
@@ -161,17 +239,19 @@ const createJadwal = async (req, res) => {
       });
     }
 
-    const tukId = tuk.id_tuk;
-
-    // ======================================
-    // VALIDASI ID SKEMA
-    // ======================================
+    const tukId =
+      tuk.id_tuk;
 
     const idSkema =
-      parseInt(req.body.id_skema);
+      parseInt(
+        req.body.id_skema,
+        10
+      );
 
-    if (!idSkema || isNaN(idSkema)) {
-
+    if (
+      !idSkema ||
+      Number.isNaN(idSkema)
+    ) {
       await transaction.rollback();
 
       return res.status(400).json({
@@ -181,21 +261,15 @@ const createJadwal = async (req, res) => {
       });
     }
 
-    // ======================================
-    // VALIDASI SKEMA
-    // ======================================
-
     const skema =
       await Skema.findOne({
-
-      where: {
-        id_skema: idSkema,
-        status: "aktif"
-      }
-    });
+        where: {
+          id_skema: idSkema,
+          status: "aktif"
+        }
+      });
 
     if (!skema) {
-
       await transaction.rollback();
 
       return res.status(404).json({
@@ -205,12 +279,7 @@ const createJadwal = async (req, res) => {
       });
     }
 
-    // ======================================
-    // VALIDASI NAMA KEGIATAN
-    // ======================================
-
     if (!req.body.nama_kegiatan) {
-
       await transaction.rollback();
 
       return res.status(400).json({
@@ -220,17 +289,12 @@ const createJadwal = async (req, res) => {
       });
     }
 
-    // ======================================
-    // VALIDASI TANGGAL
-    // ======================================
-
     if (
       req.body.tgl_awal &&
       req.body.tgl_akhir &&
       req.body.tgl_awal >
-      req.body.tgl_akhir
+        req.body.tgl_akhir
     ) {
-
       await transaction.rollback();
 
       return res.status(400).json({
@@ -240,10 +304,6 @@ const createJadwal = async (req, res) => {
       });
     }
 
-    // ======================================
-    // ENUM
-    // ======================================
-
     const allowedPelaksanaan = [
       "luring",
       "daring",
@@ -251,88 +311,89 @@ const createJadwal = async (req, res) => {
       "onsite"
     ];
 
-    // ======================================
-    // CREATE JADWAL
-    // ======================================
-
     const data =
-      await Jadwal.create({
+      await Jadwal.create(
+        {
+          kode_jadwal:
+            req.body.kode_jadwal || null,
 
-      kode_jadwal:
-        req.body.kode_jadwal || null,
+          id_skema:
+            idSkema,
 
-      id_skema: idSkema,
+          id_tuk:
+            tukId,
 
-      id_tuk: tukId,
+          nama_kegiatan:
+            req.body.nama_kegiatan,
 
-      nama_kegiatan:
-        req.body.nama_kegiatan,
+          tgl_pra_asesmen:
+            req.body.tgl_pra_asesmen ||
+            null,
 
-      tgl_pra_asesmen:
-        req.body.tgl_pra_asesmen || null,
+          tahun:
+            req.body.tahun
+              ? parseInt(
+                  req.body.tahun,
+                  10
+                )
+              : new Date().getFullYear(),
 
-      tahun:
-        req.body.tahun
-          ? parseInt(req.body.tahun)
-          : new Date().getFullYear(),
+          periode_bulan:
+            req.body.periode_bulan ||
+            null,
 
-      periode_bulan:
-        req.body.periode_bulan || null,
+          gelombang:
+            req.body.gelombang ||
+            null,
 
-      gelombang:
-        req.body.gelombang || null,
+          tgl_awal:
+            req.body.tgl_awal ||
+            null,
 
-      tgl_awal:
-        req.body.tgl_awal || null,
+          tgl_akhir:
+            req.body.tgl_akhir ||
+            null,
 
-      tgl_akhir:
-        req.body.tgl_akhir || null,
+          jam:
+            req.body.jam ||
+            null,
 
-      jam:
-        req.body.jam || null,
+          pelaksanaan_uji:
+            allowedPelaksanaan.includes(
+              req.body.pelaksanaan_uji
+            )
+              ? req.body.pelaksanaan_uji
+              : "luring",
 
-      pelaksanaan_uji:
-        allowedPelaksanaan.includes(
-          req.body.pelaksanaan_uji
-        )
-          ? req.body.pelaksanaan_uji
-          : "luring",
+          url_agenda:
+            req.body.url_agenda ||
+            null,
 
-      url_agenda:
-        req.body.url_agenda || null,
+          status: "draft",
 
-      // ======================================
-      // AUTO DRAFT
-      // MENUNGGU VERIFIKASI ADMIN
-      // ======================================
+          created_by:
+            req.user.id_user,
 
-      status: "draft",
+          created_at:
+            new Date(),
 
-      created_by:
-        req.user.id_user,
-
-      created_at: new Date(),
-
-      updated_at: new Date()
-
-    }, { transaction });
-
-    // ======================================
-    // SIMPAN RELASI TUK SKEMA
-    // ======================================
+          updated_at:
+            new Date()
+        },
+        {
+          transaction
+        }
+      );
 
     await TukSkema.findOrCreate({
-
       where: {
         id_tuk: tukId,
         id_skema: idSkema
       },
-
       defaults: {
         id_tuk: tukId,
         id_skema: idSkema
       },
-
       transaction
     });
 
@@ -344,9 +405,7 @@ const createJadwal = async (req, res) => {
         "Jadwal berhasil dibuat dan menunggu verifikasi admin",
       data
     });
-
   } catch (err) {
-
     await transaction.rollback();
 
     console.error(
@@ -361,73 +420,77 @@ const createJadwal = async (req, res) => {
   }
 };
 
-
-// ======================================
-// GET ALL JADWAL
-// SEMUA TUK BOLEH LIHAT
-// TUK MANDIRI / SEWAKTU / TEMPAT KERJA
-// ======================================
-
 const getAllJadwal = async (req, res) => {
-
   try {
-
-    const tuk = await getTukLogin(req);
+    const tuk =
+      await getTukLogin(req);
 
     if (!tuk) {
       return res.status(404).json({
         success: false,
-        message: "TUK tidak ditemukan"
+        message:
+          "TUK tidak ditemukan"
       });
     }
 
     const data =
       await Jadwal.findAll({
-
-      where: {
-        id_tuk: tuk.id_tuk
-      },
-
-      include: [
-
-        {
-          model: Tuk,
-          as: "tuk",
-          attributes: [
-            "id_tuk",
-            "nama_tuk",
-            "jenis_tuk",
-            "email"
-          ]
+        where: {
+          id_tuk:
+            tuk.id_tuk
         },
 
-        {
-          model: Skema,
-          as: "skema",
-          attributes: [
-            "id_skema",
-            "kode_skema",
-            "judul_skema",
-            "jenis_skema"
+        include:
+          buildJadwalInclude(),
+
+        order: [
+          [
+            "created_at",
+            "DESC"
           ]
+        ]
+      });
+
+    const jadwalIds =
+      data.map(
+        (item) =>
+          Number(
+            item.id_jadwal
+          )
+      );
+
+    const participantCountMap =
+      await getParticipantCountMap(
+        jadwalIds
+      );
+
+    const result =
+      data.map(
+        (item) => {
+          const plain =
+            getAsesorList(
+              item
+            );
+
+          plain.kuota =
+            participantCountMap.get(
+              Number(
+                item.id_jadwal
+              )
+            ) || 0;
+
+          return plain;
         }
-
-      ],
-
-      order: [
-        ["created_at", "DESC"]
-      ]
-    });
+      );
 
     return res.json({
       success: true,
-      total: data.length,
-      jenis_tuk: tuk.jenis_tuk,
-      data
+      total: result.length,
+      jenis_tuk:
+        tuk.jenis_tuk,
+      data: result
     });
-
   } catch (err) {
-
     console.error(
       "GET ALL JADWAL ERROR:",
       err
@@ -435,27 +498,25 @@ const getAllJadwal = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: err.message
+      message:
+        err.message
     });
   }
 };
 
-
-// ======================================
-// GET JADWAL BY ID
-// SEMUA TUK BOLEH LIHAT
-// ======================================
-
-const getJadwalById = async (req, res) => {
-
+const getJadwalById = async (
+  req,
+  res
+) => {
   try {
-
-    const tuk = await getTukLogin(req);
+    const tuk =
+      await getTukLogin(req);
 
     if (!tuk) {
       return res.status(404).json({
         success: false,
-        message: "TUK tidak ditemukan"
+        message:
+          "TUK tidak ditemukan"
       });
     }
 
@@ -464,30 +525,21 @@ const getJadwalById = async (req, res) => {
 
     const data =
       await Jadwal.findOne({
-
-      where: {
-        id_jadwal:
-          parseInt(id),
-        id_tuk: tuk.id_tuk
-      },
-
-      include: [
-
-        {
-          model: Tuk,
-          as: "tuk"
+        where: {
+          id_jadwal:
+            parseInt(
+              id,
+              10
+            ),
+          id_tuk:
+            tuk.id_tuk
         },
 
-        {
-          model: Skema,
-          as: "skema"
-        }
-
-      ]
-    });
+        include:
+          buildJadwalInclude()
+      });
 
     if (!data) {
-
       return res.status(404).json({
         success: false,
         message:
@@ -495,14 +547,32 @@ const getJadwalById = async (req, res) => {
       });
     }
 
+    const totalPeserta =
+      await PesertaJadwal.count({
+        where: {
+          id_jadwal:
+            parseInt(
+              id,
+              10
+            )
+        }
+      });
+
+    const result =
+      getAsesorList(
+        data
+      );
+
+    result.kuota =
+      totalPeserta;
+
     return res.json({
       success: true,
-      jenis_tuk: tuk.jenis_tuk,
-      data
+      jenis_tuk:
+        tuk.jenis_tuk,
+      data: result
     });
-
   } catch (err) {
-
     console.error(
       "GET JADWAL BY ID ERROR:",
       err
@@ -510,37 +580,32 @@ const getJadwalById = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: err.message
+      message:
+        err.message
     });
   }
 };
 
-
-// ======================================
-// UPDATE JADWAL
-// HANYA TUK MANDIRI
-// HANYA DRAFT BOLEH DIUBAH
-// STATUS TIDAK BOLEH DIUBAH TUK
-// ======================================
-
-const updateJadwal = async (req, res) => {
-
+const updateJadwal = async (
+  req,
+  res
+) => {
   try {
-
-    const tuk = await getTukLogin(req);
+    const tuk =
+      await getTukLogin(req);
 
     if (!tuk) {
       return res.status(404).json({
         success: false,
-        message: "TUK tidak ditemukan"
+        message:
+          "TUK tidak ditemukan"
       });
     }
 
-    // ======================================
-    // HANYA TUK MANDIRI
-    // ======================================
-
-    if (tuk.jenis_tuk !== "mandiri") {
+    if (
+      tuk.jenis_tuk !==
+      "mandiri"
+    ) {
       return res.status(403).json({
         success: false,
         message:
@@ -553,16 +618,18 @@ const updateJadwal = async (req, res) => {
 
     const jadwal =
       await Jadwal.findOne({
-
-      where: {
-        id_jadwal:
-          parseInt(id),
-        id_tuk: tuk.id_tuk
-      }
-    });
+        where: {
+          id_jadwal:
+            parseInt(
+              id,
+              10
+            ),
+          id_tuk:
+            tuk.id_tuk
+        }
+      });
 
     if (!jadwal) {
-
       return res.status(404).json({
         success: false,
         message:
@@ -570,24 +637,16 @@ const updateJadwal = async (req, res) => {
       });
     }
 
-    // ======================================
-    // HANYA DRAFT
-    // ======================================
-
     if (
-      jadwal.status !== "draft"
+      jadwal.status !==
+      "draft"
     ) {
-
       return res.status(400).json({
         success: false,
         message:
           "Hanya jadwal draft yang boleh diubah"
       });
     }
-
-    // ======================================
-    // VALIDASI TANGGAL
-    // ======================================
 
     const tglAwal =
       req.body.tgl_awal ||
@@ -600,9 +659,9 @@ const updateJadwal = async (req, res) => {
     if (
       tglAwal &&
       tglAkhir &&
-      tglAwal > tglAkhir
+      tglAwal >
+        tglAkhir
     ) {
-
       return res.status(400).json({
         success: false,
         message:
@@ -610,21 +669,12 @@ const updateJadwal = async (req, res) => {
       });
     }
 
-    // ======================================
-    // ENUM
-    // ======================================
-
     const allowedPelaksanaan = [
       "luring",
       "daring",
       "hybrid",
       "onsite"
     ];
-
-    // ======================================
-    // AMANKAN PAYLOAD
-    // FIELD INI TIDAK BOLEH DIUBAH TUK
-    // ======================================
 
     const payload = {
       ...req.body
@@ -637,12 +687,7 @@ const updateJadwal = async (req, res) => {
     delete payload.created_at;
     delete payload.updated_at;
 
-    // ======================================
-    // UPDATE
-    // ======================================
-
     await jadwal.update({
-
       ...payload,
 
       pelaksanaan_uji:
@@ -652,16 +697,11 @@ const updateJadwal = async (req, res) => {
           ? req.body.pelaksanaan_uji
           : jadwal.pelaksanaan_uji,
 
-      // ======================================
-      // STATUS TIDAK BOLEH DIUBAH TUK
-      // ======================================
-
       status:
         jadwal.status,
 
       updated_at:
         new Date()
-
     });
 
     return res.json({
@@ -670,9 +710,7 @@ const updateJadwal = async (req, res) => {
         "Jadwal berhasil diupdate",
       data: jadwal
     });
-
   } catch (err) {
-
     console.error(
       "UPDATE JADWAL ERROR:",
       err
@@ -680,36 +718,32 @@ const updateJadwal = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: err.message
+      message:
+        err.message
     });
   }
 };
 
-
-// ======================================
-// DELETE JADWAL
-// HANYA TUK MANDIRI
-// HANYA DRAFT BOLEH DIHAPUS
-// ======================================
-
-const deleteJadwal = async (req, res) => {
-
+const deleteJadwal = async (
+  req,
+  res
+) => {
   try {
-
-    const tuk = await getTukLogin(req);
+    const tuk =
+      await getTukLogin(req);
 
     if (!tuk) {
       return res.status(404).json({
         success: false,
-        message: "TUK tidak ditemukan"
+        message:
+          "TUK tidak ditemukan"
       });
     }
 
-    // ======================================
-    // HANYA TUK MANDIRI
-    // ======================================
-
-    if (tuk.jenis_tuk !== "mandiri") {
+    if (
+      tuk.jenis_tuk !==
+      "mandiri"
+    ) {
       return res.status(403).json({
         success: false,
         message:
@@ -722,16 +756,18 @@ const deleteJadwal = async (req, res) => {
 
     const jadwal =
       await Jadwal.findOne({
-
-      where: {
-        id_jadwal:
-          parseInt(id),
-        id_tuk: tuk.id_tuk
-      }
-    });
+        where: {
+          id_jadwal:
+            parseInt(
+              id,
+              10
+            ),
+          id_tuk:
+            tuk.id_tuk
+        }
+      });
 
     if (!jadwal) {
-
       return res.status(404).json({
         success: false,
         message:
@@ -739,14 +775,10 @@ const deleteJadwal = async (req, res) => {
       });
     }
 
-    // ======================================
-    // HANYA DRAFT
-    // ======================================
-
     if (
-      jadwal.status !== "draft"
+      jadwal.status !==
+      "draft"
     ) {
-
       return res.status(400).json({
         success: false,
         message:
@@ -754,21 +786,15 @@ const deleteJadwal = async (req, res) => {
       });
     }
 
-    // ======================================
-    // HAPUS ASESOR
-    // ======================================
-
     await JadwalAsesor.destroy({
-
       where: {
         id_jadwal:
-          parseInt(id)
+          parseInt(
+            id,
+            10
+          )
       }
     });
-
-    // ======================================
-    // HAPUS JADWAL
-    // ======================================
 
     await jadwal.destroy();
 
@@ -777,9 +803,7 @@ const deleteJadwal = async (req, res) => {
       message:
         "Jadwal berhasil dihapus"
     });
-
   } catch (err) {
-
     console.error(
       "DELETE JADWAL ERROR:",
       err
@@ -787,134 +811,140 @@ const deleteJadwal = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: err.message
+      message:
+        err.message
     });
   }
 };
 
+const getDetailJadwalLengkap =
+  async (req, res) => {
+    try {
+      const tuk =
+        await getTukLogin(req);
 
-// ======================================
-// DETAIL JADWAL LENGKAP
-// SEMUA TUK BOLEH LIHAT
-// ======================================
+      if (!tuk) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "TUK tidak ditemukan"
+        });
+      }
 
-const getDetailJadwalLengkap = async (req, res) => {
+      const { id } =
+        req.params;
 
-  try {
-
-    const tuk = await getTukLogin(req);
-
-    if (!tuk) {
-      return res.status(404).json({
-        success: false,
-        message: "TUK tidak ditemukan"
-      });
-    }
-
-    const { id } =
-      req.params;
-
-    const data =
-      await Jadwal.findOne({
-
-      where: {
-        id_jadwal:
-          parseInt(id),
-        id_tuk: tuk.id_tuk
-      },
-
-      include: [
-
-        {
-          model: Skema,
-          as: "skema",
-          attributes: [
-            "id_skema",
-            "kode_skema",
-            "judul_skema",
-            "jenis_skema"
-          ]
-        },
-
-        {
-          model: Tuk,
-          as: "tuk",
-          attributes: [
-            "id_tuk",
-            "nama_tuk",
-            "email",
-            "jenis_tuk"
-          ]
-        },
-
-        {
-          model: JadwalAsesor,
-          as: "asesorList",
-
-          required: false,
+      const data =
+        await Jadwal.findOne({
+          where: {
+            id_jadwal:
+              parseInt(
+                id,
+                10
+              ),
+            id_tuk:
+              tuk.id_tuk
+          },
 
           include: [
-
             {
-              model: User,
-              as: "asesor",
+              model: Skema,
+              as: "skema",
               attributes: [
-                "id_user",
-                "username",
-                "email",
-                "no_hp"
+                "id_skema",
+                "kode_skema",
+                "judul_skema",
+                "jenis_skema"
               ]
             },
-
             {
-              model: ProfileAsesor,
-              as: "profileAsesor",
+              model: Tuk,
+              as: "tuk",
               attributes: [
-                "nama_lengkap",
-                "gelar_depan",
-                "gelar_belakang",
-                "no_reg_asesor",
-                "no_lisensi",
-                "bidang_keahlian",
-                "foto_profil"
+                "id_tuk",
+                "nama_tuk",
+                "email",
+                "jenis_tuk"
+              ]
+            },
+            {
+              model: JadwalAsesor,
+              required: false,
+              include: [
+                {
+                  model: User,
+                  as: "asesor",
+                  attributes: [
+                    "id_user",
+                    "username",
+                    "email",
+                    "no_hp"
+                  ]
+                },
+                {
+                  model: ProfileAsesor,
+                  as: "profileAsesor",
+                  attributes: [
+                    "nama_lengkap",
+                    "gelar_depan",
+                    "gelar_belakang",
+                    "no_reg_asesor",
+                    "no_lisensi",
+                    "bidang_keahlian",
+                    "foto_profil"
+                  ]
+                }
               ]
             }
-
           ]
-        }
+        });
 
-      ]
-    });
+      if (!data) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "Jadwal tidak ditemukan"
+        });
+      }
 
-    if (!data) {
+      const totalPeserta =
+        await PesertaJadwal.count({
+          where: {
+            id_jadwal:
+              parseInt(
+                id,
+                10
+              )
+          }
+        });
 
-      return res.status(404).json({
+      const result =
+        getAsesorList(
+          data
+        );
+
+      result.kuota =
+        totalPeserta;
+
+      return res.json({
+        success: true,
+        jenis_tuk:
+          tuk.jenis_tuk,
+        data: result
+      });
+    } catch (err) {
+      console.error(
+        "DETAIL JADWAL ERROR:",
+        err
+      );
+
+      return res.status(500).json({
         success: false,
         message:
-          "Jadwal tidak ditemukan"
+          err.message
       });
     }
-
-    return res.json({
-      success: true,
-      jenis_tuk: tuk.jenis_tuk,
-      data
-    });
-
-  } catch (err) {
-
-    console.error(
-      "DETAIL JADWAL ERROR:",
-      err
-    );
-
-    return res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
-};
-
+  };
 
 module.exports = {
   getDetailJadwalLengkap,

@@ -54,7 +54,6 @@ const BuatJadwal = () => {
 
   const today = new Date();
   const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth();
   const todayString = today.toISOString().split("T")[0];
 
   const bulanList = [
@@ -112,10 +111,14 @@ const BuatJadwal = () => {
       } catch (err) {
         console.error(
           "Skema Error:",
-          err.response?.data || err.message
+          err.response?.data ||
+            err.message
         );
 
-        if (err.response?.status === 401) {
+        if (
+          err.response?.status ===
+          401
+        ) {
           localStorage.clear();
 
           await notifikasi.peringatan(
@@ -144,17 +147,14 @@ const BuatJadwal = () => {
   }, [navigate]);
 
   const getFilteredBulan = () => {
-    if (parseInt(form.tahun, 10) === currentYear) {
-      return bulanList.filter(
-        (_, index) => index >= currentMonth
-      );
-    }
-
     return bulanList;
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const {
+      name,
+      value,
+    } = e.target;
 
     setForm((prev) => ({
       ...prev,
@@ -181,7 +181,10 @@ const BuatJadwal = () => {
       return;
     }
 
-    if (!form.tgl_awal || !form.tgl_akhir) {
+    if (
+      !form.tgl_awal ||
+      !form.tgl_akhir
+    ) {
       await notifikasi.peringatan(
         "Tanggal Belum Lengkap",
         "Tanggal awal dan tanggal akhir wajib diisi."
@@ -217,59 +220,84 @@ const BuatJadwal = () => {
     try {
       setLoading(true);
 
-      const selectedSkema = skemaOptions.find(
-        (skema) =>
-          String(skema.id_skema) ===
-          String(form.id_skema)
-      );
+      const selectedSkema =
+        skemaOptions.find(
+          (skema) =>
+            String(skema.id_skema) ===
+            String(form.id_skema)
+        );
 
       const payload = {
         kode_jadwal:
-          form.kode_jadwal || null,
+          form.kode_jadwal ||
+          null,
         id_skema:
-          parseInt(form.id_skema, 10),
+          parseInt(
+            form.id_skema,
+            10
+          ),
         nama_kegiatan:
           selectedSkema?.judul_skema ||
           "Uji Kompetensi",
         tahun:
-          parseInt(form.tahun, 10),
+          parseInt(
+            form.tahun,
+            10
+          ),
         periode_bulan:
-          form.periode_bulan || null,
+          form.periode_bulan ||
+          null,
         gelombang:
-          form.gelombang || null,
+          form.gelombang ||
+          null,
         tgl_pra_asesmen:
-          form.tgl_pra_asesmen || null,
+          form.tgl_pra_asesmen ||
+          null,
         tgl_awal:
-          form.tgl_awal || null,
+          form.tgl_awal ||
+          null,
         tgl_akhir:
-          form.tgl_akhir || null,
+          form.tgl_akhir ||
+          null,
         jam:
-          form.jam || null,
+          form.jam ||
+          null,
         pelaksanaan_uji:
           form.pelaksanaan_uji,
         url_agenda:
-          form.url_agenda || null,
+          form.url_agenda ||
+          null,
         status:
           form.status,
       };
 
-      await api.post(API, payload);
+      await api.post(
+        API,
+        payload
+      );
 
       await notifikasi.sukses(
         "Berhasil",
         "Jadwal berhasil dibuat dan menunggu verifikasi admin."
       );
 
-      navigate("/tuk/jadwal", {
-        replace: true,
-      });
+      navigate(
+        "/tuk/jadwal",
+        {
+          replace: true,
+        }
+      );
     } catch (err) {
       console.error(
         "Create jadwal error:",
-        err.response?.data || err.message
+        err.response?.data ||
+          err.message
       );
 
-      if (err.response?.status === 401) {
+      if (
+        err.response?.status ===
+        401
+      ) {
         localStorage.clear();
 
         await notifikasi.peringatan(
@@ -277,9 +305,12 @@ const BuatJadwal = () => {
           "Silakan login kembali untuk melanjutkan."
         );
 
-        navigate("/login", {
-          replace: true,
-        });
+        navigate(
+          "/login",
+          {
+            replace: true,
+          }
+        );
 
         return;
       }
@@ -297,27 +328,36 @@ const BuatJadwal = () => {
   const handleLogout = () => {
     localStorage.clear();
 
-    navigate("/login", {
-      replace: true,
-    });
+    navigate(
+      "/login",
+      {
+        replace: true,
+      }
+    );
   };
 
-  const selectedSkema = skemaOptions.find(
-    (skema) =>
-      String(skema.id_skema) ===
-      String(form.id_skema)
-  );
+  const selectedSkema =
+    skemaOptions.find(
+      (skema) =>
+        String(skema.id_skema) ===
+        String(form.id_skema)
+    );
 
   const selectedSkemaName =
-    selectedSkema?.judul_skema || "";
+    selectedSkema?.judul_skema ||
+    "";
 
   if (skemaLoading) {
     return (
       <div className="flex min-h-screen bg-[#FAFAFA]">
         <SidebarTUK
           isOpen={sidebarOpen}
-          setIsOpen={setSidebarOpen}
-          onLogout={handleLogout}
+          setIsOpen={
+            setSidebarOpen
+          }
+          onLogout={
+            handleLogout
+          }
         />
 
         <main className="flex flex-1 items-center justify-center p-6">
@@ -346,8 +386,12 @@ const BuatJadwal = () => {
     <div className="flex min-h-screen bg-[#FAFAFA]">
       <SidebarTUK
         isOpen={sidebarOpen}
-        setIsOpen={setSidebarOpen}
-        onLogout={handleLogout}
+        setIsOpen={
+          setSidebarOpen
+        }
+        onLogout={
+          handleLogout
+        }
       />
 
       <main className="flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
@@ -359,11 +403,15 @@ const BuatJadwal = () => {
                   <button
                     type="button"
                     onClick={() =>
-                      navigate("/tuk/jadwal")
+                      navigate(
+                        "/tuk/jadwal"
+                      )
                     }
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#071E3D]/15 bg-white text-[#071E3D] transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27] hover:text-white"
                   >
-                    <ArrowLeft size={18} />
+                    <ArrowLeft
+                      size={18}
+                    />
                   </button>
 
                   <div className="h-9 w-px bg-[#071E3D]/10" />
@@ -385,8 +433,7 @@ const BuatJadwal = () => {
                     </h1>
 
                     <p className="mt-1 text-[11px] font-medium text-[#182D4A]/60">
-                      Lengkapi informasi jadwal sebelum
-                      diajukan untuk proses verifikasi admin.
+                      Lengkapi informasi jadwal sebelum diajukan untuk proses verifikasi admin.
                     </p>
                   </div>
                 </div>
@@ -394,23 +441,35 @@ const BuatJadwal = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    navigate("/tuk/jadwal")
+                    navigate(
+                      "/tuk/jadwal"
+                    )
                   }
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#071E3D]/15 bg-white px-4 py-2.5 text-[11px] font-bold text-[#071E3D] transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white"
                 >
-                  <CalendarCheck size={15} />
+                  <CalendarCheck
+                    size={15}
+                  />
                   Lihat Jadwal
                 </button>
               </div>
             </div>
           </section>
 
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={
+              handleSubmit
+            }
+          >
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="space-y-5">
                 <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
                   <SectionHeader
-                    icon={<FileText size={17} />}
+                    icon={
+                      <FileText
+                        size={17}
+                      />
+                    }
                     title="Identitas Jadwal"
                     description="Tentukan skema dan identitas dasar jadwal"
                   />
@@ -419,19 +478,35 @@ const BuatJadwal = () => {
                     <InputField
                       label="Kode Jadwal"
                       name="kode_jadwal"
-                      value={form.kode_jadwal}
-                      onChange={handleChange}
+                      value={
+                        form.kode_jadwal
+                      }
+                      onChange={
+                        handleChange
+                      }
                       placeholder="Opsional"
-                      icon={<Hash size={17} />}
+                      icon={
+                        <Hash
+                          size={17}
+                        />
+                      }
                     />
 
                     <SelectField
                       label="Skema Sertifikasi"
                       name="id_skema"
-                      value={form.id_skema}
-                      onChange={handleChange}
-                      disabled={skemaLoading}
-                      loading={skemaLoading}
+                      value={
+                        form.id_skema
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      disabled={
+                        skemaLoading
+                      }
+                      loading={
+                        skemaLoading
+                      }
                     >
                       <option value="">
                         {skemaLoading
@@ -440,12 +515,20 @@ const BuatJadwal = () => {
                       </option>
 
                       {skemaOptions.map(
-                        (skema) => (
+                        (
+                          skema
+                        ) => (
                           <option
-                            key={skema.id_skema}
-                            value={skema.id_skema}
+                            key={
+                              skema.id_skema
+                            }
+                            value={
+                              skema.id_skema
+                            }
                           >
-                            {skema.judul_skema}
+                            {
+                              skema.judul_skema
+                            }
                             {skema.kode_skema
                               ? ` (${skema.kode_skema})`
                               : ""}
@@ -458,7 +541,11 @@ const BuatJadwal = () => {
 
                 <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
                   <SectionHeader
-                    icon={<Clock size={17} />}
+                    icon={
+                      <Clock
+                        size={17}
+                      />
+                    }
                     title="Periode & Gelombang"
                     description="Atur tahun, periode bulan, dan gelombang pelaksanaan"
                   />
@@ -468,8 +555,12 @@ const BuatJadwal = () => {
                       label="Tahun"
                       name="tahun"
                       type="number"
-                      value={form.tahun}
-                      onChange={handleChange}
+                      value={
+                        form.tahun
+                      }
+                      onChange={
+                        handleChange
+                      }
                       placeholder="Contoh: 2026"
                       min="2020"
                       max="2030"
@@ -478,18 +569,28 @@ const BuatJadwal = () => {
                     <SelectField
                       label="Periode Bulan"
                       name="periode_bulan"
-                      value={form.periode_bulan}
-                      onChange={handleChange}
+                      value={
+                        form.periode_bulan
+                      }
+                      onChange={
+                        handleChange
+                      }
                     >
                       <option value="">
                         Pilih Bulan
                       </option>
 
                       {getFilteredBulan().map(
-                        (bulan) => (
+                        (
+                          bulan
+                        ) => (
                           <option
-                            key={bulan}
-                            value={bulan}
+                            key={
+                              bulan
+                            }
+                            value={
+                              bulan
+                            }
                           >
                             {bulan}
                           </option>
@@ -500,8 +601,12 @@ const BuatJadwal = () => {
                     <InputField
                       label="Gelombang"
                       name="gelombang"
-                      value={form.gelombang}
-                      onChange={handleChange}
+                      value={
+                        form.gelombang
+                      }
+                      onChange={
+                        handleChange
+                      }
                       placeholder="Contoh: Gelombang 1"
                     />
                   </div>
@@ -509,7 +614,11 @@ const BuatJadwal = () => {
 
                 <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
                   <SectionHeader
-                    icon={<CalendarDays size={17} />}
+                    icon={
+                      <CalendarDays
+                        size={17}
+                      />
+                    }
                     title="Tanggal & Waktu"
                     description="Tentukan periode dan waktu pelaksanaan uji"
                   />
@@ -519,9 +628,15 @@ const BuatJadwal = () => {
                       label="Tanggal Mulai"
                       name="tgl_awal"
                       type="date"
-                      value={form.tgl_awal}
-                      min={todayString}
-                      onChange={handleChange}
+                      value={
+                        form.tgl_awal
+                      }
+                      min={
+                        todayString
+                      }
+                      onChange={
+                        handleChange
+                      }
                       required
                     />
 
@@ -529,12 +644,16 @@ const BuatJadwal = () => {
                       label="Tanggal Selesai"
                       name="tgl_akhir"
                       type="date"
-                      value={form.tgl_akhir}
+                      value={
+                        form.tgl_akhir
+                      }
                       min={
                         form.tgl_awal ||
                         todayString
                       }
-                      onChange={handleChange}
+                      onChange={
+                        handleChange
+                      }
                       required
                     />
 
@@ -542,16 +661,28 @@ const BuatJadwal = () => {
                       label="Jam Pelaksanaan"
                       name="jam"
                       type="time"
-                      value={form.jam}
-                      onChange={handleChange}
-                      icon={<Clock size={17} />}
+                      value={
+                        form.jam
+                      }
+                      onChange={
+                        handleChange
+                      }
+                      icon={
+                        <Clock
+                          size={17}
+                        />
+                      }
                     />
                   </div>
                 </section>
 
                 <section className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
                   <SectionHeader
-                    icon={<Settings size={17} />}
+                    icon={
+                      <Settings
+                        size={17}
+                      />
+                    }
                     title="Pengaturan Pelaksanaan"
                     description="Pilih metode uji dan tambahkan agenda jika diperlukan"
                   />
@@ -566,7 +697,11 @@ const BuatJadwal = () => {
                         <TypeButton
                           label="Luring"
                           description="Tatap muka"
-                          icon={<MapPin size={17} />}
+                          icon={
+                            <MapPin
+                              size={17}
+                            />
+                          }
                           active={
                             form.pelaksanaan_uji ===
                             "luring"
@@ -581,7 +716,11 @@ const BuatJadwal = () => {
                         <TypeButton
                           label="Daring"
                           description="Online"
-                          icon={<Video size={17} />}
+                          icon={
+                            <Video
+                              size={17}
+                            />
+                          }
                           active={
                             form.pelaksanaan_uji ===
                             "daring"
@@ -598,10 +737,18 @@ const BuatJadwal = () => {
                     <InputField
                       label="URL Agenda / Zoom"
                       name="url_agenda"
-                      value={form.url_agenda}
-                      onChange={handleChange}
+                      value={
+                        form.url_agenda
+                      }
+                      onChange={
+                        handleChange
+                      }
                       placeholder="Opsional"
-                      icon={<LinkIcon size={17} />}
+                      icon={
+                        <LinkIcon
+                          size={17}
+                        />
+                      }
                     />
                   </div>
                 </section>
@@ -622,14 +769,22 @@ const BuatJadwal = () => {
 
                     <div className="space-y-3 p-5">
                       <SummaryItem
-                        icon={<CheckCircle size={15} />}
+                        icon={
+                          <CheckCircle
+                            size={15}
+                          />
+                        }
                         label="Status Awal"
                         value="Draft"
                         accent
                       />
 
                       <SummaryItem
-                        icon={<FileText size={15} />}
+                        icon={
+                          <FileText
+                            size={15}
+                          />
+                        }
                         label="Skema"
                         value={
                           selectedSkemaName ||
@@ -638,7 +793,11 @@ const BuatJadwal = () => {
                       />
 
                       <SummaryItem
-                        icon={<Hash size={15} />}
+                        icon={
+                          <Hash
+                            size={15}
+                          />
+                        }
                         label="Kode Jadwal"
                         value={
                           form.kode_jadwal ||
@@ -647,7 +806,11 @@ const BuatJadwal = () => {
                       />
 
                       <SummaryItem
-                        icon={<CalendarCheck size={15} />}
+                        icon={
+                          <CalendarCheck
+                            size={15}
+                          />
+                        }
                         label="Tanggal"
                         value={
                           form.tgl_awal &&
@@ -662,7 +825,11 @@ const BuatJadwal = () => {
                       />
 
                       <SummaryItem
-                        icon={<Clock size={15} />}
+                        icon={
+                          <Clock
+                            size={15}
+                          />
+                        }
                         label="Waktu"
                         value={
                           form.jam ||
@@ -671,7 +838,11 @@ const BuatJadwal = () => {
                       />
 
                       <SummaryItem
-                        icon={<Settings size={15} />}
+                        icon={
+                          <Settings
+                            size={15}
+                          />
+                        }
                         label="Pelaksanaan"
                         value={
                           form.pelaksanaan_uji
@@ -684,7 +855,9 @@ const BuatJadwal = () => {
                     <div className="border-b border-[#071E3D]/10 px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
-                          <Save size={17} />
+                          <Save
+                            size={17}
+                          />
                         </div>
 
                         <div>
@@ -714,7 +887,9 @@ const BuatJadwal = () => {
                             className="animate-spin"
                           />
                         ) : (
-                          <Save size={15} />
+                          <Save
+                            size={15}
+                          />
                         )}
 
                         {loading
@@ -725,12 +900,18 @@ const BuatJadwal = () => {
                       <button
                         type="button"
                         onClick={() =>
-                          navigate("/tuk/jadwal")
+                          navigate(
+                            "/tuk/jadwal"
+                          )
                         }
-                        disabled={loading}
+                        disabled={
+                          loading
+                        }
                         className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#071E3D]/15 bg-white px-4 py-3 text-[11px] font-bold text-[#071E3D] transition-all hover:border-[#071E3D] hover:bg-[#071E3D] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <ArrowLeft size={15} />
+                        <ArrowLeft
+                          size={15}
+                        />
                         Batal / Kembali
                       </button>
                     </div>
@@ -739,7 +920,9 @@ const BuatJadwal = () => {
                   <section className="rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] p-5">
                     <div className="flex items-start gap-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#CC6B27] shadow-sm">
-                        <CheckCircle size={16} />
+                        <CheckCircle
+                          size={16}
+                        />
                       </div>
 
                       <div>
@@ -748,9 +931,7 @@ const BuatJadwal = () => {
                         </p>
 
                         <p className="mt-1 text-[10px] font-medium leading-5 text-[#182D4A]/55">
-                          Setelah disimpan, jadwal akan
-                          berstatus draft dan menunggu
-                          proses verifikasi admin.
+                          Setelah disimpan, jadwal akan berstatus draft dan menunggu proses verifikasi admin.
                         </p>
                       </div>
                     </div>
@@ -836,7 +1017,9 @@ const InputField = ({
           min={min}
           max={max}
           className={`w-full rounded-lg border border-[#071E3D]/15 bg-[#FAFAFA] px-4 py-3 text-[12px] font-semibold text-[#071E3D] outline-none transition-all placeholder:text-[#182D4A]/30 focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10 ${
-            icon ? "pl-11" : ""
+            icon
+              ? "pl-11"
+              : ""
           }`}
         />
       </div>
@@ -969,22 +1152,32 @@ const SummaryItem = ({
   );
 };
 
-const formatShortDate = (date) => {
+const formatShortDate = (
+  date
+) => {
   if (!date) {
     return "-";
   }
 
-  const parsed = new Date(date);
+  const parsed =
+    new Date(date);
 
-  if (Number.isNaN(parsed.getTime())) {
+  if (
+    Number.isNaN(
+      parsed.getTime()
+    )
+  ) {
     return "-";
   }
 
-  return parsed.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return parsed.toLocaleDateString(
+    "id-ID",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }
+  );
 };
 
 export default BuatJadwal;
