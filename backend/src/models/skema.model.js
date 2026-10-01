@@ -19,8 +19,6 @@ const Skema = sequelize.define("skema", {
     allowNull: false,
   },
 
-  judul_skema_en: DataTypes.STRING(255),
-
   jenis_skema: {
     type: DataTypes.ENUM("klaster", "kkni", "okupasi"),
     allowNull: false,

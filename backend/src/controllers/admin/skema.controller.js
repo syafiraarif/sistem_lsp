@@ -14,8 +14,6 @@ const buildPayload = (body, files) => {
   const payload = {
     kode_skema: body.kode_skema || null,
     judul_skema: body.judul_skema || null,
-    judul_skema_en: body.judul_skema_en || null,
-
     jenis_skema: body.jenis_skema || "kkni",
 
     level_kkni: body.level_kkni

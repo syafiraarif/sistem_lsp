@@ -18,8 +18,8 @@ exports.downloadTemplate = async (req, res) => {
     ];
 
     const exampleData = [{
-      nik: "1234567890123456",
-      email: "asesi.contoh@email.com",
+      nik: "'1234567890123456",
+      email: "asesi.contoh@gmail.com",
       no_hp: "081234567890",
       nama_lengkap: "Budi Santoso",
       jenis_kelamin: "laki-laki",
@@ -95,10 +95,17 @@ exports.importAsesiExcel = async (req, res) => {
           throw new Error(`Data tidak lengkap untuk NIK ${row.nik}`);
         }
 
-        // --- PERBAIKAN 1: BERSIHKAN SPASI GHAIB DARI EXCEL ---
+        // --- PERBAIKAN 1: BERSIHKAN SPASI GHAIB & TANDA KUTIP DARI EXCEL ---
         const emailBersih = String(row.email).trim().toLowerCase();
-        const nikBersih = String(row.nik).trim();
-        const noHpBersih = row.no_hp ? String(row.no_hp).trim() : null;
+
+        // Bersihkan NIK dari kutip tunggal bawaan template excel
+        let nikBersih = String(row.nik).trim();
+        if (nikBersih.startsWith("'")) {
+          nikBersih = nikBersih.substring(1);
+        }
+
+        // Pastikan No HP hanya berisi angka (membersihkan spasi, strip, dll)
+        const noHpBersih = row.no_hp ? String(row.no_hp).trim().replace(/\D/g, "") : null;
         
         const { user, rawPassword } = await createUser({
           username: nikBersih,

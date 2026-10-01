@@ -44,6 +44,7 @@ const TempatUji = () => {
     telepon: '',
     kode_tuk: '',
     nama_tuk: '',
+    nama_penanggung_jawab: '',
     jenis_tuk: 'sewaktu',
     institusi_induk: '',
     alamat: '',
@@ -57,17 +58,13 @@ const TempatUji = () => {
     surat_keputusan: '',
     status: 'aktif'
   };
-
   const [formData, setFormData] = useState(initialFormState);
 
-  // --- PERBAIKAN 1: Helper File URL & Preview ---
+  // --- Helper File URL & Preview ---
   const buildFileUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('blob:') || path.startsWith('http')) return path;
-    
     const cleanPath = path.replace(/^(\/?uploads\/|\/)/, '');
-    
-    // Jika tidak ada folder dalam path, arahkan ke folder tuk/dokumen/
     if (!cleanPath.includes('/')) {
        return `http://localhost:3000/uploads/tuk/dokumen/${cleanPath}`;
     }
@@ -92,7 +89,6 @@ const TempatUji = () => {
     fetchProvinsiInit();
   }, [pagination.page, searchTerm, filterStatus]);
 
-  // --- API FUNCTIONS ---
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -104,7 +100,6 @@ const TempatUji = () => {
           status: filterStatus 
         }
       });
-
       const result = response.data.data || response.data;
       if (Array.isArray(result)) {
         setData(result);
@@ -130,10 +125,8 @@ const TempatUji = () => {
   const handleProvinsiChange = async (e) => {
     const id = e.target.value;
     const name = id ? provinsiList.find(p => String(p.id) === String(id))?.name : '';
-    
     setFormData(prev => ({ ...prev, provinsi: name || '', kota: '', kecamatan: '', kelurahan: '' }));
     setKotaList([]); setKecamatanList([]); setKelurahanList([]);
-    
     if (id) {
       try {
         const res = await getKota(id);
@@ -145,10 +138,8 @@ const TempatUji = () => {
   const handleKotaChange = async (e) => {
     const id = e.target.value;
     const name = id ? kotaList.find(p => String(p.id) === String(id))?.name : '';
-    
     setFormData(prev => ({ ...prev, kota: name || '', kecamatan: '', kelurahan: '' }));
     setKecamatanList([]); setKelurahanList([]);
-    
     if (id) {
       try {
         const res = await getKecamatan(id);
@@ -160,10 +151,8 @@ const TempatUji = () => {
   const handleKecamatanChange = async (e) => {
     const id = e.target.value;
     const name = id ? kecamatanList.find(p => String(p.id) === String(id))?.name : '';
-    
     setFormData(prev => ({ ...prev, kecamatan: name || '', kelurahan: '' }));
     setKelurahanList([]);
-    
     if (id) {
       try {
         const res = await getKelurahan(id);
@@ -217,14 +206,13 @@ const TempatUji = () => {
     try {
       const res = await api.get(`/admin/tuk/${id}`);
       const item = res.data.data || res.data;
-      
       const toDateInput = (dateStr) => dateStr ? new Date(dateStr).toISOString().split('T')[0] : '';
-
       setFormData({
         email: item.email || '',
         telepon: item.telepon || '',
         kode_tuk: item.kode_tuk || '',
         nama_tuk: item.nama_tuk || '',
+        nama_penanggung_jawab: item.nama_penanggung_jawab || '',
         jenis_tuk: item.jenis_tuk || 'sewaktu',
         institusi_induk: item.institusi_induk || '',
         alamat: item.alamat || '',
@@ -238,11 +226,7 @@ const TempatUji = () => {
         surat_keputusan: item.surat_keputusan || '',
         status: item.status || 'aktif'
       });
-      
-      if (item.surat_keputusan) {
-        setPreviewSuratUrl(buildFileUrl(item.surat_keputusan));
-      }
-
+      if (item.surat_keputusan) setPreviewSuratUrl(buildFileUrl(item.surat_keputusan));
       return item;
     } catch (error) {
       Swal.fire({title: 'Error', text: 'Gagal mengambil detail TUK', icon: 'error', confirmButtonColor: '#CC6B27'});
@@ -254,19 +238,16 @@ const TempatUji = () => {
     if (!item.provinsi) return;
     const provMatch = provinsiList.find(p => p.name === item.provinsi);
     if (!provMatch) return;
-
     try {
         const kotaRes = await getKota(provMatch.id);
         const kList = Array.isArray(kotaRes) ? kotaRes : (kotaRes?.data || []);
         setKotaList(kList);
-
         if (item.kota) {
             const kotaMatch = kList.find(k => k.name === item.kota);
             if (kotaMatch) {
                 const kecRes = await getKecamatan(kotaMatch.id);
                 const kecList = Array.isArray(kecRes) ? kecRes : (kecRes?.data || []);
                 setKecamatanList(kecList);
-
                 if (item.kecamatan) {
                     const kecMatch = kecList.find(k => k.name === item.kecamatan);
                     if (kecMatch) {
@@ -305,7 +286,6 @@ const TempatUji = () => {
   // --- ACTIONS ---
   const handleSendEmail = async (tukId, hasAccount) => {
     if (!tukId || hasAccount) return; 
-    
     const confirm = await Swal.fire({
       title: 'Buat & Kirim Akun?',
       text: "Akun penanggung jawab untuk TUK ini belum ada. Sistem akan membuatkan akun dan mengirimkannya via email. Lanjutkan?",
@@ -319,51 +299,28 @@ const TempatUji = () => {
 
     if (confirm.isConfirmed) {
       Swal.fire({
-        title: 'Memproses...',
-        text: 'Sedang membuat akun dan mengirim email...',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
+        title: 'Memproses...', text: 'Sedang membuat akun dan mengirim email...', allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
       });
-
       try {
         const resGenerate = await api.post(`/admin/tuk/${tukId}/generate-account`);
         const targetUserId = resGenerate.data.data.id_user; 
         await api.post(`/admin/send-email/${targetUserId}`);
-        
-        Swal.fire({
-          title: 'Sukses', 
-          text: 'Akun berhasil dibuat & email informasi login telah dikirim.', 
-          icon: 'success', 
-          confirmButtonColor: '#CC6B27'
-        });
-        
+        Swal.fire({title: 'Sukses', text: 'Akun berhasil dibuat & email informasi login telah dikirim.', icon: 'success', confirmButtonColor: '#CC6B27'});
         fetchData(); 
       } catch (error) {
-        Swal.fire({
-          title: 'Gagal', 
-          text: error.response?.data?.message || 'Gagal memproses akun/email', 
-          icon: 'error', 
-          confirmButtonColor: '#CC6B27'
-        });
+        Swal.fire({title: 'Gagal', text: error.response?.data?.message || 'Gagal memproses akun/email', icon: 'error', confirmButtonColor: '#CC6B27'});
       }
     }
   };
 
   const handleResetPassword = async (id_user) => {
-    if (!id_user) {
-      return Swal.fire({title: 'Peringatan', text: 'ID User (Penanggung Jawab) tidak ditemukan untuk TUK ini.', icon: 'warning', confirmButtonColor: '#CC6B27'});
-    }
+    if (!id_user) return Swal.fire({title: 'Peringatan', text: 'ID User (Penanggung Jawab) tidak ditemukan untuk TUK ini.', icon: 'warning', confirmButtonColor: '#CC6B27'});
+    
     const confirm = await Swal.fire({
-      title: 'Reset Password?',
-      text: "Password akan direset dan dikirimkan ke email TUK. Lanjutkan?",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#EF4444',
-      cancelButtonColor: '#182D4A',
-      confirmButtonText: 'Ya, Reset',
-      cancelButtonText: 'Batal'
+      title: 'Reset Password?', text: "Password akan direset dan dikirimkan ke email TUK. Lanjutkan?", icon: 'warning',
+      showCancelButton: true, confirmButtonColor: '#EF4444', cancelButtonColor: '#182D4A',
+      confirmButtonText: 'Ya, Reset', cancelButtonText: 'Batal'
     });
 
     if (confirm.isConfirmed) {
@@ -378,11 +335,7 @@ const TempatUji = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.kode_tuk || !formData.nama_tuk) {
-      Swal.fire({title: 'Peringatan', text: 'Kode TUK dan Nama TUK wajib diisi!', icon: 'warning', confirmButtonColor: '#CC6B27'});
-      return;
-    }
+    if (!formData.kode_tuk || !formData.nama_tuk) return Swal.fire({title: 'Peringatan', text: 'Kode TUK dan Nama TUK wajib diisi!', icon: 'warning', confirmButtonColor: '#CC6B27'});
 
     const dataPayload = new FormData();
     Object.keys(formData).forEach((key) => {
@@ -391,30 +344,16 @@ const TempatUji = () => {
       }
     });
 
-    if (!formData.masa_berlaku_lisensi) {
-      dataPayload.delete("masa_berlaku_lisensi");
-    }
-
-    if (selectedSurat) {
-      dataPayload.append("surat_keputusan", selectedSurat);
-    }
+    if (!formData.masa_berlaku_lisensi) dataPayload.delete("masa_berlaku_lisensi");
+    if (selectedSurat) dataPayload.append("surat_keputusan", selectedSurat);
 
     try {
       if (isEditMode) {
-        await api.put(`/admin/tuk/${currentId}`, dataPayload, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
+        await api.put(`/admin/tuk/${currentId}`, dataPayload, { headers: { "Content-Type": "multipart/form-data" } });
         Swal.fire({title: 'Sukses', text: 'Data TUK berhasil diperbarui', icon: 'success', confirmButtonColor: '#CC6B27'});
       } else {
-        await api.post('/admin/tuk', dataPayload, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
-        Swal.fire({
-          title: 'Sukses',
-          text: 'TUK baru berhasil dibuat.',
-          icon: 'success',
-          confirmButtonColor: '#CC6B27'
-        });
+        await api.post('/admin/tuk', dataPayload, { headers: { "Content-Type": "multipart/form-data" } });
+        Swal.fire({title: 'Sukses', text: 'TUK baru berhasil dibuat.', icon: 'success', confirmButtonColor: '#CC6B27'});
       }
       setShowModal(false);
       fetchData();
@@ -425,14 +364,8 @@ const TempatUji = () => {
 
   const handleDelete = async (id) => {
     const confirm = await Swal.fire({
-      title: 'Hapus TUK?',
-      text: "Data akan dihapus permanen!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#EF4444',
-      cancelButtonColor: '#182D4A',
-      confirmButtonText: 'Ya, Hapus',
-      cancelButtonText: 'Batal'
+      title: 'Hapus TUK?', text: "Data akan dihapus permanen!", icon: 'warning', showCancelButton: true,
+      confirmButtonColor: '#EF4444', cancelButtonColor: '#182D4A', confirmButtonText: 'Ya, Hapus', cancelButtonText: 'Batal'
     });
 
     if (confirm.isConfirmed) {
@@ -448,38 +381,24 @@ const TempatUji = () => {
 
   const handleImportSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedImportFile) {
-        return Swal.fire({title: 'Peringatan', text: 'Pilih file excel terlebih dahulu', icon: 'warning', confirmButtonColor: '#CC6B27'});
-    }
+    if (!selectedImportFile) return Swal.fire({title: 'Peringatan', text: 'Pilih file excel terlebih dahulu', icon: 'warning', confirmButtonColor: '#CC6B27'});
+
     const form = new FormData();
     form.append('file', selectedImportFile);
+
     Swal.fire({
-      title: 'Memproses Import...',
-      text: 'Sistem sedang membaca file, membuat akun, dan mengirimkan email. Harap jangan tutup halaman ini.',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
+      title: 'Memproses Import...', text: 'Sistem sedang membaca file, membuat akun, dan mengirimkan email. Harap jangan tutup halaman ini.',
+      allowOutsideClick: false, didOpen: () => Swal.showLoading()
     });
 
     try {
-      const response = await api.post('/admin/import-tuk', form, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      Swal.fire({
-        title: 'Import Selesai', 
-        text: response.data.message || 'Data berhasil diimport dan email telah dikirim!', 
-        icon: 'success', 
-        confirmButtonColor: '#CC6B27'
-      });
+      const response = await api.post('/admin/import-tuk', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      Swal.fire({title: 'Import Selesai', text: response.data.message || 'Data berhasil diimport dan email telah dikirim!', icon: 'success', confirmButtonColor: '#CC6B27'});
       setShowImportModal(false);
       setSelectedImportFile(null); 
       fetchData();
     } catch (err) {
-      Swal.fire({
-        title: 'Gagal Import', 
-        text: err.response?.data?.message || 'Gagal membaca atau memproses file Excel', 
-        icon: 'error', 
-        confirmButtonColor: '#CC6B27'
-      });
+      Swal.fire({title: 'Gagal Import', text: err.response?.data?.message || 'Gagal membaca atau memproses file Excel', icon: 'error', confirmButtonColor: '#CC6B27'});
     }
   };
 
@@ -543,7 +462,6 @@ const TempatUji = () => {
               }}
             />
           </div>
-
           <div className="relative w-full md:w-48">
             <Filter size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 z-10" />
             <select 
@@ -569,7 +487,8 @@ const TempatUji = () => {
                 <th className="py-3.5 px-4 text-center w-12">No</th>
                 <th className="py-3.5 px-4">Kode TUK</th>
                 <th className="py-3.5 px-4">Nama TUK</th>
-                <th className="py-3.5 px-4">Jenis</th>
+                <th className="py-3.5 px-4">Penanggung Jawab</th>
+                <th className="py-3.5 px-4 text-center">Jenis</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
                 <th className="py-3.5 px-4 text-center w-48">Aksi</th>
               </tr>
@@ -577,7 +496,7 @@ const TempatUji = () => {
             <tbody className="divide-y divide-[#071E3D]/5">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-16">
+                  <td colSpan="7" className="text-center py-16">
                     <Loader2 className="animate-spin text-[#CC6B27] mx-auto mb-3" size={36}/>
                     <p className="text-[#182D4A] font-medium text-[14px]">Memuat data TUK...</p>
                   </td>
@@ -596,40 +515,71 @@ const TempatUji = () => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                        <span className="text-[12px] font-bold text-[#182D4A] capitalize bg-[#071E3D]/5 px-2.5 py-1 rounded-md border border-[#071E3D]/10">{item.jenis_tuk?.replace('_', ' ')}</span>
+                      <div className="font-medium text-[#182D4A] text-[13px]">{item.nama_penanggung_jawab || '-'}</div>
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border capitalize ${
+                        <span className="text-[11px] font-bold text-[#182D4A] uppercase tracking-wider bg-slate-100 px-3 py-1 rounded-full border border-slate-200">{item.jenis_tuk?.replace('_', ' ')}</span>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border capitalize tracking-wider ${
                         item.status === 'aktif' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
                       }`}>
                         {item.status}
                       </span>
                     </td>
-                    <td className="py-4 px-4">
-                      <div className="flex justify-center gap-1.5">
+                    <td className="py-4 px-4 text-center">
+                      {/* PENYESUAIAN CLASS ICON UNTUK SESUAI DENGAN MODUL SKKNI */}
+                      <div className="flex justify-center gap-2">
                         <button 
                           onClick={() => handleSendEmail(item.id_tuk, !!item.penanggungJawab)} 
                           disabled={!!item.penanggungJawab}
-                          className={`p-1.5 rounded-lg transition-colors ${
+                          className={`rounded-lg p-1.5 transition-colors ${
                             item.penanggungJawab 
-                              ? "text-[#182D4A]/30 bg-[#071E3D]/5 cursor-not-allowed" 
-                              : "text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10"
+                              ? "bg-[#182D4A]/5 text-[#182D4A]/30 cursor-not-allowed" 
+                              : "bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100"
                           }`} 
                           title={item.penanggungJawab ? "Akun sudah dibuat" : "Buat Akun & Kirim Email"}
                         >
-                          <Mail size={18}/>
+                          <Mail size={16}/>
                         </button>
-                        <button onClick={() => handleResetPassword(item.penanggungJawab?.id_user)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10 transition-colors" title="Reset Password"><Key size={18}/></button>
-                        <button onClick={() => openDetailModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#CC6B27] bg-[#CC6B27]/10 hover:bg-[#CC6B27] hover:text-white transition-colors" title="Detail"><Eye size={18}/></button>
-                        <button onClick={() => openEditModal(item.id_tuk)} className="p-1.5 rounded-lg text-[#182D4A] hover:text-[#071E3D] hover:bg-[#071E3D]/10 transition-colors" title="Edit"><Edit2 size={18}/></button>
-                        <button onClick={() => handleDelete(item.id_tuk)} className="p-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-100 transition-colors" title="Hapus"><Trash2 size={18}/></button>
+                        <button 
+                          onClick={() => handleResetPassword(item.penanggungJawab?.id_user)} 
+                          className="rounded-lg bg-teal-50 p-1.5 text-teal-600 transition-colors hover:bg-teal-600 hover:text-white" 
+                          title="Reset Password"
+                        >
+                          <Key size={16}/>
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg bg-[#182D4A]/10 p-1.5 text-[#182D4A] transition-colors hover:bg-[#182D4A] hover:text-white"
+                          title="Detail"
+                          onClick={() => openDetailModal(item.id_tuk)}
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg bg-[#CC6B27]/10 p-1.5 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white"
+                          title="Edit"
+                          onClick={() => openEditModal(item.id_tuk)}
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-red-100 bg-red-50 p-1.5 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                          title="Hapus"
+                          onClick={() => handleDelete(item.id_tuk)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                    <td colSpan="6" className="text-center py-16">
+                    <td colSpan="7" className="text-center py-16">
                       <Building2 size={48} className="text-[#071E3D]/20 mx-auto mb-3" />
                       <p className="text-[#182D4A] font-medium text-[14px]">Data TUK tidak ditemukan.</p>
                     </td>
@@ -660,13 +610,37 @@ const TempatUji = () => {
                 
                 {/* AKUN */}
                 <SectionTitle icon={<User size={16}/>} title="Informasi Akun & Kontak" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {/* 2. DISABLED UNTUK EMAIL DI MODE EDIT TELAH DIHAPUS SEHINGGA BISA DI EDIT KAPANPUN */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <FormGroup label={<>Nama Penanggung Jawab</>}>
+                      <input type="text" name="nama_penanggung_jawab" value={formData.nama_penanggung_jawab} onChange={handleInputChange} disabled={isDetailMode} className={inputBase} placeholder="Nama penanggung jawab..."/>
+                    </FormGroup>
                     <FormGroup label={<>Email</>}>
                       <input type="email" name="email" value={formData.email} onChange={handleInputChange} disabled={isDetailMode} required className={inputBase} placeholder="Email login TUK..."/>
                     </FormGroup>
                     <FormGroup label="No Handphone / Telp">
-                      <input type="text" name="telepon" value={formData.telepon} onChange={handleInputChange} disabled={isDetailMode} required={!isEditMode} className={inputBase} placeholder="08..."/>
+                      <div className="flex">
+                        <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-[#071E3D]/20 bg-slate-100 text-[#071E3D] text-[13px] font-bold">
+                          08
+                        </span>
+                        <input 
+                          type="text" 
+                          name="telepon" 
+                          value={formData.telepon ? (formData.telepon.startsWith('08') ? formData.telepon.substring(2) : formData.telepon) : ''} 
+                          onChange={(e) => {
+                            const onlyNumbers = e.target.value.replace(/\D/g, '');
+                            handleInputChange({ target: { name: 'telepon', value: '08' + onlyNumbers } });
+                          }}
+                          disabled={isDetailMode} 
+                          required={!isEditMode} 
+                          minLength={9}  
+                          maxLength={11} 
+                          className={inputBase.replace('rounded-lg', 'rounded-r-lg')} 
+                          placeholder="123456789..."
+                        />
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-400 mt-0.5">
+                        Total panjang nomor minimal 11 digit dan maksimal 13 digit.
+                      </span>
                     </FormGroup>
                 </div>
 
@@ -676,11 +650,9 @@ const TempatUji = () => {
                     <FormGroup label={<span>Kode TUK <span className="text-red-500">*</span></span>}>
                       <input type="text" name="kode_tuk" value={formData.kode_tuk} onChange={handleInputChange} disabled={isDetailMode} required className={inputBase}/>
                     </FormGroup>
-
                     <FormGroup label={<span>Nama TUK <span className="text-red-500">*</span></span>}>
                       <input type="text" name="nama_tuk" value={formData.nama_tuk} onChange={handleInputChange} disabled={isDetailMode} required className={inputBase}/>
                     </FormGroup>
-
                     <div className="md:col-span-2">
                       <FormGroup label="Jenis TUK">
                         <select name="jenis_tuk" value={formData.jenis_tuk} onChange={handleInputChange} disabled={isDetailMode} className={`${inputBase} appearance-none`}>
@@ -690,7 +662,6 @@ const TempatUji = () => {
                         </select>
                       </FormGroup>
                     </div>
-
                     <div className="md:col-span-2">
                       <FormGroup label="Institusi Induk">
                         <input type="text" name="institusi_induk" value={formData.institusi_induk} onChange={handleInputChange} disabled={isDetailMode} className={inputBase} placeholder="Nama instansi/perusahaan..."/>
@@ -715,21 +686,18 @@ const TempatUji = () => {
                               {provinsiList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                           </select>
                         </FormGroup>
-
                         <FormGroup label="Kota/Kab">
                           <select value={selectedKotaId} onChange={handleKotaChange} disabled={kotaList.length === 0} className={`${inputBase} appearance-none`}>
                               <option value="">Pilih Kota/Kab</option>
                               {kotaList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
                           </select>
                         </FormGroup>
-
                         <FormGroup label="Kecamatan">
                           <select value={selectedKecamatanId} onChange={handleKecamatanChange} disabled={kecamatanList.length === 0} className={`${inputBase} appearance-none`}>
                               <option value="">Pilih Kecamatan</option>
                               {kecamatanList.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
                           </select>
                         </FormGroup>
-
                         <FormGroup label="Kelurahan">
                           <select value={selectedKelurahanId} onChange={handleKelurahanChange} disabled={kelurahanList.length === 0} className={`${inputBase} appearance-none`}>
                               <option value="">Pilih Kelurahan</option>
@@ -758,11 +726,9 @@ const TempatUji = () => {
                     <FormGroup label="No. Lisensi / Penugasan">
                       <input type="text" name="no_lisensi" value={formData.no_lisensi} onChange={handleInputChange} disabled={isDetailMode} className={inputBase}/>
                     </FormGroup>
-
                     <FormGroup label="Masa Berlaku">
                       <input type="date" name="masa_berlaku_lisensi" value={formData.masa_berlaku_lisensi} onChange={handleInputChange} disabled={isDetailMode} className={inputBase}/>
                     </FormGroup>
-
                     <FormGroup label="Status TUK">
                       <select name="status" value={formData.status} onChange={handleInputChange} disabled={isDetailMode} className={`${inputBase} appearance-none`}>
                           <option value="aktif">Aktif</option>
@@ -784,12 +750,10 @@ const TempatUji = () => {
                               className="w-full text-[12px] p-2 border border-[#071E3D]/20 rounded-lg text-[#071E3D] bg-[#FAFAFA] file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-[11px] file:font-black file:uppercase file:tracking-widest file:bg-[#CC6B27] file:text-white hover:file:bg-[#a8561f] cursor-pointer"
                           />
                         )}
-
                         {isDetailMode && !formData.surat_keputusan && (
                            <span className="text-[13px] font-medium text-slate-400 py-2.5 px-3 border border-slate-200 rounded-lg bg-slate-50 w-full block">Tidak ada dokumen</span>
                         )}
-
-                        {/* 3. TOMBOL DOWNLOAD DIBERIKAN ATRIBUT DOWNLOAD AGAR BISA DIDOWNLOAD SAAT DETAIL MODE */}
+                        
                         {formData.surat_keputusan && !selectedSurat && (
                           <div className="mt-2 flex flex-col gap-2">
                             <span className="text-[12px] font-bold text-slate-500 truncate max-w-[200px]">Current: {formData.surat_keputusan}</span>
@@ -800,7 +764,6 @@ const TempatUji = () => {
                         )}
                     </div>
                   </div>
-
                   <div className="w-full lg:w-2/3">
                       {/* PREVIEW BOX */}
                       <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -809,7 +772,6 @@ const TempatUji = () => {
                           </div>
                           
                           <div className="relative h-[250px] bg-slate-100 flex items-center justify-center">
-                              {/* MEMASTIKAN PREVIEW MENGGUNAKAN URL YANG BENAR */}
                               {previewSuratUrl ? (
                                   isPreviewable(previewSuratUrl) ? (
                                       isImageFile(previewSuratUrl) ? (
@@ -834,10 +796,9 @@ const TempatUji = () => {
                       </div>
                   </div>
                 </div>
-
                 </form>
             </div>
-
+            
             {/* FOOTER */}
             <div className="mt-auto pt-4 border-t border-[#071E3D]/10 bg-[#FAFAFA] flex justify-end gap-3 px-6 pb-4">
               <button type="button" className="px-5 py-2.5 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] bg-white hover:bg-[#E2E8F0] transition-colors text-[13px]" onClick={() => setShowModal(false)}>
@@ -885,7 +846,6 @@ const TempatUji = () => {
                     <p className="text-[12px] font-medium text-[#182D4A]/70">Format yang didukung: .xls, .xlsx</p>
                   </>
                 )}
-
                 <input 
                   type="file" 
                   accept=".xlsx, .xls" 

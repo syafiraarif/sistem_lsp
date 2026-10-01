@@ -704,8 +704,6 @@ const JadwalUji = () => {
                       >
                         <option value="luring">Luring (Offline)</option>
                         <option value="daring">Daring (Online)</option>
-                        <option value="hybrid">Hybrid</option>
-                        <option value="onsite">Onsite</option>
                       </select>
                     </div>
                     <div>

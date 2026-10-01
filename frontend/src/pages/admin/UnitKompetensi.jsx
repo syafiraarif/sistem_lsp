@@ -32,25 +32,28 @@ const UnitKompetensi = () => {
   const [expandedUnits, setExpandedUnits] = useState({});
   const [selectedUnitId, setSelectedUnitId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
+  
+  // STATE LOADING DIPISAH
+  const [loading, setLoading] = useState(false);       // Untuk loading halaman & refresh
+  const [isSaving, setIsSaving] = useState(false);     // Untuk loading tombol simpan modal
   
   // Modals State
   const [showKelompokModal, setShowKelompokModal] = useState(false);
   const [isEditingKelompok, setIsEditingKelompok] = useState(false);
   const [editKelompokId, setEditKelompokId] = useState(null);
   const [formKelompok, setFormKelompok] = useState({ nama_kelompok: "", deskripsi: "", urutan: "" });
-
+  
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [isEditingUnit, setIsEditingUnit] = useState(false);
   const [editUnitId, setEditUnitId] = useState(null);
   const [activeKelompok, setActiveKelompok] = useState(null);
   const [formUnit, setFormUnit] = useState({ id_kelompok: "", id_skkni: "", kode_unit: "", judul_unit: "", urutan: "" });
-
+  
   const [showElemenModal, setShowElemenModal] = useState(false);
   const [isEditingElemen, setIsEditingElemen] = useState(false);
   const [editElemenId, setEditElemenId] = useState(null);
   const [formElemen, setFormElemen] = useState({ id_unit: "", nama_elemen: "", urutan: "" });
-
+  
   const [showKukModal, setShowKukModal] = useState(false);
   const [isEditingKuk, setIsEditingKuk] = useState(false);
   const [editKukId, setEditKukId] = useState(null);
@@ -155,7 +158,6 @@ const UnitKompetensi = () => {
       const isKelompokMatch = String(getUnitKelompokId(unit)) === String(idKelompok);
       return isSkemaMatch && isKelompokMatch;
     });
-
     if (keyword) {
       data = data.filter(u => getUnitKode(u).toLowerCase().includes(keyword) || getUnitJudul(u).toLowerCase().includes(keyword));
     }
@@ -207,7 +209,7 @@ const UnitKompetensi = () => {
     e.preventDefault();
     if (!formKelompok.nama_kelompok.trim()) return notifikasi.peringatan("Nama kelompok wajib diisi");
     
-    setLoading(true);
+    setIsSaving(true); // Gunakan isSaving agar list belakang tidak hilang
     try {
       const payload = { id_skema: selectedSkemaId, ...formKelompok, urutan: formKelompok.urutan || kelompokList.length + 1 };
       
@@ -216,11 +218,11 @@ const UnitKompetensi = () => {
       
       await notifikasi.sukses(isEditingKelompok ? "Diperbarui" : "Ditambahkan");
       setShowKelompokModal(false);
-      await fetchKelompokBySkema(selectedSkemaId);
+      await fetchKelompokBySkema(selectedSkemaId); // List akan refresh secara halus (silently)
     } catch (error) {
       notifikasi.gagal("Terjadi kesalahan");
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -229,15 +231,12 @@ const UnitKompetensi = () => {
     const confirmed = await notifikasi.konfirmasi("Hapus kelompok pekerjaan ini?");
     if (!confirmed.isConfirmed) return;
     
-    setLoading(true);
     try {
       await api.delete(`/admin/kelompok-pekerjaan/${kelompok.id_kelompok}`);
       notifikasi.sukses("Terhapus");
       fetchKelompokBySkema(selectedSkemaId);
     } catch (error) {
       notifikasi.gagal("Gagal menghapus");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -262,7 +261,7 @@ const UnitKompetensi = () => {
     if (!formUnit.id_skkni) return notifikasi.peringatan("Pilih Standar/SKKNI");
     if (!formUnit.kode_unit || !formUnit.judul_unit) return notifikasi.peringatan("Lengkapi kode & judul");
     
-    setLoading(true);
+    setIsSaving(true);
     try {
       const payload = { id_skema: selectedSkemaId, ...formUnit, judul_unit: formUnit.judul_unit.trim(), kode_unit: formUnit.kode_unit.trim() };
       
@@ -275,20 +274,23 @@ const UnitKompetensi = () => {
     } catch (error) {
       notifikasi.gagal(error.response?.data?.message || "Gagal");
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
   const handleDeleteUnit = async (unit) => {
-    const confirmed = await notifikasi.konfirmasi("Hapus Unit ini beserta Elemen & KUK di dalamnya?");
+    const confirmed = await notifikasi.konfirmasi(
+      "Hapus Unit dari Skema ini?",
+      "Unit akan dilepaskan dari kelompok ini. Master unit beserta Elemen dan KUK hanya akan terhapus jika unit ini tidak digunakan di skema lain."
+    );
     if (!confirmed.isConfirmed) return;
     
     try {
-      await api.delete(`/admin/unit-kompetensi/${getUnitId(unit)}`);
-      notifikasi.sukses("Terhapus");
+      await api.delete(`/admin/unit-kompetensi/${getUnitId(unit)}?id_skema=${selectedSkemaId}`);
+      notifikasi.sukses("Unit berhasil dihapus");
       fetchUnits();
     } catch (error) {
-      notifikasi.gagal("Gagal");
+      notifikasi.gagal("Gagal menghapus unit");
     }
   };
 
@@ -308,7 +310,7 @@ const UnitKompetensi = () => {
 
   const handleSaveElemen = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSaving(true);
     try {
       if (isEditingElemen) await api.put(`/admin/unit-elemen/${editElemenId}`, formElemen);
       else await api.post("/admin/unit-elemen", formElemen);
@@ -318,7 +320,7 @@ const UnitKompetensi = () => {
     } catch (error) {
       notifikasi.gagal("Gagal");
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -350,7 +352,7 @@ const UnitKompetensi = () => {
 
   const handleSaveKuk = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSaving(true);
     try {
       if (isEditingKuk) await api.put(`/admin/unit-kuk/${editKukId}`, formKuk);
       else await api.post("/admin/unit-kuk", formKuk);
@@ -360,7 +362,7 @@ const UnitKompetensi = () => {
     } catch (error) {
       notifikasi.gagal("Gagal");
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -561,7 +563,8 @@ const UnitKompetensi = () => {
             <FormInput label="Nama Kelompok Pekerjaan" name="nama_kelompok" value={formKelompok.nama_kelompok} onChange={handleKelompokInputChange} required />
             <FormTextarea label="Deskripsi" name="deskripsi" value={formKelompok.deskripsi} onChange={handleKelompokInputChange} />
             <FormInput label="Urutan" name="urutan" type="number" value={formKelompok.urutan} onChange={handleKelompokInputChange} />
-            <ModalFooter loading={loading} onCancel={closeKelompokModal} submitText="Simpan Kelompok" />
+            {/* Pakai isSaving di sini */}
+            <ModalFooter loading={isSaving} onCancel={closeKelompokModal} submitText="Simpan Kelompok" />
           </form>
         </ModalWrapper>
       )}
@@ -586,7 +589,7 @@ const UnitKompetensi = () => {
               <FormInput label="Kode Unit" name="kode_unit" value={formUnit.kode_unit} onChange={handleUnitInputChange} required />
               <FormInput label="Urutan" name="urutan" type="number" value={formUnit.urutan} onChange={handleUnitInputChange} />
             </div>
-            <ModalFooter loading={loading} onCancel={closeUnitModal} submitText="Simpan Unit" />
+            <ModalFooter loading={isSaving} onCancel={closeUnitModal} submitText="Simpan Unit" />
           </form>
         </ModalWrapper>
       )}
@@ -597,7 +600,7 @@ const UnitKompetensi = () => {
           <form onSubmit={handleSaveElemen} className="p-6 flex flex-col gap-5">
             <FormInput label="Urutan" name="urutan" type="number" value={formElemen.urutan} onChange={handleInputElemenChange} required />
             <FormTextarea label="Nama Elemen" name="nama_elemen" value={formElemen.nama_elemen} onChange={handleInputElemenChange} required />
-            <ModalFooter loading={loading} onCancel={() => setShowElemenModal(false)} submitText="Simpan Elemen" />
+            <ModalFooter loading={isSaving} onCancel={() => setShowElemenModal(false)} submitText="Simpan Elemen" />
           </form>
         </ModalWrapper>
       )}
@@ -608,7 +611,7 @@ const UnitKompetensi = () => {
           <form onSubmit={handleSaveKuk} className="p-6 flex flex-col gap-5">
             <FormInput label="Urutan KUK" name="urutan" type="number" value={formKuk.urutan} onChange={handleInputKukChange} required />
             <FormTextarea label="Kriteria Unjuk Kerja" name="kuk" value={formKuk.kuk} onChange={handleInputKukChange} required />
-            <ModalFooter loading={loading} onCancel={() => setShowKukModal(false)} submitText="Simpan KUK" />
+            <ModalFooter loading={isSaving} onCancel={() => setShowKukModal(false)} submitText="Simpan KUK" />
           </form>
         </ModalWrapper>
       )}
@@ -617,7 +620,6 @@ const UnitKompetensi = () => {
 };
 
 // --- SUB COMPONENTS ---
-
 const KelompokCard = ({
   kelompok,
   units,
@@ -710,7 +712,6 @@ const KelompokCard = ({
                     </button>
                   </div>
                 </div>
-
                 {isExpanded && (
                   <UnitDetail
                     unit={unit}
@@ -755,7 +756,6 @@ const UnitDetail = ({
   handleDeleteKuk,
 }) => {
   const elemenList = getElemenList(unit);
-
   return (
     <div className="border-t border-[#071E3D]/10 bg-slate-50 p-4">
       <div className="flex justify-between items-center mb-4">
@@ -767,7 +767,6 @@ const UnitDetail = ({
           <Plus size={14} /> Elemen Baru
         </button>
       </div>
-
       {elemenList.length > 0 ? (
         <div className="space-y-4">
           {elemenList.map((elemen, elemenIndex) => {
@@ -788,7 +787,6 @@ const UnitDetail = ({
                         <button onClick={() => handleDeleteElemen(elemen)} className="rounded-lg border border-red-100 bg-red-50 p-1.5 text-red-600 transition-colors hover:bg-red-600 hover:text-white"><Trash2 size={16}/></button>
                       </div>
                     </div>
-
                     <div className="mt-3 bg-[#FAFAFA] border border-slate-100 rounded-lg p-3">
                       <div className="flex justify-between items-center mb-3">
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kriteria Unjuk Kerja (KUK)</p>
@@ -830,7 +828,6 @@ const UnitDetail = ({
 };
 
 // --- KOMPONEN KECIL LAINNYA ---
-
 const StatCard = ({ icon, label, value, tone = "orange" }) => {
   const tones = {
     navy: "bg-[#071E3D]/10 text-[#071E3D]",

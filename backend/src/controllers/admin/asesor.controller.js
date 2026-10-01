@@ -62,7 +62,7 @@ exports.downloadTemplate = async (req, res) => {
     ];
     const exampleData = [{
       nik: "'3404012345678901", // Kutip tunggal mencegah Excel mengubah NIK jadi angka scientific
-      email: "asesor.contoh@email.com",
+      email: "asesor.contoh@gmail.com",
       no_hp: "081987654321",
       gelar_depan: "Dr.",
       nama_lengkap: "Siti Aminah",

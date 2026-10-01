@@ -30,7 +30,7 @@ const Jadwal = sequelize.define("jadwal", {
   tgl_awal: DataTypes.DATEONLY,
   tgl_akhir: DataTypes.DATEONLY,
   jam: DataTypes.TIME,
-  pelaksanaan_uji: DataTypes.ENUM("luring", "daring", "hybrid", "onsite"),
+  pelaksanaan_uji: DataTypes.ENUM("luring", "daring"),
   url_agenda: DataTypes.STRING(255),
   status: {
     type: DataTypes.ENUM(

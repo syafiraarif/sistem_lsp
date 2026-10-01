@@ -648,7 +648,7 @@ const handleImportExcel = async (e) => {
               </button>
 
               <button type="button" onClick={() => setShowImportModal(true)} className="flex-1 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 md:flex-none">
-                <span className="flex items-center justify-center gap-2"><FileSpreadsheet size={18} /> Import Excel</span>
+                <span className="flex items-center justify-center gap-2"><FileSpreadsheet size={18} /> Import Data Asesor (Excel)</span>
               </button>
 
               <button type="button" onClick={handleAdd} className="flex-1 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] hover:shadow-md md:flex-none">
@@ -1028,34 +1028,39 @@ const handleImportExcel = async (e) => {
         )}
 
         {showImportModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-              <div className="flex items-center justify-between border-b border-slate-100 p-5">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/40 backdrop-blur-sm">
+            <div className="bg-white rounded-xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-[#071E3D]/10 flex justify-between items-center bg-[#FAFAFA]">
                 <div>
-                  <h3 className="text-lg font-black text-[#071E3D]">Import Data Asesor</h3>
-                  <p className="mt-1 text-xs font-medium text-slate-400">Upload file Excel untuk menambahkan data asesor.</p>
+                  <h3 className="text-[16px] font-bold text-[#071E3D] m-0">Import Data Asesor Excel</h3>
+                  <p className="text-[12px] text-[#182D4A]/70 mt-1 m-0">Unggah file Excel berisi data asesor.</p>
                 </div>
-
-                <button type="button" onClick={() => { setShowImportModal(false); setFileExcel(null); }} className="rounded-xl bg-slate-50 p-2 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500">
-                  <X size={19} />
+                <button onClick={() => { setShowImportModal(false); setFileExcel(null); }} className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-colors">
+                  <X size={20}/>
                 </button>
               </div>
-
-              <form onSubmit={handleImportExcel} className="p-5">
-                <div className="rounded-2xl border border-dashed border-[#CC6B27]/40 bg-orange-50/40 p-6 text-center">
-                  <FileSpreadsheet size={42} className="mx-auto mb-3 text-[#CC6B27]" />
-                  <p className="mb-3 text-sm font-bold text-[#071E3D]">Pilih file Excel</p>
-                  <input type="file" accept=".xlsx,.xls" onChange={(e) => setFileExcel(e.target.files?.[0] || null)} className="mx-auto block w-full text-sm" />
+              
+              <form onSubmit={handleImportExcel}>
+                <div className="p-6 bg-white">
+                  <div className="border-2 border-dashed border-[#CC6B27]/30 rounded-xl p-8 text-center bg-[#CC6B27]/5">
+                    <Upload className="mx-auto text-[#CC6B27] mb-3" size={36} />
+                    <p className="text-[13px] font-bold text-[#071E3D] mb-4">Upload file Excel Asesor (.xlsx)</p>
+                    <input 
+                      type="file" 
+                      accept=".xlsx, .xls" 
+                      onChange={(e) => setFileExcel(e.target.files?.[0] || null)} 
+                      className="block w-full text-[12px] text-[#182D4A] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-[12px] file:font-bold file:bg-[#071E3D] file:text-white hover:file:bg-[#182D4A] file:cursor-pointer cursor-pointer transition-colors"
+                    />
+                  </div>
                 </div>
-
-                <div className="mt-5 flex justify-end gap-3">
-                  <button type="button" onClick={() => { setShowImportModal(false); setFileExcel(null); }} className="rounded-xl border border-slate-200 px-5 py-2.5 text-xs font-black text-[#071E3D]">
+                
+                <div className="px-6 py-4 border-t border-[#071E3D]/10 bg-[#FAFAFA] flex justify-end gap-3">
+                  <button type="button" className="px-5 py-2.5 rounded-lg font-bold border border-[#071E3D]/20 text-[#182D4A] bg-[#FAFAFA] hover:bg-[#E2E8F0] transition-colors text-[13px]" onClick={() => { setShowImportModal(false); setFileExcel(null); }}>
                     Batal
                   </button>
-
-                  <button type="submit" disabled={loading} className="inline-flex items-center gap-2 rounded-xl bg-[#CC6B27] px-5 py-2.5 text-xs font-black text-white disabled:bg-slate-300">
-                    {loading ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
-                    Import Data
+                  <button type="submit" disabled={loading} className="px-5 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm flex items-center gap-2 text-[13px] disabled:bg-slate-300 disabled:cursor-not-allowed">
+                    {loading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16}/>} 
+                    Upload Data
                   </button>
                 </div>
               </form>

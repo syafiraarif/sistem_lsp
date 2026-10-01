@@ -1,5 +1,3 @@
-// frontend/src/pages/admin/BiayaUji.jsx
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -279,8 +277,6 @@ const BiayaUji = () => {
                         <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
                             item.metode_uji === "daring"
                               ? "bg-blue-50 text-blue-600 border-blue-200"
-                              : item.metode_uji === "hybrid"
-                              ? "bg-purple-50 text-purple-600 border-purple-200"
                               : "bg-green-50 text-green-600 border-green-200"
                           }`}
                         >
@@ -364,7 +360,6 @@ const BiayaUji = () => {
                   >
                     <option value="luring">Luring</option>
                     <option value="daring">Daring</option>
-                    <option value="hybrid">Hybrid</option>
                   </select>
                 </div>
 

@@ -15,7 +15,6 @@ import {
   Upload,
   BookOpen,
   Eye,
-  ArrowRight,
   Filter,
   Layers,
   BadgeCheck,
@@ -53,7 +52,6 @@ const Skema = () => {
   const initialFormState = {
     kode_skema: "",
     judul_skema: "",
-    judul_skema_en: "",
     jenis_skema: "kkni",
     level_kkni: "",
     bidang: "",
@@ -107,7 +105,7 @@ const Skema = () => {
 
   const validateInput = (name, value) => {
     let errorMsg = "";
-    const minLengthFields = ["kode_skema", "judul_skema", "judul_skema_en"];
+    const minLengthFields = ["kode_skema", "judul_skema"];
 
     if (name === "level_kkni") {
       if (value === null || value === "") errorMsg = "Tidak boleh kosong.";
@@ -165,7 +163,6 @@ const Skema = () => {
     setFormData({
       kode_skema: item.kode_skema || "",
       judul_skema: item.judul_skema || "",
-      judul_skema_en: item.judul_skema_en || "",
       jenis_skema: item.jenis_skema || "kkni",
       level_kkni: item.level_kkni || "",
       bidang: item.bidang || "",
@@ -569,14 +566,9 @@ const Skema = () => {
                       </div>
                     </div>
                     <div>
-                      <Label required>Judul Skema (Indonesia)</Label>
+                      <Label required>Judul Skema</Label>
                       <input type="text" name="judul_skema" value={formData.judul_skema} onChange={handleInputChange} required className={inputClass("judul_skema")} />
                       {errors.judul_skema && <ErrorText>{errors.judul_skema}</ErrorText>}
-                    </div>
-                    <div>
-                      <Label>Judul Skema (Inggris)</Label>
-                      <input type="text" name="judul_skema_en" value={formData.judul_skema_en} onChange={handleInputChange} className={inputClass("judul_skema_en")} />
-                      {errors.judul_skema_en && <ErrorText>{errors.judul_skema_en}</ErrorText>}
                     </div>
                   </FormSection>
                   <FormSection title="Atribut & Kode Klasifikasi">
@@ -760,7 +752,6 @@ const Skema = () => {
                     </DetailItem>
                     <DetailItem label="Judul Skema" wide>
                       <span>{selectedSkema.judul_skema}</span>
-                      {selectedSkema.judul_skema_en && <p className="mt-1 text-[13px] font-semibold italic text-[#182D4A]/60">{selectedSkema.judul_skema_en}</p>}
                     </DetailItem>
                   </div>
                 </InfoPanel>

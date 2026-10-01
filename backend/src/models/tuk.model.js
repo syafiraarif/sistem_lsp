@@ -19,6 +19,12 @@ const Tuk = sequelize.define("tuk", {
   institusi_induk: DataTypes.STRING(150),
   telepon: DataTypes.STRING(20),
   email: DataTypes.STRING(100),
+  
+  // ---> TAMBAHAN BARU <---
+  nama_penanggung_jawab: {
+    type: DataTypes.STRING(255)
+  },
+
   alamat: DataTypes.TEXT,
   provinsi: DataTypes.STRING(50),
   kota: DataTypes.STRING(50),

@@ -1,5 +1,4 @@
 // frontend/src/pages/admin/VerifikasiPendaftaran.jsx
-
 import React, { useState, useEffect } from "react";
 import { 
   Search, 
@@ -16,7 +15,8 @@ import {
   ClipboardList,
   UserCheck,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  MapPin // MapPin ditambahkan di sini
 } from "lucide-react";
 import Swal from "sweetalert2";
 import api from "../../services/api";
@@ -33,7 +33,6 @@ const VerifikasiPendaftaran = () => {
   
   // State untuk checkbox multi-select
   const [selectedIds, setSelectedIds] = useState([]);
-
   // State untuk Modal Detail
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -61,7 +60,6 @@ const VerifikasiPendaftaran = () => {
     (item.nik || "").includes(searchQuery) ||
     (item.email || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
-
   const totalPages = Math.ceil(filteredData.length / limit) || 1;
   const currentData = filteredData.slice((currentPage - 1) * limit, currentPage * limit);
 
@@ -240,7 +238,6 @@ const VerifikasiPendaftaran = () => {
               <CheckSquare size={18} className="text-[#CC6B27]" />
               Daftar Antrian Pendaftaran
             </h4>
-
             <div className="group relative w-full sm:w-72">
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
               <input
@@ -481,7 +478,6 @@ const VerifikasiPendaftaran = () => {
                 </>
               )}
             </div>
-
           </div>
         </div>
       )}
@@ -497,7 +493,6 @@ const VerifikasiPendaftaran = () => {
 };
 
 // --- SUB COMPONENTS ---
-
 const StatCard = ({ icon, label, value, tone = "orange" }) => {
   const tones = {
     orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
