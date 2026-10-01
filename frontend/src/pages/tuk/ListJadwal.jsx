@@ -1,10 +1,9 @@
-// frontend/src/pages/tuk/ListJadwal.jsx
-
 import React, {
   useState,
   useEffect,
   useMemo,
   useCallback,
+  useRef,
 } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -13,6 +12,7 @@ import {
   CalendarCheck,
   CalendarDays,
   CheckCircle,
+  ChevronLeft,
   ChevronRight,
   ClipboardList,
   Clock,
@@ -29,7 +29,6 @@ import {
   Trash2,
   UserCheck,
   UserCog,
-  UserPlus,
   Users,
   XCircle,
 } from "lucide-react";
@@ -42,6 +41,8 @@ const API_BASE =
 
 const API =
   `${API_BASE}/tuk/jadwal`;
+
+const ITEMS_PER_PAGE = 3;
 
 const emptySummary = {
   asesor_penguji: {
@@ -79,12 +80,212 @@ api.interceptors.request.use(
     }
 
     return config;
-  }
+  },
+  (error) =>
+    Promise.reject(error)
 );
+
+const sleep = (
+  ms
+) =>
+  new Promise(
+    (resolve) =>
+      setTimeout(
+        resolve,
+        ms
+      )
+  );
+
+const requestWithRetry =
+  async (
+    request,
+    maxRetries = 2
+  ) => {
+    let lastError;
+
+    for (
+      let attempt = 0;
+      attempt <=
+      maxRetries;
+      attempt += 1
+    ) {
+      try {
+        return await request();
+      } catch (error) {
+        lastError =
+          error;
+
+        if (
+          error?.response
+            ?.status !==
+            429 ||
+          attempt ===
+            maxRetries
+        ) {
+          throw error;
+        }
+
+        const retryAfter =
+          error?.response
+            ?.headers?.[
+            "retry-after"
+          ];
+
+        const retrySeconds =
+          Number(
+            retryAfter
+          );
+
+        const delay =
+          Number.isFinite(
+            retrySeconds
+          ) &&
+          retrySeconds > 0
+            ? Math.min(
+                retrySeconds *
+                  1000,
+                10000
+              )
+            : Math.min(
+                1200 *
+                  Math.pow(
+                    2,
+                    attempt
+                  ),
+                8000
+              );
+
+        await sleep(
+          delay
+        );
+      }
+    }
+
+    throw lastError;
+  };
+
+const getAsesorName = (
+  item
+) => {
+  return (
+    item?.nama_lengkap ||
+    item?.profileAsesor
+      ?.nama_lengkap ||
+    item?.profile_asesor
+      ?.nama_lengkap ||
+    item?.asesor
+      ?.nama_lengkap ||
+    item?.asesor
+      ?.username ||
+    item?.user
+      ?.nama_lengkap ||
+    item?.user
+      ?.username ||
+    item?.username ||
+    "-"
+  );
+};
+
+const formatDate = (
+  date
+) => {
+  if (!date) {
+    return "-";
+  }
+
+  const parsed =
+    new Date(date);
+
+  if (
+    Number.isNaN(
+      parsed.getTime()
+    )
+  ) {
+    return "-";
+  }
+
+  return parsed.toLocaleDateString(
+    "id-ID",
+    {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }
+  );
+};
+
+const getStatusLabel = (
+  status
+) => {
+  const labels = {
+    draft: "Draft",
+    disetujui:
+      "Disetujui",
+    ditolak:
+      "Ditolak",
+    open: "Open",
+    ongoing:
+      "Ongoing",
+    selesai:
+      "Selesai",
+    arsip: "Arsip",
+  };
+
+  return (
+    labels[status] ||
+    status ||
+    "Arsip"
+  );
+};
+
+const getStatusClass = (
+  status
+) => {
+  if (
+    status ===
+      "disetujui" ||
+    status ===
+      "open"
+  ) {
+    return "border-green-100 bg-green-50 text-green-600";
+  }
+
+  if (
+    status ===
+    "ongoing"
+  ) {
+    return "border-blue-100 bg-blue-50 text-blue-600";
+  }
+
+  if (
+    status ===
+    "ditolak"
+  ) {
+    return "border-red-100 bg-red-50 text-red-600";
+  }
+
+  if (
+    status ===
+    "selesai"
+  ) {
+    return "border-slate-200 bg-slate-50 text-slate-600";
+  }
+
+  return "border-orange-100 bg-orange-50 text-orange-600";
+};
 
 const ListJadwal = () => {
   const navigate =
     useNavigate();
+
+  const initialLoadRef =
+    useRef(false);
+
+  const summaryCacheRef =
+    useRef(new Map());
+
+  const summaryPromiseRef =
+    useRef(new Map());
 
   const [jadwal, setJadwal] =
     useState([]);
@@ -98,11 +299,17 @@ const ListJadwal = () => {
   const [refreshing, setRefreshing] =
     useState(false);
 
+  const [summaryLoading, setSummaryLoading] =
+    useState(false);
+
   const [search, setSearch] =
     useState("");
 
   const [filterStatus, setFilterStatus] =
     useState("semua");
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
 
   const [sidebarOpen, setSidebarOpen] =
     useState(false);
@@ -117,64 +324,33 @@ const ListJadwal = () => {
     useState(false);
 
   const isMandiri =
-    jenisTuk === "mandiri";
+    jenisTuk ===
+    "mandiri";
 
-  const getAsesorName =
+  const fetchProfileTuk =
     useCallback(
-      (item) => {
-        return (
-          item?.nama_lengkap ||
-          item?.profileAsesor
-            ?.nama_lengkap ||
-          item?.profile_asesor
-            ?.nama_lengkap ||
-          item?.asesor
-            ?.nama_lengkap ||
-          item?.asesor
-            ?.username ||
-          item?.user
-            ?.nama_lengkap ||
-          item?.user
-            ?.username ||
-          item?.username ||
-          "-"
+      async () => {
+        return requestWithRetry(
+          () =>
+            api.get(
+              "/tuk/profile"
+            ),
+          2
         );
       },
       []
     );
 
-  const fetchProfileTuk =
+  const fetchJadwalBase =
     useCallback(
       async () => {
-        try {
-          const res =
-            await api.get(
-              "/tuk/profile"
-            );
-
-          const jenis =
-            res.data?.data
-              ?.tuk
-              ?.jenis_tuk ||
-            "";
-
-          if (jenis) {
-            setJenisTuk(
-              jenis
-            );
-          } else if (
-            res.data?.jenis_tuk
-          ) {
-            setJenisTuk(
-              res.data.jenis_tuk
-            );
-          }
-        } catch (err) {
-          console.error(
-            "Gagal mengambil profil TUK:",
-            err
-          );
-        }
+        return requestWithRetry(
+          () =>
+            api.get(
+              "/tuk/jadwal"
+            ),
+          2
+        );
       },
       []
     );
@@ -186,16 +362,20 @@ const ListJadwal = () => {
         jenisTugas
       ) => {
         try {
-          const res =
-            await api.get(
-              `${API}/${idJadwal}/asesor/${jenisTugas}`
+          const response =
+            await requestWithRetry(
+              () =>
+                api.get(
+                  `${API}/${idJadwal}/asesor/${jenisTugas}`
+                ),
+              2
             );
 
           const data =
             Array.isArray(
-              res.data?.data
+              response.data?.data
             )
-              ? res.data
+              ? response.data
                   .data
               : [];
 
@@ -204,23 +384,22 @@ const ListJadwal = () => {
               data.length,
             names: data
               .map(
-                (
-                  item
-                ) =>
-                  getAsesorName(
-                    item
-                  )
+                getAsesorName
               )
-              .filter(Boolean)
+              .filter(
+                (name) =>
+                  name &&
+                  name !== "-"
+              )
               .slice(
                 0,
                 2
               ),
           };
-        } catch (err) {
+        } catch (error) {
           console.warn(
             `Gagal fetch ${jenisTugas} jadwal ${idJadwal}:`,
-            err
+            error
           );
 
           return {
@@ -229,10 +408,120 @@ const ListJadwal = () => {
           };
         }
       },
-      [getAsesorName]
+      []
     );
 
-  const fetchJadwal =
+  const loadAssignmentSummary =
+    useCallback(
+      async (
+        idJadwal
+      ) => {
+        if (
+          summaryCacheRef.current.has(
+            idJadwal
+          )
+        ) {
+          return summaryCacheRef.current.get(
+            idJadwal
+          );
+        }
+
+        if (
+          summaryPromiseRef.current.has(
+            idJadwal
+          )
+        ) {
+          return summaryPromiseRef.current.get(
+            idJadwal
+          );
+        }
+
+        const promise =
+          (async () => {
+            const summary = {
+              asesor_penguji: {
+                count: 0,
+                names: [],
+              },
+              verifikator_tuk: {
+                count: 0,
+                names: [],
+              },
+              validator_mkva: {
+                count: 0,
+                names: [],
+              },
+              komite_teknis: {
+                count: 0,
+                names: [],
+              },
+            };
+
+            const taskList = [
+              "asesor_penguji",
+              "verifikator_tuk",
+              "validator_mkva",
+              "komite_teknis",
+            ];
+
+            for (
+              let index = 0;
+              index <
+              taskList.length;
+              index +=
+                1
+            ) {
+              const jenisTugas =
+                taskList[
+                  index
+                ];
+
+              summary[
+                jenisTugas
+              ] =
+                await fetchAsesorByJenis(
+                  idJadwal,
+                  jenisTugas
+                );
+
+              if (
+                index <
+                taskList.length -
+                  1
+              ) {
+                await sleep(
+                  200
+                );
+              }
+            }
+
+            summaryCacheRef.current.set(
+              idJadwal,
+              summary
+            );
+
+            return summary;
+          })();
+
+        summaryPromiseRef.current.set(
+          idJadwal,
+          promise
+        );
+
+        try {
+          return await promise;
+        } finally {
+          summaryPromiseRef.current.delete(
+            idJadwal
+          );
+        }
+      },
+      [
+        fetchAsesorByJenis,
+      ]
+    );
+
+  const loadPageData =
     useCallback(
       async (
         showLoading = true
@@ -254,12 +543,13 @@ const ListJadwal = () => {
             );
 
           if (!token) {
+            localStorage.clear();
+
             await notifikasi.peringatan(
               "Sesi Berakhir",
               "Silakan login kembali untuk melanjutkan."
             );
 
-            localStorage.clear();
             navigate(
               "/login",
               {
@@ -267,116 +557,81 @@ const ListJadwal = () => {
               }
             );
 
-            return;
+            return false;
           }
 
-          const res =
-            await api.get(
-              "/tuk/jadwal"
-            );
+          const profileRes =
+            await fetchProfileTuk();
+
+          const currentJenisTuk =
+            profileRes?.data
+              ?.data?.tuk
+              ?.jenis_tuk ||
+            profileRes?.data
+              ?.jenis_tuk ||
+            "";
+
+          setJenisTuk(
+            currentJenisTuk
+          );
+
+          await sleep(
+            100
+          );
+
+          const jadwalRes =
+            await fetchJadwalBase();
 
           const jadwalList =
             Array.isArray(
-              res.data?.data
+              jadwalRes?.data
+                ?.data
             )
-              ? res.data
+              ? jadwalRes.data
                   .data
               : [];
 
-          if (
-            !jenisTuk &&
-            res.data?.jenis_tuk
-          ) {
-            setJenisTuk(
-              res.data.jenis_tuk
-            );
-          }
+          summaryCacheRef.current.clear();
+          summaryPromiseRef.current.clear();
 
-          const jadwalWithAsesor =
-            await Promise.all(
-              jadwalList.map(
-                async (
-                  item
-                ) => {
-                  if (
-                    item.status ===
-                      "draft" ||
-                    item.status ===
-                      "ditolak" ||
-                    jenisTuk !==
-                      "mandiri"
-                  ) {
-                    return {
-                      ...item,
-                      asesorSummary:
-                        emptySummary,
-                    };
-                  }
-
-                  const [
-                    penguji,
-                    verifTuk,
-                    mkva,
-                    komiteTeknis,
-                  ] =
-                    await Promise.all([
-                      fetchAsesorByJenis(
-                        item.id_jadwal,
-                        "asesor_penguji"
-                      ),
-                      fetchAsesorByJenis(
-                        item.id_jadwal,
-                        "verifikator_tuk"
-                      ),
-                      fetchAsesorByJenis(
-                        item.id_jadwal,
-                        "validator_mkva"
-                      ),
-                      fetchAsesorByJenis(
-                        item.id_jadwal,
-                        "komite_teknis"
-                      ),
-                    ]);
-
-                  return {
-                    ...item,
-                    asesorSummary: {
-                      asesor_penguji:
-                        penguji,
-                      verifikator_tuk:
-                        verifTuk,
-                      validator_mkva:
-                        mkva,
-                      komite_teknis:
-                        komiteTeknis,
-                    },
-                  };
-                }
-              )
+          const baseJadwal =
+            jadwalList.map(
+              (
+                item
+              ) => ({
+                ...item,
+                asesorSummary:
+                  emptySummary,
+              })
             );
 
           setJadwal(
-            jadwalWithAsesor
-          );
-        } catch (err) {
-          console.error(
-            "Gagal mengambil jadwal:",
-            err
+            baseJadwal
           );
 
-          const status =
-            err?.response?.status;
+          setCurrentPage(
+            1
+          );
+
+          return true;
+        } catch (error) {
+          console.error(
+            "Gagal memuat data List Jadwal:",
+            error
+          );
 
           if (
-            status === 401
+            error?.response
+              ?.status ===
+            401
           ) {
+            localStorage.clear();
+
             await notifikasi.peringatan(
               "Sesi Berakhir",
               "Sesi login Anda telah berakhir. Silakan login kembali."
             );
 
-            localStorage.clear();
-
             navigate(
               "/login",
               {
@@ -384,67 +639,294 @@ const ListJadwal = () => {
               }
             );
 
-            return;
+            return false;
+          }
+
+          if (
+            error?.response
+              ?.status ===
+            429
+          ) {
+            await notifikasi.peringatan(
+              "Terlalu Banyak Permintaan",
+              "Server sedang membatasi jumlah permintaan. Tunggu beberapa saat lalu coba lagi."
+            );
+
+            return false;
           }
 
           await notifikasi.gagal(
             "Gagal Memuat Jadwal",
-            err?.response
+            error?.response
               ?.data
               ?.message ||
-              "Gagal mengambil data jadwal."
+              "Data jadwal gagal dimuat."
           );
 
           setJadwal([]);
+
+          return false;
         } finally {
           setLoading(false);
           setRefreshing(false);
         }
       },
       [
-        fetchAsesorByJenis,
-        jenisTuk,
+        fetchProfileTuk,
+        fetchJadwalBase,
         navigate,
       ]
     );
 
   useEffect(() => {
-    const token =
-      localStorage.getItem(
-        "token"
-      );
-
-    if (!token) {
-      navigate(
-        "/login",
-        {
-          replace: true,
-        }
-      );
-
+    if (
+      initialLoadRef.current
+    ) {
       return;
     }
 
-    fetchProfileTuk();
+    initialLoadRef.current =
+      true;
+
+    loadPageData();
   }, [
-    navigate,
-    fetchProfileTuk,
+    loadPageData,
+  ]);
+
+  const filteredJadwal =
+    useMemo(() => {
+      const keyword =
+        search
+          .trim()
+          .toLowerCase();
+
+      return jadwal.filter(
+        (item) => {
+          const skema =
+            item?.skema ||
+            item?.Skema ||
+            {};
+
+          const tuk =
+            item?.tuk ||
+            item?.Tuk ||
+            {};
+
+          const searchableText =
+            [
+              item?.nama_kegiatan,
+              item?.kode_jadwal,
+              item?.status,
+              item?.pelaksanaan_uji,
+              item?.lokasi,
+              item?.nama_tuk,
+              skema?.judul_skema,
+              skema?.kode_skema,
+              tuk?.nama_tuk,
+              tuk?.nama,
+              tuk?.alamat,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
+
+          const matchSearch =
+            !keyword ||
+            searchableText.includes(
+              keyword
+            );
+
+          const matchStatus =
+            filterStatus ===
+              "semua" ||
+            item?.status ===
+              filterStatus;
+
+          return (
+            matchSearch &&
+            matchStatus
+          );
+        }
+      );
+    }, [
+      jadwal,
+      search,
+      filterStatus,
+    ]);
+
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        filteredJadwal.length /
+          ITEMS_PER_PAGE
+      )
+    );
+
+  const paginatedJadwal =
+    useMemo(() => {
+      const start =
+        (currentPage -
+          1) *
+        ITEMS_PER_PAGE;
+
+      return filteredJadwal.slice(
+        start,
+        start +
+          ITEMS_PER_PAGE
+      );
+    }, [
+      filteredJadwal,
+      currentPage,
+    ]);
+
+  const pageKey =
+    paginatedJadwal
+      .map(
+        (item) =>
+          item.id_jadwal
+      )
+      .join(",");
+
+  useEffect(() => {
+    setCurrentPage(
+      1
+    );
+  }, [
+    search,
+    filterStatus,
   ]);
 
   useEffect(() => {
-    const token =
-      localStorage.getItem(
-        "token"
+    if (
+      currentPage >
+      totalPages
+    ) {
+      setCurrentPage(
+        totalPages
+      );
+    }
+  }, [
+    currentPage,
+    totalPages,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isMandiri ||
+      paginatedJadwal.length ===
+        0
+    ) {
+      setSummaryLoading(
+        false
       );
 
-    if (!token) {
       return;
     }
 
-    fetchJadwal();
+    let cancelled =
+      false;
+
+    const loadCurrentPageSummary =
+      async () => {
+        setSummaryLoading(
+          true
+        );
+
+        try {
+          for (
+            const item of paginatedJadwal
+          ) {
+            if (
+              cancelled
+            ) {
+              return;
+            }
+
+            if (
+              item.status ===
+                "draft" ||
+              item.status ===
+                "ditolak"
+            ) {
+              continue;
+            }
+
+            const summary =
+              await loadAssignmentSummary(
+                item.id_jadwal
+              );
+
+            if (
+              cancelled
+            ) {
+              return;
+            }
+
+            setJadwal(
+              (prev) =>
+                prev.map(
+                  (
+                    jadwalItem
+                  ) =>
+                    jadwalItem.id_jadwal ===
+                    item.id_jadwal
+                      ? {
+                          ...jadwalItem,
+                          asesorSummary:
+                            summary,
+                        }
+                      : jadwalItem
+                )
+            );
+
+            await sleep(
+              200
+            );
+          }
+        } finally {
+          if (
+            !cancelled
+          ) {
+            setSummaryLoading(
+              false
+            );
+          }
+        }
+      };
+
+    loadCurrentPageSummary();
+
+    return () => {
+      cancelled =
+        true;
+    };
   }, [
-    fetchJadwal,
+    pageKey,
+    isMandiri,
+    loadAssignmentSummary,
   ]);
+
+  const handlePageChange =
+    (page) => {
+      if (
+        page < 1 ||
+        page > totalPages ||
+        page ===
+          currentPage
+      ) {
+        return;
+      }
+
+      setCurrentPage(
+        page
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    };
 
   const handleRefresh =
     async () => {
@@ -455,14 +937,19 @@ const ListJadwal = () => {
         return;
       }
 
-      await fetchJadwal(
-        false
-      );
+      const success =
+        await loadPageData(
+          false
+        );
 
-      await notifikasi.sukses(
-        "Data Diperbarui",
-        "Daftar jadwal berhasil disegarkan."
-      );
+      if (
+        success
+      ) {
+        await notifikasi.sukses(
+          "Data Diperbarui",
+          "Daftar jadwal berhasil disegarkan."
+        );
+      }
     };
 
   const handleDeleteClick =
@@ -487,9 +974,16 @@ const ListJadwal = () => {
           true
         );
 
-        await api.delete(
-          `${API}/${deleteId}`
+        await requestWithRetry(
+          () =>
+            api.delete(
+              `${API}/${deleteId}`
+            ),
+          2
         );
+
+        summaryCacheRef.current.clear();
+        summaryPromiseRef.current.clear();
 
         setShowModal(
           false
@@ -504,21 +998,34 @@ const ListJadwal = () => {
           "Jadwal berhasil dihapus."
         );
 
-        await fetchJadwal(
+        await loadPageData(
           false
         );
-      } catch (err) {
+      } catch (error) {
         console.error(
-          "Delete jadwal error:",
-          err
+          "Gagal menghapus jadwal:",
+          error
         );
+
+        if (
+          error?.response
+            ?.status ===
+          429
+        ) {
+          await notifikasi.peringatan(
+            "Terlalu Banyak Permintaan",
+            "Server sedang membatasi permintaan. Coba lagi beberapa saat."
+          );
+
+          return;
+        }
 
         await notifikasi.gagal(
           "Gagal Menghapus",
-          err?.response
+          error?.response
             ?.data
             ?.message ||
-            "Gagal menghapus jadwal."
+            "Jadwal gagal dihapus."
         );
       } finally {
         setDeleting(
@@ -527,87 +1034,25 @@ const ListJadwal = () => {
       }
     };
 
-  const formatDate =
-    (date) => {
-      if (!date) {
-        return "-";
-      }
-
-      const parsed =
-        new Date(date);
-
-      if (
-        Number.isNaN(
-          parsed.getTime()
-        )
-      ) {
-        return "-";
-      }
-
-      return parsed.toLocaleDateString(
-        "id-ID",
-        {
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-        }
+  const getTotalAsesor =
+    (
+      summary = {}
+    ) => {
+      return Object.values(
+        summary
+      ).reduce(
+        (
+          total,
+          data
+        ) =>
+          total +
+          Number(
+            data?.count ||
+              0
+          ),
+        0
       );
     };
-
-  const filteredJadwal =
-    useMemo(() => {
-      const keyword =
-        search
-          .trim()
-          .toLowerCase();
-
-      return jadwal.filter(
-        (item) => {
-          const skema =
-            item?.skema ||
-            item?.Skema ||
-            {};
-
-          const searchableText =
-            [
-              item?.nama_kegiatan,
-              item?.kode_jadwal,
-              skema?.judul_skema,
-              skema?.kode_skema,
-              item?.pelaksanaan_uji,
-              item?.status,
-              item?.lokasi,
-              item?.tuk
-                ?.nama_tuk,
-              item?.nama_tuk,
-            ]
-              .filter(Boolean)
-              .join(" ")
-              .toLowerCase();
-
-          const matchSearch =
-            !keyword ||
-            searchableText.includes(
-              keyword
-            );
-
-          const matchStatus =
-            filterStatus ===
-              "semua" ||
-            item.status ===
-              filterStatus;
-
-          return (
-            matchSearch &&
-            matchStatus
-          );
-        }
-      );
-    }, [
-      jadwal,
-      search,
-      filterStatus,
-    ]);
 
   const totalAktif =
     jadwal.filter(
@@ -627,72 +1072,6 @@ const ListJadwal = () => {
         item.status ===
         "draft"
     ).length;
-
-  const getStatusBadge =
-    (status) => {
-      const label = {
-        draft: "Draft",
-        disetujui:
-          "Disetujui",
-        ditolak:
-          "Ditolak",
-        open: "Open",
-        ongoing:
-          "Ongoing",
-        selesai:
-          "Selesai",
-        arsip: "Arsip",
-      };
-
-      const statusClass = {
-        draft:
-          "border-orange-100 bg-orange-50 text-orange-600",
-        ditolak:
-          "border-red-100 bg-red-50 text-red-600",
-        disetujui:
-          "border-green-100 bg-green-50 text-green-600",
-        open:
-          "border-green-100 bg-green-50 text-green-600",
-        ongoing:
-          "border-blue-100 bg-blue-50 text-blue-600",
-        selesai:
-          "border-slate-200 bg-slate-50 text-slate-600",
-        arsip:
-          "border-slate-100 bg-slate-50 text-slate-500",
-      };
-
-      return (
-        <span
-          className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider ${
-            statusClass[
-              status
-            ] ||
-            statusClass.arsip
-          }`}
-        >
-          {label[status] ||
-            "Arsip"}
-        </span>
-      );
-    };
-
-  const getTotalAsesor =
-    (summary = {}) => {
-      return Object.values(
-        summary
-      ).reduce(
-        (
-          total,
-          data
-        ) =>
-          total +
-          Number(
-            data?.count ||
-              0
-          ),
-        0
-      );
-    };
 
   const handleLogout =
     () => {
@@ -866,15 +1245,12 @@ const ListJadwal = () => {
                 <div>
                   <p className="text-[12px] font-medium text-[#182D4A]/60">
                     Cari berdasarkan kegiatan,
-                    kode, skema, atau status
-                    jadwal.
+                    kode, skema, atau status jadwal.
                   </p>
 
                   <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-[#182D4A]/40">
-                    {
-                      filteredJadwal.length
-                    }{" "}
-                    jadwal ditemukan
+                    {filteredJadwal.length} jadwal
+                    ditemukan
                   </p>
                 </div>
 
@@ -894,8 +1270,7 @@ const ListJadwal = () => {
                         e
                       ) =>
                         setSearch(
-                          e.target
-                            .value
+                          e.target.value
                         )
                       }
                       placeholder="Cari jadwal, skema, kode..."
@@ -917,8 +1292,7 @@ const ListJadwal = () => {
                         e
                       ) =>
                         setFilterStatus(
-                          e.target
-                            .value
+                          e.target.value
                         )
                       }
                       className="w-full appearance-none rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] py-2.5 pl-9 pr-9 text-[13px] font-bold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white sm:w-[180px]"
@@ -961,7 +1335,7 @@ const ListJadwal = () => {
             </div>
 
             <div className="p-5 md:p-6">
-              {filteredJadwal.length ===
+              {paginatedJadwal.length ===
               0 ? (
                 <EmptyState
                   search={
@@ -970,7 +1344,7 @@ const ListJadwal = () => {
                 />
               ) : (
                 <div className="space-y-3">
-                  {filteredJadwal.map(
+                  {paginatedJadwal.map(
                     (
                       item,
                       index
@@ -986,14 +1360,11 @@ const ListJadwal = () => {
                         isMandiri={
                           isMandiri
                         }
-                        getStatusBadge={
-                          getStatusBadge
+                        summaryLoading={
+                          summaryLoading
                         }
                         getTotalAsesor={
                           getTotalAsesor
-                        }
-                        formatDate={
-                          formatDate
                         }
                         onEdit={() =>
                           navigate(
@@ -1031,20 +1402,66 @@ const ListJadwal = () => {
                 </div>
               )}
             </div>
+
+            {filteredJadwal.length >
+              0 && (
+              <Pagination
+                currentPage={
+                  currentPage
+                }
+                totalPages={
+                  totalPages
+                }
+                totalItems={
+                  filteredJadwal.length
+                }
+                itemsPerPage={
+                  ITEMS_PER_PAGE
+                }
+                onPageChange={
+                  handlePageChange
+                }
+              />
+            )}
           </section>
 
-          <div className="text-right text-[11px] font-bold text-[#182D4A]/45">
-            Menampilkan{" "}
-            <span className="text-[#071E3D]">
-              {
-                filteredJadwal.length
-              }
-            </span>{" "}
-            dari{" "}
-            <span className="text-[#071E3D]">
-              {jadwal.length}
-            </span>{" "}
-            jadwal
+          <div className="flex flex-col gap-1 text-right text-[11px] font-bold text-[#182D4A]/45 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Menampilkan{" "}
+              <span className="text-[#071E3D]">
+                {Math.min(
+                  (currentPage -
+                    1) *
+                    ITEMS_PER_PAGE +
+                    1,
+                  filteredJadwal.length
+                )}
+                -
+                {Math.min(
+                  currentPage *
+                    ITEMS_PER_PAGE,
+                  filteredJadwal.length
+                )}
+              </span>{" "}
+              dari{" "}
+              <span className="text-[#071E3D]">
+                {
+                  filteredJadwal.length
+                }
+              </span>{" "}
+              jadwal
+            </span>
+
+            <span>
+              Halaman{" "}
+              <span className="text-[#071E3D]">
+                {currentPage}
+              </span>{" "}
+              dari{" "}
+              <span className="text-[#071E3D]">
+                {totalPages}
+              </span>
+            </span>
           </div>
         </div>
       </main>
@@ -1078,19 +1495,18 @@ const ListJadwal = () => {
   );
 };
 
-function ScheduleCard({
+const ScheduleCard = ({
   item,
   isMandiri,
-  getStatusBadge,
+  summaryLoading,
   getTotalAsesor,
-  formatDate,
   onEdit,
   onDelete,
   onPenguji,
   onVerifikasi,
   onValidator,
   onKomite,
-}) {
+}) => {
   const skema =
     item?.skema ||
     item?.Skema ||
@@ -1105,23 +1521,18 @@ function ScheduleCard({
     item?.asesorSummary ||
     emptySummary;
 
+  const isDraft =
+    item?.status ===
+    "draft";
+
+  const isDitolak =
+    item?.status ===
+    "ditolak";
+
   const totalAsesor =
     getTotalAsesor(
       summary
     );
-
-  const isDraft =
-    item.status ===
-    "draft";
-
-  const isDitolak =
-    item.status ===
-    "ditolak";
-
-  const canManage =
-    isMandiri &&
-    !isDraft &&
-    !isDitolak;
 
   const totalTeam =
     Number(
@@ -1153,19 +1564,17 @@ function ScheduleCard({
     <article className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm transition-all hover:shadow-md">
       <div className="border-b border-[#071E3D]/10 px-5 py-5 md:px-6">
         <div className="flex items-center gap-4">
-          <div className="flex w-11 shrink-0 items-center justify-center">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
-              <ClipboardList
-                size={21}
-              />
-            </div>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+            <ClipboardList
+              size={21}
+            />
           </div>
 
-          <div className="w-px shrink-0 self-stretch bg-[#071E3D]/10" />
+          <div className="h-10 w-px shrink-0 bg-[#071E3D]/10" />
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              {item.kode_jadwal && (
+              {item?.kode_jadwal && (
                 <>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[#CC6B27]">
                     {
@@ -1179,9 +1588,15 @@ function ScheduleCard({
                 </>
               )}
 
-              {getStatusBadge(
-                item.status
-              )}
+              <span
+                className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider ${getStatusClass(
+                  item?.status
+                )}`}
+              >
+                {getStatusLabel(
+                  item?.status
+                )}
+              </span>
 
               {!isMandiri && (
                 <>
@@ -1233,11 +1648,18 @@ function ScheduleCard({
             />
           }
           label="Tanggal"
-          value={`${formatDate(
-            item?.tgl_awal
-          )} - ${formatDate(
+          value={
+            item?.tgl_awal &&
             item?.tgl_akhir
-          )}`}
+              ? `${formatDate(
+                  item.tgl_awal
+                )} - ${formatDate(
+                  item.tgl_akhir
+                )}`
+              : formatDate(
+                  item?.tgl_awal
+                )
+          }
         />
 
         <DetailItem
@@ -1280,8 +1702,20 @@ function ScheduleCard({
             </p>
 
             <p className="mt-1 text-[11px] font-medium text-[#182D4A]/50">
-              {totalTeam} penugasan
-              tercatat
+              {summaryLoading &&
+              isMandiri &&
+              !isDraft &&
+              !isDitolak ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Loader2
+                    size={12}
+                    className="animate-spin text-[#CC6B27]"
+                  />
+                  Memuat penugasan...
+                </span>
+              ) : (
+                `${totalTeam} penugasan tercatat`
+              )}
             </p>
           </div>
 
@@ -1303,6 +1737,11 @@ function ScheduleCard({
                 ?.count ||
               0
             }
+            names={
+              summary
+                ?.asesor_penguji
+                ?.names
+            }
             icon={
               <UserCheck
                 size={13}
@@ -1317,6 +1756,11 @@ function ScheduleCard({
                 ?.verifikator_tuk
                 ?.count ||
               0
+            }
+            names={
+              summary
+                ?.verifikator_tuk
+                ?.names
             }
             icon={
               <CheckCircle
@@ -1333,6 +1777,11 @@ function ScheduleCard({
                 ?.count ||
               0
             }
+            names={
+              summary
+                ?.validator_mkva
+                ?.names
+            }
             icon={
               <FileCheck
                 size={13}
@@ -1348,6 +1797,11 @@ function ScheduleCard({
                 ?.count ||
               0
             }
+            names={
+              summary
+                ?.komite_teknis
+                ?.names
+            }
             icon={
               <UserCog
                 size={13}
@@ -1356,18 +1810,16 @@ function ScheduleCard({
           />
         </div>
 
-        {!isMandiri &&
-          totalAsesor ===
-            0 && (
-            <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-semibold text-slate-400">
-              <Inbox
-                size={14}
-              />
-              Data penugasan asesor
-              tersedia untuk TUK
-              mandiri.
-            </div>
-          )}
+        {!isMandiri && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-semibold text-slate-400">
+            <Inbox
+              size={14}
+            />
+            Data penugasan asesor
+            tersedia untuk TUK
+            mandiri.
+          </div>
+        )}
       </div>
 
       <div className="border-t border-[#071E3D]/10 bg-white px-5 py-5 md:px-6">
@@ -1404,8 +1856,9 @@ function ScheduleCard({
               </p>
 
               <p className="mt-0.5 text-[10px] font-medium text-[#182D4A]/55">
-                Jadwal dibuat dan dikelola
-                oleh Administrator.
+                Jadwal dibuat dan
+                dikelola oleh
+                Administrator.
               </p>
             </div>
           </div>
@@ -1442,8 +1895,9 @@ function ScheduleCard({
                 className="shrink-0"
               />
 
-              Jadwal masih berstatus
-              draft dan menunggu proses
+              Jadwal masih
+              berstatus draft dan
+              menunggu proses
               pengajuan.
             </div>
           </div>
@@ -1455,9 +1909,11 @@ function ScheduleCard({
             />
 
             <span>
-              Jadwal ditolak dan tidak dapat
-              dikelola sampai ada perubahan
-              status dari administrator.
+              Jadwal ditolak dan
+              tidak dapat dikelola
+              sampai ada perubahan
+              status dari
+              administrator.
             </span>
           </div>
         ) : (
@@ -1511,33 +1967,16 @@ function ScheduleCard({
             />
           </div>
         )}
-
-        {canManage && (
-          <div className="mt-3 flex justify-end">
-            <button
-              type="button"
-              onClick={
-                onPenguji
-              }
-              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#CC6B27] transition-colors hover:text-[#071E3D]"
-            >
-              Kelola Detail
-              <ChevronRight
-                size={13}
-              />
-            </button>
-          </div>
-        )}
       </div>
     </article>
   );
-}
+};
 
-function DetailItem({
+const DetailItem = ({
   icon,
   label,
   value,
-}) {
+}) => {
   return (
     <div className="rounded-lg border border-[#071E3D]/10 bg-[#FAFAFA] p-4">
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#CC6B27]">
@@ -1553,38 +1992,50 @@ function DetailItem({
       </p>
     </div>
   );
-}
+};
 
-function TeamItem({
+const TeamItem = ({
   label,
   count,
+  names = [],
   icon,
-}) {
+}) => {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-[#071E3D]/10 bg-white px-3 py-2.5">
-      <span className="flex min-w-0 items-center gap-2 text-[10px] font-bold text-[#182D4A]/55">
-        <span className="shrink-0 text-[#CC6B27]">
-          {icon}
+    <div className="min-h-[58px] rounded-lg border border-[#071E3D]/10 bg-white px-3 py-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2 text-[10px] font-bold text-[#182D4A]/55">
+          <span className="shrink-0 text-[#CC6B27]">
+            {icon}
+          </span>
+
+          <span className="truncate">
+            {label}
+          </span>
         </span>
 
-        <span className="truncate">
-          {label}
+        <span className="shrink-0 text-[11px] font-black text-[#071E3D]">
+          {count}
         </span>
-      </span>
+      </div>
 
-      <span className="shrink-0 text-[11px] font-black text-[#071E3D]">
-        {count}
-      </span>
+      {names.length >
+        0 && (
+        <p className="mt-1 truncate pl-5 text-[9px] font-medium text-[#182D4A]/45">
+          {names.join(
+            ", "
+          )}
+        </p>
+      )}
     </div>
   );
-}
+};
 
-function ActionButton({
+const ActionButton = ({
   icon,
   title,
   onClick,
   variant = "primary",
-}) {
+}) => {
   const classes =
     variant ===
     "danger"
@@ -1601,16 +2052,20 @@ function ActionButton({
     >
       {icon}
       {title}
+      <ChevronRight
+        size={13}
+        className="ml-auto opacity-70"
+      />
     </button>
   );
-}
+};
 
-function StatCard({
+const StatCard = ({
   icon,
   label,
   value,
   tone = "orange",
-}) {
+}) => {
   const tones = {
     orange:
       "bg-[#CC6B27]/10 text-[#CC6B27]",
@@ -1642,32 +2097,219 @@ function StatCard({
       </div>
     </div>
   );
-}
+};
 
-function LoadingState() {
+const Pagination = ({
+  currentPage,
+  totalPages,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
+}) => {
+  const startItem =
+    totalItems === 0
+      ? 0
+      : (currentPage -
+          1) *
+          itemsPerPage +
+        1;
+
+  const endItem =
+    Math.min(
+      currentPage *
+        itemsPerPage,
+      totalItems
+    );
+
+  const getPageNumbers =
+    () => {
+      if (
+        totalPages <=
+        5
+      ) {
+        return Array.from(
+          {
+            length:
+              totalPages,
+          },
+          (_, index) =>
+            index + 1
+        );
+      }
+
+      if (
+        currentPage <=
+        3
+      ) {
+        return [
+          1,
+          2,
+          3,
+          4,
+          "...",
+          totalPages,
+        ];
+      }
+
+      if (
+        currentPage >=
+        totalPages - 2
+      ) {
+        return [
+          1,
+          "...",
+          totalPages -
+            3,
+          totalPages -
+            2,
+          totalPages -
+            1,
+          totalPages,
+        ];
+      }
+
+      return [
+        1,
+        "...",
+        currentPage -
+          1,
+        currentPage,
+        currentPage +
+          1,
+        "...",
+        totalPages,
+      ];
+    };
+
   return (
-    <div className="w-full max-w-md rounded-xl border border-[#071E3D]/10 bg-white p-8 text-center shadow-sm">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
-        <Loader2
-          size={25}
-          className="animate-spin"
-        />
+    <div className="border-t border-[#071E3D]/10 bg-[#FAFAFA] px-5 py-4 md:px-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <p className="text-[10px] font-bold text-[#182D4A]/50">
+          Menampilkan{" "}
+          <span className="text-[#071E3D]">
+            {startItem}
+          </span>
+          -
+          <span className="text-[#071E3D]">
+            {endItem}
+          </span>{" "}
+          dari{" "}
+          <span className="text-[#071E3D]">
+            {totalItems}
+          </span>{" "}
+          jadwal
+        </p>
+
+        {totalPages >
+          1 && (
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                onPageChange(
+                  currentPage -
+                    1
+                )
+              }
+              disabled={
+                currentPage ===
+                1
+              }
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#071E3D]/15 bg-white text-[#071E3D] transition-all hover:border-[#CC6B27] hover:text-[#CC6B27] disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronLeft
+                size={15}
+              />
+            </button>
+
+            <div className="flex items-center gap-1">
+              {getPageNumbers().map(
+                (
+                  page,
+                  index
+                ) =>
+                  page ===
+                  "..." ? (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="flex h-9 w-7 items-center justify-center text-[11px] font-bold text-[#182D4A]/40"
+                    >
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={
+                        page
+                      }
+                      type="button"
+                      onClick={() =>
+                        onPageChange(
+                          page
+                        )
+                      }
+                      className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-[10px] font-bold transition-all ${
+                        currentPage ===
+                        page
+                          ? "bg-[#CC6B27] text-white"
+                          : "border border-[#071E3D]/15 bg-white text-[#071E3D] hover:border-[#CC6B27] hover:text-[#CC6B27]"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                onPageChange(
+                  currentPage +
+                    1
+                )
+              }
+              disabled={
+                currentPage ===
+                totalPages
+              }
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#071E3D]/15 bg-white text-[#071E3D] transition-all hover:border-[#CC6B27] hover:text-[#CC6B27] disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronRight
+                size={15}
+              />
+            </button>
+          </div>
+        )}
       </div>
-
-      <p className="text-[15px] font-black text-[#071E3D]">
-        Memuat Data Jadwal
-      </p>
-
-      <p className="mt-1 text-[11px] font-medium text-[#182D4A]/55">
-        Mohon tunggu sebentar...
-      </p>
     </div>
   );
-}
+};
 
-function EmptyState({
+const LoadingState =
+  () => {
+    return (
+      <div className="w-full max-w-md rounded-xl border border-[#071E3D]/10 bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+          <Loader2
+            size={25}
+            className="animate-spin"
+          />
+        </div>
+
+        <p className="text-[15px] font-black text-[#071E3D]">
+          Memuat Data Jadwal
+        </p>
+
+        <p className="mt-1 text-[11px] font-medium text-[#182D4A]/55">
+          Mohon tunggu sebentar...
+        </p>
+      </div>
+    );
+  };
+
+const EmptyState = ({
   search,
-}) {
+}) => {
   return (
     <div className="rounded-lg border border-dashed border-[#071E3D]/15 bg-[#FAFAFA] px-6 py-14 text-center">
       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-white text-[#071E3D]/25">
@@ -1695,13 +2337,13 @@ function EmptyState({
       </p>
     </div>
   );
-}
+};
 
-function DeleteModal({
+const DeleteModal = ({
   deleting,
   onCancel,
   onConfirm,
-}) {
+}) => {
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#071E3D]/50 p-4">
       <div className="w-full max-w-md overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-2xl">
@@ -1727,10 +2369,10 @@ function DeleteModal({
           </h3>
 
           <p className="mt-2 text-center text-[12px] font-medium leading-5 text-[#182D4A]/60">
-            Jadwal yang dihapus tidak dapat
-            dikembalikan. Pastikan Anda
-            benar-benar ingin menghapus data
-            ini.
+            Jadwal yang dihapus tidak
+            dapat dikembalikan. Pastikan
+            Anda benar-benar ingin menghapus
+            data ini.
           </p>
 
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
@@ -1777,6 +2419,6 @@ function DeleteModal({
       </div>
     </div>
   );
-}
+};
 
 export default ListJadwal;

@@ -17,7 +17,6 @@ import {
   Calendar,
   CheckCircle,
   ClipboardList,
-  FileCheck,
   Hash,
   Inbox,
   Loader2,
@@ -26,9 +25,9 @@ import {
   Search,
   ShieldCheck,
   Trash2,
-  User,
   UserPlus,
   Users,
+  XCircle,
 } from "lucide-react";
 import { notifikasi } from "../../components/ui/notifikasi";
 
@@ -49,9 +48,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token =
-      localStorage.getItem(
-        "token"
-      );
+      localStorage.getItem("token");
 
     if (token) {
       config.headers.Authorization =
@@ -211,6 +208,13 @@ export default function KomiteTeknis() {
             user?.no_hp ||
             profile?.no_hp ||
             "-",
+
+          tersedia:
+            item?.tersedia !== false,
+
+          jadwal_bentrok:
+            item?.jadwal_bentrok ||
+            null,
         };
       },
       []
@@ -332,7 +336,8 @@ export default function KomiteTeknis() {
             Number(
               asesor.id_user
             )
-          )
+          ) &&
+          asesor.tersedia !== false
       ).length;
     }, [
       normalizedAsesor,
@@ -388,7 +393,7 @@ export default function KomiteTeknis() {
               `/tuk/jadwal/${id}/asesor/${JENIS_TUGAS}`
             ),
             api.get(
-              "/tuk/asesor"
+              `/tuk/asesor?id_jadwal=${id}`
             ),
           ]);
 
@@ -485,7 +490,9 @@ export default function KomiteTeknis() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [
+    fetchData,
+  ]);
 
   const handleRefresh =
     async () => {
@@ -508,14 +515,27 @@ export default function KomiteTeknis() {
 
   const handleAdd =
     useCallback(
-      (idUser) => {
+      (asesor) => {
         const parsedId =
-          Number(idUser);
+          Number(
+            asesor?.id_user
+          );
+
+        if (!parsedId) {
+          return;
+        }
 
         if (
           activeIds.has(
             parsedId
           )
+        ) {
+          return;
+        }
+
+        if (
+          asesor?.tersedia ===
+          false
         ) {
           return;
         }
@@ -565,9 +585,8 @@ export default function KomiteTeknis() {
           (prev) =>
             prev.filter(
               (item) =>
-                Number(
-                  item
-                ) !== parsedId
+                Number(item) !==
+                parsedId
             )
         );
       },
@@ -583,7 +602,9 @@ export default function KomiteTeknis() {
               Number(
                 item.id_user
               ) ===
-              Number(idUser)
+              Number(
+                idUser
+              )
           );
 
         const nama =
@@ -610,12 +631,8 @@ export default function KomiteTeknis() {
             (prev) =>
               prev.filter(
                 (item) =>
-                  Number(
-                    item
-                  ) !==
-                  Number(
-                    idUser
-                  )
+                  Number(item) !==
+                  Number(idUser)
               )
           );
 
@@ -738,6 +755,42 @@ export default function KomiteTeknis() {
             err?.response?.data
               ?.invalid;
 
+          const message =
+            err?.response?.data
+              ?.message ||
+            err?.response?.data
+              ?.error ||
+            "";
+
+          if (
+            message
+              .toLowerCase()
+              .includes(
+                "jadwal"
+              ) ||
+            message
+              .toLowerCase()
+              .includes(
+                "bentrok"
+              ) ||
+            message
+              .toLowerCase()
+              .includes(
+                "hari dan jam"
+              )
+          ) {
+            await notifikasi.peringatan(
+              "Asesor Tidak Tersedia",
+              message
+            );
+
+            await fetchData(
+              false
+            );
+
+            return;
+          }
+
           if (
             Array.isArray(
               invalid
@@ -754,10 +807,7 @@ export default function KomiteTeknis() {
 
           await notifikasi.gagal(
             "Gagal Menyimpan",
-            err?.response
-              ?.data?.message ||
-              err?.response
-                ?.data?.error ||
+            message ||
               "Gagal menyimpan komite teknis."
           );
         } finally {
@@ -773,16 +823,19 @@ export default function KomiteTeknis() {
     );
 
   const handleLogout =
-    useCallback(() => {
-      localStorage.clear();
+    useCallback(
+      () => {
+        localStorage.clear();
 
-      navigate(
-        "/login",
-        {
-          replace: true,
-        }
-      );
-    }, [navigate]);
+        navigate(
+          "/login",
+          {
+            replace: true,
+          }
+        );
+      },
+      [navigate]
+    );
 
   const formatDate =
     (date) => {
@@ -798,7 +851,9 @@ export default function KomiteTeknis() {
           parsed.getTime()
         )
       ) {
-        return String(date);
+        return String(
+          date
+        );
       }
 
       return parsed.toLocaleDateString(
@@ -809,6 +864,25 @@ export default function KomiteTeknis() {
           year: "numeric",
         }
       );
+    };
+
+  const formatTime =
+    (time) => {
+      if (!time) {
+        return "-";
+      }
+
+      if (
+        typeof time ===
+        "string"
+      ) {
+        return time.slice(
+          0,
+          5
+        );
+      }
+
+      return "-";
     };
 
   if (loading) {
@@ -913,8 +987,9 @@ export default function KomiteTeknis() {
                   </h1>
 
                   <p className="mt-1 max-w-3xl text-[13px] font-medium leading-5 text-[#182D4A]/70">
-                    Kelola asesor yang ditugaskan
-                    sebagai komite teknis untuk
+                    Kelola asesor yang
+                    ditugaskan sebagai
+                    komite teknis untuk
                     jadwal{" "}
                     <span className="font-bold text-[#071E3D]">
                       {jadwal.nama_kegiatan ||
@@ -961,6 +1036,7 @@ export default function KomiteTeknis() {
                 value={
                   activeAsesor.length
                 }
+                tone="green"
               />
 
               <MiniStat
@@ -973,6 +1049,7 @@ export default function KomiteTeknis() {
                 value={
                   availableCount
                 }
+                tone="blue"
               />
 
               <MiniStat
@@ -1133,11 +1210,15 @@ export default function KomiteTeknis() {
 
                 <input
                   type="text"
-                  value={search}
-                  onChange={(e) =>
-                    setSearch(
-                      e.target.value
-                    )
+                  value={
+                    search
+                  }
+                  onChange={
+                    (e) =>
+                      setSearch(
+                        e.target
+                          .value
+                      )
                   }
                   placeholder="Cari nama, nomor registrasi, username, atau HP..."
                   className="w-full rounded-lg border border-[#071E3D]/15 bg-[#FAFAFA] py-3.5 pl-11 pr-4 text-[12px] font-medium text-[#071E3D] outline-none transition-all placeholder:text-[#182D4A]/40 focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
@@ -1167,7 +1248,9 @@ export default function KomiteTeknis() {
                 ) : (
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     {filteredAsesor.map(
-                      (asesor) => {
+                      (
+                        asesor
+                      ) => {
                         const idUser =
                           Number(
                             asesor.id_user
@@ -1183,13 +1266,23 @@ export default function KomiteTeknis() {
                             idUser
                           );
 
+                        const isConflict =
+                          asesor.tersedia ===
+                          false;
+
+                        const conflictSchedule =
+                          asesor.jadwal_bentrok ||
+                          null;
+
                         return (
                           <div
                             key={
                               asesor.id_user
                             }
                             className={`rounded-xl border p-4 transition-all ${
-                              isAssigned
+                              isConflict
+                                ? "border-slate-200 bg-slate-100/80 opacity-80"
+                                : isAssigned
                                 ? "border-green-200 bg-green-50/40"
                                 : isSelected
                                 ? "border-[#CC6B27] bg-[#CC6B27]/5"
@@ -1199,14 +1292,22 @@ export default function KomiteTeknis() {
                             <div className="flex items-start gap-3">
                               <div
                                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                                  isAssigned
+                                  isConflict
+                                    ? "bg-slate-200 text-slate-400"
+                                    : isAssigned
                                     ? "bg-green-100 text-green-600"
                                     : isSelected
                                     ? "bg-[#CC6B27] text-white"
                                     : "bg-[#CC6B27]/10 text-[#CC6B27]"
                                 }`}
                               >
-                                {isAssigned ? (
+                                {isConflict ? (
+                                  <XCircle
+                                    size={
+                                      18
+                                    }
+                                  />
+                                ) : isAssigned ? (
                                   <BadgeCheck
                                     size={
                                       18
@@ -1229,7 +1330,11 @@ export default function KomiteTeknis() {
 
                               <div className="min-w-0 flex-1">
                                 <h3
-                                  className="truncate text-[14px] font-black text-[#071E3D]"
+                                  className={`truncate text-[14px] font-black ${
+                                    isConflict
+                                      ? "text-slate-500"
+                                      : "text-[#071E3D]"
+                                  }`}
                                   title={
                                     asesor.nama_lengkap
                                   }
@@ -1239,17 +1344,27 @@ export default function KomiteTeknis() {
                                   }
                                 </h3>
 
-                                <p className="mt-1 min-h-[16px] line-clamp-2 text-[10px] font-medium leading-4 text-[#182D4A]/55">
+                                <p
+                                  className={`mt-1 min-h-[16px] line-clamp-2 text-[10px] font-medium leading-4 ${
+                                    isConflict
+                                      ? "text-slate-400"
+                                      : "text-[#182D4A]/55"
+                                  }`}
+                                >
                                   {asesor.bidang_keahlian ||
                                     "Komite Teknis"}
                                 </p>
                               </div>
 
-                              {isAssigned && (
+                              {isConflict ? (
+                                <span className="shrink-0 rounded-lg border border-slate-200 bg-slate-200 px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">
+                                  Tidak Tersedia
+                                </span>
+                              ) : isAssigned ? (
                                 <span className="shrink-0 rounded-lg border border-green-200 bg-green-50 px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-green-600">
                                   Aktif
                                 </span>
-                              )}
+                              ) : null}
                             </div>
 
                             <div className="mt-4 space-y-2">
@@ -1299,8 +1414,60 @@ export default function KomiteTeknis() {
                               />
                             </div>
 
+                            {isConflict &&
+                              conflictSchedule && (
+                                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+                                  <div className="flex items-start gap-2.5">
+                                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-200 text-slate-500">
+                                      <Calendar
+                                        size={
+                                          14
+                                        }
+                                      />
+                                    </div>
+
+                                    <div className="min-w-0">
+                                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                                        Sudah Ada Jadwal Lain
+                                      </p>
+
+                                      <p className="mt-1 truncate text-[11px] font-bold text-slate-600">
+                                        {conflictSchedule.nama_kegiatan ||
+                                          "Jadwal lain"}
+                                      </p>
+
+                                      <p className="mt-1 text-[10px] font-medium text-slate-400">
+                                        {formatDate(
+                                          conflictSchedule.tgl_awal
+                                        )}{" "}
+                                        -{" "}
+                                        {formatDate(
+                                          conflictSchedule.tgl_akhir
+                                        )}
+                                      </p>
+
+                                      <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+                                        Jam{" "}
+                                        {formatTime(
+                                          conflictSchedule.jam
+                                        )}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
                             <div className="mt-4">
-                              {isAssigned ? (
+                              {isConflict ? (
+                                <div className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-200 px-4 py-2.5 text-[11px] font-bold text-slate-500">
+                                  <XCircle
+                                    size={
+                                      15
+                                    }
+                                  />
+                                  Tidak Bisa Dipilih
+                                </div>
+                              ) : isAssigned ? (
                                 <>
                                   <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-[11px] font-bold text-green-600">
                                     <BadgeCheck
@@ -1329,20 +1496,28 @@ export default function KomiteTeknis() {
                                   </button>
                                 </>
                               ) : isSelected ? (
-                                <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#CC6B27]/20 bg-[#CC6B27]/10 px-4 py-2.5 text-[11px] font-bold text-[#CC6B27]">
-                                  <BadgeCheck
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleRemove(
+                                      idUser
+                                    )
+                                  }
+                                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#CC6B27]/20 bg-[#CC6B27]/10 px-4 py-2.5 text-[11px] font-bold text-[#CC6B27] transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+                                >
+                                  <XCircle
                                     size={
                                       15
                                     }
                                   />
-                                  Komite Sudah Dipilih
-                                </div>
+                                  Batal Memilih
+                                </button>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() =>
                                     handleAdd(
-                                      idUser
+                                      asesor
                                     )
                                   }
                                   disabled={
@@ -1434,31 +1609,36 @@ export default function KomiteTeknis() {
                 0 &&
                 activeAsesor.length ===
                   0 && (
-                  <div className="mt-5 rounded-lg border border-[#CC6B27]/15 bg-[#CC6B27]/5 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
-                        <ShieldCheck
-                          size={16}
-                        />
-                      </div>
+                <div className="mt-5 rounded-lg border border-[#CC6B27]/15 bg-[#CC6B27]/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+                      <ShieldCheck
+                        size={16}
+                      />
+                    </div>
 
-                      <div>
-                        <p className="text-[12px] font-bold text-[#071E3D]">
-                          Ketentuan Komite Teknis
-                        </p>
+                    <div>
+                      <p className="text-[12px] font-bold text-[#071E3D]">
+                        Ketentuan Komite Teknis
+                      </p>
 
-                        <p className="mt-1 text-[11px] font-medium leading-5 text-[#182D4A]/60">
-                          Komite teknis terdiri
-                          dari minimal{" "}
-                          {MIN_KOMITE}{" "}
-                          dan maksimal{" "}
-                          {MAX_KOMITE}{" "}
-                          asesor.
-                        </p>
-                      </div>
+                      <p className="mt-1 text-[11px] font-medium leading-5 text-[#182D4A]/60">
+                        Komite teknis
+                        terdiri dari
+                        minimal{" "}
+                        {
+                          MIN_KOMITE
+                        }{" "}
+                        dan maksimal{" "}
+                        {
+                          MAX_KOMITE
+                        }{" "}
+                        asesor.
+                      </p>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
             </div>
           </section>
         </div>

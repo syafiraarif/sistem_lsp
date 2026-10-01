@@ -18,16 +18,6 @@ const Apl01Dokumen = sequelize.define("apl01_dokumen", {
     allowNull: false
   },
 
-  nomor_dokumen: {
-    type: DataTypes.STRING(100),
-    allowNull: true
-  },
-
-  tanggal_dokumen: {
-    type: DataTypes.DATEONLY,
-    allowNull: true
-  },
-
   file_path: {
     type: DataTypes.STRING(255),
     allowNull: false
