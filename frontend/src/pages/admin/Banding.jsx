@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   Inbox,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Download
 } from "lucide-react";
 
 const Banding = () => {
@@ -26,13 +27,13 @@ const Banding = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Pagination State
+  
+  // Pagination & Modal State
   const [pagination, setPagination] = useState({ page: 1, limit: 10 });
-
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  
   const [formUpdate, setFormUpdate] = useState({
     status_progress: "diajukan",
     keputusan: "belum_diputuskan",
@@ -46,21 +47,17 @@ const Banding = () => {
   // Filter & Reset Pagination saat pencarian
   useEffect(() => {
     if (!data) return;
-
     const lowerTerm = searchTerm.toLowerCase();
-
     const filtered = data.filter((item) => {
       const ket = item.isi_banding?.toLowerCase() || "";
       const emailUser = item.user?.email?.toLowerCase() || "";
       const namaUser = item.user?.username?.toLowerCase() || "";
-
       return (
         emailUser.includes(lowerTerm) ||
         namaUser.includes(lowerTerm) ||
         ket.includes(lowerTerm)
       );
     });
-
     setFilteredData(filtered);
     setPagination(prev => ({ ...prev, page: 1 }));
   }, [searchTerm, data]);
@@ -92,18 +89,43 @@ const Banding = () => {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-
     if (!selectedItem) return;
-
     try {
       await api.put(`/admin/banding/${selectedItem.id_banding}`, formUpdate);
-
-      await notifikasi.sukses("Berhasil", "Status banding telah diperbarui");
+      notifikasi.sukses("Berhasil", "Status banding telah diperbarui");
       setShowModal(false);
       fetchData();
     } catch (error) {
       console.error("Update error:", error);
       notifikasi.gagal("Gagal", "Terjadi kesalahan saat update status");
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    // Gunakan id_peserta jika tersedia di payload, fallback ke id_user
+    const targetId = selectedItem.id_peserta || selectedItem.id_user; 
+    if (!targetId) {
+      notifikasi.info("Info", "Data referensi peserta tidak ditemukan untuk pengajuan ini.");
+      return;
+    }
+
+    setDownloadingPdf(true);
+    try {
+      const response = await api.get(`/admin/fr-ak04/pdf/${targetId}`, { responseType: "blob" });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `FR-AK-04-${targetId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download PDF error:", error);
+      notifikasi.gagal("Gagal", "Gagal mengunduh PDF FR.AK.04. Pastikan form telah diisi.");
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -146,7 +168,6 @@ const Banding = () => {
         </span>
       );
     }
-
     if (keputusan === "ditolak") {
       return (
         <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-red-600">
@@ -154,7 +175,6 @@ const Banding = () => {
         </span>
       );
     }
-
     return (
       <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
         Belum Diputus
@@ -211,7 +231,6 @@ const Banding = () => {
               <ClipboardList size={18} className="text-[#CC6B27]" />
               Daftar Pengajuan Banding
             </h4>
-
             <div className="group relative w-full sm:w-72">
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
               <input
@@ -223,7 +242,7 @@ const Banding = () => {
               />
             </div>
           </div>
-
+          
           <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
             <table className="w-full min-w-[1000px] border-collapse bg-white text-left">
               <thead>
@@ -324,7 +343,6 @@ const Banding = () => {
               </div>
             </div>
           )}
-
         </div>
       </div>
 
@@ -332,6 +350,7 @@ const Banding = () => {
       {showModal && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 p-4 backdrop-blur-sm">
           <div className="flex max-h-[95vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            
             {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-[#071E3D]/10 bg-[#FAFAFA] px-6 py-4">
               <div className="flex items-center gap-3">
@@ -373,7 +392,7 @@ const Banding = () => {
                       <div className="md:col-span-2 mt-2">
                         <p className="mb-2 text-[11px] font-bold text-[#071E3D]">File Bukti Pendukung</p>
                         <a
-                          href={`http://localhost:3000/uploads/${selectedItem.file_bukti}`}
+                          href={`${api.defaults.baseURL.replace('/api', '')}/uploads/${selectedItem.file_bukti}`}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-2 rounded-lg bg-[#CC6B27]/10 px-4 py-2 text-[12px] font-bold text-[#CC6B27] transition-all hover:bg-[#CC6B27] hover:text-white"
@@ -382,6 +401,34 @@ const Banding = () => {
                         </a>
                       </div>
                     )}
+                  </div>
+                </DetailSection>
+
+                {/* INFO FORM FR.AK.04 */}
+                <DetailSection icon={<FileText size={16} />} title="Formulir FR.AK.04 (Banding Asesmen)">
+                  <div className="flex flex-col gap-3">
+                    <p className="text-[12px] font-medium text-[#182D4A]/70">
+                      Asesi telah melengkapi form standar pengajuan Banding Asesmen (FR.AK.04). Anda dapat melihat atau mencetak dokumen ini.
+                    </p>
+                    <div className="flex gap-3 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => window.open(`/admin/fr-ak04-detail/${selectedItem.id_peserta || selectedItem.id_user}`, '_blank')}
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#071E3D] px-4 py-2 text-[12px] font-bold text-white transition-all hover:bg-orange-500"
+                      >
+                        <Eye size={16} /> Lihat Detail Form
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={handleDownloadPdf}
+                        disabled={downloadingPdf}
+                        className="inline-flex items-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2 text-[12px] font-bold text-[#071E3D] transition-all hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        {downloadingPdf ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+                        {downloadingPdf ? "Mengunduh PDF..." : "Unduh PDF FR.AK.04"}
+                      </button>
+                    </div>
                   </div>
                 </DetailSection>
 
@@ -403,7 +450,6 @@ const Banding = () => {
                         <option value="selesai">Selesai</option>
                       </select>
                     </div>
-
                     <div>
                       <label className="mb-2 block text-[11px] font-bold text-[#071E3D]">
                         Keputusan Akhir
@@ -418,7 +464,6 @@ const Banding = () => {
                         <option value="ditolak">Banding Ditolak (Tetap BK)</option>
                       </select>
                     </div>
-
                     <div className="md:col-span-2 mt-2">
                       <label className="mb-2 block text-[11px] font-bold text-[#071E3D]">
                         Catatan Komite / Hasil Pleno
@@ -433,7 +478,6 @@ const Banding = () => {
                     </div>
                   </div>
                 </DetailSection>
-
               </div>
             </form>
 
@@ -458,7 +502,7 @@ const Banding = () => {
           </div>
         </div>
       )}
-
+      
       {/* SCROLLBAR CUSTOM */}
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -471,7 +515,6 @@ const Banding = () => {
 };
 
 // --- SUB COMPONENTS ---
-
 const StatCard = ({ icon, label, value, tone = "orange" }) => {
   const tones = {
     orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
@@ -481,7 +524,6 @@ const StatCard = ({ icon, label, value, tone = "orange" }) => {
     navy: "bg-[#071E3D]/10 text-[#071E3D]",
     yellow: "bg-yellow-50 text-yellow-600"
   };
-
   return (
     <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
       <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone]}`}>

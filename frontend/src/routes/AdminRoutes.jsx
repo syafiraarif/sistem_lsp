@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
 
 import AdminDashboard from "../pages/admin/AdminDashboard";
+import Banding from "../pages/admin/Banding";
 import TambahAsesi from "../pages/admin/TambahAsesi";
 import UnitKompetensi from "../pages/admin/UnitKompetensi";
 import Skkni from "../pages/admin/Skkni";
@@ -28,6 +29,8 @@ import AsesiBelumKompeten from "../pages/admin/AsesiBelumKompeten";
 import ValidasiPembayaran from "../pages/admin/ValidasiPembayaran";
 import FeedbackAdmin from "../pages/admin/Feedback";
 import LaporanSertifikasi from "../pages/admin/LaporanSertifikasi";
+import FRAK04Detail from "../pages/shared/FRAK04Detail";
+import MasterFRIA05 from "../pages/admin/MasterFRIA05";
 
 /* PROTECTED */
 const getUser = () => {
@@ -52,12 +55,17 @@ export default function AdminRoutes() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="unit-kompetensi" element={<UnitKompetensi />} />
           <Route path="skkni" element={<Skkni />} />
+          <Route path="banding" element={<Banding />} />
+          <Route path="fr-ak04-detail/:id_peserta" element={<FRAK04Detail role="admin" />} />
           
           {/* PENGELOMPOKAN RUTE SKEMA DAN TURUNANNYA */}
           <Route path="skema" element={<Skema />} />
           <Route path="skema/:id/persyaratan" element={<SkemaPersyaratan />} />
           <Route path="skema/:id/persyaratan-tuk" element={<SkemaPersyaratanTuk />} />
           <Route path="skema/:id/biaya-uji" element={<BiayaUji />} />
+
+          {/* RUTE BARU UNTUK KELOLA BANK SOAL MASTER */}
+          <Route path="skema/:id_skema/bank-soal" element={<MasterFRIA05 />} />
 
           {/* RUTE LAINNYA */}
           <Route path="dokumen-mutu" element={<DokumenMutu />} />
