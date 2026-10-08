@@ -1,4 +1,5 @@
 const { DataTypes } = require("sequelize");
+
 const sequelize = require("../config/database");
 
 const FrIa05 = sequelize.define("fr_ia_05", {
@@ -7,23 +8,32 @@ const FrIa05 = sequelize.define("fr_ia_05", {
     primaryKey: true,
     autoIncrement: true
   },
+
   id_jadwal: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: true
   },
+
   id_skema: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
+
   kode_paket: {
     type: DataTypes.STRING(50),
     allowNull: false
   },
-  judul_paket: DataTypes.STRING(255),
+
+  judul_paket: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+
   passing_grade: {
     type: DataTypes.INTEGER,
     defaultValue: 70
   },
+
   nama_asesi: {
     type: DataTypes.INTEGER,
     allowNull: true
@@ -38,8 +48,16 @@ const FrIa05 = sequelize.define("fr_ia_05", {
     type: DataTypes.INTEGER,
     allowNull: true
   },
-  created_by: DataTypes.INTEGER,
-  created_at: DataTypes.DATE
+
+  created_by: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+
+  created_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  }
 }, {
   tableName: "fr_ia_05",
   timestamps: false

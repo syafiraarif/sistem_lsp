@@ -15,16 +15,10 @@ const Tuk = sequelize.define("tuk", {
     type: DataTypes.STRING(255),
     allowNull: false
   },
-  jenis_tuk: DataTypes.ENUM("mandiri","sewaktu","tempat_kerja"),
+  jenis_tuk: DataTypes.ENUM("mandiri", "sewaktu", "tempat_kerja"),
   institusi_induk: DataTypes.STRING(150),
   telepon: DataTypes.STRING(20),
   email: DataTypes.STRING(100),
-  
-  // ---> TAMBAHAN BARU <---
-  nama_penanggung_jawab: {
-    type: DataTypes.STRING(255)
-  },
-
   alamat: DataTypes.TEXT,
   provinsi: DataTypes.STRING(50),
   kota: DataTypes.STRING(50),
@@ -34,7 +28,7 @@ const Tuk = sequelize.define("tuk", {
   no_lisensi: DataTypes.STRING(100),
   masa_berlaku_lisensi: DataTypes.DATE,
   status: {
-    type: DataTypes.ENUM("aktif","nonaktif"),
+    type: DataTypes.ENUM("aktif", "nonaktif"),
     defaultValue: "aktif"
   },
   id_penanggung_jawab: {

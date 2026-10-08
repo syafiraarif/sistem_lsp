@@ -1789,59 +1789,37 @@ const getPengujiContext = async (req, idJadwal, idPeserta) => {
 };
 
 const findCommitteeSource = async (idJadwal, idUserAsesi) => {
-  const committeeAssignments = await JadwalAsesor.findAll({
-    where: {
-      id_jadwal: idJadwal,
-      jenis_tugas: "komite_teknis",
-      status: "aktif"
-    },
-    attributes: ["id_user"]
-  });
-
-  const committeeIds = committeeAssignments.map((item) => item.id_user);
-
-  if (!committeeIds.length) {
-    return null;
-  }
-
-  return FrIa02.findOne({
-    where: {
-      id_jadwal: idJadwal,
-      id_asesi: idUserAsesi,
-      id_asesor: committeeIds
-    },
+  const jadwal = await Jadwal.findByPk(idJadwal);
+  if (!jadwal) return null;
+  const master = await FrIa02.findOne({
+    where: { id_skema: jadwal.id_skema, id_jadwal: null, id_asesi: null },
     include: [
-      {
-        model: FrIa02Detail,
-        as: "detail",
-        include: [
-          {
-            model: KelompokPekerjaan,
-            as: "kelompok"
-          }
-        ]
-      },
-      {
-        model: FrIa02Validator,
-        as: "validator",
-        include: [
-          {
-            model: ProfileAsesor,
-            as: "asesor",
-            attributes: [
-              "id_user",
-              "nama_lengkap",
-              "no_lisensi",
-              "no_reg_asesor",
-              "ttd_path"
-            ]
-          }
-        ]
-      }
+      { model: FrIa02Detail, as: "detail", include: [{ model: KelompokPekerjaan, as: "kelompok" }] },
+      { model: FrIa02Validator, as: "validator", include: [{ model: ProfileAsesor, as: "asesor" }] },
+      { model: Skema, as: "skema" }
     ],
-    order: [
-      ["created_at", "DESC"]
-    ]
+    order: [["id_fr_ia_02", "DESC"]]
+  });
+  if (master) return master;
+  const assignment = await JadwalAsesor.findAll({
+    where: { id_jadwal: idJadwal, jenis_tugas: "komite_teknis", status: "aktif" },
+    order: [["created_at", "DESC"]]
+  });
+  const assessorIds = assignment.map((item) => item.id_user).filter(Boolean);
+  if (!assessorIds.length) return null;
+  const where = { id_jadwal: idJadwal, id_asesor: { [require("sequelize").Op.in]: assessorIds } };
+  if (idUserAsesi) where.id_asesi = idUserAsesi;
+  return FrIa02.findOne({
+    where,
+    include: [
+      { model: FrIa02Detail, as: "detail", include: [{ model: KelompokPekerjaan, as: "kelompok" }] },
+      { model: FrIa02Validator, as: "validator", include: [{ model: ProfileAsesor, as: "asesor" }] },
+      { model: Skema, as: "skema" },
+      { model: Tuk, as: "tuk" },
+      { model: ProfileAsesor, as: "asesor" },
+      { model: ProfileAsesi, as: "asesi" }
+    ],
+    order: [["id_fr_ia_02", "DESC"]]
   });
 };
 
@@ -2045,7 +2023,7 @@ exports.getFrIa02Penguji = async (req, res) => {
 
     if (!record) {
       return res.status(404).json({
-        message: "FR.IA.02 dari Komite Teknis belum tersedia untuk peserta ini"
+        message: "FR.IA.02 untuk skema peserta belum tersedia"
       });
     }
 

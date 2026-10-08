@@ -93,96 +93,65 @@ const getFrIa03Data = async (id) => {
 exports.getForm = async (req, res) => {
   try {
     const { id_jadwal, id_peserta } = req.params;
-
     if (!id_jadwal || !id_peserta) {
-      return res.status(400).json({
-        success: false,
-        message: "ID jadwal dan ID peserta wajib diisi"
-      });
+      return res.status(400).json({ success: false, message: "ID jadwal dan ID peserta wajib diisi" });
     }
-
-    const peserta = await PesertaJadwal.findOne({
-      where: {
-        id_jadwal,
-        id_peserta
-      }
-    });
-
-    if (!peserta) {
-      return res.status(404).json({
-        success: false,
-        message: "Peserta pada jadwal tersebut tidak ditemukan"
-      });
-    }
-
-    const data = await FrIa03.findOne({
-      where: {
-        id_jadwal,
-        id_asesi: peserta.id_user
-      },
+    const peserta = await PesertaJadwal.findOne({ where: { id_jadwal, id_peserta } });
+    if (!peserta) return res.status(404).json({ success: false, message: "Peserta pada jadwal tersebut tidak ditemukan" });
+    const jadwal = await require("../../models/jadwal.model").findByPk(id_jadwal);
+    if (!jadwal) return res.status(404).json({ success: false, message: "Jadwal tidak ditemukan" });
+    let data = await FrIa03.findOne({
+      where: { id_jadwal, id_asesi: peserta.id_user },
       include: [
-        {
-          model: FrIa03Pertanyaan,
-          as: "pertanyaan",
-          include: [
-            {
-              model: FrIa03Jawaban,
-              as: "jawaban"
-            },
-            {
-              model: UnitKompetensi,
-              as: "unit"
-            }
-          ]
-        },
-        {
-          model: ProfileAsesor,
-          as: "asesor"
-        },
-        {
-          model: ProfileAsesi,
-          as: "asesi"
-        },
-        {
-          model: Skema,
-          as: "skema"
-        },
-        {
-          model: Tuk,
-          as: "tuk"
-        }
+        { model: FrIa03Pertanyaan, as: "pertanyaan", include: [{ model: FrIa03Jawaban, as: "jawaban" }, { model: UnitKompetensi, as: "unit" }] },
+        { model: ProfileAsesor, as: "asesor" },
+        { model: ProfileAsesi, as: "asesi" },
+        { model: Skema, as: "skema" },
+        { model: Tuk, as: "tuk" }
       ],
-      order: [
-        [
-          {
-            model: FrIa03Pertanyaan,
-            as: "pertanyaan"
-          },
-          "urutan",
-          "ASC"
-        ]
-      ]
+      order: [[{ model: FrIa03Pertanyaan, as: "pertanyaan" }, "urutan", "ASC"]]
     });
-
     if (!data) {
-      return res.status(404).json({
-        success: false,
-        message: "FR.IA.03 untuk peserta tersebut belum tersedia"
+      const master = await FrIa03.findOne({
+        where: { id_skema: jadwal.id_skema, id_jadwal: null, id_asesi: null },
+        include: [{ model: FrIa03Pertanyaan, as: "pertanyaan" }],
+        order: [[{ model: FrIa03Pertanyaan, as: "pertanyaan" }, "urutan", "ASC"]]
       });
+      if (!master) return res.status(404).json({ success: false, message: "FR.IA.03 untuk skema ini belum tersedia" });
+      data = await FrIa03.create({
+        id_jadwal,
+        id_skema: jadwal.id_skema,
+        id_tuk: jadwal.id_tuk || null,
+        id_asesor: peserta.id_asesor || req.user?.id_user || req.user?.id,
+        id_asesi: peserta.id_user,
+        tanggal: null,
+        created_by: req.user?.id_user || req.user?.id || null,
+        created_at: new Date()
+      });
+      const questions = Array.isArray(master.pertanyaan) ? master.pertanyaan : [];
+      if (questions.length) await FrIa03Pertanyaan.bulkCreate(questions.map((item) => ({ id_fr_ia_03: data.id_fr_ia_03, id_unit: item.id_unit, pertanyaan: item.pertanyaan, urutan: item.urutan, created_by: item.created_by, created_at: new Date() })));
+    } else {
+      const questionCount = await FrIa03Pertanyaan.count({ where: { id_fr_ia_03: data.id_fr_ia_03 } });
+      if (questionCount === 0) {
+        const masterRecord = await FrIa03.findOne({ where: { id_skema: jadwal.id_skema, id_jadwal: null, id_asesi: null } });
+        const masterQuestions = masterRecord ? await FrIa03Pertanyaan.findAll({ where: { id_fr_ia_03: masterRecord.id_fr_ia_03 } }) : [];
+        if (masterQuestions.length) await FrIa03Pertanyaan.bulkCreate(masterQuestions.map((item) => ({ id_fr_ia_03: data.id_fr_ia_03, id_unit: item.id_unit, pertanyaan: item.pertanyaan, urutan: item.urutan, created_by: item.created_by, created_at: new Date() })));
+      }
     }
-
-    return res.json({
-      success: true,
-      data: data.toJSON()
+    const result = await FrIa03.findByPk(data.id_fr_ia_03, {
+      include: [
+        { model: FrIa03Pertanyaan, as: "pertanyaan", include: [{ model: FrIa03Jawaban, as: "jawaban" }, { model: UnitKompetensi, as: "unit" }] },
+        { model: ProfileAsesor, as: "asesor" },
+        { model: ProfileAsesi, as: "asesi" },
+        { model: Skema, as: "skema" },
+        { model: Tuk, as: "tuk" }
+      ],
+      order: [[{ model: FrIa03Pertanyaan, as: "pertanyaan" }, "urutan", "ASC"]]
     });
+    return res.json({ success: true, data: result.toJSON() });
   } catch (error) {
     console.error("Error getForm FR.IA.03:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Gagal mengambil data FR.IA.03",
-      error: error.message
-    });
+    return res.status(500).json({ success: false, message: "Gagal mengambil data FR.IA.03", error: error.message });
   }
 };
 

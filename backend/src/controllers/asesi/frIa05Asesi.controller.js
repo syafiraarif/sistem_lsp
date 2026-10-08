@@ -214,45 +214,28 @@ const findPaketById = async (id_fr_ia_05) => {
 };
 
 const findPaketByJadwal = async (id_jadwal) => {
+  const jadwal = await Jadwal.findByPk(id_jadwal);
+  if (jadwal?.id_skema) {
+    const master = await FrIa05.findOne({
+      where: { id_skema: jadwal.id_skema, id_jadwal: null },
+      include: [
+        { model: Soal, as: "soal", include: [{ model: Opsi, as: "opsi", attributes: ["id_opsi", "id_soal", "kode_opsi", "jawaban"] }] },
+        { model: Skema, as: "skema" }
+      ],
+      order: [["id_fr_ia_05", "DESC"]]
+    });
+    if (master) return master;
+  }
   return FrIa05.findOne({
-    where: {
-      id_jadwal,
-    },
+    where: { id_jadwal },
     include: [
-      {
-        model: Soal,
-        as: "soal",
-        include: [
-          {
-            model: Opsi,
-            as: "opsi",
-            attributes: ["id_opsi", "id_soal", "kode_opsi", "jawaban"],
-          },
-        ],
-      },
-      {
-        model: Jadwal,
-        as: "jadwal",
-        include: [
-          {
-            model: Skema,
-            as: "skema",
-          },
-          {
-            model: Tuk,
-            as: "tuk",
-          },
-        ],
-      },
-      {
-        model: Skema,
-        as: "skema",
-      },
+      { model: Soal, as: "soal", include: [{ model: Opsi, as: "opsi", attributes: ["id_opsi", "id_soal", "kode_opsi", "jawaban"] }] },
+      { model: Jadwal, as: "jadwal", include: [{ model: Skema, as: "skema" }, { model: Tuk, as: "tuk" }] },
+      { model: Skema, as: "skema" }
     ],
-    order: [["id_fr_ia_05", "DESC"]],
+    order: [["id_fr_ia_05", "DESC"]]
   });
 };
-
 const validateJadwalOpen = (jadwal) => {
   if (!jadwal) {
     return {
@@ -307,7 +290,7 @@ exports.getPaketByJadwal = async (req, res) => {
     if (!paket) {
       return res.status(404).json({
         status: "error",
-        message: "Paket FR.IA.05 belum dibuat oleh komite teknis",
+        message: "Paket FR.IA.05 untuk skema peserta belum tersedia",
       });
     }
 
@@ -733,12 +716,7 @@ exports.getStatus = async (req, res) => {
       });
     }
 
-    const paket = await FrIa05.findOne({
-      where: {
-        id_jadwal: peserta.id_jadwal
-      },
-      order: [["id_fr_ia_05","DESC"]]
-    });
+    const paket = await findPaketByJadwal(peserta.id_jadwal);
 
     if (!paket) {
       return res.json({

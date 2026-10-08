@@ -10,7 +10,7 @@ const FrIa03 = sequelize.define("fr_ia_03", {
 
   id_jadwal: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: true
   },
 
   id_skema: {
@@ -20,7 +20,7 @@ const FrIa03 = sequelize.define("fr_ia_03", {
 
   id_tuk: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: true
   },
 
   id_asesor: {
@@ -30,7 +30,7 @@ const FrIa03 = sequelize.define("fr_ia_03", {
 
   id_asesi: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: true
   },
 
   tanggal: {

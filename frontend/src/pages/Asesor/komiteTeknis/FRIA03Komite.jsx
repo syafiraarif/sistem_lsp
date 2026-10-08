@@ -1,5 +1,3 @@
-// frontend/src/pages/Asesor/komiteTeknis/FRIA03Komite.jsx
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
 import { useNavigate, useParams } from "react-router-dom";
@@ -16,12 +14,21 @@ import {
 import Swal from "sweetalert2";
 import api from "../../../services/api";
 
-export default function FRIA03Komite() {
-  const params = useParams();
-  const navigate = useNavigate();
+const PANDUAN_ASESOR = [
+  "Formulir ini diisi oleh asesor kompetensi dapat sebelum, pada saat atau setelah melakukan asesmen dengan metode observasi demonstrasi.",
+  "Pertanyaan dibuat dengan tujuan untuk menggali, dapat berisi pertanyaan yang berkaitan dengan dimensi kompetensi, batasan variabel dan aspek kritis yang relevan dengan skenario tugas dan praktik demonstrasi.",
+  "Jika pertanyaan disampaikan sebelum asesi melakukan praktik demonstrasi, maka pertanyaan dibuat berkaitan dengan aspek K3L, SOP, penggunaan peralatan dan perlengkapan.",
+  "Jika setelah asesi melakukan praktik demonstrasi terdapat item pertanyaan pendukung observasi telah terpenuhi, maka pertanyaan tersebut tidak perlu ditanyakan lagi dan cukup memberi catatan bahwa sudah terpenuhi pada saat tugas praktik demonstrasi pada kolom tanggapan.",
+  "Jika pada saat observasi ada hal yang perlu dikonfirmasi sedangkan di instrumen daftar pertanyaan pendukung observasi tidak ada, maka asesor dapat memberikan pertanyaan dengan syarat pertanyaan harus berkaitan dengan tugas praktik demonstrasi. Jika dilakukan, asesor harus mencatat dalam instrumen pertanyaan pendukung observasi.",
+  "Tanggapan asesi ditulis pada kolom tanggapan.",
+];
 
-  const { id_jadwal } = useParams();
+export default function FRIA03Komite() {
+  const { id_skema, idSkema, id } = useParams();
+  const navigate = useNavigate();
   const printRef = useRef(null);
+
+  const skemaId = id_skema || idSkema || id;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,29 +48,57 @@ export default function FRIA03Komite() {
 
   useEffect(() => {
     fetchData();
-}, [id_jadwal]);
+  }, [skemaId]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      if (!id_jadwal) {
-        Swal.fire("Gagal", "ID Jadwal tidak ditemukan di URL", "error");
+      if (!skemaId) {
+        await Swal.fire(
+          "Gagal",
+          "ID Skema tidak ditemukan di URL.",
+          "error"
+        );
         return;
       }
 
-      const res = await api.get(`/asesor/fr-ia03/komite/${id_jadwal}`);
-      const payload = res.data?.data || res.data || null;
+      const res = await api.get(
+        `/asesor/fr-ia03/komite/${skemaId}`
+      );
+
+      const payload =
+        res.data?.data ||
+        res.data ||
+        null;
+
       setData(payload);
-      setPertanyaanList(normalizePertanyaan(payload));
-      const unitRes = await api.get(`/asesor/fr-ia02/unit/${id_jadwal}`);
-      console.log(unitRes.data);
-      setUnitOptions(unitRes.data || []);
+      setPertanyaanList(
+        normalizePertanyaan(payload)
+      );
+
+      const unitRes = await api.get(
+        `/asesor/fr-ia02/unit/${skemaId}`
+      );
+
+      const units =
+        Array.isArray(unitRes.data?.data)
+          ? unitRes.data.data
+          : Array.isArray(unitRes.data)
+            ? unitRes.data
+            : [];
+
+      setUnitOptions(units);
     } catch (err) {
-      console.error(err);
-      Swal.fire(
+      console.error(
+        "LOAD FR.IA.03 ERROR:",
+        err
+      );
+
+      await Swal.fire(
         "Gagal",
-        err.response?.data?.message || "Gagal memuat FR.IA.03 Komite Teknis",
+        err.response?.data?.message ||
+          "Gagal memuat FR.IA.03.",
         "error"
       );
     } finally {
@@ -72,34 +107,111 @@ export default function FRIA03Komite() {
   };
 
   const skema = getSkema(data);
-  const tuk = getTuk(data);
-  const asesor = getAsesor(data);
-  const asesi = getAsesi(data);
 
+  const kelompokMap = useMemo(() => {
+    const groups = {};
+
+    unitOptions.forEach((unit) => {
+      const namaKelompok =
+        unit?.nama_kelompok ||
+        unit?.kelompok?.nama_kelompok ||
+        unit?.kelompok_pekerjaan ||
+        "Kelompok Pekerjaan";
+
+      if (!groups[namaKelompok]) {
+        groups[namaKelompok] = [];
+      }
+
+      groups[namaKelompok].push(unit);
+    });
+
+    pertanyaanList.forEach((pertanyaan) => {
+      const unit =
+        unitOptions.find(
+          (item) =>
+            String(item?.id_unit) ===
+            String(pertanyaan?.id_unit)
+        ) || {};
+
+      const namaKelompok =
+        pertanyaan?.unit?.skemaUnit?.[0]?.kelompok
+          ?.nama_kelompok ||
+        unit?.nama_kelompok ||
+        unit?.kelompok?.nama_kelompok ||
+        unit?.kelompok_pekerjaan ||
+        "Kelompok Pekerjaan";
+
+      if (!groups[namaKelompok]) {
+        groups[namaKelompok] = [];
+      }
+
+      const alreadyExists = groups[
+        namaKelompok
+      ].some(
+        (item) =>
+          String(item?.id_unit) ===
+          String(pertanyaan?.id_unit)
+      );
+
+      if (!alreadyExists && pertanyaan?.id_unit) {
+        groups[namaKelompok].push({
+          id_unit: pertanyaan.id_unit,
+          kode_unit:
+            pertanyaan?.unit?.kode_unit ||
+            pertanyaan?.kode_unit ||
+            "",
+          judul_unit:
+            pertanyaan?.unit?.judul_unit ||
+            pertanyaan?.judul_unit ||
+            "",
+          nama_kelompok:
+            namaKelompok,
+        });
+      }
+    });
+
+    return groups;
+  }, [unitOptions, pertanyaanList]);
 
   const openAdd = () => {
     setEditingPertanyaan(null);
+
     setForm({
-      id_unit: unitOptions.length ? unitOptions[0].id_unit : "",
+      id_unit:
+        unitOptions.length > 0
+          ? unitOptions[0]?.id_unit || ""
+          : "",
       pertanyaan: "",
-      urutan: pertanyaanList.length + 1,
+      urutan:
+        pertanyaanList.length + 1,
     });
+
     setShowModal(true);
   };
 
   const openEdit = (item) => {
     setEditingPertanyaan(item);
+
     setForm({
-      id_unit: item.id_unit || item.unit?.id_unit || "",
-      pertanyaan: item.pertanyaan || "",
-      urutan: item.urutan || "",
+      id_unit:
+        item?.id_unit ||
+        item?.unit?.id_unit ||
+        "",
+      pertanyaan:
+        item?.pertanyaan ||
+        "",
+      urutan:
+        item?.urutan ||
+        "",
     });
+
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingPertanyaan(null);
+
     setForm({
       id_unit: "",
       pertanyaan: "",
@@ -110,29 +222,43 @@ export default function FRIA03Komite() {
   const handleChange = (e) => {
     setForm((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [e.target.name]:
+        e.target.value,
     }));
   };
 
   const savePertanyaan = async (e) => {
     e.preventDefault();
 
-    if (!form.pertanyaan.trim()) {
-      return Swal.fire("Validasi", "Pertanyaan wajib diisi", "warning");
+    if (!form.id_unit) {
+      await Swal.fire(
+        "Validasi",
+        "Unit kompetensi wajib dipilih.",
+        "warning"
+      );
+      return;
     }
 
-    if (!form.id_unit) {
-      return Swal.fire("Validasi", "Unit kompetensi wajib dipilih", "warning");
+    if (!form.pertanyaan.trim()) {
+      await Swal.fire(
+        "Validasi",
+        "Pertanyaan wajib diisi.",
+        "warning"
+      );
+      return;
     }
 
     try {
       setSaving(true);
 
       const payload = {
-        id_jadwal,
+        id_skema: Number(skemaId),
         id_unit: Number(form.id_unit),
-        pertanyaan: form.pertanyaan,
-        urutan: Number(form.urutan)
+        pertanyaan:
+          form.pertanyaan.trim(),
+        urutan:
+          Number(form.urutan) ||
+          pertanyaanList.length + 1,
       };
 
       if (editingPertanyaan) {
@@ -141,14 +267,17 @@ export default function FRIA03Komite() {
           payload
         );
       } else {
-        await api.post("/asesor/fr-ia03/komite/pertanyaan", payload);
+        await api.post(
+          "/asesor/fr-ia03/komite/pertanyaan",
+          payload
+        );
       }
 
       closeModal();
 
-      Swal.fire({
+      await Swal.fire({
         title: "Berhasil",
-        text: "Pertanyaan FR.IA.03 berhasil disimpan",
+        text: "Pertanyaan FR.IA.03 berhasil disimpan.",
         icon: "success",
         timer: 1200,
         showConfirmButton: false,
@@ -156,10 +285,15 @@ export default function FRIA03Komite() {
 
       await fetchData();
     } catch (err) {
-      console.error(err);
-      Swal.fire(
+      console.error(
+        "SAVE FR.IA.03 QUESTION ERROR:",
+        err
+      );
+
+      await Swal.fire(
         "Gagal",
-        err.response?.data?.message || "Gagal menyimpan pertanyaan",
+        err.response?.data?.message ||
+          "Gagal menyimpan pertanyaan.",
         "error"
       );
     } finally {
@@ -178,7 +312,9 @@ export default function FRIA03Komite() {
       confirmButtonText: "Hapus",
     });
 
-    if (!confirm.isConfirmed) return;
+    if (!confirm.isConfirmed) {
+      return;
+    }
 
     try {
       setSaving(true);
@@ -187,9 +323,9 @@ export default function FRIA03Komite() {
         `/asesor/fr-ia03/komite/pertanyaan/${item.id_pertanyaan}`
       );
 
-      Swal.fire({
+      await Swal.fire({
         title: "Terhapus",
-        text: "Pertanyaan berhasil dihapus",
+        text: "Pertanyaan berhasil dihapus.",
         icon: "success",
         timer: 1200,
         showConfirmButton: false,
@@ -197,10 +333,15 @@ export default function FRIA03Komite() {
 
       await fetchData();
     } catch (err) {
-      console.error(err);
-      Swal.fire(
+      console.error(
+        "DELETE FR.IA.03 QUESTION ERROR:",
+        err
+      );
+
+      await Swal.fire(
         "Gagal",
-        err.response?.data?.message || "Gagal menghapus pertanyaan",
+        err.response?.data?.message ||
+          "Gagal menghapus pertanyaan.",
         "error"
       );
     } finally {
@@ -208,58 +349,66 @@ export default function FRIA03Komite() {
     }
   };
 
-const downloadPdf = useReactToPrint({
-  contentRef: printRef,
-  documentTitle: `FR-IA-03-${id_jadwal}`,
-  pageStyle: `
-    @page {
-      size:A4;
-      margin:10mm;
-    }
+  const downloadPdf = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `FR-IA-03-${skemaId}`,
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 10mm;
+      }
 
-    body{
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-  `,
-});
-
-
-const kelompokMap = useMemo(() => {
-  const groups = {};
-
-  unitOptions.forEach((unit) => {
-    const namaKelompok = unit.nama_kelompok || "Kelompok Pekerjaan";
-
-    if (!groups[namaKelompok]) {
-      groups[namaKelompok] = [];
-    }
-
-    groups[namaKelompok].push(unit);
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    `,
   });
 
-  return groups;
-}, [unitOptions]);
-
   if (loading) {
-    return <LoadingScreen title="Memuat FR.IA.03 Komite Teknis..." />;
+    return (
+      <LoadingScreen
+        title="Memuat FR.IA.03..."
+      />
+    );
   }
 
   return (
     <div className="min-h-screen bg-slate-100 py-6">
       <style>{`
         @media print {
-          table { page-break-inside: auto; }
-          tr { page-break-inside: avoid; }
-          section { page-break-inside: avoid; }
-          thead { display: table-header-group; }
-          tfoot { display: table-footer-group; }
+          table {
+            page-break-inside: auto;
+          }
+
+          tr {
+            page-break-inside: avoid;
+          }
+
+          section {
+            page-break-inside: avoid;
+          }
+
+          thead {
+            display: table-header-group;
+          }
+
+          tfoot {
+            display: table-footer-group;
+          }
+
+          .print-hidden {
+            display: none !important;
+          }
         }
       `}</style>
+
       <div className="mx-auto mb-5 flex w-[900px] justify-between print:hidden">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() =>
+            navigate(-1)
+          }
           className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50"
         >
           <ArrowLeft size={18} />
@@ -288,28 +437,61 @@ const kelompokMap = useMemo(() => {
       </div>
 
       <main
-      ref={printRef}
-      className="mx-auto w-[900px] bg-white px-10 py-8 shadow-lg text-[14px] text-black"
+        ref={printRef}
+        className="mx-auto w-[900px] bg-white px-10 py-8 text-[14px] text-black shadow-lg"
       >
         <div className="mb-5 border border-black">
-        <div className="border-b border-black py-2 text-center">
-          <h1 className="text-[18px] font-bold">
-            FR.IA.03
-          </h1>
+          <div className="border-b border-black py-2 text-center">
+            <h1 className="text-[18px] font-bold">
+              FR.IA.03
+            </h1>
 
-          <p className="text-[15px] font-bold uppercase">
-            PERTANYAAN UNTUK MENDUKUNG OBSERVASI
-          </p>
+            <p className="text-[15px] font-bold uppercase">
+              PERTANYAAN UNTUK MENDUKUNG OBSERVASI
+            </p>
+          </div>
         </div>
-      </div>
 
-        <HeaderTable
-          skema={skema}
-          tuk={tuk}
-          asesor={asesor}
-          asesi={asesi}
-          tanggal={data?.tanggal}
-        />
+        <table className="w-full border-collapse border border-black text-[13px]">
+          <tbody>
+            <tr>
+              <td
+                rowSpan="2"
+                className="w-[240px] border border-black px-2 py-2 align-middle font-bold"
+              >
+                Skema Sertifikasi
+                <br />
+                (KKNI/Okupasi/Klaster)
+              </td>
+
+              <td className="w-[90px] border border-black px-2 py-1 font-bold">
+                Judul
+              </td>
+
+              <td className="w-[20px] border border-black text-center">
+                :
+              </td>
+
+              <td className="border border-black px-2 py-1 font-semibold">
+                {skema.judul_skema}
+              </td>
+            </tr>
+
+            <tr>
+              <td className="border border-black px-2 py-1 font-bold">
+                Nomor
+              </td>
+
+              <td className="border border-black text-center">
+                :
+              </td>
+
+              <td className="border border-black px-2 py-1 font-semibold">
+                {skema.kode_skema}
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <section className="mt-5 border border-black">
           <div className="border-b border-black bg-gray-300 px-2 py-1 font-bold">
@@ -317,135 +499,258 @@ const kelompokMap = useMemo(() => {
           </div>
 
           <ul className="list-disc space-y-1 px-8 py-3 text-[13px] leading-relaxed">
-            <li>Formulir ini diisi oleh asesor kompetensi dapat sebelum, pada saat atau setelah melakukan asesmen dengan metode observasi demonstrasi.</li>
-
-            <li>Pertanyaan dibuat dengan tujuan untuk menggali, dapat berisi pertanyaan yang berkaitan dengan dimensi kompetensi, batasan variabel dan aspek kritis yang relevan dengan skenario tugas dan praktik demonstrasi.</li>
-
-            <li>Jika pertanyaan disampaikan sebelum asesmen dilakukan praktik demonstrasi, maka pertanyaan dibuat berkaitan dengan aspek K3L, SOP, penggunaan peralatan dan perlengkapan.</li>
-
-            <li>Jika setelah asesi melakukan praktik demonstrasi terdapat item pertanyaan pendukung observasi telah terpenuhi, maka pertanyaan tersebut tidak perlu ditanyakan lagi dan cukup memberi catatan bahwa sudah terpenuhi pada saat tugas praktik demonstrasi pada kolom tanggapan.</li>
-
-            <li>Jika pada saat observasi ada hal yang perlu dikonfirmasi sedang dalam instrumen daftar pertanyaan pendukung observasi tidak ada, maka asesor dapat memberikan pertanyaan dengan syarat pertanyaan harus berkaitan dengan tugas praktik demonstrasi. Jika dilakukan, asesor harus mencatat dalam instrumen pertanyaan pendukung observasi.</li>
-
-            <li>Tanggapan asesi ditulis pada kolom tanggapan.</li>
+            {PANDUAN_ASESOR.map(
+              (item, index) => (
+                <li key={index}>
+                  {item}
+                </li>
+              )
+            )}
           </ul>
         </section>
 
-        <div className="my-5 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
-          Mode Komite Teknis: Anda hanya dapat menambah, mengubah, dan menghapus pertanyaan. Kolom tanggapan dan pencapaian dikunci untuk asesor penguji.
+        <div className="my-5 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700 print:hidden">
+          Mode Penyusunan Instrumen: Anda dapat menambah,
+          mengubah, dan menghapus pertanyaan FR.IA.03.
+          Kolom tanggapan dan pencapaian disiapkan untuk
+          digunakan oleh asesor penguji.
         </div>
 
-        {unitOptions.length === 0 ? (
-          <EmptyState text="Belum ada pertanyaan FR.IA.03. Klik Tambah Pertanyaan untuk membuat pertanyaan." />
+        {Object.keys(kelompokMap).length ===
+        0 ? (
+          <EmptyState
+            text="Belum ada unit kompetensi pada skema ini. Pastikan unit kompetensi sudah tersedia."
+          />
         ) : (
-          Object.entries(kelompokMap).map(([kelompok, list], groupIndex) => (
-            <section key={kelompok} className="mb-8">
-              <UnitTable
-                kelompok={kelompok}
-                list={list}
-              />
+          Object.entries(
+            kelompokMap
+          ).map(
+            (
+              [
+                kelompok,
+                list,
+              ],
+              groupIndex
+            ) => (
+              <section
+                key={`${kelompok}-${groupIndex}`}
+                className="mb-8"
+              >
+                <UnitTable
+                  kelompok={kelompok}
+                  list={list}
+                />
 
-              <table className="w-full border-collapse border border-black text-[13px]">
-                <thead>
-                  <tr className="bg-gray-100 print:bg-white">
-                    <th className="border border-black px-3 py-2 text-center font-bold uppercase">
-                      Pertanyaan
-                    </th>
+                <table className="w-full border-collapse border border-black text-[13px]">
+                  <thead>
+                    <tr className="bg-gray-100 print:bg-white">
+                      <th className="border border-black px-3 py-2 text-center font-bold uppercase">
+                        Pertanyaan
+                      </th>
 
-                    <th colSpan="2" className="w-[120px] border border-black px-3 py-2 text-center font-bold">
-                      Pencapaian
-                    </th>
-                  </tr>
+                      <th
+                        colSpan="2"
+                        className="w-[120px] border border-black px-3 py-2 text-center font-bold"
+                      >
+                        Pencapaian
+                      </th>
+                    </tr>
 
-                  <tr className="bg-gray-100 print:bg-white">
-                    <th className="border border-black"></th>
+                    <tr className="bg-gray-100 print:bg-white">
+                      <th className="border border-black"></th>
 
-                    <th className="border border-black py-2 text-center font-bold uppercase">
-                      Ya
-                    </th>
+                      <th className="border border-black py-2 text-center font-bold uppercase">
+                        Ya
+                      </th>
 
-                    <th className="border border-black py-2 text-center font-bold uppercase">
-                      Tidak
-                    </th>
-                  </tr>
-                </thead>
+                      <th className="border border-black py-2 text-center font-bold uppercase">
+                        Tidak
+                      </th>
+                    </tr>
+                  </thead>
 
-                <tbody>
-                  {pertanyaanList
-                    .filter(
-                      (item) =>
-                        item.unit?.skemaUnit?.[0]?.kelompok?.nama_kelompok === kelompok ||
-                        unitOptions.find(x => x.id_unit === item.id_unit)?.nama_kelompok === kelompok
-                    )
-                    .map((item, index) => (
-                    <React.Fragment key={item.id_pertanyaan || index}>
-                      <tr className="print:bg-white hover:bg-gray-50">
-                        <td className="border border-black px-3 py-2">
-                          <div className="flex items-start gap-2">
-                            <span className="w-8 text-center font-bold">
-                              {index + 1}.
-                            </span>
+                  <tbody>
+                    {pertanyaanList
+                      .filter(
+                        (item) =>
+                          String(
+                            getUnitKelompokNama(
+                              item,
+                              unitOptions
+                            )
+                          ) ===
+                          String(
+                            kelompok
+                          )
+                      )
+                      .map(
+                        (
+                          item,
+                          index
+                        ) => (
+                          <React.Fragment
+                            key={
+                              item?.id_pertanyaan ||
+                              `${groupIndex}-${index}`
+                            }
+                          >
+                            <tr className="print:bg-white hover:bg-gray-50">
+                              <td className="border border-black px-3 py-2">
+                                <div className="flex items-start gap-2">
+                                  <span className="w-8 shrink-0 text-center font-bold">
+                                    {index +
+                                      1}
+                                    .
+                                  </span>
 
-                            <span className="flex-1 leading-6">
-                              {item.pertanyaan}
-                            </span>
+                                  <span className="flex-1 leading-6">
+                                    {
+                                      item.pertanyaan
+                                    }
+                                  </span>
 
-                            <div className="ml-3 flex gap-2 print:hidden">
-                              <button
-                                type="button"
-                                onClick={() => openEdit(item)}
-                                className="rounded-lg border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50"
+                                  <div className="ml-3 flex gap-2 print:hidden">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openEdit(
+                                          item
+                                        )
+                                      }
+                                      className="rounded-lg border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50"
+                                    >
+                                      <Edit
+                                        size={
+                                          15
+                                        }
+                                      />
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        deletePertanyaan(
+                                          item
+                                        )
+                                      }
+                                      className="rounded-lg border border-red-200 bg-red-50 p-2 text-red-600 hover:bg-red-100"
+                                    >
+                                      <Trash2
+                                        size={
+                                          15
+                                        }
+                                      />
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="border border-black py-3 text-center">
+                                <div className="mx-auto h-6 w-6 border border-black"></div>
+                              </td>
+
+                              <td className="border border-black py-3 text-center">
+                                <div className="mx-auto h-6 w-6 border border-black"></div>
+                              </td>
+                            </tr>
+
+                            <tr>
+                              <td
+                                colSpan="3"
+                                className="h-[140px] border border-black px-3 py-3 align-top"
                               >
-                                <Edit size={15} />
-                              </button>
+                                <div className="font-bold">
+                                  Tanggapan :
+                                </div>
 
-                              <button
-                                type="button"
-                                onClick={() => deletePertanyaan(item)}
-                                className="rounded-lg border border-red-200 bg-red-50 p-2 text-red-600 hover:bg-red-100"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="border border-black py-3 text-center">
-                          <div className="mx-auto h-6 w-6 border border-black"></div>
-                        </td>
-
-                        <td className="border border-black py-3 text-center">
-                          <div className="mx-auto h-6 w-6 border border-black"></div>
-                        </td>
-                      </tr>
-
-                      <tr>
-                        <td colSpan="3" className="h-[140px] border border-black px-3 py-3 align-top">
-                        <div className="font-bold">Tanggapan :</div>
-
-                        <p className="mt-2 text-xs italic text-slate-500 print:hidden">
-                          Diisi oleh asesor penguji.
-                        </p>
-                      </td>
-                      </tr>
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ))
+                                <p className="mt-2 text-xs italic text-slate-500 print:hidden">
+                                  Diisi oleh asesor penguji.
+                                </p>
+                              </td>
+                            </tr>
+                          </React.Fragment>
+                        )
+                      )}
+                  </tbody>
+                </table>
+              </section>
+            )
+          )
         )}
 
-        <SignatureBlock
-          asesi={asesi}
-          asesor={asesor}
-          labelAsesor="KOMITE TEKNIS"
-        />
+        <div className="mt-8">
+          <table className="w-full border-collapse border border-black text-[13px]">
+            <tbody>
+              <tr>
+                <td
+                  colSpan="4"
+                  className="border border-black bg-slate-50 px-4 py-3 text-[14px] font-bold"
+                >
+                  PENYUSUNAN DAN VALIDASI INSTRUMEN
+                </td>
+              </tr>
+
+              <tr>
+                <td className="w-[160px] border border-black px-2 py-2 font-bold">
+                  Status
+                </td>
+
+                <td className="w-[60px] border border-black text-center font-bold">
+                  No
+                </td>
+
+                <td className="border border-black px-2 py-2 font-bold">
+                  Nama
+                </td>
+
+                <td className="w-[260px] border border-black px-2 py-2 font-bold text-center">
+                  Tanda Tangan dan Tanggal
+                </td>
+              </tr>
+
+              <tr>
+                <td className="border border-black px-2 py-3 font-semibold">
+                  Penyusun
+                </td>
+
+                <td className="border border-black py-3 text-center">
+                  1
+                </td>
+
+                <td className="border border-black px-2 py-3">
+                  -
+                </td>
+
+                <td className="h-[90px] border border-black px-2 py-3"></td>
+              </tr>
+
+              <tr>
+                <td className="border border-black px-2 py-3 font-semibold">
+                  Validator
+                </td>
+
+                <td className="border border-black py-3 text-center">
+                  1
+                </td>
+
+                <td className="border border-black px-2 py-3">
+                  -
+                </td>
+
+                <td className="h-[90px] border border-black px-2 py-3"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </main>
 
       {showModal && (
         <QuestionModal
-          title={editingPertanyaan ? "Edit Pertanyaan" : "Tambah Pertanyaan"}
+          title={
+            editingPertanyaan
+              ? "Edit Pertanyaan"
+              : "Tambah Pertanyaan"
+          }
           form={form}
           unitOptions={unitOptions}
           saving={saving}
@@ -458,16 +763,17 @@ const kelompokMap = useMemo(() => {
   );
 }
 
-/* =========================
-COMPONENTS
-========================= */
-
-function HeaderTable({ skema, tuk, asesor, asesi, tanggal }) {
+function HeaderTable({
+  skema,
+}) {
   return (
     <table className="w-full border-collapse border border-black text-[13px]">
       <tbody>
         <tr>
-          <td rowSpan="2" className="w-[240px] border border-black px-2 py-2 align-middle font-bold">
+          <td
+            rowSpan="2"
+            className="w-[240px] border border-black px-2 py-2 align-middle font-bold"
+          >
             Skema Sertifikasi
             <br />
             (KKNI/Okupasi/Klaster)
@@ -482,7 +788,8 @@ function HeaderTable({ skema, tuk, asesor, asesi, tanggal }) {
           </td>
 
           <td className="border border-black px-2 py-1">
-            {skema.judul_skema}
+            {skema?.judul_skema ||
+              "-"}
           </td>
         </tr>
 
@@ -496,63 +803,8 @@ function HeaderTable({ skema, tuk, asesor, asesi, tanggal }) {
           </td>
 
           <td className="border border-black px-2 py-1">
-            {skema.kode_skema}
-          </td>
-        </tr>
-
-        <tr>
-          <td colSpan="2" className="border border-black px-2 py-1 font-bold">
-            TUK
-          </td>
-
-          <td className="border border-black text-center">
-            :
-          </td>
-
-          <td className="border border-black px-2 py-1">
-            {tuk}
-          </td>
-        </tr>
-
-        <tr>
-          <td colSpan="2" className="border border-black px-2 py-1 font-bold">
-            Nama Asesor
-          </td>
-
-          <td className="border border-black text-center">
-            :
-          </td>
-
-          <td className="border border-black px-2 py-1">
-            {getNama(asesor)}
-          </td>
-        </tr>
-
-        <tr>
-          <td colSpan="2" className="border border-black px-2 py-1 font-bold">
-            Nama Asesi
-          </td>
-
-          <td className="border border-black text-center">
-            :
-          </td>
-
-          <td className="border border-black px-2 py-1">
-            {getNama(asesi)}
-          </td>
-        </tr>
-
-        <tr>
-          <td colSpan="2" className="border border-black px-2 py-1 font-bold">
-            Tanggal
-          </td>
-
-          <td className="border border-black text-center">
-            :
-          </td>
-
-          <td className="border border-black px-2 py-1">
-            {formatTanggal(tanggal)}
+            {skema?.kode_skema ||
+              "-"}
           </td>
         </tr>
       </tbody>
@@ -560,7 +812,10 @@ function HeaderTable({ skema, tuk, asesor, asesi, tanggal }) {
   );
 }
 
-function UnitTable({ kelompok, list }) {
+function UnitTable({
+  kelompok,
+  list,
+}) {
   return (
     <table className="mb-4 w-full border-collapse border border-black text-[13px]">
       <thead>
@@ -584,131 +839,38 @@ function UnitTable({ kelompok, list }) {
       </thead>
 
       <tbody>
-        {list.map((unit, index) => (
-          <tr key={unit.id_unit}>
-            <td className="border border-black px-2 py-2">
-              {index === 0 ? kelompok : ""}
-            </td>
+        {list.map(
+          (unit, index) => (
+            <tr
+              key={
+                unit?.id_unit ||
+                `${unit?.kode_unit}-${index}`
+              }
+            >
+              <td className="border border-black px-2 py-2">
+                {index === 0
+                  ? kelompok
+                  : ""}
+              </td>
 
-            <td className="border border-black py-2 text-center">
-              {index + 1}
-            </td>
+              <td className="border border-black py-2 text-center">
+                {index + 1}
+              </td>
 
-            <td className="border border-black px-2 py-2">
-              {unit.kode_unit}
-            </td>
+              <td className="border border-black px-2 py-2">
+                {getUnitKode(
+                  unit
+                )}
+              </td>
 
-            <td className="border border-black px-2 py-2">
-              {unit.judul_unit}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function SignatureBlock({ asesi, asesor, labelAsesor = "ASESOR" }) {
-  return (
-    <table className="mt-6 w-full border-collapse border border-black">
-      <tbody>
-        <tr>
-          <td colSpan="3" className="border border-black px-2 py-1 font-bold">
-            Umpan balik asesi:
-          </td>
-        </tr>
-
-        <tr>
-          <td colSpan="3" className="h-[80px] border border-black px-2 py-1" />
-        </tr>
-
-        <tr>
-          <td colSpan="3" className="border border-black px-2 py-1 font-bold">
-            ASESI :
-          </td>
-        </tr>
-
-        <tr>
-          <td className="w-[220px] border border-black px-2 py-1 font-bold">
-            Nama
-          </td>
-          <td className="w-[30px] border border-black px-2 py-1 text-center">
-            :
-          </td>
-          <td className="border border-black px-2 py-1">{getNama(asesi)}</td>
-        </tr>
-
-        <tr>
-          <td className="border border-black px-2 py-1 font-bold">
-            No. Reg
-          </td>
-
-          <td className="border border-black px-2 py-1 text-center">
-            :
-          </td>
-
-          <td className="border border-black px-2 py-1">
-            {asesor?.no_reg_asesor || "-"}
-          </td>
-        </tr>
-
-        <tr>
-          <td className="border border-black px-2 py-1 font-bold">
-            Tanda tangan dan Tanggal
-          </td>
-          <td className="border border-black px-2 py-1 text-center">:</td>
-          <td className="h-[90px] border border-black px-2 py-1 text-center">
-          {asesi?.ttd_path ? (
-            <>
-              <img
-                src={`${import.meta.env.VITE_API_BASE.replace("/api","")}/${asesi.ttd_path}`}
-                alt="TTD Asesi"
-                className="mx-auto h-16 object-contain"
-              />
-              <p className="mt-1 text-xs">
-                {formatTanggal(new Date())}
-              </p>
-            </>
-          ) : null}
-        </td>
-        </tr>
-
-        <tr>
-          <td colSpan="3" className="border border-black px-2 py-1 font-bold">
-            {labelAsesor} :
-          </td>
-        </tr>
-
-        <tr>
-          <td className="border border-black px-2 py-1 font-bold">Nama</td>
-          <td className="border border-black px-2 py-1 text-center">:</td>
-          <td className="border border-black px-2 py-1">{getNama(asesor)}</td>
-        </tr>
-
-        <tr>
-          <td className="border border-black px-2 py-1 font-bold">
-            Tanda tangan dan Tanggal
-          </td>
-
-          <td className="border border-black px-2 py-1 text-center">
-            :
-          </td>
-
-          <td className="h-[90px] border border-black px-2 py-1 text-center">
-            {asesor?.ttd_path ? (
-              <>
-                <img
-                  src={`${import.meta.env.VITE_API_BASE.replace("/api","")}/${asesor.ttd_path}`}
-                  alt="TTD Asesor"
-                  className="mx-auto h-16 object-contain"
-                />
-                <p className="mt-1 text-xs">
-                  {formatTanggal(new Date())}
-                </p>
-              </>
-            ) : null}
-          </td>
-        </tr>
+              <td className="border border-black px-2 py-2">
+                {getUnitJudul(
+                  unit
+                )}
+              </td>
+            </tr>
+          )
+        )}
       </tbody>
     </table>
   );
@@ -730,7 +892,9 @@ function QuestionModal({
         className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl"
       >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-black text-[#071E3D]">{title}</h2>
+          <h2 className="text-xl font-black text-[#071E3D]">
+            {title}
+          </h2>
 
           <button
             type="button"
@@ -749,24 +913,42 @@ function QuestionModal({
 
             <select
               name="id_unit"
-              value={form.id_unit}
+              value={
+                form.id_unit
+              }
               onChange={onChange}
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-orange-500"
             >
-              {unitOptions.map((unit) => (
-                <option
-                  key={unit.id_unit}
-                  value={unit.id_unit}
-                >
-                  {unit.kode_unit} - {unit.judul_unit}
-                </option>
-              ))}
+              <option value="">
+                Pilih Unit Kompetensi
+              </option>
+
+              {unitOptions.map(
+                (unit) => (
+                  <option
+                    key={
+                      unit?.id_unit
+                    }
+                    value={
+                      unit?.id_unit
+                    }
+                  >
+                    {getUnitKode(
+                      unit
+                    )}{" "}
+                    -{" "}
+                    {getUnitJudul(
+                      unit
+                    )}
+                  </option>
+                )
+              )}
             </select>
 
-            {unitOptions.length === 0 && (
+            {unitOptions.length ===
+              0 && (
               <p className="mt-2 text-xs font-semibold text-red-500">
-                Unit belum tersedia dari data FR.IA.03. Pastikan backend
-                mengirim unit pada pertanyaan.
+                Unit kompetensi belum tersedia pada skema.
               </p>
             )}
           </div>
@@ -779,7 +961,10 @@ function QuestionModal({
             <input
               type="number"
               name="urutan"
-              value={form.urutan}
+              min="1"
+              value={
+                form.urutan
+              }
               onChange={onChange}
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-orange-500"
               placeholder="Urutan pertanyaan"
@@ -793,7 +978,9 @@ function QuestionModal({
 
             <textarea
               name="pertanyaan"
-              value={form.pertanyaan}
+              value={
+                form.pertanyaan
+              }
               onChange={onChange}
               rows={5}
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-orange-500"
@@ -814,10 +1001,20 @@ function QuestionModal({
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:bg-orange-300"
+            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
           >
-            {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
-            Simpan
+            {saving ? (
+              <Loader2
+                size={17}
+                className="animate-spin"
+              />
+            ) : (
+              <Save size={17} />
+            )}
+
+            {saving
+              ? "Menyimpan..."
+              : "Simpan"}
           </button>
         </div>
       </form>
@@ -825,18 +1022,25 @@ function QuestionModal({
   );
 }
 
-function LoadingScreen({ title }) {
+function LoadingScreen({
+  title,
+}) {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="flex items-center gap-3 text-slate-600 font-bold">
-        <Loader2 className="animate-spin" />
+    <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex items-center gap-3 font-bold text-slate-600">
+        <Loader2
+          size={22}
+          className="animate-spin"
+        />
         {title}
       </div>
     </div>
   );
 }
 
-function EmptyState({ text }) {
+function EmptyState({
+  text,
+}) {
   return (
     <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center text-sm font-bold text-slate-500">
       {text}
@@ -844,11 +1048,9 @@ function EmptyState({ text }) {
   );
 }
 
-/* =========================
-HELPERS
-========================= */
-
-function normalizePertanyaan(data) {
+function normalizePertanyaan(
+  data
+) {
   const list =
     data?.pertanyaan ||
     data?.Pertanyaan ||
@@ -857,51 +1059,69 @@ function normalizePertanyaan(data) {
     [];
 
   return Array.isArray(list)
-    ? [...list].sort((a, b) => Number(a.urutan || 0) - Number(b.urutan || 0))
+    ? [...list].sort(
+        (a, b) =>
+          Number(
+            a?.urutan || 0
+          ) -
+          Number(
+            b?.urutan || 0
+          )
+      )
     : [];
 }
 
 function getSkema(data) {
-  const skema = data?.skema || data?.Skema || {};
+  const skema =
+    data?.skema ||
+    data?.Skema ||
+    data ||
+    {};
 
   return {
-    id_skema: skema.id_skema || data?.id_skema || "",
+    id_skema:
+      skema?.id_skema ||
+      data?.id_skema ||
+      "",
+
     judul_skema:
-      skema.judul_skema ||
-      skema.nama_skema ||
+      skema?.judul_skema ||
+      skema?.nama_skema ||
       data?.judul_skema ||
       data?.nama_skema ||
       "-",
+
     kode_skema:
-      skema.kode_skema ||
-      skema.nomor_skema ||
+      skema?.kode_skema ||
+      skema?.nomor_skema ||
       data?.kode_skema ||
       data?.nomor_skema ||
       "-",
   };
 }
 
-function getTuk(data) {
-  const tuk = data?.tuk || data?.Tuk || {};
+function getUnitKelompokNama(
+  item,
+  unitOptions
+) {
+  const unit =
+    unitOptions.find(
+      (option) =>
+        String(
+          option?.id_unit
+        ) ===
+        String(
+          item?.id_unit
+        )
+    ) || {};
 
-  return tuk.nama_tuk || tuk.nama || data?.nama_tuk || "-";
-}
-
-function getAsesor(data) {
-  return data?.asesor || data?.komite || data?.penyusun || {};
-}
-
-function getAsesi(data) {
-  return data?.asesi || {};
-}
-
-function getNama(obj) {
   return (
-    obj?.nama_lengkap ||
-    obj?.nama ||
-    obj?.username ||
-    obj?.email ||
-    "-"
+    item?.unit?.skemaUnit?.[0]
+      ?.kelompok?.nama_kelompok ||
+    unit?.nama_kelompok ||
+    unit?.kelompok?.nama_kelompok ||
+    unit?.kelompok_pekerjaan ||
+    "Kelompok Pekerjaan"
   );
 }
 
@@ -922,18 +1142,4 @@ function getUnitJudul(unit) {
     unit?.nama ||
     "-"
   );
-}
-
-function getTodayDate() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function formatTanggal(value) {
-  if (!value) return "-";
-
-  return new Date(value).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
 }

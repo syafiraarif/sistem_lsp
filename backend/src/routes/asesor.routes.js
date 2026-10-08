@@ -31,6 +31,7 @@ const frIa05AsesiController = require("../controllers/asesi/frIa05Asesi.controll
 
 const lupaPasswordAsesorController = require("../controllers/asesor/lupapasswordAsesor.controller");
 const hasilKeputusanController = require("../controllers/asesor/hasilKeputusanAsesmen.controller");
+const instrumenSkemaController = require("../controllers/asesor/instrumenSkema.controller");
 
 /* ===================================================
    AUTH ASESOR
@@ -119,6 +120,18 @@ router.get(
   "/list-asesor",
   jadwalAsesorController.getListAsesor
 );
+
+router.get("/skema", instrumenSkemaController.getSkemaList);
+router.get("/skema/:id_skema", instrumenSkemaController.getSkemaDetail);
+router.get("/skema/:id_skema/fr-ia02", instrumenSkemaController.getFrIa02Master);
+router.get("/skema/:id_skema/fr-ia02/unit", instrumenSkemaController.getFrIa02UnitBySkema);
+router.post("/skema/:id_skema/fr-ia02", instrumenSkemaController.saveFrIa02Master);
+router.get("/skema/:id_skema/fr-ia03", instrumenSkemaController.getFrIa03Master);
+router.post("/skema/:id_skema/fr-ia03/pertanyaan", instrumenSkemaController.createFrIa03MasterPertanyaan);
+router.put("/skema/:id_skema/fr-ia03/pertanyaan/:id_pertanyaan", instrumenSkemaController.updateFrIa03MasterPertanyaan);
+router.delete("/skema/:id_skema/fr-ia03/pertanyaan/:id_pertanyaan", instrumenSkemaController.deleteFrIa03MasterPertanyaan);
+router.get("/skema/:id_skema/fr-ia05", instrumenSkemaController.getFrIa05Master);
+router.post("/skema/:id_skema/fr-ia05", instrumenSkemaController.saveFrIa05Master);
 
 /* ===================================================
    MKVA

@@ -10,6 +10,8 @@ import ProfileAsesor from "../pages/Asesor/ProfileAsesor";
 import JadwalSayaAsesor from "../pages/Asesor/JadwalSayaAsesor";
 import JadwalVerifikasiTuk from "../pages/Asesor/JadwalVerifikasiTuk";
 import JadwalKomiteTeknis from "../pages/Asesor/JadwalKomiteTeknis";
+import SkemaAsesor from "../pages/Asesor/SkemaAsesor";
+import SkemaAsesorDetail from "../pages/Asesor/SkemaAsesorDetail";
 import JadwalMkva from "../pages/Asesor/JadwalMkva";
 import IsiMKVA from "../pages/Asesor/IsiMKVA";
 import UbahSandiAsesor from "../pages/Asesor/UbahSandiAsesor";
@@ -110,30 +112,44 @@ export default function AsesorRoutes() {
       />
 
       <Route
-        path="komite-teknis"
+        path="skema"
         element={
-          <JadwalKomiteTeknis />
+          <SkemaAsesor />
         }
       />
 
       <Route
-        path="komite-teknis/:id_jadwal/fr-ia02"
+        path="skema/:id_skema"
+        element={
+          <SkemaAsesorDetail />
+        }
+      />
+
+      <Route
+        path="skema/:id_skema/fr-ia02"
         element={
           <FRIA02 />
         }
       />
 
       <Route
-        path="komite-teknis/:id_jadwal/paket-soal"
+        path="skema/:id_skema/fr-ia03"
+        element={
+          <FRIA03Komite />
+        }
+      />
+
+      <Route
+        path="skema/:id_skema/paket-soal"
         element={
           <FRIA05 />
         }
       />
 
       <Route
-        path="komite-teknis/:id_jadwal/fr-ia03"
+        path="komite-teknis"
         element={
-          <FRIA03Komite />
+          <JadwalKomiteTeknis />
         }
       />
 
@@ -148,13 +164,6 @@ export default function AsesorRoutes() {
         path="fr-ia02/:id_jadwal/:id_peserta"
         element={
           <FRIA02Asesor />
-        }
-      />
-
-      <Route
-        path="fr-ia02/:id_jadwal"
-        element={
-          <FRIA02 />
         }
       />
 

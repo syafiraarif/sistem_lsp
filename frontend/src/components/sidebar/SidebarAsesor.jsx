@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   ClipboardCheck,
   FileSearch,
+  Layers3,
   Key,
   Menu,
   LogOut,
@@ -114,6 +115,12 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
         icon: <ShieldCheck size={21} />,
       },
       {
+        id: "skema",
+        name: "Skema",
+        path: "/asesor/skema",
+        icon: <Layers3 size={21} />,
+      },
+      {
         id: "jadwal-komite-teknis",
         name: "Jadwal Komite Teknis",
         path: "/asesor/komite-teknis",
@@ -150,8 +157,12 @@ const SidebarAsesor = ({ isOpen, setIsOpen }) => {
       return currentPath === "/asesor/verifikasi-tuk" || currentPath.startsWith("/asesor/verifikasi-tuk/");
     }
 
+    if (path === "/asesor/skema") {
+      return currentPath === "/asesor/skema" || currentPath.startsWith("/asesor/skema/");
+    }
+
     if (path === "/asesor/komite-teknis") {
-      return currentPath === "/asesor/komite-teknis" || currentPath.startsWith("/asesor/komite-teknis/");
+      return currentPath === "/asesor/komite-teknis";
     }
 
     if (path === "/asesor/mkva") {

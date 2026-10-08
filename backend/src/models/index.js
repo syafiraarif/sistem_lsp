@@ -56,6 +56,7 @@ const FrIa02 = require("./frIa02.model");
 const FrIa02Detail = require("./frIa02Detail.model");
 const FrIa02Validator = require("./frIa02Validator.model");
 const FrIa03 = require("./frIa03.model");
+const FrIa03Pertanyaan = require("./frIa03Pertanyaan.model");
 const FrIa03Jawaban = require("./frIa03Jawaban.model");
 const FrIa01 = require("./frIa01.model");
 const FrIa01Detail = require("./frIa01Detail.model");
@@ -266,6 +267,32 @@ ProfileAsesi.hasMany(FrIa03, {
   foreignKey: "id_asesi",
   sourceKey: "id_user",
   as: "frIa03List"
+});
+FrIa03.hasMany(FrIa03Pertanyaan, {
+  foreignKey: "id_fr_ia_03",
+  as: "pertanyaan",
+  onDelete: "CASCADE"
+});
+FrIa03Pertanyaan.belongsTo(FrIa03, {
+  foreignKey: "id_fr_ia_03",
+  as: "frIa03"
+});
+FrIa03Pertanyaan.belongsTo(UnitKompetensi, {
+  foreignKey: "id_unit",
+  as: "unit"
+});
+UnitKompetensi.hasMany(FrIa03Pertanyaan, {
+  foreignKey: "id_unit",
+  as: "frIa03Pertanyaan"
+});
+FrIa03Pertanyaan.hasOne(FrIa03Jawaban, {
+  foreignKey: "id_pertanyaan",
+  as: "jawaban",
+  onDelete: "CASCADE"
+});
+FrIa03Jawaban.belongsTo(FrIa03Pertanyaan, {
+  foreignKey: "id_pertanyaan",
+  as: "pertanyaan"
 });
 
 // =====================================================
@@ -1234,6 +1261,7 @@ module.exports = {
   FrIa02Detail,
   FrIa02Validator,
   FrIa03,
+  FrIa03Pertanyaan,
   FrIa03Jawaban,
   FrIa05,
   FrIa05Validator,

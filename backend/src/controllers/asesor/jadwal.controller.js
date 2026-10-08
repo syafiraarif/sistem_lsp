@@ -1,8 +1,6 @@
-// backend/src/controllers/asesor/jadwal.controller.js
-
 const models = require("../../models");
 
-const { JadwalAsesor, Jadwal } = models;
+const { JadwalAsesor, Jadwal, ProfileAsesor, User } = models;
 
 const getNestedJadwalInclude = () => {
   const include = [];
@@ -19,21 +17,18 @@ const getNestedJadwalInclude = () => {
 };
 
 const getJadwalInclude = () => {
-  const nestedInclude = getNestedJadwalInclude();
-
   return [
     {
       model: Jadwal,
       as: "jadwal",
-      include: nestedInclude,
-    },
+      include: getNestedJadwalInclude()
+    }
   ];
 };
 
 const getJadwalByJenisTugas = async (req, res, jenis_tugas = null) => {
   try {
     const id_user = req.user.id_user;
-
     const where = { id_user };
 
     if (jenis_tugas) {
@@ -43,7 +38,7 @@ const getJadwalByJenisTugas = async (req, res, jenis_tugas = null) => {
     const data = await JadwalAsesor.findAll({
       where,
       include: getJadwalInclude(),
-      order: [["created_at", "DESC"]],
+      order: [["created_at", "DESC"]]
     });
 
     return res.json({ data });
@@ -51,7 +46,7 @@ const getJadwalByJenisTugas = async (req, res, jenis_tugas = null) => {
     console.error(err);
     return res.status(500).json({
       message: "Terjadi kesalahan server",
-      error: err.message,
+      error: err.message
     });
   }
 };
@@ -69,16 +64,17 @@ const getJadwalVerifikasiTuk = async (req, res) => {
 };
 
 const getJadwalKomiteTeknis = async (req, res) => {
-  return getJadwalByJenisTugas(req, res, "komite_teknis");
+  return res.json({
+    success: true,
+    data: []
+  });
 };
-
-const { ProfileAsesor, User } = models;
 
 const getListAsesor = async (req, res) => {
   try {
     const data = await ProfileAsesor.findAll({
       where: {
-        status_asesor: "aktif",
+        status_asesor: "aktif"
       },
       include: [
         {
@@ -86,38 +82,37 @@ const getListAsesor = async (req, res) => {
           as: "user",
           required: true,
           where: {
-            status_user: "aktif",
+            status_user: "aktif"
           },
           attributes: [
             "id_user",
             "username",
             "email",
-            "no_hp",
-          ],
-        },
+            "no_hp"
+          ]
+        }
       ],
-      attributes:[
-    "id_user",
-    "nama_lengkap",
-    "gelar_depan",
-    "gelar_belakang",
-    "no_reg_asesor",
-    "no_lisensi",
-    "ttd_path"
-],
-      order: [["nama_lengkap", "ASC"]],
+      attributes: [
+        "id_user",
+        "nama_lengkap",
+        "gelar_depan",
+        "gelar_belakang",
+        "no_reg_asesor",
+        "no_lisensi",
+        "ttd_path"
+      ],
+      order: [["nama_lengkap", "ASC"]]
     });
 
     return res.json({
       success: true,
-      data,
+      data
     });
   } catch (err) {
     console.error(err);
-
     return res.status(500).json({
       success: false,
-      message: err.message,
+      message: err.message
     });
   }
 };
@@ -127,5 +122,5 @@ module.exports = {
   getJadwalUjiKompetensi,
   getJadwalVerifikasiTuk,
   getJadwalKomiteTeknis,
-  getListAsesor,
+  getListAsesor
 };

@@ -12,6 +12,18 @@ const Jadwal = require("../../models/jadwal.model");
 const Skema = require("../../models/skema.model");
 const Tuk = require("../../models/tuk.model");
 
+const findPaketByJadwal = async (id_jadwal) => {
+  const jadwal = await Jadwal.findByPk(id_jadwal);
+  if (jadwal?.id_skema) {
+    const master = await FrIa05.findOne({
+      where: { id_skema: jadwal.id_skema, id_jadwal: null },
+      order: [["id_fr_ia_05", "DESC"]]
+    });
+    if (master) return master;
+  }
+  return FrIa05.findOne({ where: { id_jadwal }, order: [["id_fr_ia_05", "DESC"]] });
+};
+
 exports.saveJawabanAsesi = async (req, res) => {
   try {
     const {
@@ -175,12 +187,7 @@ exports.getHasilAsesi = async (req, res) => {
       });
     }
 
-    const paket = await FrIa05.findOne({
-      where: {
-        id_jadwal: peserta.id_jadwal
-      },
-      order: [["id_fr_ia_05", "DESC"]]
-    });
+    const paket = await findPaketByJadwal(peserta.id_jadwal);
 
     if (!paket) {
       return res.status(404).json({
@@ -522,12 +529,7 @@ exports.downloadPdf = async (req, res) => {
       });
     }
 
-    const paket = await FrIa05.findOne({
-      where: {
-        id_jadwal: peserta.id_jadwal
-      },
-      order: [["id_fr_ia_05", "DESC"]]
-    });
+    const paket = await findPaketByJadwal(peserta.id_jadwal);
 
     if (!paket) {
       return res.status(404).json({

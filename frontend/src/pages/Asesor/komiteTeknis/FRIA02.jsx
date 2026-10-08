@@ -1,5 +1,3 @@
-// frontend/src/pages/asesor/komiteTeknis/FRIA02.jsx
-
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -21,104 +19,60 @@ const defaultPetunjuk = [
 
 const defaultKelompok = [
   {
-    id_kelompok:null,
+    id_kelompok: null,
     kelompok_pekerjaan: "Kelompok Pekerjaan",
     units: [
       {
-        kode_unit: "LOG.OO.09.002.00",
-        judul_unit: "Membaca gambar teknik",
-      },
-      {
-        kode_unit: "J.611000.005.02",
-        judul_unit: "Menentukan Spesifikasi Perangkat Jaringan",
+        kode_unit: "",
+        judul_unit: "",
       },
     ],
     skenario_tugas: "",
-    langkah_kerja:"",
-    perlengkapan_peralatan: "",
-    waktu: "",
-  },
-  {
-    id_kelompok:null,
-    kelompok_pekerjaan: "Kelompok Pekerjaan Instalasi Jaringan",
-    units: [
-      {
-        kode_unit: "J.611000.005.02",
-        judul_unit: "Menentukan Spesifikasi Perangkat Jaringan",
-      },
-      {
-        kode_unit: "TIK.MM02.052.01",
-        judul_unit: "Membuat rekaman gambar berurutan untuk animasi",
-      },
-    ],
-    skenario_tugas: "",
-    langkah_kerja:"",
+    langkah_kerja: "",
     perlengkapan_peralatan: "",
     waktu: "",
   },
 ];
 
 export default function FRIA02() {
-  const { id_jadwal, idJadwal, id } = useParams();
+  const { id_skema, idSkema, id } = useParams();
   const navigate = useNavigate();
 
-  const jadwalId = id_jadwal || idJadwal || id;
+  const skemaId = id_skema || idSkema || id;
 
   const [loading, setLoading] = useState(true);
-const [idFrIa02, setIdFrIa02] = useState(null);
-  const [jadwal, setJadwal] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [idFrIa02, setIdFrIa02] = useState(null);
+  const [skema, setSkema] = useState(null);
   const [listAsesor, setListAsesor] = useState([]);
-  const [listAsesi, setListAsesi] = useState([]);
   const [listUnit, setListUnit] = useState([]);
 
-
   const [form, setForm] = useState({
-  nama_asesor: getDisplayName(),
-  nama_asesi: "",
-  id_asesi: null,
-  tanggal: "",
-
-  petunjuk: defaultPetunjuk,
-  kelompok: defaultKelompok,
-
-  asesi: {
-  nama: "",
-  ttd: "",
-  tanggal: "",
-},
-
-asesor: {
-  id_user: "",
-  nama: "",
-  no_reg: "",
-  ttd: "",
-  tanggal: "",
-},
-
-  penyusun: [
-  {
-  id_user: "",
-  nama: "",
-  nomor_met: "",
-  ttd: "",
-  tanggal: "",
-},
-],
-
-  validator: [
-    {
-      id_user: "",
-      nama: "",
-      nomor_met: "",
-      ttd: "",
-      tanggal: "",
-    },
-  ],
-});
+    petunjuk: defaultPetunjuk,
+    kelompok: defaultKelompok,
+    penyusun: [
+      {
+        id_user: "",
+        nama: "",
+        nomor_met: "",
+        ttd: "",
+        tanggal: "",
+      },
+    ],
+    validator: [
+      {
+        id_user: "",
+        nama: "",
+        nomor_met: "",
+        ttd: "",
+        tanggal: "",
+      },
+    ],
+  });
 
   const localStorageKey = useMemo(
-    () => `fria02-komite-teknis-${jadwalId}`,
-    [jadwalId]
+    () => `fria02-skema-${skemaId}`,
+    [skemaId]
   );
 
   useEffect(() => {
@@ -130,328 +84,457 @@ asesor: {
 
         if (saved) {
           try {
+            const parsed = JSON.parse(saved);
+
             setForm((prev) => ({
               ...prev,
-              ...JSON.parse(saved),
+              ...parsed,
+              petunjuk:
+                Array.isArray(parsed?.petunjuk) &&
+                parsed.petunjuk.length
+                  ? parsed.petunjuk
+                  : prev.petunjuk,
+              kelompok:
+                Array.isArray(parsed?.kelompok) &&
+                parsed.kelompok.length
+                  ? parsed.kelompok
+                  : prev.kelompok,
+              penyusun:
+                Array.isArray(parsed?.penyusun) &&
+                parsed.penyusun.length
+                  ? parsed.penyusun
+                  : prev.penyusun,
+              validator:
+                Array.isArray(parsed?.validator) &&
+                parsed.validator.length
+                  ? parsed.validator
+                  : prev.validator,
             }));
           } catch {
-            // biarkan default kalau localStorage rusak
+            localStorage.removeItem(localStorageKey);
           }
         }
 
-        const res = await api.get("/asesor/jadwal-komite-teknis");
-        const list = Array.isArray(res.data?.data) ? res.data.data : [];
+        if (!skemaId) {
+          throw new Error("ID skema tidak ditemukan.");
+        }
 
-        const found = list.find((item) => {
-          const j = item.jadwal || {};
-          return (
-            String(item.id_jadwal) === String(jadwalId) ||
-            String(j.id_jadwal) === String(jadwalId) ||
-            String(j.id) === String(jadwalId)
-          );
+        const skemaRes = await api.get("/asesor/skema");
+
+        const daftarSkema = Array.isArray(skemaRes.data?.data)
+          ? skemaRes.data.data
+          : Array.isArray(skemaRes.data)
+            ? skemaRes.data
+            : [];
+
+        const foundSkema = daftarSkema.find(
+          (item) =>
+            String(
+              item?.id_skema ||
+                item?.skema?.id_skema ||
+                item?.Skema?.id_skema ||
+                item?.id
+            ) === String(skemaId)
+        );
+
+        setSkema(
+          foundSkema?.skema ||
+            foundSkema?.Skema ||
+            foundSkema ||
+            null
+        );
+
+        const asesorRes = await api.get(
+          "/asesor/list-asesor"
+        );
+
+        setListAsesor(
+          Array.isArray(asesorRes.data?.data)
+            ? asesorRes.data.data
+            : Array.isArray(asesorRes.data)
+              ? asesorRes.data
+              : []
+        );
+
+        const unitRes = await api.get(
+          `/asesor/fr-ia02/unit/${skemaId}`
+        );
+
+        setListUnit(
+          Array.isArray(unitRes.data?.data)
+            ? unitRes.data.data
+            : Array.isArray(unitRes.data)
+              ? unitRes.data
+              : []
+        );
+
+        const fria02Res = await api.get("/asesor/fr-ia02", {
+          params: {
+            id_skema: skemaId,
+          },
         });
 
-        setJadwal(found?.jadwal || found || null);
+        const fria02Data =
+          fria02Res.data?.data ||
+          fria02Res.data ||
+          {};
 
-const asesorRes = await api.get("/asesor/list-asesor");
+        setIdFrIa02(
+          fria02Data?.id_fr_ia_02 ||
+            fria02Data?.id ||
+            null
+        );
 
-setListAsesor(
-  Array.isArray(asesorRes.data?.data)
-    ? asesorRes.data.data
-    : []
-);
+        const detailList = Array.isArray(
+          fria02Data?.detail
+        )
+          ? fria02Data.detail
+          : Array.isArray(
+              fria02Data?.details
+            )
+            ? fria02Data.details
+            : [];
 
-console.log("ASESOR", asesorRes.data);
+        if (detailList.length) {
+          const kelompokMap = new Map();
 
-const asesiRes = await api.get(`/asesor/jadwal/${jadwalId}/peserta`);
+          detailList.forEach((item) => {
+            const idKelompok =
+              item?.id_kelompok ??
+              item?.kelompok?.id_kelompok ??
+              `kelompok-${kelompokMap.size + 1}`;
 
-setListAsesi(
-  Array.isArray(asesiRes.data?.data)
-    ? asesiRes.data.data
-    : []
-);
+            if (!kelompokMap.has(idKelompok)) {
+              kelompokMap.set(idKelompok, {
+                id_kelompok:
+                  item?.id_kelompok ??
+                  item?.kelompok?.id_kelompok ??
+                  null,
+                kelompok_pekerjaan:
+                  item?.kelompok?.nama_kelompok ||
+                  item?.nama_kelompok ||
+                  "Kelompok Pekerjaan",
+                units: [],
+                skenario_tugas:
+                  item?.skenario || "",
+                langkah_kerja:
+                  item?.langkah_kerja || "",
+                perlengkapan_peralatan:
+                  item?.peralatan || "",
+                waktu:
+                  item?.durasi || "",
+              });
+            }
 
-console.log("ASESI", asesiRes.data);
+            const kelompok =
+              kelompokMap.get(idKelompok);
 
-const unitRes = await api.get(`/asesor/fr-ia02/unit/${jadwalId}`);
+            kelompok.units.push({
+              kode_unit:
+                item?.kode_unit || "",
+              judul_unit:
+                item?.judul_unit || "",
+              urutan:
+                item?.urutan ||
+                kelompok.units.length + 1,
+            });
+          });
 
-setListUnit(
-  Array.isArray(unitRes.data)
-    ? unitRes.data
-    : []
-);
+          const kelompok = Array.from(
+            kelompokMap.values()
+          );
 
-console.log("UNIT", unitRes.data);
+          const penyusun = [];
+          const validator = [];
 
-// =============================
-// Ambil data FR.IA.02
-// =============================
-const fria02Res = await api.get("/asesor/fr-ia02", {
-  params: {
-    id_jadwal: jadwalId,
-  },
-});
+          const validatorList =
+            Array.isArray(fria02Data?.validator)
+              ? fria02Data.validator
+              : [];
 
-setIdFrIa02(fria02Res.data.id_fr_ia_02 || null);
+          validatorList.forEach((item) => {
+            const data = {
+              id_user:
+                item?.id_asesor ||
+                item?.asesor?.id_user ||
+                "",
+              nama:
+                item?.asesor?.nama_lengkap ||
+                "",
+              nomor_met:
+                item?.asesor?.no_lisensi ||
+                item?.asesor?.nomor_met ||
+                "",
+              ttd:
+                item?.asesor?.ttd_path ||
+                "",
+              tanggal:
+                fria02Data?.tanggal ||
+                item?.tanggal ||
+                "",
+            };
 
-console.log(
-  "FRIA02 JSON",
-  JSON.stringify(fria02Res.data, null, 2)
-);
+            if (item?.peran === "penyusun") {
+              penyusun.push(data);
+            }
 
-console.log(
-  "DETAIL BACKEND JSON",
-  JSON.stringify(fria02Res.data.detail, null, 2)
-);
+            if (item?.peran === "validator") {
+              validator.push(data);
+            }
+          });
 
-if (fria02Res.data.detail) {
-
-    const kelompok = fria02Res.data.detail.map((item)=>({
-
-        id_kelompok:
-            item.id_kelompok ??
-            item.kelompok?.id_kelompok,
-
-        kelompok_pekerjaan:
-            item.kelompok?.nama_kelompok ??
-            item.nama_kelompok,
-
-        units: [
-            {
-              kode_unit: item.kode_unit ?? "",
-              judul_unit: item.judul_unit ?? "",
-              urutan: item.urutan ?? 1,
-            },
-          ],
-
-        skenario_tugas:item.skenario || "",
-
-        langkah_kerja:item.langkah_kerja || "",
-
-        perlengkapan_peralatan:item.peralatan || "",
-
-        waktu:item.durasi || ""
-
-    }));
-
-    const penyusun = [];
-const validator = [];
-
-(fria02Res.data.validator || []).forEach((item) => {
-  const data = {
-    id_user: item.id_asesor,
-    nama: item.asesor?.nama_lengkap || "",
-    nomor_met: item.asesor?.no_lisensi || "",
-    ttd: item.asesor?.ttd_path || "",
-    tanggal: fria02Res.data.tanggal || "",
-  };
-
-  if (item.peran === "penyusun") {
-    penyusun.push(data);
-  } else {
-    validator.push(data);
-  }
-});
-
-setForm((prev) => ({
-  ...prev,
-
-  kelompok,
-
-  penyusun: penyusun.length
-    ? penyusun
-    : prev.penyusun,
-
-  validator: validator.length
-    ? validator
-    : prev.validator,
-
-  id_asesi: fria02Res.data.id_asesi ?? "",
-
-  nama_asesi: fria02Res.data.nama_asesi ?? "",
-
-  tanggal: fria02Res.data.tanggal ?? "",
-
-  asesor: {
-    id_user: fria02Res.data.id_asesor ?? "",
-    nama: fria02Res.data.nama_asesor ?? "",
-    no_reg: fria02Res.data.no_reg_asesor ?? "",
-    ttd: fria02Res.data.ttd_asesor ?? "",
-    tanggal: fria02Res.data.tanggal ?? "",
-  },
-
-  asesi: {
-    nama: fria02Res.data.nama_asesi ?? "",
-    ttd: fria02Res.data.ttd_asesi ?? "",
-    tanggal: fria02Res.data.tanggal ?? "",
-  },
-}));
-
-}
-
+          setForm((prev) => ({
+            ...prev,
+            kelompok,
+            penyusun: penyusun.length
+              ? penyusun
+              : prev.penyusun,
+            validator: validator.length
+              ? validator
+              : prev.validator,
+          }));
+        }
       } catch (err) {
-        console.error(err);
-        alert(err.response?.data?.message || "Gagal memuat data FR.IA.02");
+        console.error(
+          "LOAD FR.IA.02 ERROR:",
+          err
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [jadwalId, localStorageKey]);
-
-  const skema = getSkema(jadwal);
-  const tuk = getTuk(jadwal);
+  }, [skemaId, localStorageKey]);
 
   const handleSave = async () => {
-  try {
-    console.log("FORM KELOMPOK", JSON.stringify(form.kelompok, null, 2));
-    const payload = {
-      id_jadwal: Number(jadwalId),
-      id_asesi: form.id_asesi,
-      tanggal: form.tanggal,
-      details: form.kelompok.flatMap((kelompok) =>
-  kelompok.units.map((unit, index) => ({
-    id_kelompok: kelompok.id_kelompok,
+    try {
+      setSaving(true);
 
-    kode_unit: unit.kode_unit,
+      if (!skemaId) {
+        throw new Error(
+          "ID skema tidak ditemukan."
+        );
+      }
 
-    judul_unit: unit.judul_unit,
+      const details =
+        form.kelompok.flatMap(
+          (kelompok) =>
+            kelompok.units.map(
+              (unit, index) => ({
+                id_kelompok:
+                  kelompok.id_kelompok,
+                kode_unit:
+                  unit.kode_unit,
+                judul_unit:
+                  unit.judul_unit,
+                urutan:
+                  index + 1,
+                skenario:
+                  kelompok.skenario_tugas,
+                langkah_kerja:
+                  kelompok.langkah_kerja,
+                peralatan:
+                  kelompok.perlengkapan_peralatan,
+                durasi:
+                  kelompok.waktu,
+              })
+            )
+        );
 
-    urutan: index + 1,
+      const validators = [
+        ...form.penyusun
+          .filter((item) => item.id_user)
+          .map((item, index) => ({
+            id_asesor:
+              Number(item.id_user),
+            peran: "penyusun",
+            urutan: index + 1,
+          })),
 
-    skenario: kelompok.skenario_tugas,
+        ...form.validator
+          .filter((item) => item.id_user)
+          .map((item, index) => ({
+            id_asesor:
+              Number(item.id_user),
+            peran: "validator",
+            urutan: index + 1,
+          })),
+      ];
 
-    langkah_kerja: kelompok.langkah_kerja,
+      const payload = {
+        id_skema: Number(skemaId),
+        details,
+        validators,
+      };
 
-    peralatan: kelompok.perlengkapan_peralatan,
+      let response;
 
-    durasi: kelompok.waktu,
-  }))
-),
-      validators: [
-    ...form.penyusun.map((item, index) => ({
-        id_asesor: item.id_user,
-        peran: "penyusun",
-        urutan: index + 1,
-    })),
+      if (idFrIa02) {
+        response = await api.put(
+          `/asesor/fr-ia02/${idFrIa02}`,
+          payload
+        );
+      } else {
+        response = await api.post(
+          "/asesor/fr-ia02",
+          payload
+        );
+      }
 
-    ...form.validator.map((item, index) => ({
-        id_asesor: item.id_user,
-        peran: "validator",
-        urutan: index + 1,
-    })),
-],
-    };
+      const savedData =
+        response.data?.data ||
+        response.data ||
+        null;
 
-    console.log(payload);
-    console.log("PAYLOAD", payload);
-    if (idFrIa02) {
-  await api.put(`/asesor/fr-ia02/${idFrIa02}`, payload);
-} else {
-  await api.post("/asesor/fr-ia02", payload);
-}
+      if (
+        savedData?.id_fr_ia_02
+      ) {
+        setIdFrIa02(
+          savedData.id_fr_ia_02
+        );
+      }
 
-    alert("FR.IA.02 berhasil disimpan");
-  } catch (err) {
-  console.error(err);
+      localStorage.setItem(
+        localStorageKey,
+        JSON.stringify(form)
+      );
 
-  console.log("ERROR BACKEND", err.response?.data);
+      window.alert(
+        "FR.IA.02 berhasil disimpan."
+      );
+    } catch (err) {
+      console.error(
+        "SAVE FR.IA.02 ERROR:",
+        err
+      );
 
-  alert(
-    err.response?.data?.error ||
-    err.response?.data?.message ||
-    "Gagal menyimpan"
-  );
-}
-};
+      window.alert(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          err.message ||
+          "Gagal menyimpan FR.IA.02."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
   };
 
-  const updateField = (field, value) => {
+  const updatePetunjuk = (
+    index,
+    value
+  ) => {
     setForm((prev) => ({
       ...prev,
-      [field]: value,
+      petunjuk:
+        prev.petunjuk.map(
+          (item, itemIndex) =>
+            itemIndex === index
+              ? value
+              : item
+        ),
     }));
   };
 
-  const updatePetunjuk = (index, value) => {
+  const updateKelompok = (
+    index,
+    field,
+    value
+  ) => {
     setForm((prev) => ({
       ...prev,
-      petunjuk: prev.petunjuk.map((item, itemIndex) =>
-        itemIndex === index ? value : item
-      ),
+      kelompok:
+        prev.kelompok.map(
+          (item, itemIndex) =>
+            itemIndex === index
+              ? {
+                  ...item,
+                  [field]: value,
+                }
+              : item
+        ),
     }));
   };
 
-  const updateKelompok = (index, field, value) => {
+  const updateUnit = (
+    kelompokIndex,
+    unitIndex,
+    field,
+    value
+  ) => {
     setForm((prev) => ({
       ...prev,
-      kelompok: prev.kelompok.map((item, itemIndex) =>
-        itemIndex === index
-          ? {
-              ...item,
-              [field]: value,
-            }
-          : item
-      ),
+      kelompok:
+        prev.kelompok.map(
+          (kelompok, kIndex) =>
+            kIndex === kelompokIndex
+              ? {
+                  ...kelompok,
+                  units:
+                    kelompok.units.map(
+                      (unit, uIndex) =>
+                        uIndex === unitIndex
+                          ? {
+                              ...unit,
+                              [field]:
+                                value,
+                            }
+                          : unit
+                    ),
+                }
+              : kelompok
+        ),
     }));
   };
 
-  const updateUnit = (kelompokIndex, unitIndex, field, value) => {
+  const addUnit = (
+    kelompokIndex
+  ) => {
     setForm((prev) => ({
       ...prev,
-      kelompok: prev.kelompok.map((kelompok, kIndex) =>
-        kIndex === kelompokIndex
-          ? {
-              ...kelompok,
-              units: kelompok.units.map((unit, uIndex) =>
-                uIndex === unitIndex
-                  ? {
-                      ...unit,
-                      [field]: value,
-                    }
-                  : unit
-              ),
-            }
-          : kelompok
-      ),
+      kelompok:
+        prev.kelompok.map(
+          (kelompok, kIndex) =>
+            kIndex === kelompokIndex
+              ? {
+                  ...kelompok,
+                  units: [
+                    ...kelompok.units,
+                    {
+                      kode_unit: "",
+                      judul_unit: "",
+                    },
+                  ],
+                }
+              : kelompok
+        ),
     }));
   };
 
-  const addUnit = (kelompokIndex) => {
+  const removeUnit = (
+    kelompokIndex,
+    unitIndex
+  ) => {
     setForm((prev) => ({
       ...prev,
-      kelompok: prev.kelompok.map((kelompok, kIndex) =>
-        kIndex === kelompokIndex
-          ? {
-              ...kelompok,
-              units: [
-                ...kelompok.units,
-                {
-                  kode_unit: "",
-                  judul_unit: "",
-                },
-              ],
-            }
-          : kelompok
-      ),
-    }));
-  };
-
-  const removeUnit = (kelompokIndex, unitIndex) => {
-    setForm((prev) => ({
-      ...prev,
-      kelompok: prev.kelompok.map((kelompok, kIndex) =>
-        kIndex === kelompokIndex
-          ? {
-              ...kelompok,
-              units: kelompok.units.filter((_, uIndex) => uIndex !== unitIndex),
-            }
-          : kelompok
-      ),
+      kelompok:
+        prev.kelompok.map(
+          (kelompok, kIndex) =>
+            kIndex === kelompokIndex
+              ? {
+                  ...kelompok,
+                  units:
+                    kelompok.units.filter(
+                      (_, uIndex) =>
+                        uIndex !== unitIndex
+                    ),
+                }
+              : kelompok
+        ),
     }));
   };
 
@@ -461,8 +544,9 @@ setForm((prev) => ({
       kelompok: [
         ...prev.kelompok,
         {
-          id_kelompok:null,
-          kelompok_pekerjaan: "Kelompok Pekerjaan",
+          id_kelompok: null,
+          kelompok_pekerjaan:
+            "Kelompok Pekerjaan",
           units: [
             {
               kode_unit: "",
@@ -470,7 +554,7 @@ setForm((prev) => ({
             },
           ],
           skenario_tugas: "",
-          langkah_kerja:"",
+          langkah_kerja: "",
           perlengkapan_peralatan: "",
           waktu: "",
         },
@@ -478,97 +562,138 @@ setForm((prev) => ({
     }));
   };
 
-  const removeKelompok = (index) => {
+  const removeKelompok = (
+    index
+  ) => {
     setForm((prev) => ({
       ...prev,
-      kelompok: prev.kelompok.filter((_, itemIndex) => itemIndex !== index),
+      kelompok:
+        prev.kelompok.filter(
+          (_, itemIndex) =>
+            itemIndex !== index
+        ),
     }));
   };
 
-  const updatePenyusun = (index, field, value) => {
-  setForm((prev) => ({
-    ...prev,
-    penyusun: prev.penyusun.map((item, i) =>
-      i === index
-        ? {
-            ...item,
-            [field]: value,
-          }
-        : item
-    ),
-  }));
-};
+  const updatePenyusun = (
+    index,
+    field,
+    value
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      penyusun:
+        prev.penyusun.map(
+          (item, i) =>
+            i === index
+              ? {
+                  ...item,
+                  [field]: value,
+                }
+              : item
+        ),
+    }));
+  };
 
-const updateValidator = (index, field, value) => {
-  setForm((prev) => ({
-    ...prev,
-    validator: prev.validator.map((item, i) =>
-      i === index
-        ? {
-            ...item,
-            [field]: value,
-          }
-        : item
-    ),
-  }));
-};
+  const updateValidator = (
+    index,
+    field,
+    value
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      validator:
+        prev.validator.map(
+          (item, i) =>
+            i === index
+              ? {
+                  ...item,
+                  [field]: value,
+                }
+              : item
+        ),
+    }));
+  };
 
-const addPenyusun = () => {
-  setForm((prev) => ({
-    ...prev,
-    penyusun: [
-      ...prev.penyusun,
-      {
-        id_user: "",
-        nama: "",
-        nomor_met: "",
-        ttd: "",
-        tanggal: "",
-      },
-    ],
-  }));
-};
+  const addPenyusun = () => {
+    setForm((prev) => ({
+      ...prev,
+      penyusun: [
+        ...prev.penyusun,
+        {
+          id_user: "",
+          nama: "",
+          nomor_met: "",
+          ttd: "",
+          tanggal: "",
+        },
+      ],
+    }));
+  };
 
-const addValidator = () => {
-  setForm((prev) => ({
-    ...prev,
-    validator: [
-      ...prev.validator,
-      {
-        id_user: "",
-        nama: "",
-        nomor_met: "",
-        ttd: "",
-        tanggal: "",
-      },
-    ],
-  }));
-};
+  const addValidator = () => {
+    setForm((prev) => ({
+      ...prev,
+      validator: [
+        ...prev.validator,
+        {
+          id_user: "",
+          nama: "",
+          nomor_met: "",
+          ttd: "",
+          tanggal: "",
+        },
+      ],
+    }));
+  };
 
-const removePenyusun = (index) => {
-  setForm((prev) => ({
-    ...prev,
-    penyusun: prev.penyusun.filter((_, i) => i !== index),
-  }));
-};
+  const removePenyusun = (
+    index
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      penyusun:
+        prev.penyusun.filter(
+          (_, i) => i !== index
+        ),
+    }));
+  };
 
-const removeValidator = (index) => {
-  setForm((prev) => ({
-    ...prev,
-    validator: prev.validator.filter((_, i) => i !== index),
-  }));
-};
+  const removeValidator = (
+    index
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      validator:
+        prev.validator.filter(
+          (_, i) => i !== index
+        ),
+    }));
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex items-center gap-3 text-slate-600 font-bold">
-          <Loader2 className="animate-spin" />
+          <Loader2
+            size={22}
+            className="animate-spin"
+          />
           Memuat FR.IA.02...
         </div>
       </div>
     );
   }
+
+  const namaSkema =
+    skema?.judul_skema ||
+    skema?.nama_skema ||
+    "-";
+
+  const kodeSkema =
+    skema?.kode_skema ||
+    skema?.nomor_skema ||
+    "-";
 
   return (
     <div className="min-h-screen bg-slate-100 py-6 print:bg-white print:py-0">
@@ -586,10 +711,20 @@ const removeValidator = (index) => {
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600"
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Save size={18} />
-            Simpan
+            {saving ? (
+              <Loader2
+                size={18}
+                className="animate-spin"
+              />
+            ) : (
+              <Save size={18} />
+            )}
+            {saving
+              ? "Menyimpan..."
+              : "Simpan"}
           </button>
 
           <button
@@ -605,14 +740,14 @@ const removeValidator = (index) => {
 
       <main className="mx-auto w-[900px] bg-white px-10 py-8 text-[14px] text-black shadow-lg print:w-full print:shadow-none print:px-8 print:py-6">
         <div className="mb-8 text-center">
-        <h1 className="text-[20px] font-bold">
-          FR.IA.02
-        </h1>
+          <h1 className="text-[20px] font-bold">
+            FR.IA.02
+          </h1>
 
-        <p className="mt-1 text-[16px] font-semibold">
-          TUGAS PRAKTIK DEMONSTRASI
-        </p>
-      </div>
+          <p className="mt-1 text-[16px] font-semibold">
+            TUGAS PRAKTIK DEMONSTRASI
+          </p>
+        </div>
 
         <table className="w-full border-collapse border border-black">
           <tbody>
@@ -635,7 +770,7 @@ const removeValidator = (index) => {
               </td>
 
               <td className="border border-black px-2 py-1 font-bold">
-                {skema.judul_skema}
+                {namaSkema}
               </td>
             </tr>
 
@@ -644,101 +779,12 @@ const removeValidator = (index) => {
                 Nomor
               </td>
 
-              <td className="border border-black px-2 py-1 text-center">:</td>
+              <td className="border border-black px-2 py-1 text-center">
+                :
+              </td>
 
               <td className="border border-black px-2 py-1 font-bold">
-                {skema.kode_skema}
-              </td>
-            </tr>
-
-            <tr>
-              <td colSpan="2" className="border border-black px-2 py-1 font-bold">
-                TUK
-              </td>
-
-              <td className="border border-black px-2 py-1 text-center">:</td>
-
-              <td className="border border-black px-2 py-1">
-                {tuk || "-"}
-              </td>
-            </tr>
-
-            <tr>
-              <td colSpan="2" className="border border-black px-2 py-1 font-bold">
-                Nama Asesor
-              </td>
-
-              <td className="border border-black px-2 py-1 text-center">:</td>
-
-              <td className="border border-black px-2 py-1">
-                <p className="font-medium">
-                  {form.asesor.nama || "-"}
-                </p>
-              </td>
-            </tr>
-
-            <tr>
-              <td colSpan="2" className="border border-black px-2 py-1 font-bold">
-                Nama Asesi
-              </td>
-
-              <td className="border border-black px-2 py-1 text-center">:</td>
-
-              <td className="border border-black px-2 py-1">
-              <div className="print:hidden">
-              <select
-                value={form.id_asesi || ""}
-                onChange={(e) => {
-                  const asesi = listAsesi.find(
-                    (x) => String(x.id_user) === e.target.value
-                  );
-
-                  setForm((prev) => ({
-                    ...prev,
-                    id_asesi: asesi?.id_user || null,
-                    nama_asesi: asesi?.nama_lengkap || "",
-                    asesi: {
-                      nama: asesi?.nama_lengkap || "",
-                      ttd: asesi?.ttd_path || "",
-                      tanggal: new Date().toISOString().slice(0, 10),
-                    },
-                  }));
-                }}
-                className="w-full bg-transparent outline-none"
-              >
-                <option value="">Pilih Asesi</option>
-
-                {listAsesi.map((item) => (
-                  <option key={item.id_user} value={item.id_user}>
-                    {item.nama_lengkap}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <p className="hidden print:block font-medium">
-              {form.nama_asesi || "-"}
-            </p>
-            </td>
-            </tr>
-
-            <tr>
-              <td colSpan="2" className="border border-black px-2 py-1 font-bold">
-                Tanggal
-              </td>
-
-              <td className="border border-black px-2 py-1 text-center">:</td>
-
-              <td className="border border-black px-2 py-1">
-                <input
-                  type="date"
-                  value={form.tanggal}
-                  onChange={(e) => updateField("tanggal", e.target.value)}
-                  className="bg-transparent outline-none print:hidden"
-                />
-                <span className="hidden print:inline">
-                  {formatTanggal(form.tanggal)}
-                </span>
+                {kodeSkema}
               </td>
             </tr>
           </tbody>
@@ -746,240 +792,363 @@ const removeValidator = (index) => {
 
         <section className="mt-6">
           <div className="flex gap-5">
-            <span className="font-bold">A.</span>
-            <h2 className="font-bold">Petunjuk</h2>
+            <span className="font-bold">
+              A.
+            </span>
+
+            <h2 className="font-bold">
+              Petunjuk
+            </h2>
           </div>
 
           <ol className="ml-[68px] mt-2 list-decimal space-y-1">
-            {form.petunjuk.map((item, index) => (
-              <li key={index}>
-                <input
-                  value={item}
-                  onChange={(e) => updatePetunjuk(index, e.target.value)}
-                  className="w-full bg-transparent outline-none"
-                />
-              </li>
-            ))}
+            {form.petunjuk.map(
+              (item, index) => (
+                <li key={index}>
+                  <input
+                    value={item}
+                    onChange={(e) =>
+                      updatePetunjuk(
+                        index,
+                        e.target.value
+                      )
+                    }
+                    className="w-full bg-transparent outline-none"
+                  />
+                </li>
+              )
+            )}
           </ol>
         </section>
 
         <section className="mt-7">
           <div className="flex gap-5">
-            <span className="font-bold">B.</span>
-            <h2 className="font-bold">Skenario Tugas Praktik Demonstrasi</h2>
+            <span className="font-bold">
+              B.
+            </span>
+
+            <h2 className="font-bold">
+              Skenario Tugas Praktik Demonstrasi
+            </h2>
           </div>
 
-          {form.kelompok.map((kelompok, kelompokIndex) => (
-            <div
-              key={kelompokIndex}
-              className="mt-5 rounded-none border-0 border-black"
-            >
-              <div className="mb-2 flex justify-between print:hidden">
-                <p className="font-bold text-slate-700">
-                  Kelompok {kelompokIndex + 1}
-                </p>
-
-                {form.kelompok.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeKelompok(kelompokIndex)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1 text-xs font-bold text-red-600"
-                  >
-                    <Trash2 size={14} />
-                    Hapus Kelompok
-                  </button>
-                )}
-              </div>
-
-              <table className="w-full border-collapse border border-black">
-                <thead>
-  <tr>
-    <th className="w-[45px] border border-black px-2 py-1">No.</th>
-    <th className="w-[170px] border border-black px-2 py-1">
-      Kode Unit
-    </th>
-    <th className="border border-black px-2 py-1">
-      Judul Unit
-    </th>
-    <th className="w-[50px] border border-black print:hidden"></th>
-  </tr>
-</thead>
-
-<tbody>
-  {kelompok.units.map((unit, unitIndex) => (
-    <tr key={unitIndex}>
-      {unitIndex === 0 && (
-        <td
-          rowSpan={kelompok.units.length}
-          className="w-[185px] border border-black px-2 py-2 align-top"
-        >
-          <textarea
-            value={kelompok.kelompok_pekerjaan}
-            onChange={(e) =>
-              updateKelompok(
-                kelompokIndex,
-                "kelompok_pekerjaan",
-                e.target.value
-              )
-            }
-            className="h-[70px] w-full resize-none bg-transparent outline-none"
-          />
-        </td>
-      )}
-
-      <td className="border border-black px-2 py-1 text-center">
-        {unitIndex + 1}
-      </td>
-
-      <td className="border border-black px-2 py-1">
-        <div className="print:hidden">
-          <select
-            value={unit.kode_unit}
-            onChange={(e) => {
-              const selected = listUnit.find(
-                (x) => x.kode_unit === e.target.value
-              );
-              updateUnit(
-                kelompokIndex,
-                unitIndex,
-                "kode_unit",
-                selected?.kode_unit || ""
-              );
-              updateUnit(
-                kelompokIndex,
-                unitIndex,
-                "judul_unit",
-                selected?.judul_unit || ""
-              );
-            }}
-            className="w-full bg-transparent outline-none"
-          >
-            <option value="">Pilih Unit</option>
-            {listUnit.map((item) => (
-              <option
-                key={item.id_unit}
-                value={item.kode_unit}
+          {form.kelompok.map(
+            (
+              kelompok,
+              kelompokIndex
+            ) => (
+              <div
+                key={
+                  kelompokIndex
+                }
+                className="mt-5 rounded-none border-0 border-black"
               >
-                {item.kode_unit}
-              </option>
-            ))}
-          </select>
-        </div>
-        <p className="hidden print:block">
-          {unit.kode_unit || "-"}
-        </p>
-      </td>
+                <div className="mb-2 flex justify-between print:hidden">
+                  <p className="font-bold text-slate-700">
+                    Kelompok{" "}
+                    {kelompokIndex + 1}
+                  </p>
 
-      <td className="border border-black px-2 py-1">
+                  {form.kelompok.length >
+                    1 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removeKelompok(
+                          kelompokIndex
+                        )
+                      }
+                      className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1 text-xs font-bold text-red-600"
+                    >
+                      <Trash2
+                        size={14}
+                      />
+                      Hapus Kelompok
+                    </button>
+                  )}
+                </div>
 
-        <div className="print:hidden">
-          <p className="leading-6">
-            {unit.judul_unit || "-"}
-          </p>
-        </div>
+                <table className="w-full border-collapse border border-black">
+                  <thead>
+                    <tr>
+                      <th className="w-[45px] border border-black px-2 py-1">
+                        No.
+                      </th>
 
-        <p className="hidden print:block leading-6">
-          {unit.judul_unit || "-"}
-        </p>
+                      <th className="w-[170px] border border-black px-2 py-1">
+                        Kode Unit
+                      </th>
 
-      </td>
+                      <th className="border border-black px-2 py-1">
+                        Judul Unit
+                      </th>
 
-      <td className="border border-black text-center print:hidden">
-        <button
-          type="button"
-          onClick={() => removeUnit(kelompokIndex, unitIndex)}
-          className="text-red-500"
-        >
-          <Trash2 size={14} />
-        </button>
-      </td>
-    </tr>
-  ))}
-</tbody>
-              </table>
+                      <th className="w-[50px] border border-black print:hidden"></th>
+                    </tr>
+                  </thead>
 
-              <button
-                type="button"
-                onClick={() => addUnit(kelompokIndex)}
-                className="mt-2 inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 print:hidden"
-              >
-                <Plus size={14} />
-                Tambah Unit
-              </button>
+                  <tbody>
+                    {kelompok.units.map(
+                      (
+                        unit,
+                        unitIndex
+                      ) => (
+                        <tr
+                          key={
+                            unitIndex
+                          }
+                        >
+                          {unitIndex ===
+                            0 && (
+                            <td
+                              rowSpan={
+                                kelompok
+                                  .units
+                                  .length
+                              }
+                              className="w-[185px] border border-black px-2 py-2 align-top"
+                            >
+                              <textarea
+                                value={
+                                  kelompok.kelompok_pekerjaan
+                                }
+                                onChange={(
+                                  e
+                                ) =>
+                                  updateKelompok(
+                                    kelompokIndex,
+                                    "kelompok_pekerjaan",
+                                    e
+                                      .target
+                                      .value
+                                  )
+                                }
+                                className="h-[70px] w-full resize-none bg-transparent outline-none"
+                              />
+                            </td>
+                          )}
 
-              <div className="mt-7 space-y-5">
-                <InputTable
-                  title="Skenario Tugas Praktik Demonstrasi"
-                  value={kelompok.skenario_tugas}
-                  onChange={(value) =>
-                    updateKelompok(kelompokIndex, "skenario_tugas", value)
+                          <td className="border border-black px-2 py-1 text-center">
+                            {unitIndex +
+                              1}
+                          </td>
+
+                          <td className="border border-black px-2 py-1">
+                            <div className="print:hidden">
+                              <select
+                                value={
+                                  unit.kode_unit
+                                }
+                                onChange={(
+                                  e
+                                ) => {
+                                  const selected =
+                                    listUnit.find(
+                                      (
+                                        x
+                                      ) =>
+                                        String(
+                                          x?.kode_unit
+                                        ) ===
+                                        e
+                                          .target
+                                          .value
+                                    );
+
+                                  updateUnit(
+                                    kelompokIndex,
+                                    unitIndex,
+                                    "kode_unit",
+                                    selected?.kode_unit ||
+                                      ""
+                                  );
+
+                                  updateUnit(
+                                    kelompokIndex,
+                                    unitIndex,
+                                    "judul_unit",
+                                    selected?.judul_unit ||
+                                      ""
+                                  );
+                                }}
+                                className="w-full bg-transparent outline-none"
+                              >
+                                <option value="">
+                                  Pilih Unit
+                                </option>
+
+                                {listUnit.map(
+                                  (
+                                    item
+                                  ) => (
+                                    <option
+                                      key={
+                                        item?.id_unit ||
+                                        item?.kode_unit
+                                      }
+                                      value={
+                                        item?.kode_unit
+                                      }
+                                    >
+                                      {
+                                        item?.kode_unit
+                                      }
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            </div>
+
+                            <p className="hidden print:block">
+                              {unit.kode_unit ||
+                                "-"}
+                            </p>
+                          </td>
+
+                          <td className="border border-black px-2 py-1">
+                            <p className="leading-6">
+                              {unit.judul_unit ||
+                                "-"}
+                            </p>
+                          </td>
+
+                          <td className="border border-black text-center print:hidden">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                removeUnit(
+                                  kelompokIndex,
+                                  unitIndex
+                                )
+                              }
+                              className="text-red-500"
+                            >
+                              <Trash2
+                                size={14}
+                              />
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    addUnit(
+                      kelompokIndex
+                    )
                   }
-                  placeholder="Tuliskan skenario tugas praktik demonstrasi..."
-                />
+                  className="mt-2 inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 print:hidden"
+                >
+                  <Plus size={14} />
+                  Tambah Unit
+                </button>
 
-                <InputTable
-                    title="Langkah Kerja"
-                    value={kelompok.langkah_kerja || ""}
+                <div className="mt-7 space-y-5">
+                  <InputTable
+                    title="Skenario Tugas Praktik Demonstrasi"
+                    value={
+                      kelompok.skenario_tugas
+                    }
                     onChange={(value) =>
-                      updateKelompok(kelompokIndex, "langkah_kerja", value)
+                      updateKelompok(
+                        kelompokIndex,
+                        "skenario_tugas",
+                        value
+                      )
+                    }
+                    placeholder="Tuliskan skenario tugas praktik demonstrasi..."
+                  />
+
+                  <InputTable
+                    title="Langkah Kerja"
+                    value={
+                      kelompok.langkah_kerja ||
+                      ""
+                    }
+                    onChange={(value) =>
+                      updateKelompok(
+                        kelompokIndex,
+                        "langkah_kerja",
+                        value
+                      )
                     }
                     placeholder="Tuliskan langkah kerja..."
                   />
 
-                <InputTable
-                  title="Perlengkapan dan Peralatan"
-                  value={kelompok.perlengkapan_peralatan}
-                  onChange={(value) =>
-                    updateKelompok(
-                      kelompokIndex,
-                      "perlengkapan_peralatan",
-                      value
-                    )
-                  }
-                  placeholder="Tuliskan perlengkapan dan peralatan yang digunakan..."
-                />
+                  <InputTable
+                    title="Perlengkapan dan Peralatan"
+                    value={
+                      kelompok.perlengkapan_peralatan
+                    }
+                    onChange={(value) =>
+                      updateKelompok(
+                        kelompokIndex,
+                        "perlengkapan_peralatan",
+                        value
+                      )
+                    }
+                    placeholder="Tuliskan perlengkapan dan peralatan yang digunakan..."
+                  />
 
-                <table className="w-full border-collapse border border-black">
-  <tbody>
-    <tr>
-      <td className="w-[260px] border border-black bg-slate-100 px-3 py-3 font-bold">
-        Waktu :
-      </td>
+                  <table className="w-full border-collapse border border-black">
+                    <tbody>
+                      <tr>
+                        <td className="w-[260px] border border-black bg-slate-100 px-3 py-3 font-bold">
+                          Waktu :
+                        </td>
 
-      <td className="border border-black px-3 py-2">
-        <div className="flex items-center gap-2">
-        <div className="print:hidden">
-        <input
-          type="number"
-          min="1"
-          value={kelompok.waktu}
-          onChange={(e)=>
-            updateKelompok(kelompokIndex,"waktu",e.target.value)
-          }
-          placeholder="120"
-          className="w-24 bg-transparent outline-none"
-        />
-      </div>
+                        <td className="border border-black px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="print:hidden">
+                              <input
+                                type="number"
+                                min="1"
+                                value={
+                                  kelompok.waktu
+                                }
+                                onChange={(
+                                  e
+                                ) =>
+                                  updateKelompok(
+                                    kelompokIndex,
+                                    "waktu",
+                                    e
+                                      .target
+                                      .value
+                                  )
+                                }
+                                placeholder="120"
+                                className="w-24 bg-transparent outline-none"
+                              />
+                            </div>
 
-      <span className="hidden print:inline">
-        {kelompok.waktu || "-"}
-      </span>
+                            <span className="hidden print:inline">
+                              {kelompok.waktu ||
+                                "-"}
+                            </span>
 
-      <span className="ml-2">
-        Menit
-      </span>
-      </div>
-      </td>
-    </tr>
-  </tbody>
-</table>
+                            <span className="ml-2">
+                              Menit
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {kelompokIndex <
+                  form.kelompok.length -
+                    1 && (
+                  <div className="my-10 border-t-4 border-black print:break-before-page"></div>
+                )}
               </div>
-
-              {kelompokIndex < form.kelompok.length - 1 && (
-                <div className="my-10 border-t-4 border-black print:break-before-page"></div>
-              )}
-            </div>
-          ))}
+            )
+          )}
 
           <button
             type="button"
@@ -989,430 +1158,359 @@ const removeValidator = (index) => {
             <Plus size={16} />
             Tambah Kelompok Pekerjaan
           </button>
-
-          <section className="mt-10">
-
-  {/* ================= ASESI ================= */}
-
-  <table className="w-full border-collapse border border-black text-[13px]">
-    <tbody>
-
-      <tr>
-        <td
-          colSpan={3}
-          className="border border-black bg-slate-50 px-4 py-3 text-[15px] font-semibold tracking-wide"
-        >
-          ASESI
-        </td>
-      </tr>
-
-      <tr>
-        <td className="w-[170px] border border-black px-2 py-1">
-          Nama
-        </td>
-
-        <td className="w-[20px] border border-black text-center">
-          :
-        </td>
-
-        <td className="border border-black px-2 py-1">
-          <p className="font-medium">
-            {form.nama_asesi || "-"}
-          </p>
-        </td>
-      </tr>
-
-      <tr>
-        <td className="border border-black px-4 py-4 align-middle">
-          Tanda tangan dan Tanggal
-        </td>
-
-        <td className="border border-black text-center">
-          :
-        </td>
-
-        <td className="border border-black px-4 py-4 align-middle">
-<div className="flex flex-col items-center justify-center py-3">
-
-  {form.asesi.ttd && (
-    <img
-      src={
-        form.asesi.ttd.startsWith("http")
-          ? form.asesi.ttd
-          : `${import.meta.env.VITE_API_BASE.replace("/api", "")}/${form.asesi.ttd.replace(/^\/+/, "")}`
-      }
-      alt="TTD Asesi"
-      className="max-h-24 max-w-[250px] object-contain"
-    />
-  )}
-
-  <div className="mt-2 w-[220px] border-b border-black"></div>
-
-  <p className="mt-2 text-center text-[13px]">
-    {formatTanggal(form.asesi.tanggal)}
-  </p>
-
-</div>
-        </td>
-      </tr>
-
-    </tbody>
-  </table>
-
-
-  {/* ================= ASESOR ================= */}
-
-  <table className="mt-4 w-full border-collapse border border-black text-[13px]">
-
-    <tbody>
-
-      <tr>
-        <td
-          colSpan={3}
-          className="border border-black bg-slate-50 px-4 py-3 text-[15px] font-semibold tracking-wide"
-        >
-          ASESOR
-        </td>
-      </tr>
-
-      <tr>
-        <td className="w-[170px] border border-black px-2 py-1">
-          Nama
-        </td>
-
-        <td className="w-[20px] border border-black text-center">
-          :
-        </td>
-
-        <td className="border border-black px-2 py-1">
-
-          <div className="print:hidden">
-          <select
-            value={form.asesor.id_user || ""}
-            onChange={(e) => {
-              const asesor = listAsesor.find(
-                item => String(item.id_user) === e.target.value
-              );
-
-              setForm((prev) => ({
-                ...prev,
-                asesor: {
-                  id_user: asesor?.id_user || "",
-                  nama: asesor?.nama_lengkap || "",
-                  no_reg: asesor?.no_reg_asesor || "",
-                  ttd: asesor?.ttd_path || "",
-                  tanggal: new Date().toISOString().slice(0, 10),
-                },
-              }));
-            }}
-            className="w-full bg-transparent outline-none"
-          >
-            <option value="">Pilih Asesor</option>
-
-            {listAsesor.map((item) => (
-              <option key={item.id_user} value={item.id_user}>
-                {item.nama_lengkap}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <p className="hidden print:block font-medium">
-          {form.asesor.nama || "-"}
-        </p>
-
-        </td>
-      </tr>
-
-      <tr>
-
-        <td className="border border-black px-2 py-1">
-          No. Reg
-        </td>
-
-        <td className="border border-black text-center">
-          :
-        </td>
-
-        <td className="border border-black px-2 py-1">
-
-          <p className="font-medium">
-            {form.asesor.no_reg || "-"}
-          </p>
-
-        </td>
-
-      </tr>
-
-      <tr>
-
-        <td className="border border-black px-4 py-4 align-middle">
-          Tanda tangan dan Tanggal
-        </td>
-
-        <td className="border border-black text-center">
-          :
-        </td>
-
-        <td className="border border-black px-4 py-4 align-middle">
-
-<div className="flex flex-col items-center justify-center py-3">
-
-  {form.asesor.ttd && (
-    <img
-      src={
-        form.asesor.ttd.startsWith("http")
-          ? form.asesor.ttd
-          : `${import.meta.env.VITE_API_BASE.replace("/api", "")}/${form.asesor.ttd.replace(/^\/+/, "")}`
-      }
-      alt="TTD Asesor"
-      className="max-h-24 max-w-[250px] object-contain"
-    />
-  )}
-
-  <div className="mt-2 w-[220px] border-b border-black"></div>
-
-  <p className="mt-2 text-center text-[13px]">
-    {formatTanggal(form.asesor.tanggal)}
-  </p>
-
-</div>
-
-        </td>
-
-      </tr>
-
-    </tbody>
-
-  </table>
-
-</section>
         </section>
 
-        {/* ================= PENYUSUN & VALIDATOR ================= */}
+        <section className="mt-10">
+          <table className="w-full border-collapse border border-black text-[13px]">
+            <thead>
+              <tr className="bg-slate-50 text-[13px] font-semibold">
+                <th className="w-[90px] border border-black px-2 py-2">
+                  STATUS
+                </th>
 
-<table className="mt-8 w-full border-collapse border border-black text-[13px]">
-  <thead>
-    <tr className="bg-slate-50 text-[13px] font-semibold">
-      <th className="border border-black px-2 py-2 w-[90px]">
-        STATUS
-      </th>
+                <th className="w-[45px] border border-black px-2 py-2">
+                  NO
+                </th>
 
-      <th className="border border-black px-2 py-2 w-[45px]">
-        NO
-      </th>
+                <th className="w-[230px] border border-black px-3 py-2 text-left">
+                  NAMA
+                </th>
 
-      <th className="border border-black px-3 py-2 text-left w-[230px]">
-        NAMA
-      </th>
+                <th className="w-[180px] border border-black px-2 py-2">
+                  NOMOR MET
+                </th>
 
-      <th className="border border-black px-2 py-2 w-[180px]">
-        NOMOR MET
-      </th>
+                <th className="w-[260px] border border-black px-2 py-2">
+                  TANDA TANGAN DAN TANGGAL
+                </th>
+              </tr>
+            </thead>
 
-      <th className="border border-black px-2 py-2 w-[260px]">
-        TANDA TANGAN DAN TANGGAL
-      </th>
-    </tr>
-  </thead>
+            <tbody>
+              {form.penyusun.map(
+                (item, index) => (
+                  <tr
+                    key={`penyusun-${index}`}
+                  >
+                    {index === 0 && (
+                      <td
+                        rowSpan={
+                          form.penyusun
+                            .length
+                        }
+                        className="border border-black px-2 py-2 font-semibold align-middle"
+                      >
+                        Penyusun
+                      </td>
+                    )}
 
-  <tbody>
+                    <td className="border border-black text-center">
+                      {index + 1}
+                    </td>
 
-    {/* ================= PENYUSUN ================= */}
+                    <td className="border border-black px-2">
+                      <div className="print:hidden">
+                        <select
+                          value={
+                            item.id_user
+                          }
+                          onChange={(e) => {
+                            const asesor =
+                              listAsesor.find(
+                                (a) =>
+                                  String(
+                                    a?.id_user
+                                  ) ===
+                                  e.target
+                                    .value
+                              );
 
-    {form.penyusun.map((item,index)=>(
+                            updatePenyusun(
+                              index,
+                              "id_user",
+                              e.target
+                                .value
+                            );
 
-      <tr key={`penyusun-${index}`}>
-        {index===0 && (
-          <td
-            rowSpan={form.penyusun.length}
-            className="border border-black px-2 py-2 font-semibold align-middle"
-          > Penyusun </td>
-        )}
+                            updatePenyusun(
+                              index,
+                              "nama",
+                              asesor?.nama_lengkap ||
+                                ""
+                            );
 
-        <td className="border border-black text-center">
-          {index+1}
-        </td>
+                            updatePenyusun(
+                              index,
+                              "nomor_met",
+                              asesor?.no_lisensi ||
+                                asesor?.nomor_met ||
+                                ""
+                            );
 
-<td className="border border-black px-2">
-  <div className="print:hidden">
-    <select
-      value={item.id_user}
-      onChange={(e) => {
-        const asesor = listAsesor.find(
-          (a) => String(a.id_user) === e.target.value
-        );
+                            updatePenyusun(
+                              index,
+                              "ttd",
+                              asesor?.ttd_path ||
+                                ""
+                            );
 
-        updatePenyusun(index, "id_user", e.target.value);
-        updatePenyusun(index, "nama", asesor?.nama_lengkap || "");
-        updatePenyusun(index, "nomor_met", asesor?.no_lisensi || "");
-        updatePenyusun(index, "ttd", asesor?.ttd_path || "");
-        updatePenyusun(index, "tanggal", new Date().toISOString().slice(0, 10));
-      }}
-      className="w-full bg-transparent outline-none"
-    >
-      <option value="">Pilih Asesor</option>
+                            updatePenyusun(
+                              index,
+                              "tanggal",
+                              new Date()
+                                .toISOString()
+                                .slice(
+                                  0,
+                                  10
+                                )
+                            );
+                          }}
+                          className="w-full bg-transparent outline-none"
+                        >
+                          <option value="">
+                            Pilih Asesor
+                          </option>
 
-      {listAsesor.map((asesor) => (
-        <option
-          key={asesor.id_user}
-          value={asesor.id_user}
-        >
-          {asesor.nama_lengkap}
-        </option>
-      ))}
-    </select>
-  </div>
+                          {listAsesor.map(
+                            (asesor) => (
+                              <option
+                                key={
+                                  asesor.id_user
+                                }
+                                value={
+                                  asesor.id_user
+                                }
+                              >
+                                {
+                                  asesor.nama_lengkap
+                                }
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
 
-  <p className="hidden print:block whitespace-nowrap">
-    {item.nama || "-"}
-  </p>
-</td>
+                      <p className="hidden print:block whitespace-nowrap">
+                        {item.nama ||
+                          "-"}
+                      </p>
+                    </td>
 
-        <td className="border border-black px-2">
+                    <td className="border border-black px-2">
+                      <p className="font-medium">
+                        {item.nomor_met ||
+                          "-"}
+                      </p>
+                    </td>
 
-          <p className="font-medium">
-          {item.nomor_met || "-"}
-        </p>
+                    <td className="border border-black px-2">
+                      <div className="flex flex-col items-center justify-center py-3">
+                        {item.ttd && (
+                          <img
+                            src={
+                              item.ttd.startsWith(
+                                "http"
+                              )
+                                ? item.ttd
+                                : `${import.meta.env.VITE_API_BASE.replace(
+                                    "/api",
+                                    ""
+                                  )}/${item.ttd.replace(
+                                    /^\/+/,
+                                    ""
+                                  )}`
+                            }
+                            alt="TTD Penyusun"
+                            className="max-h-20 max-w-[220px] object-contain"
+                          />
+                        )}
 
-        </td>
+                        <div className="mt-2 w-[150px] border-b border-black"></div>
 
-<td className="border border-black px-2">
-  <div className="flex flex-col items-center justify-center py-3">
+                        <p className="mt-2 text-center text-[12px]">
+                          {formatTanggal(
+                            item.tanggal
+                          )}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              )}
 
-    {item.ttd && (
-      <img
-        src={
-          item.ttd.startsWith("http")
-            ? item.ttd
-            : `${import.meta.env.VITE_API_BASE.replace("/api", "")}/${item.ttd.replace(/^\/+/, "")}`
-        }
-        alt="TTD Penyusun"
-        className="max-h-20 max-w-[220px] object-contain"
-      />
-    )}
+              {form.validator.map(
+                (item, index) => (
+                  <tr
+                    key={`validator-${index}`}
+                  >
+                    {index === 0 && (
+                      <td
+                        rowSpan={
+                          form.validator
+                            .length
+                        }
+                        className="border border-black px-2 py-2 font-semibold align-middle"
+                      >
+                        Validator
+                      </td>
+                    )}
 
-    <div className="mt-2 w-[150px] border-b border-black"></div>
+                    <td className="border border-black text-center">
+                      {index + 1}
+                    </td>
 
-    <p className="mt-2 text-center text-[12px]">
-      {formatTanggal(item.tanggal)}
-    </p>
+                    <td className="border border-black px-2">
+                      <div className="print:hidden">
+                        <select
+                          value={
+                            item.id_user
+                          }
+                          onChange={(e) => {
+                            const asesor =
+                              listAsesor.find(
+                                (a) =>
+                                  String(
+                                    a?.id_user
+                                  ) ===
+                                  e.target
+                                    .value
+                              );
 
-  </div>
-</td>
+                            updateValidator(
+                              index,
+                              "id_user",
+                              e.target
+                                .value
+                            );
 
-      </tr>
+                            updateValidator(
+                              index,
+                              "nama",
+                              asesor?.nama_lengkap ||
+                                ""
+                            );
 
-    ))}
+                            updateValidator(
+                              index,
+                              "nomor_met",
+                              asesor?.no_lisensi ||
+                                asesor?.nomor_met ||
+                                ""
+                            );
 
-    {/* ================= VALIDATOR ================= */}
+                            updateValidator(
+                              index,
+                              "ttd",
+                              asesor?.ttd_path ||
+                                ""
+                            );
 
-    {form.validator.map((item,index)=>(
-      <tr key={`validator-${index}`}>
-        {index===0 && (
-        <td
-            rowSpan={form.validator.length}
-            className="border border-black px-2 py-2 font-semibold align-middle"
-        > Validator</td>
-        )}
+                            updateValidator(
+                              index,
+                              "tanggal",
+                              new Date()
+                                .toISOString()
+                                .slice(
+                                  0,
+                                  10
+                                )
+                            );
+                          }}
+                          className="w-full bg-transparent outline-none"
+                        >
+                          <option value="">
+                            Pilih Asesor
+                          </option>
 
-        <td className="border border-black text-center">
-          {index+1}
-        </td>
+                          {listAsesor.map(
+                            (asesor) => (
+                              <option
+                                key={
+                                  asesor.id_user
+                                }
+                                value={
+                                  asesor.id_user
+                                }
+                              >
+                                {
+                                  asesor.nama_lengkap
+                                }
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
 
-      <td className="border border-black px-2">
-        <div className="print:hidden">
-          <select
-            value={item.id_user}
-            onChange={(e) => {
-              const asesor = listAsesor.find(
-                (a) => String(a.id_user) === e.target.value
-              );
-              updateValidator(index, "id_user", e.target.value);
-              updateValidator(index, "nama", asesor?.nama_lengkap || "");
-              updateValidator(index, "nomor_met", asesor?.no_lisensi || "");
-              updateValidator(index, "ttd", asesor?.ttd_path || "");
-              updateValidator(index, "tanggal", new Date().toISOString().slice(0, 10));
-            }}
-            className="w-full bg-transparent outline-none"
-          >
-            <option value="">Pilih Asesor</option>
-            {listAsesor.map((asesor) => (
-              <option
-                key={asesor.id_user}
-                value={asesor.id_user}
-              >
-                {asesor.nama_lengkap}
-              </option>
-            ))}
-          </select>
-        </div>
-        <p className="hidden print:block whitespace-nowrap">
-          {item.nama || "-"}
-        </p>
-      </td>
+                      <p className="hidden print:block whitespace-nowrap">
+                        {item.nama ||
+                          "-"}
+                      </p>
+                    </td>
 
-        <td className="border border-black px-2">
+                    <td className="border border-black px-2">
+                      <p className="font-medium">
+                        {item.nomor_met ||
+                          "-"}
+                      </p>
+                    </td>
 
-          <p className="font-medium">
-            {item.nomor_met || "-"}
-          </p>
+                    <td className="border border-black px-2">
+                      <div className="flex flex-col items-center justify-center py-3">
+                        {item.ttd && (
+                          <img
+                            src={
+                              item.ttd.startsWith(
+                                "http"
+                              )
+                                ? item.ttd
+                                : `${import.meta.env.VITE_API_BASE.replace(
+                                    "/api",
+                                    ""
+                                  )}/${item.ttd.replace(
+                                    /^\/+/,
+                                    ""
+                                  )}`
+                            }
+                            alt="TTD Validator"
+                            className="max-h-20 max-w-[220px] object-contain"
+                          />
+                        )}
 
-        </td>
+                        <div className="mt-2 w-[150px] border-b border-black"></div>
 
-<td className="border border-black px-2">
-  <div className="flex flex-col items-center justify-center py-3">
+                        <p className="mt-2 text-center text-[12px]">
+                          {formatTanggal(
+                            item.tanggal
+                          )}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
 
-    {item.ttd && (
-      <img
-        src={
-          item.ttd.startsWith("http")
-            ? item.ttd
-            : `${import.meta.env.VITE_API_BASE.replace("/api", "")}/${item.ttd.replace(/^\/+/, "")}`
-        }
-        alt="TTD Penyusun"
-        className="max-h-20 max-w-[220px] object-contain"
-      />
-    )}
+          <div className="mt-3 flex gap-3 print:hidden">
+            <button
+              type="button"
+              onClick={addPenyusun}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white hover:bg-slate-900"
+            >
+              <Plus size={16} />
+              Tambah Penyusun
+            </button>
 
-    <div className="mt-2 w-[150px] border-b border-black"></div>
-
-    <p className="mt-2 text-center text-[12px]">
-      {formatTanggal(item.tanggal)}
-    </p>
-
-  </div>
-</td>
-
-      </tr>
-
-    ))}
-
-  </tbody>
-
-</table>
-
-<div className="mt-3 flex gap-3 print:hidden">
-
-  <button
-    type="button"
-    onClick={addPenyusun}
-    className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white hover:bg-slate-900"
-  >
-    <Plus size={16}/>
-    Tambah Penyusun
-  </button>
-
-  <button
-    type="button"
-    onClick={addValidator}
-    className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white hover:bg-slate-900"
-  >
-    <Plus size={16}/>
-    Tambah Validator
-  </button>
-
-</div>
+            <button
+              type="button"
+              onClick={addValidator}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white hover:bg-slate-900"
+            >
+              <Plus size={16} />
+              Tambah Validator
+            </button>
+          </div>
+        </section>
 
         <div className="mt-10 print:hidden"></div>
       </main>
@@ -1424,12 +1522,9 @@ const removeValidator = (index) => {
             margin: 14mm;
           }
 
-          input[type="date"] {
-            display: none;
-          }
-
           textarea,
-          input {
+          input,
+          select {
             border: none !important;
             outline: none !important;
           }
@@ -1439,7 +1534,13 @@ const removeValidator = (index) => {
   );
 }
 
-function InputTable({ title, value, onChange, placeholder, small = false }) {
+function InputTable({
+  title,
+  value,
+  onChange,
+  placeholder,
+  small = false,
+}) {
   return (
     <table className="w-full border-collapse border border-black">
       <tbody>
@@ -1449,20 +1550,22 @@ function InputTable({ title, value, onChange, placeholder, small = false }) {
           </td>
 
           <td className="border border-black px-3 py-2">
-            <>
-          <textarea
-            value={value}
-            onChange={(e)=>onChange(e.target.value)}
-            placeholder={placeholder}
-            className={`w-full resize-none bg-transparent p-2 leading-7 outline-none print:hidden ${
-              small ? "min-h-[50px]" : "min-h-[110px]"
-            }`}
-          />
+            <textarea
+              value={value}
+              onChange={(e) =>
+                onChange(e.target.value)
+              }
+              placeholder={placeholder}
+              className={`w-full resize-none bg-transparent p-2 leading-7 outline-none print:hidden ${
+                small
+                  ? "min-h-[50px]"
+                  : "min-h-[110px]"
+              }`}
+            />
 
-          <div className="hidden whitespace-pre-wrap p-2 leading-7 print:block">
-            {value || "-"}
-          </div>
-        </>
+            <div className="hidden whitespace-pre-wrap p-2 leading-7 print:block">
+              {value || "-"}
+            </div>
           </td>
         </tr>
       </tbody>
@@ -1470,64 +1573,10 @@ function InputTable({ title, value, onChange, placeholder, small = false }) {
   );
 }
 
-function getDisplayName() {
-  try {
-    const storedUser = localStorage.getItem("user");
-    const user = storedUser ? JSON.parse(storedUser) : null;
-
-    return (
-      user?.nama ||
-      user?.nama_lengkap ||
-      user?.username ||
-      user?.name ||
-      "Asesor"
-    );
-  } catch {
-    return "Asesor";
-  }
-}
-
-function getSkema(jadwal) {
-  const skema = jadwal?.skema;
-
-  if (skema && typeof skema === "object") {
-    return {
-      judul_skema:
-        skema.judul_skema ||
-        skema.nama_skema ||
-        jadwal?.nama_skema ||
-        "KKNI Level II Pada Kompetensi Keahlian Teknik Komputer dan Jaringan",
-      kode_skema:
-        skema.kode_skema ||
-        skema.nomor_skema ||
-        jadwal?.kode_skema ||
-        "LEVEL II TKJ",
-    };
-  }
-
-  return {
-    judul_skema:
-      jadwal?.judul_skema ||
-      jadwal?.nama_skema ||
-      skema ||
-      "KKNI Level II Pada Kompetensi Keahlian Teknik Komputer dan Jaringan",
-    kode_skema: jadwal?.kode_skema || jadwal?.nomor_skema || "LEVEL II TKJ",
-  };
-}
-
-function getTuk(jadwal) {
-  return (
-    jadwal?.nama_tuk ||
-    jadwal?.tuk?.nama_tuk ||
-    jadwal?.tuk?.nama ||
-    jadwal?.tempat ||
-    jadwal?.lokasi ||
-    ""
-  );
-}
-
 function formatTanggal(value) {
-  if (!value) return "";
+  if (!value) {
+    return "-";
+  }
 
   const parsed = new Date(value);
 
@@ -1535,9 +1584,12 @@ function formatTanggal(value) {
     return value;
   }
 
-  return parsed.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  return parsed.toLocaleDateString(
+    "id-ID",
+    {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }
+  );
 }
