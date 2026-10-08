@@ -23,7 +23,8 @@ import {
   DollarSign,
   ChevronLeft,
   ChevronRight,
-  RefreshCcw
+  RefreshCcw,
+  FileQuestion
 } from "lucide-react";
 
 const Skema = () => {
@@ -439,6 +440,13 @@ const Skema = () => {
                         >
                           Persyaratan TUK
                         </button>
+                        <button
+                        type="button"
+                        onClick={() => navigate(`/admin/skema/${item.id_skema}/bank-soal`)}
+                        className="w-[145px] flex items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-bold text-indigo-700 transition-all hover:bg-indigo-600 hover:border-indigo-600 hover:text-white"
+                      >
+                          Bank Soal (FR.IA.05)
+                      </button>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-center">

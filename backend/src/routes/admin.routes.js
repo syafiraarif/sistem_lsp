@@ -1,4 +1,3 @@
-// backend/src/routes/admin.routes.js
 const router = require("express").Router();
 
 const authMiddleware = require("../middlewares/auth.middleware");
@@ -17,9 +16,9 @@ const biayaUjiController = require("../controllers/admin/biayaUji.controller");
 const persyaratanController = require("../controllers/admin/persyaratan.controller");
 const persyaratanTukController = require("../controllers/admin/persyaratanTuk.controller");
 const kelompokPekerjaanController = require("../controllers/admin/kelompokPekerjaan.controller");
-// const tukTempatController = require("../controllers/admin/tukTempat.controller"); // Dihapus karena tidak terlihat digunakan di rute yang ada
 const adminProfile = require("../controllers/admin/profile.controller");
 const bandingController = require("../controllers/admin/banding.controller");
+const FrAk04Controller = require("../controllers/admin/frAk04.controller");
 const dokumenMutuController = require("../controllers/admin/dokumenMutu.controller");
 const jadwalController = require("../controllers/admin/jadwal.controller");
 const jadwalAsesorController = require("../controllers/admin/jadwalAsesor.controller");
@@ -31,6 +30,7 @@ const accountController = require("../controllers/admin/account.controller");
 const elemenKukController = require("../controllers/admin/elemenKuk.controller");
 const pembayaranController = require("../controllers/admin/pembayaran.controller");
 const feedbackAdminController = require("../controllers/admin/feedback.controller");
+const frIa05AdminController = require("../controllers/admin/frIa05.controller");
 
 // PROTECT SEMUA ROUTE ADMIN
 router.use(authMiddleware, roleMiddleware.adminOnly);
@@ -167,6 +167,10 @@ router.delete("/kelompok-pekerjaan/:id", kelompokPekerjaanController.delete);
 router.get("/banding", bandingController.getAllBanding);
 router.put("/banding/:id", bandingController.updateStatusBanding);
 
+// ======================= FR.AK.04 =======================
+router.get("/fr-ak04/:id_peserta", FrAk04Controller.getFrAk04ByPeserta);
+router.get("/fr-ak04/pdf/:id_peserta", FrAk04Controller.generatePdfFrAk04);
+
 // ======================= PESERTA JADWAL (GLOBAL & PER JADWAL) =======================
 router.get("/peserta-jadwal/global", pesertaJadwalController.getAllPesertaGlobal);
 router.get("/jadwal/:id_jadwal/peserta", pesertaJadwalController.getPesertaByJadwal);
@@ -192,5 +196,17 @@ router.delete("/unit-kuk/:id", elemenKukController.deleteKuk);
 router.get("/pembayaran", pembayaranController.getAll);
 router.put("/pembayaran/:id/approve", pembayaranController.approve);
 router.put("/pembayaran/:id/reject", pembayaranController.reject);
+
+// ======================= MASTER SOAL FR.IA.05 (ADMIN) =======================
+// Get Master Bank Soal berdasarkan ID Skema
+router.get("/fr-ia05/skema/:id_skema", frIa05AdminController.getBySkema);
+
+// Create / Update Header Paket Soal untuk Skema tersebut
+router.post("/fr-ia05/paket", frIa05AdminController.createPaket);
+
+// CRUD Soal & Opsi di dalam Paket
+router.post("/fr-ia05/soal", frIa05AdminController.uploadGambar, frIa05AdminController.createSoal);
+router.put("/fr-ia05/soal/:id", frIa05AdminController.uploadGambar, frIa05AdminController.updateSoal);
+router.delete("/fr-ia05/soal/:id", frIa05AdminController.deleteSoal);
 
 module.exports = router;

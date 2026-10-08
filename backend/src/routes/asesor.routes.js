@@ -13,6 +13,7 @@ const presensiController = require("../controllers/asesor/presensi.controller");
 
 const frAk01Controller = require("../controllers/asesor/frAk01.controller");
 const frAk02Controller = require("../controllers/asesor/frAk02.controller");
+const FrAk04Controller = require("../controllers/asesor/frAk04.controller");
 const frAk05Controller = require("../controllers/asesor/frAk05.controller");
 const frAk06Controller = require("../controllers/asesor/frAk06.controller");
 const frAk07Controller = require("../controllers/asesor/frAk07.controller");
@@ -228,6 +229,9 @@ router.get(
   frAk02Controller.generatePdfFrAk02
 );
 
+// ======================= FR.AK.04 =======================
+router.get("/fr-ak04/:id_peserta", FrAk04Controller.getFrAk04ByPeserta);
+router.get("/fr-ak04/pdf/:id_peserta", FrAk04Controller.generatePdfFrAk04);
 
 /* ========================= FR.AK.05 ========================= */
 router.get(
