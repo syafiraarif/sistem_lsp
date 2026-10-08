@@ -9,7 +9,7 @@ import {
   Plus,
   Save,
   Trash2,
-  X,
+  X
 } from "lucide-react";
 import Swal from "sweetalert2";
 import api from "../../../services/api";
@@ -20,30 +20,110 @@ const PANDUAN_ASESOR = [
   "Jika pertanyaan disampaikan sebelum asesi melakukan praktik demonstrasi, maka pertanyaan dibuat berkaitan dengan aspek K3L, SOP, penggunaan peralatan dan perlengkapan.",
   "Jika setelah asesi melakukan praktik demonstrasi terdapat item pertanyaan pendukung observasi telah terpenuhi, maka pertanyaan tersebut tidak perlu ditanyakan lagi dan cukup memberi catatan bahwa sudah terpenuhi pada saat tugas praktik demonstrasi pada kolom tanggapan.",
   "Jika pada saat observasi ada hal yang perlu dikonfirmasi sedangkan di instrumen daftar pertanyaan pendukung observasi tidak ada, maka asesor dapat memberikan pertanyaan dengan syarat pertanyaan harus berkaitan dengan tugas praktik demonstrasi. Jika dilakukan, asesor harus mencatat dalam instrumen pertanyaan pendukung observasi.",
-  "Tanggapan asesi ditulis pada kolom tanggapan.",
+  "Tanggapan asesi ditulis pada kolom tanggapan."
 ];
+
+const createAsesorRow = (item = {}) => ({
+  id_asesor:
+    item?.id_asesor ||
+    item?.asesor?.id_user ||
+    item?.id_user ||
+    "",
+  nama_lengkap:
+    item?.nama_lengkap ||
+    item?.asesor?.nama_lengkap ||
+    item?.nama ||
+    "",
+  no_reg_asesor:
+    item?.no_reg_asesor ||
+    item?.asesor?.no_reg_asesor ||
+    item?.no_reg ||
+    "",
+  ttd_path:
+    item?.ttd_path ||
+    item?.asesor?.ttd_path ||
+    item?.ttd ||
+    "",
+  tanggal:
+    item?.tanggal ||
+    item?.asesor?.tanggal ||
+    ""
+});
+
+const getToday = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(
+    now.getMonth() + 1
+  ).padStart(2, "0");
+  const day = String(
+    now.getDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const getImageUrl = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(String(value))) {
+    return String(value);
+  }
+
+  const base = String(
+    import.meta.env.VITE_API_BASE || ""
+  ).replace(/\/api\/?$/, "");
+
+  return base
+    ? `${base}/${String(value).replace(
+        /^\/+/,
+        ""
+      )}`
+    : `/${String(value).replace(
+        /^\/+/,
+        ""
+      )}`;
+};
 
 export default function FRIA03Komite() {
   const { id_skema, idSkema, id } = useParams();
   const navigate = useNavigate();
   const printRef = useRef(null);
-
   const skemaId = id_skema || idSkema || id;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
+  const [savingValidation, setSavingValidation] = useState(false);
   const [data, setData] = useState(null);
   const [pertanyaanList, setPertanyaanList] = useState([]);
   const [unitOptions, setUnitOptions] = useState([]);
-
+  const [asesorList, setAsesorList] = useState([]);
+  const [penyusun, setPenyusun] = useState([
+    {
+      id_asesor: "",
+      nama_lengkap: "",
+      no_reg_asesor: "",
+      ttd_path: "",
+      tanggal: ""
+    }
+  ]);
+  const [validator, setValidator] = useState([
+    {
+      id_asesor: "",
+      nama_lengkap: "",
+      no_reg_asesor: "",
+      ttd_path: "",
+      tanggal: ""
+    }
+  ]);
   const [showModal, setShowModal] = useState(false);
   const [editingPertanyaan, setEditingPertanyaan] = useState(null);
-
   const [form, setForm] = useState({
     id_unit: "",
     pertanyaan: "",
-    urutan: "",
+    urutan: ""
   });
 
   useEffect(() => {
@@ -63,32 +143,133 @@ export default function FRIA03Komite() {
         return;
       }
 
-      const res = await api.get(
-        `/asesor/fr-ia03/komite/${skemaId}`
-      );
+      const [fria03Res, asesorRes] =
+        await Promise.all([
+          api.get(
+            `/asesor/skema/${skemaId}/fr-ia03`
+          ),
+          api.get(
+            "/asesor/list-asesor"
+          )
+        ]);
 
       const payload =
-        res.data?.data ||
-        res.data ||
-        null;
+        fria03Res.data?.data ||
+        fria03Res.data ||
+        {};
+
+      const master =
+        payload?.master || null;
+
+      const units = Array.isArray(
+        payload?.units
+      )
+        ? payload.units
+        : [];
+
+      const asesors =
+        Array.isArray(
+          asesorRes.data?.data
+        )
+          ? asesorRes.data.data
+          : Array.isArray(
+              asesorRes.data
+            )
+            ? asesorRes.data
+            : [];
+
+      const masterValidators =
+        Array.isArray(
+          master?.validator
+        )
+          ? master.validator
+          : [];
+
+      const mappedPenyusun =
+        masterValidators
+          .filter(
+            (item) =>
+              item?.peran ===
+              "penyusun"
+          )
+          .map(
+            createAsesorRow
+          );
+
+      const mappedValidator =
+        masterValidators
+          .filter(
+            (item) =>
+              item?.peran ===
+              "validator"
+          )
+          .map(
+            createAsesorRow
+          );
+
+      if (
+        !mappedPenyusun.length &&
+        master?.id_asesor
+      ) {
+        const selected =
+          asesors.find(
+            (item) =>
+              String(
+                item?.id_user
+              ) ===
+              String(
+                master.id_asesor
+              )
+          );
+
+        if (selected) {
+          mappedPenyusun.push(
+            createAsesorRow({
+              ...selected,
+              tanggal:
+                master?.tanggal ||
+                ""
+            })
+          );
+        }
+      }
 
       setData(payload);
       setPertanyaanList(
-        normalizePertanyaan(payload)
+        normalizePertanyaan(
+          master
+        )
       );
-
-      const unitRes = await api.get(
-        `/asesor/fr-ia02/unit/${skemaId}`
-      );
-
-      const units =
-        Array.isArray(unitRes.data?.data)
-          ? unitRes.data.data
-          : Array.isArray(unitRes.data)
-            ? unitRes.data
-            : [];
-
       setUnitOptions(units);
+      setAsesorList(asesors);
+
+      setPenyusun(
+        mappedPenyusun.length
+          ? mappedPenyusun
+          : [
+              {
+                id_asesor: "",
+                nama_lengkap: "",
+                no_reg_asesor: "",
+                ttd_path: "",
+                tanggal: ""
+              }
+            ]
+      );
+
+      setValidator(
+        mappedValidator.length
+          ? mappedValidator
+          : [
+              {
+                id_asesor: "",
+                nama_lengkap: "",
+                no_reg_asesor: "",
+                ttd_path: "",
+                tanggal: ""
+              }
+            ]
+      );
     } catch (err) {
       console.error(
         "LOAD FR.IA.03 ERROR:",
@@ -111,86 +292,132 @@ export default function FRIA03Komite() {
   const kelompokMap = useMemo(() => {
     const groups = {};
 
-    unitOptions.forEach((unit) => {
-      const namaKelompok =
-        unit?.nama_kelompok ||
-        unit?.kelompok?.nama_kelompok ||
-        unit?.kelompok_pekerjaan ||
-        "Kelompok Pekerjaan";
+    unitOptions.forEach(
+      (unit) => {
+        const namaKelompok =
+          unit?.kelompok
+            ?.nama_kelompok ||
+          unit?.nama_kelompok ||
+          unit?.kelompok_pekerjaan ||
+          "Kelompok Pekerjaan";
 
-      if (!groups[namaKelompok]) {
-        groups[namaKelompok] = [];
+        if (
+          !groups[
+            namaKelompok
+          ]
+        ) {
+          groups[
+            namaKelompok
+          ] = [];
+        }
+
+        groups[
+          namaKelompok
+        ].push(unit);
       }
+    );
 
-      groups[namaKelompok].push(unit);
-    });
+    pertanyaanList.forEach(
+      (pertanyaan) => {
+        const unit =
+          unitOptions.find(
+            (item) =>
+              String(
+                item?.id_unit
+              ) ===
+              String(
+                pertanyaan?.id_unit
+              )
+          ) || {};
 
-    pertanyaanList.forEach((pertanyaan) => {
-      const unit =
-        unitOptions.find(
-          (item) =>
-            String(item?.id_unit) ===
-            String(pertanyaan?.id_unit)
-        ) || {};
+        const namaKelompok =
+          pertanyaan?.unit
+            ?.skemaUnit?.[0]
+            ?.kelompok
+            ?.nama_kelompok ||
+          unit?.kelompok
+            ?.nama_kelompok ||
+          unit?.nama_kelompok ||
+          unit?.kelompok_pekerjaan ||
+          "Kelompok Pekerjaan";
 
-      const namaKelompok =
-        pertanyaan?.unit?.skemaUnit?.[0]?.kelompok
-          ?.nama_kelompok ||
-        unit?.nama_kelompok ||
-        unit?.kelompok?.nama_kelompok ||
-        unit?.kelompok_pekerjaan ||
-        "Kelompok Pekerjaan";
+        if (
+          !groups[
+            namaKelompok
+          ]
+        ) {
+          groups[
+            namaKelompok
+          ] = [];
+        }
 
-      if (!groups[namaKelompok]) {
-        groups[namaKelompok] = [];
+        const alreadyExists =
+          groups[
+            namaKelompok
+          ].some(
+            (item) =>
+              String(
+                item?.id_unit
+              ) ===
+              String(
+                pertanyaan?.id_unit
+              )
+          );
+
+        if (
+          !alreadyExists &&
+          pertanyaan?.id_unit
+        ) {
+          groups[
+            namaKelompok
+          ].push({
+            id_unit:
+              pertanyaan.id_unit,
+            kode_unit:
+              pertanyaan?.unit
+                ?.kode_unit ||
+              pertanyaan?.kode_unit ||
+              "",
+            judul_unit:
+              pertanyaan?.unit
+                ?.judul_unit ||
+              pertanyaan?.judul_unit ||
+              "",
+            nama_kelompok:
+              namaKelompok
+          });
+        }
       }
-
-      const alreadyExists = groups[
-        namaKelompok
-      ].some(
-        (item) =>
-          String(item?.id_unit) ===
-          String(pertanyaan?.id_unit)
-      );
-
-      if (!alreadyExists && pertanyaan?.id_unit) {
-        groups[namaKelompok].push({
-          id_unit: pertanyaan.id_unit,
-          kode_unit:
-            pertanyaan?.unit?.kode_unit ||
-            pertanyaan?.kode_unit ||
-            "",
-          judul_unit:
-            pertanyaan?.unit?.judul_unit ||
-            pertanyaan?.judul_unit ||
-            "",
-          nama_kelompok:
-            namaKelompok,
-        });
-      }
-    });
+    );
 
     return groups;
-  }, [unitOptions, pertanyaanList]);
+  }, [
+    unitOptions,
+    pertanyaanList
+  ]);
 
   const openAdd = () => {
     setEditingPertanyaan(null);
 
     setForm({
       id_unit:
-        unitOptions.length > 0
-          ? unitOptions[0]?.id_unit || ""
-          : "",
+        unitOptions[0]?.id_unit ||
+        "",
       pertanyaan: "",
       urutan:
-        pertanyaanList.length + 1,
+        pertanyaanList.length +
+        1
     });
 
     setShowModal(true);
   };
 
-  const openEdit = (item) => {
-    setEditingPertanyaan(item);
+  const openEdit = (
+    item
+  ) => {
+    setEditingPertanyaan(
+      item
+    );
 
     setForm({
       id_unit:
@@ -202,7 +429,7 @@ export default function FRIA03Komite() {
         "",
       urutan:
         item?.urutan ||
-        "",
+        ""
     });
 
     setShowModal(true);
@@ -215,155 +442,509 @@ export default function FRIA03Komite() {
     setForm({
       id_unit: "",
       pertanyaan: "",
-      urutan: "",
+      urutan: ""
     });
   };
 
-  const handleChange = (e) => {
+  const handleChange = (
+    e
+  ) => {
     setForm((prev) => ({
       ...prev,
       [e.target.name]:
-        e.target.value,
+        e.target.value
     }));
   };
 
-  const savePertanyaan = async (e) => {
-    e.preventDefault();
+  const buildValidatorPayload = (
+    nextPenyusun,
+    nextValidator
+  ) => [
+    ...nextPenyusun
+      .filter(
+        (item) =>
+          item?.id_asesor
+      )
+      .map(
+        (item, index) => ({
+          id_asesor:
+            Number(
+              item.id_asesor
+            ),
+          peran:
+            "penyusun",
+          urutan:
+            index + 1,
+          tanggal:
+            item?.tanggal ||
+            null
+        })
+      ),
+    ...nextValidator
+      .filter(
+        (item) =>
+          item?.id_asesor
+      )
+      .map(
+        (item, index) => ({
+          id_asesor:
+            Number(
+              item.id_asesor
+            ),
+          peran:
+            "validator",
+          urutan:
+            index + 1,
+          tanggal:
+            item?.tanggal ||
+            null
+        })
+      )
+  ];
 
-    if (!form.id_unit) {
-      await Swal.fire(
-        "Validasi",
-        "Unit kompetensi wajib dipilih.",
-        "warning"
-      );
-      return;
-    }
+  const saveValidation = async (
+    nextPenyusun = penyusun,
+    nextValidator = validator,
+    silent = true
+  ) => {
+    const primaryAsesor =
+      nextPenyusun.find(
+        (item) =>
+          item?.id_asesor
+      )?.id_asesor || "";
 
-    if (!form.pertanyaan.trim()) {
-      await Swal.fire(
-        "Validasi",
-        "Pertanyaan wajib diisi.",
-        "warning"
-      );
-      return;
+    if (!primaryAsesor) {
+      if (!silent) {
+        await Swal.fire(
+          "Validasi",
+          "Penyusun asesor wajib dipilih.",
+          "warning"
+        );
+      }
+
+      return false;
     }
 
     try {
-      setSaving(true);
+      setSavingValidation(
+        true
+      );
 
-      const payload = {
-        id_skema: Number(skemaId),
-        id_unit: Number(form.id_unit),
-        pertanyaan:
-          form.pertanyaan.trim(),
-        urutan:
-          Number(form.urutan) ||
-          pertanyaanList.length + 1,
-      };
+      await api.put(
+        `/asesor/skema/${skemaId}/fr-ia03`,
+        {
+          id_asesor:
+            Number(
+              primaryAsesor
+            ),
+          validators:
+            buildValidatorPayload(
+              nextPenyusun,
+              nextValidator
+            )
+        }
+      );
 
-      if (editingPertanyaan) {
-        await api.put(
-          `/asesor/fr-ia03/komite/pertanyaan/${editingPertanyaan.id_pertanyaan}`,
-          payload
+      return true;
+    } catch (err) {
+      console.error(
+        "SAVE FR.IA.03 VALIDATION ERROR:",
+        err
+      );
+
+      if (!silent) {
+        await Swal.fire(
+          "Gagal",
+          err.response?.data?.message ||
+            "Gagal menyimpan penyusun dan validator.",
+          "error"
+        );
+      }
+
+      return false;
+    } finally {
+      setSavingValidation(
+        false
+      );
+    }
+  };
+
+  const handleAsesorChange =
+    async (
+      jenis,
+      index,
+      value
+    ) => {
+      const selected =
+        asesorList.find(
+          (item) =>
+            String(
+              item?.id_user
+            ) ===
+            String(value)
+        );
+
+      if (!selected) {
+        return;
+      }
+
+      const nextRow =
+        createAsesorRow({
+          ...selected,
+          tanggal:
+            getToday()
+        });
+
+      let nextPenyusun =
+        penyusun;
+
+      let nextValidator =
+        validator;
+
+      if (
+        jenis ===
+        "penyusun"
+      ) {
+        nextPenyusun =
+          penyusun.map(
+            (
+              item,
+              itemIndex
+            ) =>
+              itemIndex ===
+              index
+                ? nextRow
+                : item
+          );
+
+        setPenyusun(
+          nextPenyusun
         );
       } else {
-        await api.post(
-          "/asesor/fr-ia03/komite/pertanyaan",
-          payload
+        nextValidator =
+          validator.map(
+            (
+              item,
+              itemIndex
+            ) =>
+              itemIndex ===
+              index
+                ? nextRow
+                : item
+          );
+
+        setValidator(
+          nextValidator
         );
       }
 
-      closeModal();
-
-      await Swal.fire({
-        title: "Berhasil",
-        text: "Pertanyaan FR.IA.03 berhasil disimpan.",
-        icon: "success",
-        timer: 1200,
-        showConfirmButton: false,
-      });
-
-      await fetchData();
-    } catch (err) {
-      console.error(
-        "SAVE FR.IA.03 QUESTION ERROR:",
-        err
+      await saveValidation(
+        nextPenyusun,
+        nextValidator,
+        false
       );
+    };
 
-      await Swal.fire(
-        "Gagal",
-        err.response?.data?.message ||
-          "Gagal menyimpan pertanyaan.",
-        "error"
-      );
-    } finally {
-      setSaving(false);
-    }
+  const addPenyusun = () => {
+    setPenyusun(
+      (prev) => [
+        ...prev,
+        {
+          id_asesor: "",
+          nama_lengkap: "",
+          no_reg_asesor: "",
+          ttd_path: "",
+          tanggal: ""
+        }
+      ]
+    );
   };
 
-  const deletePertanyaan = async (item) => {
-    const confirm = await Swal.fire({
-      title: "Hapus Pertanyaan?",
-      text: "Pertanyaan akan dihapus dari FR.IA.03.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonText: "Batal",
-      confirmButtonText: "Hapus",
+  const addValidator = () => {
+    setValidator(
+      (prev) => [
+        ...prev,
+        {
+          id_asesor: "",
+          nama_lengkap: "",
+          no_reg_asesor: "",
+          ttd_path: "",
+          tanggal: ""
+        }
+      ]
+    );
+  };
+
+  const removePenyusun =
+    async (
+      index
+    ) => {
+      if (
+        penyusun.length ===
+        1
+      ) {
+        await Swal.fire(
+          "Validasi",
+          "Minimal satu penyusun harus tersedia.",
+          "warning"
+        );
+        return;
+      }
+
+      const nextPenyusun =
+        penyusun.filter(
+          (
+            _,
+            itemIndex
+          ) =>
+            itemIndex !==
+            index
+        );
+
+      setPenyusun(
+        nextPenyusun
+      );
+
+      await saveValidation(
+        nextPenyusun,
+        validator,
+        false
+      );
+    };
+
+  const removeValidator =
+    async (
+      index
+    ) => {
+      const nextValidator =
+        validator.filter(
+          (
+            _,
+            itemIndex
+          ) =>
+            itemIndex !==
+            index
+        );
+
+      const normalizedValidator =
+        nextValidator.length
+          ? nextValidator
+          : [
+              {
+                id_asesor: "",
+                nama_lengkap: "",
+                no_reg_asesor: "",
+                ttd_path: "",
+                tanggal: ""
+              }
+            ];
+
+      setValidator(
+        normalizedValidator
+      );
+
+      await saveValidation(
+        penyusun,
+        normalizedValidator,
+        false
+      );
+    };
+
+  const savePertanyaan =
+    async (
+      e
+    ) => {
+      e.preventDefault();
+
+      if (!form.id_unit) {
+        await Swal.fire(
+          "Validasi",
+          "Unit kompetensi wajib dipilih.",
+          "warning"
+        );
+        return;
+      }
+
+      if (
+        !form.pertanyaan.trim()
+      ) {
+        await Swal.fire(
+          "Validasi",
+          "Pertanyaan wajib diisi.",
+          "warning"
+        );
+        return;
+      }
+
+      const primaryAsesor =
+        penyusun.find(
+          (item) =>
+            item?.id_asesor
+        )?.id_asesor || "";
+
+      if (!primaryAsesor) {
+        await Swal.fire(
+          "Validasi",
+          "Pilih penyusun asesor terlebih dahulu sebelum menyimpan pertanyaan.",
+          "warning"
+        );
+        return;
+      }
+
+      try {
+        setSaving(true);
+
+        const payload = {
+          id_asesor:
+            Number(
+              primaryAsesor
+            ),
+          id_unit:
+            Number(
+              form.id_unit
+            ),
+          pertanyaan:
+            form.pertanyaan.trim(),
+          urutan:
+            Number(
+              form.urutan
+            ) ||
+            pertanyaanList.length +
+              1
+        };
+
+        if (
+          editingPertanyaan
+        ) {
+          await api.put(
+            `/asesor/skema/${skemaId}/fr-ia03/pertanyaan/${editingPertanyaan.id_pertanyaan}`,
+            payload
+          );
+        } else {
+          await api.post(
+            `/asesor/skema/${skemaId}/fr-ia03/pertanyaan`,
+            payload
+          );
+        }
+
+        closeModal();
+
+        await Swal.fire({
+          title:
+            "Berhasil",
+          text:
+            "Pertanyaan FR.IA.03 berhasil disimpan.",
+          icon:
+            "success",
+          timer:
+            1200,
+          showConfirmButton:
+            false
+        });
+
+        await fetchData();
+      } catch (err) {
+        console.error(
+          "SAVE FR.IA.03 QUESTION ERROR:",
+          err
+        );
+
+        await Swal.fire(
+          "Gagal",
+          err.response?.data?.message ||
+            err.response?.data?.error ||
+            "Gagal menyimpan pertanyaan.",
+          "error"
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
+
+  const deletePertanyaan =
+    async (
+      item
+    ) => {
+      const confirm =
+        await Swal.fire({
+          title:
+            "Hapus Pertanyaan?",
+          text:
+            "Pertanyaan akan dihapus dari FR.IA.03.",
+          icon:
+            "warning",
+          showCancelButton:
+            true,
+          confirmButtonColor:
+            "#d33",
+          cancelButtonText:
+            "Batal",
+          confirmButtonText:
+            "Hapus"
+        });
+
+      if (
+        !confirm.isConfirmed
+      ) {
+        return;
+      }
+
+      try {
+        setSaving(true);
+
+        await api.delete(
+          `/asesor/skema/${skemaId}/fr-ia03/pertanyaan/${item.id_pertanyaan}`
+        );
+
+        await Swal.fire({
+          title:
+            "Terhapus",
+          text:
+            "Pertanyaan berhasil dihapus.",
+          icon:
+            "success",
+          timer:
+            1200,
+          showConfirmButton:
+            false
+        });
+
+        await fetchData();
+      } catch (err) {
+        console.error(
+          "DELETE FR.IA.03 QUESTION ERROR:",
+          err
+        );
+
+        await Swal.fire(
+          "Gagal",
+          err.response?.data?.message ||
+            "Gagal menghapus pertanyaan.",
+          "error"
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
+
+  const downloadPdf =
+    useReactToPrint({
+      contentRef:
+        printRef,
+      documentTitle:
+        `FR-IA-03-${skemaId}`,
+      pageStyle: `
+        @page {
+          size: A4;
+          margin: 10mm;
+        }
+
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      `
     });
-
-    if (!confirm.isConfirmed) {
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      await api.delete(
-        `/asesor/fr-ia03/komite/pertanyaan/${item.id_pertanyaan}`
-      );
-
-      await Swal.fire({
-        title: "Terhapus",
-        text: "Pertanyaan berhasil dihapus.",
-        icon: "success",
-        timer: 1200,
-        showConfirmButton: false,
-      });
-
-      await fetchData();
-    } catch (err) {
-      console.error(
-        "DELETE FR.IA.03 QUESTION ERROR:",
-        err
-      );
-
-      await Swal.fire(
-        "Gagal",
-        err.response?.data?.message ||
-          "Gagal menghapus pertanyaan.",
-        "error"
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const downloadPdf = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `FR-IA-03-${skemaId}`,
-    pageStyle: `
-      @page {
-        size: A4;
-        margin: 10mm;
-      }
-
-      body {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-    `,
-  });
 
   if (loading) {
     return (
@@ -411,26 +992,36 @@ export default function FRIA03Komite() {
           }
           className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft
+            size={18}
+          />
           Kembali
         </button>
 
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={openAdd}
+            onClick={
+              openAdd
+            }
             className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600"
           >
-            <Plus size={18} />
+            <Plus
+              size={18}
+            />
             Tambah Pertanyaan
           </button>
 
           <button
             type="button"
-            onClick={downloadPdf}
+            onClick={
+              downloadPdf
+            }
             className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-slate-900"
           >
-            <Download size={18} />
+            <Download
+              size={18}
+            />
             Download PDF
           </button>
         </div>
@@ -500,9 +1091,18 @@ export default function FRIA03Komite() {
 
           <ul className="list-disc space-y-1 px-8 py-3 text-[13px] leading-relaxed">
             {PANDUAN_ASESOR.map(
-              (item, index) => (
-                <li key={index}>
-                  {item}
+              (
+                item,
+                index
+              ) => (
+                <li
+                  key={
+                    index
+                  }
+                >
+                  {
+                    item
+                  }
                 </li>
               )
             )}
@@ -510,14 +1110,12 @@ export default function FRIA03Komite() {
         </section>
 
         <div className="my-5 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700 print:hidden">
-          Mode Penyusunan Instrumen: Anda dapat menambah,
-          mengubah, dan menghapus pertanyaan FR.IA.03.
-          Kolom tanggapan dan pencapaian disiapkan untuk
-          digunakan oleh asesor penguji.
+          Mode Penyusunan Instrumen: Anda dapat menambah, mengubah, dan menghapus pertanyaan FR.IA.03. Kolom tanggapan dan pencapaian disiapkan untuk digunakan oleh asesor penguji.
         </div>
 
-        {Object.keys(kelompokMap).length ===
-        0 ? (
+        {Object.keys(
+          kelompokMap
+        ).length === 0 ? (
           <EmptyState
             text="Belum ada unit kompetensi pada skema ini. Pastikan unit kompetensi sudah tersedia."
           />
@@ -528,7 +1126,7 @@ export default function FRIA03Komite() {
             (
               [
                 kelompok,
-                list,
+                list
               ],
               groupIndex
             ) => (
@@ -537,8 +1135,12 @@ export default function FRIA03Komite() {
                 className="mb-8"
               >
                 <UnitTable
-                  kelompok={kelompok}
-                  list={list}
+                  kelompok={
+                    kelompok
+                  }
+                  list={
+                    list
+                  }
                 />
 
                 <table className="w-full border-collapse border border-black text-[13px]">
@@ -572,7 +1174,9 @@ export default function FRIA03Komite() {
                   <tbody>
                     {pertanyaanList
                       .filter(
-                        (item) =>
+                        (
+                          item
+                        ) =>
                           String(
                             getUnitKelompokNama(
                               item,
@@ -703,44 +1307,290 @@ export default function FRIA03Komite() {
                   Nama
                 </td>
 
-                <td className="w-[260px] border border-black px-2 py-2 font-bold text-center">
+                <td className="w-[260px] border border-black px-2 py-2 text-center font-bold">
                   Tanda Tangan dan Tanggal
                 </td>
               </tr>
 
-              <tr>
-                <td className="border border-black px-2 py-3 font-semibold">
-                  Penyusun
-                </td>
+              {penyusun.map(
+                (
+                  item,
+                  index
+                ) => (
+                  <tr
+                    key={`penyusun-${index}`}
+                  >
+                    {index ===
+                      0 && (
+                      <td
+                        rowSpan={
+                          penyusun.length
+                        }
+                        className="border border-black px-2 py-3 font-semibold align-middle"
+                      >
+                        Penyusun
+                      </td>
+                    )}
 
-                <td className="border border-black py-3 text-center">
-                  1
-                </td>
+                    <td className="border border-black py-3 text-center">
+                      {index +
+                        1}
+                    </td>
 
-                <td className="border border-black px-2 py-3">
-                  -
-                </td>
+                    <td className="border border-black px-2 py-3">
+                      <div className="print:hidden">
+                        <select
+                          value={
+                            item?.id_asesor ||
+                            ""
+                          }
+                          onChange={(
+                            e
+                          ) =>
+                            handleAsesorChange(
+                              "penyusun",
+                              index,
+                              e
+                                .target
+                                .value
+                            )
+                          }
+                          disabled={
+                            savingValidation
+                          }
+                          className="w-full bg-transparent font-semibold outline-none"
+                        >
+                          <option value="">
+                            Pilih Asesor
+                          </option>
 
-                <td className="h-[90px] border border-black px-2 py-3"></td>
-              </tr>
+                          {asesorList.map(
+                            (
+                              asesor
+                            ) => (
+                              <option
+                                key={
+                                  asesor.id_user
+                                }
+                                value={
+                                  asesor.id_user
+                                }
+                              >
+                                {
+                                  asesor.nama_lengkap
+                                }
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
 
-              <tr>
-                <td className="border border-black px-2 py-3 font-semibold">
-                  Validator
-                </td>
+                      <p className="hidden print:block">
+                        {
+                          item?.nama_lengkap ||
+                          "-"
+                        }
+                      </p>
+                    </td>
 
-                <td className="border border-black py-3 text-center">
-                  1
-                </td>
+                    <td className="h-[90px] border border-black px-2 py-3">
+                      <div className="flex flex-col items-center justify-center">
+                        {item?.ttd_path && (
+                          <img
+                            src={getImageUrl(
+                              item.ttd_path
+                            )}
+                            className="max-h-16 max-w-[220px] object-contain"
+                            alt="TTD Penyusun"
+                          />
+                        )}
 
-                <td className="border border-black px-2 py-3">
-                  -
-                </td>
+                        <div className="mt-2 w-[150px] border-b border-black"></div>
 
-                <td className="h-[90px] border border-black px-2 py-3"></td>
-              </tr>
+                        <p className="mt-2 text-center text-[12px]">
+                          {formatTanggal(
+                            item?.tanggal
+                          )}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              )}
+
+              {validator.map(
+                (
+                  item,
+                  index
+                ) => (
+                  <tr
+                    key={`validator-${index}`}
+                  >
+                    {index ===
+                      0 && (
+                      <td
+                        rowSpan={
+                          validator.length
+                        }
+                        className="border border-black px-2 py-3 font-semibold align-middle"
+                      >
+                        Validator
+                      </td>
+                    )}
+
+                    <td className="border border-black py-3 text-center">
+                      {index +
+                        1}
+                    </td>
+
+                    <td className="border border-black px-2 py-3">
+                      <div className="print:hidden">
+                        <select
+                          value={
+                            item?.id_asesor ||
+                            ""
+                          }
+                          onChange={(
+                            e
+                          ) =>
+                            handleAsesorChange(
+                              "validator",
+                              index,
+                              e
+                                .target
+                                .value
+                            )
+                          }
+                          disabled={
+                            savingValidation
+                          }
+                          className="w-full bg-transparent font-semibold outline-none"
+                        >
+                          <option value="">
+                            Pilih Asesor
+                          </option>
+
+                          {asesorList.map(
+                            (
+                              asesor
+                            ) => (
+                              <option
+                                key={
+                                  asesor.id_user
+                                }
+                                value={
+                                  asesor.id_user
+                                }
+                              >
+                                {
+                                  asesor.nama_lengkap
+                                }
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+
+                      <p className="hidden print:block">
+                        {
+                          item?.nama_lengkap ||
+                          "-"
+                        }
+                      </p>
+                    </td>
+
+                    <td className="h-[90px] border border-black px-2 py-3">
+                      <div className="flex flex-col items-center justify-center">
+                        {item?.ttd_path && (
+                          <img
+                            src={getImageUrl(
+                              item.ttd_path
+                            )}
+                            className="max-h-16 max-w-[220px] object-contain"
+                            alt="TTD Validator"
+                          />
+                        )}
+
+                        <div className="mt-2 w-[150px] border-b border-black"></div>
+
+                        <p className="mt-2 text-center text-[12px]">
+                          {formatTanggal(
+                            item?.tanggal
+                          )}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              )}
             </tbody>
           </table>
+
+          <div className="mt-3 flex gap-3 print:hidden">
+            <button
+              type="button"
+              onClick={
+                addPenyusun
+              }
+              className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white hover:bg-slate-900"
+            >
+              <Plus
+                size={16}
+              />
+              Tambah Penyusun
+            </button>
+
+            <button
+              type="button"
+              onClick={
+                addValidator
+              }
+              className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white hover:bg-slate-900"
+            >
+              <Plus
+                size={16}
+              />
+              Tambah Validator
+            </button>
+
+            {penyusun.length >
+              1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  removePenyusun(
+                    penyusun.length -
+                      1
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200"
+              >
+                <Trash2
+                  size={16}
+                />
+                Hapus Penyusun
+              </button>
+            )}
+
+            {validator.length >
+              1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  removeValidator(
+                    validator.length -
+                      1
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200"
+              >
+                <Trash2
+                  size={16}
+                />
+                Hapus Validator
+              </button>
+            )}
+          </div>
         </div>
       </main>
 
@@ -751,12 +1601,24 @@ export default function FRIA03Komite() {
               ? "Edit Pertanyaan"
               : "Tambah Pertanyaan"
           }
-          form={form}
-          unitOptions={unitOptions}
-          saving={saving}
-          onChange={handleChange}
-          onSubmit={savePertanyaan}
-          onClose={closeModal}
+          form={
+            form
+          }
+          unitOptions={
+            unitOptions
+          }
+          saving={
+            saving
+          }
+          onChange={
+            handleChange
+          }
+          onSubmit={
+            savePertanyaan
+          }
+          onClose={
+            closeModal
+          }
         />
       )}
     </div>
@@ -764,7 +1626,7 @@ export default function FRIA03Komite() {
 }
 
 function HeaderTable({
-  skema,
+  skema
 }) {
   return (
     <table className="w-full border-collapse border border-black text-[13px]">
@@ -788,8 +1650,10 @@ function HeaderTable({
           </td>
 
           <td className="border border-black px-2 py-1">
-            {skema?.judul_skema ||
-              "-"}
+            {
+              skema?.judul_skema ||
+              "-"
+            }
           </td>
         </tr>
 
@@ -803,8 +1667,10 @@ function HeaderTable({
           </td>
 
           <td className="border border-black px-2 py-1">
-            {skema?.kode_skema ||
-              "-"}
+            {
+              skema?.kode_skema ||
+              "-"
+            }
           </td>
         </tr>
       </tbody>
@@ -814,7 +1680,7 @@ function HeaderTable({
 
 function UnitTable({
   kelompok,
-  list,
+  list
 }) {
   return (
     <table className="mb-4 w-full border-collapse border border-black text-[13px]">
@@ -840,7 +1706,10 @@ function UnitTable({
 
       <tbody>
         {list.map(
-          (unit, index) => (
+          (
+            unit,
+            index
+          ) => (
             <tr
               key={
                 unit?.id_unit ||
@@ -854,7 +1723,8 @@ function UnitTable({
               </td>
 
               <td className="border border-black py-2 text-center">
-                {index + 1}
+                {index +
+                  1}
               </td>
 
               <td className="border border-black px-2 py-2">
@@ -883,12 +1753,14 @@ function QuestionModal({
   saving,
   onChange,
   onSubmit,
-  onClose,
+  onClose
 }) {
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 px-4">
       <form
-        onSubmit={onSubmit}
+        onSubmit={
+          onSubmit
+        }
         className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl"
       >
         <div className="mb-5 flex items-center justify-between">
@@ -898,10 +1770,14 @@ function QuestionModal({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={
+              onClose
+            }
             className="rounded-xl bg-slate-100 p-2 text-slate-600 hover:bg-slate-200"
           >
-            <X size={18} />
+            <X
+              size={18}
+            />
           </button>
         </div>
 
@@ -916,7 +1792,9 @@ function QuestionModal({
               value={
                 form.id_unit
               }
-              onChange={onChange}
+              onChange={
+                onChange
+              }
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-orange-500"
             >
               <option value="">
@@ -924,7 +1802,9 @@ function QuestionModal({
               </option>
 
               {unitOptions.map(
-                (unit) => (
+                (
+                  unit
+                ) => (
                   <option
                     key={
                       unit?.id_unit
@@ -933,13 +1813,17 @@ function QuestionModal({
                       unit?.id_unit
                     }
                   >
-                    {getUnitKode(
-                      unit
-                    )}{" "}
+                    {
+                      getUnitKode(
+                        unit
+                      )
+                    }{" "}
                     -{" "}
-                    {getUnitJudul(
-                      unit
-                    )}
+                    {
+                      getUnitJudul(
+                        unit
+                      )
+                    }
                   </option>
                 )
               )}
@@ -965,7 +1849,9 @@ function QuestionModal({
               value={
                 form.urutan
               }
-              onChange={onChange}
+              onChange={
+                onChange
+              }
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-orange-500"
               placeholder="Urutan pertanyaan"
             />
@@ -981,7 +1867,9 @@ function QuestionModal({
               value={
                 form.pertanyaan
               }
-              onChange={onChange}
+              onChange={
+                onChange
+              }
               rows={5}
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-orange-500"
               placeholder="Masukkan pertanyaan observasi..."
@@ -992,7 +1880,9 @@ function QuestionModal({
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={
+              onClose
+            }
             className="rounded-xl bg-slate-100 px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200"
           >
             Batal
@@ -1000,7 +1890,9 @@ function QuestionModal({
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={
+              saving
+            }
             className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
           >
             {saving ? (
@@ -1009,7 +1901,9 @@ function QuestionModal({
                 className="animate-spin"
               />
             ) : (
-              <Save size={17} />
+              <Save
+                size={17}
+              />
             )}
 
             {saving
@@ -1023,7 +1917,7 @@ function QuestionModal({
 }
 
 function LoadingScreen({
-  title,
+  title
 }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white">
@@ -1032,6 +1926,7 @@ function LoadingScreen({
           size={22}
           className="animate-spin"
         />
+
         {title}
       </div>
     </div>
@@ -1039,7 +1934,7 @@ function LoadingScreen({
 }
 
 function EmptyState({
-  text,
+  text
 }) {
   return (
     <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center text-sm font-bold text-slate-500">
@@ -1058,20 +1953,29 @@ function normalizePertanyaan(
     data?.questions ||
     [];
 
-  return Array.isArray(list)
+  return Array.isArray(
+    list
+  )
     ? [...list].sort(
-        (a, b) =>
+        (
+          a,
+          b
+        ) =>
           Number(
-            a?.urutan || 0
+            a?.urutan ||
+              0
           ) -
           Number(
-            b?.urutan || 0
+            b?.urutan ||
+              0
           )
       )
     : [];
 }
 
-function getSkema(data) {
+function getSkema(
+  data
+) {
   const skema =
     data?.skema ||
     data?.Skema ||
@@ -1083,20 +1987,18 @@ function getSkema(data) {
       skema?.id_skema ||
       data?.id_skema ||
       "",
-
     judul_skema:
       skema?.judul_skema ||
       skema?.nama_skema ||
       data?.judul_skema ||
       data?.nama_skema ||
       "-",
-
     kode_skema:
       skema?.kode_skema ||
       skema?.nomor_skema ||
       data?.kode_skema ||
       data?.nomor_skema ||
-      "-",
+      "-"
   };
 }
 
@@ -1106,7 +2008,9 @@ function getUnitKelompokNama(
 ) {
   const unit =
     unitOptions.find(
-      (option) =>
+      (
+        option
+      ) =>
         String(
           option?.id_unit
         ) ===
@@ -1116,30 +2020,92 @@ function getUnitKelompokNama(
     ) || {};
 
   return (
-    item?.unit?.skemaUnit?.[0]
-      ?.kelompok?.nama_kelompok ||
+    item?.unit
+      ?.skemaUnit?.[0]
+      ?.kelompok
+      ?.nama_kelompok ||
+    unit?.kelompok
+      ?.nama_kelompok ||
     unit?.nama_kelompok ||
-    unit?.kelompok?.nama_kelompok ||
     unit?.kelompok_pekerjaan ||
     "Kelompok Pekerjaan"
   );
 }
 
-function getUnitKode(unit) {
+function getUnitKode(
+  unit
+) {
   return (
     unit?.kode_unit ||
+    unit?.unit?.kode_unit ||
     unit?.kode ||
+    unit?.unit?.kode ||
     unit?.kode_unit_kompetensi ||
+    unit?.unit?.kode_unit_kompetensi ||
     "-"
   );
 }
 
-function getUnitJudul(unit) {
+function getUnitJudul(
+  unit
+) {
   return (
     unit?.judul_unit ||
+    unit?.unit?.judul_unit ||
     unit?.nama_unit ||
+    unit?.unit?.nama_unit ||
     unit?.judul ||
     unit?.nama ||
     "-"
+  );
+}
+
+function formatTanggal(
+  value
+) {
+  if (!value) {
+    return "-";
+  }
+
+  const stringValue =
+    String(value);
+
+  if (
+    /^\d{4}-\d{2}-\d{2}$/.test(
+      stringValue
+    )
+  ) {
+    const [
+      year,
+      month,
+      day
+    ] =
+      stringValue.split(
+        "-"
+      );
+
+    return `${day}/${month}/${year}`;
+  }
+
+  const date =
+    new Date(
+      stringValue
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return stringValue;
+  }
+
+  return date.toLocaleDateString(
+    "id-ID",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    }
   );
 }

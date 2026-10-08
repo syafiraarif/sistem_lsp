@@ -34,32 +34,38 @@ const lupaPasswordAsesorController = require("../controllers/asesor/lupapassword
 const hasilKeputusanController = require("../controllers/asesor/hasilKeputusanAsesmen.controller");
 const instrumenSkemaController = require("../controllers/asesor/instrumenSkema.controller");
 
-/* ===================================================
-   AUTH ASESOR
-=================================================== */
+router.use(
+  authMiddleware,
+  roleMiddleware.asesorOnly
+);
 
-router.use(authMiddleware, roleMiddleware.asesorOnly);
+router.get(
+  "/profile",
+  profileController.getProfile
+);
 
-/* ===================================================
-   PROFILE
-=================================================== */
-
-router.get("/profile", profileController.getProfile);
-router.put("/profile", profileController.updateProfile);
+router.put(
+  "/profile",
+  profileController.updateProfile
+);
 
 router.put(
   "/profile/upload-ttd",
   (req, res, next) => {
-    uploadMiddleware(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message,
-        });
-      }
+    uploadMiddleware(
+      req,
+      res,
+      (err) => {
+        if (err) {
+          return res.status(400).json({
+            success: false,
+            message: err.message
+          });
+        }
 
-      next();
-    });
+        next();
+      }
+    );
   },
   profileController.uploadTTD
 );
@@ -67,25 +73,28 @@ router.put(
 router.put(
   "/profile/upload-foto",
   (req, res, next) => {
-    uploadMiddleware(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message,
-        });
-      }
+    uploadMiddleware(
+      req,
+      res,
+      (err) => {
+        if (err) {
+          return res.status(400).json({
+            success: false,
+            message: err.message
+          });
+        }
 
-      next();
-    });
+        next();
+      }
+    );
   },
   profileController.uploadFotoProfil
 );
 
-/* ===================================================
-   JADWAL
-=================================================== */
-
-router.get("/jadwal-saya", jadwalAsesorController.getJadwalSaya);
+router.get(
+  "/jadwal-saya",
+  jadwalAsesorController.getJadwalSaya
+);
 
 router.get(
   "/jadwal-uji-kompetensi",
@@ -122,46 +131,110 @@ router.get(
   jadwalAsesorController.getListAsesor
 );
 
-router.get("/skema", instrumenSkemaController.getSkemaList);
-router.get("/skema/:id_skema", instrumenSkemaController.getSkemaDetail);
-router.get("/skema/:id_skema/fr-ia02", instrumenSkemaController.getFrIa02Master);
-router.get("/skema/:id_skema/fr-ia02/unit", instrumenSkemaController.getFrIa02UnitBySkema);
-router.post("/skema/:id_skema/fr-ia02", instrumenSkemaController.saveFrIa02Master);
-router.get("/skema/:id_skema/fr-ia03", instrumenSkemaController.getFrIa03Master);
-router.post("/skema/:id_skema/fr-ia03/pertanyaan", instrumenSkemaController.createFrIa03MasterPertanyaan);
-router.put("/skema/:id_skema/fr-ia03/pertanyaan/:id_pertanyaan", instrumenSkemaController.updateFrIa03MasterPertanyaan);
-router.delete("/skema/:id_skema/fr-ia03/pertanyaan/:id_pertanyaan", instrumenSkemaController.deleteFrIa03MasterPertanyaan);
-router.get("/skema/:id_skema/fr-ia05", instrumenSkemaController.getFrIa05Master);
-router.post("/skema/:id_skema/fr-ia05", instrumenSkemaController.saveFrIa05Master);
+router.get(
+  "/skema",
+  instrumenSkemaController.getSkemaList
+);
 
-/* ===================================================
-   MKVA
-=================================================== */
+router.get(
+  "/skema/:id_skema",
+  instrumenSkemaController.getSkemaDetail
+);
 
-router.get("/mkva/jadwal", mkvaController.getJadwalMkva);
+router.get(
+  "/skema/:id_skema/fr-ia02",
+  instrumenSkemaController.getFrIa02Master
+);
 
-router.get("/mkva/jadwal/:id_jadwal", mkvaController.getMkvaByJadwal);
+router.get(
+  "/skema/:id_skema/fr-ia02/unit",
+  instrumenSkemaController.getFrIa02UnitBySkema
+);
 
-router.post("/mkva/:id_jadwal/submit", mkvaController.submitMkva);
+router.post(
+  "/skema/:id_skema/fr-ia02",
+  instrumenSkemaController.saveFrIa02Master
+);
 
-router.put("/mkva/:id_mkva/update", mkvaController.updateMkva);
+router.get(
+  "/skema/:id_skema/fr-ia03",
+  instrumenSkemaController.getFrIa03Master
+);
 
-router.get("/mkva/:id_mkva/pdf", mkvaController.downloadPdf);
+router.put(
+  "/skema/:id_skema/fr-ia03",
+  instrumenSkemaController.saveFrIa03Master
+);
 
-router.get("/mkva/:id_mkva", mkvaController.getDetailMkva);
+router.post(
+  "/skema/:id_skema/fr-ia03/pertanyaan",
+  instrumenSkemaController.createFrIa03MasterPertanyaan
+);
 
-/* ===================================================
-   VERIFIKASI TUK
-=================================================== */
+router.put(
+  "/skema/:id_skema/fr-ia03/pertanyaan/:id_pertanyaan",
+  instrumenSkemaController.updateFrIa03MasterPertanyaan
+);
+
+router.delete(
+  "/skema/:id_skema/fr-ia03/pertanyaan/:id_pertanyaan",
+  instrumenSkemaController.deleteFrIa03MasterPertanyaan
+);
+
+router.get(
+  "/skema/:id_skema/fr-ia05",
+  instrumenSkemaController.getFrIa05Master
+);
+
+router.post(
+  "/skema/:id_skema/fr-ia05",
+  instrumenSkemaController.saveFrIa05Master
+);
+
+router.get(
+  "/mkva/jadwal",
+  mkvaController.getJadwalMkva
+);
+
+router.get(
+  "/mkva/jadwal/:id_jadwal",
+  mkvaController.getMkvaByJadwal
+);
+
+router.post(
+  "/mkva/:id_jadwal/submit",
+  mkvaController.submitMkva
+);
+
+router.put(
+  "/mkva/:id_mkva/update",
+  mkvaController.updateMkva
+);
+
+router.get(
+  "/mkva/:id_mkva/pdf",
+  mkvaController.downloadPdf
+);
+
+router.get(
+  "/mkva/:id_mkva",
+  mkvaController.getDetailMkva
+);
 
 router.get(
   "/verifikasi-tuk/jadwal",
   verifikasiTukController.getJadwalVerifikasi
 );
 
-router.get("/verifikasi-tuk/form", verifikasiTukController.getForm);
+router.get(
+  "/verifikasi-tuk/form",
+  verifikasiTukController.getForm
+);
 
-router.post("/verifikasi-tuk/:id_jadwal/submit", verifikasiTukController.submit);
+router.post(
+  "/verifikasi-tuk/:id_jadwal/submit",
+  verifikasiTukController.submit
+);
 
 router.put(
   "/verifikasi-tuk/:id_verifikasi/update",
@@ -173,25 +246,35 @@ router.get(
   verifikasiTukController.downloadPdf
 );
 
-router.get("/verifikasi-tuk/:id_jadwal", verifikasiTukController.getDetail);
+router.get(
+  "/verifikasi-tuk/:id_jadwal",
+  verifikasiTukController.getDetail
+);
 
-/* ===================================================
-   PRESENSI
-=================================================== */
+router.get(
+  "/presensi/cek",
+  presensiController.cekPresensi
+);
 
-router.get("/presensi/cek", presensiController.cekPresensi);
+router.post(
+  "/presensi",
+  presensiController.presensiAsesor
+);
 
-router.post("/presensi", presensiController.presensiAsesor);
+router.get(
+  "/presensi/:id_jadwal",
+  presensiController.getDetailPresensi
+);
 
-router.get("/presensi/:id_jadwal", presensiController.getDetailPresensi);
+router.get(
+  "/presensi/list/:id_jadwal",
+  presensiController.listPresensi
+);
 
-router.get("/presensi/list/:id_jadwal", presensiController.listPresensi);
-
-router.get("/presensi/pdf/:id_jadwal", presensiController.downloadPdf);
-
-/* ===================================================
-   FR.AK.01
-=================================================== */
+router.get(
+  "/presensi/pdf/:id_jadwal",
+  presensiController.downloadPdf
+);
 
 router.get(
   "/fr-ak01",
@@ -213,10 +296,6 @@ router.get(
   frAk01Controller.listFrAk01
 );
 
-/* ===================================================
-   FR.AK.01 - ASESOR PENGUJI
-=================================================== */
-
 router.get(
   "/fr-ak01/asesor/:id_jadwal/:id_peserta",
   frAk01Controller.getFrAk01Asesor
@@ -227,26 +306,41 @@ router.get(
   frAk01Controller.downloadPdfFrAk01
 );
 
-/* ========================= FR.AK.02 ========================= */
+router.get(
+  "/fr-ak02",
+  frAk02Controller.getFrAk02
+);
 
-router.get("/fr-ak02", frAk02Controller.getFrAk02);
+router.post(
+  "/fr-ak02",
+  frAk02Controller.submitFrAk02
+);
 
-router.post("/fr-ak02", frAk02Controller.submitFrAk02);
+router.put(
+  "/fr-ak02/:id",
+  frAk02Controller.updateFrAk02
+);
 
-router.put("/fr-ak02/:id", frAk02Controller.updateFrAk02);
-
-router.get("/fr-ak02/list/:id_jadwal", frAk02Controller.listFrAk02);
+router.get(
+  "/fr-ak02/list/:id_jadwal",
+  frAk02Controller.listFrAk02
+);
 
 router.get(
   "/fr-ak02/pdf/:id_jadwal/:id_peserta",
   frAk02Controller.generatePdfFrAk02
 );
 
-// ======================= FR.AK.04 =======================
-router.get("/fr-ak04/:id_peserta", FrAk04Controller.getFrAk04ByPeserta);
-router.get("/fr-ak04/pdf/:id_peserta", FrAk04Controller.generatePdfFrAk04);
+router.get(
+  "/fr-ak04/:id_peserta",
+  FrAk04Controller.getFrAk04ByPeserta
+);
 
-/* ========================= FR.AK.05 ========================= */
+router.get(
+  "/fr-ak04/pdf/:id_peserta",
+  FrAk04Controller.generatePdfFrAk04
+);
+
 router.get(
   "/fr-ak05",
   frAk05Controller.getFrAk05
@@ -272,51 +366,80 @@ router.get(
   frAk05Controller.downloadPdfFrAk05
 );
 
-/* ===================================================
-   FR.AK.06
-=================================================== */
+router.get(
+  "/fr-ak06",
+  frAk06Controller.getFrAk06
+);
 
-router.get("/fr-ak06", frAk06Controller.getFrAk06);
+router.post(
+  "/fr-ak06",
+  frAk06Controller.submitFrAk06
+);
 
-router.post("/fr-ak06", frAk06Controller.submitFrAk06);
+router.put(
+  "/fr-ak06/:id",
+  frAk06Controller.updateFrAk06
+);
 
-router.put("/fr-ak06/:id", frAk06Controller.updateFrAk06);
+router.get(
+  "/fr-ak06/list/:id_jadwal",
+  frAk06Controller.listFrAk06
+);
 
-router.get("/fr-ak06/list/:id_jadwal", frAk06Controller.listFrAk06);
+router.get(
+  "/fr-ak06/:id/pdf",
+  frAk06Controller.downloadPdf
+);
 
-router.get("/fr-ak06/:id/pdf", frAk06Controller.downloadPdf);
+router.get(
+  "/fr-ak07",
+  frAk07Controller.getFrAk07
+);
 
-/* ===================================================
-   FR.AK.07
-=================================================== */
+router.post(
+  "/fr-ak07",
+  frAk07Controller.submitFrAk07
+);
 
-router.get("/fr-ak07", frAk07Controller.getFrAk07);
+router.put(
+  "/fr-ak07/:id",
+  frAk07Controller.updateFrAk07
+);
 
-router.post("/fr-ak07", frAk07Controller.submitFrAk07);
+router.get(
+  "/fr-ak07/list/:id_jadwal",
+  frAk07Controller.listFrAk07
+);
 
-router.put("/fr-ak07/:id", frAk07Controller.updateFrAk07);
+router.get(
+  "/fr-ak07/:id/pdf",
+  frAk07Controller.downloadPdfFrAk07
+);
 
-router.get("/fr-ak07/list/:id_jadwal", frAk07Controller.listFrAk07);
+router.get(
+  "/fr-mapa01",
+  frMapa01Controller.getFrMapa01
+);
 
-router.get("/fr-ak07/:id/pdf", frAk07Controller.downloadPdfFrAk07);
+router.post(
+  "/fr-mapa01",
+  frMapa01Controller.submitFrMapa01
+);
 
-/* ===================================================
-   FR.MAPA.01
-=================================================== */
+router.put(
+  "/fr-mapa01/:id",
+  frMapa01Controller.updateFrMapa01
+);
 
-router.get("/fr-mapa01", frMapa01Controller.getFrMapa01);
+router.get(
+  "/fr-mapa01/list/:id_jadwal",
+  frMapa01Controller.listFrMapa01
+);
 
-router.post("/fr-mapa01", frMapa01Controller.submitFrMapa01);
-
-router.put("/fr-mapa01/:id", frMapa01Controller.updateFrMapa01);
-
-router.get("/fr-mapa01/list/:id_jadwal", frMapa01Controller.listFrMapa01);
-
-router.get("/fr-mapa01/:id/pdf", frMapa01Controller.downloadPdfFrMapa01);
-
-/* ===================================================
-   FR.MAPA.02
-=================================================== */
+router.get(
+  "/fr-mapa01/:id/pdf",
+  frMapa01Controller.downloadPdfFrMapa01
+);
 
 router.post(
   "/fr-mapa02/generate",
@@ -343,34 +466,55 @@ router.get(
   frMapa02Controller.getMapa02ByJadwalPeserta
 );
 
-/* ===================================================
-   FR.IA.02 - KOMITE TEKNIS
-=================================================== */
+router.get(
+  "/fr-ia02/tugas",
+  frIa02Controller.getTugasKomite
+);
 
-router.get("/fr-ia02/tugas", frIa02Controller.getTugasKomite);
+router.get(
+  "/fr-ia02",
+  frIa02Controller.getDetail
+);
 
-router.get("/fr-ia02", frIa02Controller.getDetail);
-router.get("/fr-ia02/penguji/:id_jadwal/:id_peserta", frIa02Controller.getFrIa02Penguji);
-router.post("/fr-ia02/penguji/:id_jadwal/:id_peserta/acc", frIa02Controller.accFrIa02Penguji);
+router.get(
+  "/fr-ia02/penguji/:id_jadwal/:id_peserta",
+  frIa02Controller.getFrIa02Penguji
+);
 
-router.post("/fr-ia02", frIa02Controller.createFrIa02);
+router.post(
+  "/fr-ia02/penguji/:id_jadwal/:id_peserta/acc",
+  frIa02Controller.accFrIa02Penguji
+);
 
-router.put("/fr-ia02/:id", frIa02Controller.updateFrIa02);
+router.post(
+  "/fr-ia02",
+  frIa02Controller.createFrIa02
+);
 
-router.get("/fr-ia02/list/:id_jadwal", frIa02Controller.getByJadwal);
+router.put(
+  "/fr-ia02/:id",
+  frIa02Controller.updateFrIa02
+);
 
-router.get("/fr-ia02/:id/pdf", frIa02Controller.downloadPdf);
+router.get(
+  "/fr-ia02/list/:id_jadwal",
+  frIa02Controller.getByJadwal
+);
 
-router.delete("/fr-ia02/:id", frIa02Controller.deleteFrIa02);
+router.get(
+  "/fr-ia02/:id/pdf",
+  frIa02Controller.downloadPdf
+);
+
+router.delete(
+  "/fr-ia02/:id",
+  frIa02Controller.deleteFrIa02
+);
 
 router.get(
   "/fr-ia02/unit/:id_jadwal",
   frIa02Controller.getUnitBySkema
 );
-
-/* ===================================================
-   FR.IA.03 - KOMITE TEKNIS
-=================================================== */
 
 router.post(
   "/fr-ia03/komite/pertanyaan",
@@ -397,9 +541,6 @@ router.get(
   frIa03KomiteController.downloadPdf
 );
 
-/* ===================================================
-   FR.IA.03 - ASESOR PENGUJI
-=================================================== */
 router.get(
   "/fr-ia03/asesor/:id_jadwal/:id_peserta",
   frIa03AsesorController.getForm
@@ -415,24 +556,10 @@ router.get(
   frIa03AsesorController.downloadPdf
 );
 
-/* ===================================================
-   FR.IA.01 - ASESOR PENGUJI
-=================================================== */
-
 router.get(
   "/fr-ia01/tugas",
   frIa01Controller.getTugasAsesor
 );
-
-// router.get(
-//   "/fr-ia01/asesor/:id",
-//   frIa01Controller.getForm
-// );
-
-// router.post(
-//   "/fr-ia01/asesor/jawaban",
-//   frIa01Controller.saveJawaban
-// );
 
 router.get(
   "/fr-ia01/asesor/:id/pdf",
@@ -463,10 +590,6 @@ router.get(
   "/fr-ia01/:id/pdf",
   frIa01Controller.downloadPdf
 );
-
-/* ===================================================
-   FR.IA.05 - KOMITE TEKNIS
-=================================================== */
 
 router.get(
   "/fr-ia05/komite/jadwal/:id_jadwal",
@@ -515,25 +638,20 @@ router.get(
   frIa05KomiteController.downloadPdf
 );
 
-/* ===================================================
-   FR.IA.05 - ASESI
-=================================================== */
-
 router.get(
   "/fr-ia05/asesi/:id_fr_ia_05/:id_peserta",
   frIa05AsesiController.getSoal
 );
 
-router.post("/fr-ia05/asesi/submit", frIa05AsesiController.submit);
+router.post(
+  "/fr-ia05/asesi/submit",
+  frIa05AsesiController.submit
+);
 
 router.get(
   "/fr-ia05/asesi/hasil/:id_fr_ia_05/:id_peserta",
   frIa05AsesiController.getHasil
 );
-
-/* ===================================================
-   FR.IA.05 - ASESOR PENGUJI
-=================================================== */
 
 router.get(
   "/fr-ia05/asesor/hasil/:id_peserta",
@@ -560,20 +678,24 @@ router.get(
   frIa05PengujiController.downloadPdf
 );
 
-/* ===================================================
-   HASIL KEPUTUSAN ASESMEN
-=================================================== */
+router.post(
+  "/hasil-keputusan",
+  hasilKeputusanController.submitKeputusan
+);
 
-router.post("/hasil-keputusan", hasilKeputusanController.submitKeputusan);
+router.get(
+  "/hasil-keputusan/:id_peserta",
+  hasilKeputusanController.getKeputusan
+);
 
-router.get("/hasil-keputusan/:id_peserta", hasilKeputusanController.getKeputusan);
+router.get(
+  "/hasil-akhir/:id_peserta",
+  hasilKeputusanController.getHasilAkhir
+);
 
-router.get("/hasil-akhir/:id_peserta", hasilKeputusanController.getHasilAkhir);
-
-/* ===================================================
-   PASSWORD
-=================================================== */
-
-router.put("/change-password", lupaPasswordAsesorController.changePassword);
+router.put(
+  "/change-password",
+  lupaPasswordAsesorController.changePassword
+);
 
 module.exports = router;
