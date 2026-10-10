@@ -31,6 +31,7 @@ const elemenKukController = require("../controllers/admin/elemenKuk.controller")
 const pembayaranController = require("../controllers/admin/pembayaran.controller");
 const feedbackAdminController = require("../controllers/admin/feedback.controller");
 const frIa05AdminController = require("../controllers/admin/frIa05.controller");
+const frIaController = require('../controllers/admin/adminFrIa.controller');
 
 // PROTECT SEMUA ROUTE ADMIN
 router.use(authMiddleware, roleMiddleware.adminOnly);
@@ -208,5 +209,18 @@ router.post("/fr-ia05/paket", frIa05AdminController.createPaket);
 router.post("/fr-ia05/soal", frIa05AdminController.uploadGambar, frIa05AdminController.createSoal);
 router.put("/fr-ia05/soal/:id", frIa05AdminController.uploadGambar, frIa05AdminController.updateSoal);
 router.delete("/fr-ia05/soal/:id", frIa05AdminController.deleteSoal);
+
+// FR.IA.02
+router.get('/fr-ia02/:id_skema', frIaController.getFrIa02Master);
+router.post('/fr-ia02', frIaController.saveFrIa02Master);
+router.get('/fr-ia02/unit/:id_skema', frIaController.getUnitBySkema);
+
+// FR.IA.03
+router.get('/fr-ia03/:id_skema', frIaController.getFrIa03Master);
+router.post('/fr-ia03/header', frIaController.saveFrIa03Header); 
+router.post('/fr-ia03/pertanyaan', frIaController.savePertanyaanIa03);
+router.put('/fr-ia03/pertanyaan/:id', frIaController.updatePertanyaanIa03);
+router.delete('/fr-ia03/pertanyaan/:id', frIaController.deletePertanyaanIa03);
+
 
 module.exports = router;

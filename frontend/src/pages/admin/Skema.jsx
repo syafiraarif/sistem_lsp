@@ -24,7 +24,6 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCcw,
-  FileQuestion
 } from "lucide-react";
 
 const Skema = () => {
@@ -89,7 +88,7 @@ const Skema = () => {
     if (!path) return null;
     if (path.startsWith("blob:") || path.startsWith("http")) return path;
     const cleanPath = path.replace(/^(\/?uploads\/|\/)/, "");
-    return `http://localhost:3000/uploads/${cleanPath}`;
+    return `${import.meta.env.VITE_API_BASE.replace('/api', '')}/uploads/${cleanPath}`;
   };
 
   const isPdfFile = (filename) => {
@@ -387,7 +386,7 @@ const Skema = () => {
                 <TableHead>Kode</TableHead>
                 <TableHead>Judul Skema</TableHead>
                 <TableHead center>Status</TableHead>
-                <TableHead center>Kelola Persyaratan</TableHead>
+                <TableHead center>Kelola Persyaratan & Instrumen</TableHead>
                 <TableHead center>Aksi</TableHead>
               </tr>
             </thead>
@@ -416,7 +415,7 @@ const Skema = () => {
                       <span className="font-mono text-[13px] font-bold text-[#CC6B27]">{item.kode_skema}</span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="max-w-[420px] text-[13.5px] font-bold text-[#071E3D]">{item.judul_skema}</div>
+                      <div className="max-w-[320px] text-[13.5px] font-bold text-[#071E3D]">{item.judul_skema}</div>
                       <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/50">
                         {item.jenis_skema?.toUpperCase()} {item.level_kkni ? `• LEVEL ${item.level_kkni}` : ""}
                       </div>
@@ -426,27 +425,51 @@ const Skema = () => {
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan`)}
-                          className="w-[145px] rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-3 py-1.5 text-[11px] font-bold text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
-                        >
-                          Persyaratan Dasar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan-tuk`)}
-                          className="w-[145px] rounded-lg border border-[#CC6B27]/30 bg-[#CC6B27]/10 px-3 py-1.5 text-[11px] font-bold text-[#CC6B27] transition-all hover:bg-[#CC6B27] hover:text-white"
-                        >
-                          Persyaratan TUK
-                        </button>
-                        <button
-                        type="button"
-                        onClick={() => navigate(`/admin/skema/${item.id_skema}/bank-soal`)}
-                        className="w-[145px] flex items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-bold text-indigo-700 transition-all hover:bg-indigo-600 hover:border-indigo-600 hover:text-white"
-                      >
-                          Bank Soal (FR.IA.05)
-                      </button>
+                        {/* Persyaratan */}
+                        <div className="flex gap-2 w-full justify-center">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan`)}
+                            className="w-[145px] rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-3 py-1.5 text-[11px] font-bold text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
+                          >
+                            Persyaratan Dasar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/skema/${item.id_skema}/persyaratan-tuk`)}
+                            className="w-[145px] rounded-lg border border-[#CC6B27]/30 bg-[#CC6B27]/10 px-3 py-1.5 text-[11px] font-bold text-[#CC6B27] transition-all hover:bg-[#CC6B27] hover:text-white"
+                          >
+                            Persyaratan TUK
+                          </button>
+                        </div>
+                        
+                        {/* Instrumen Uji FR.IA */}
+                        <div className="flex gap-2 w-full justify-center">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/skema/${item.id_skema}/fr-ia-02`)}
+                            className="w-[145px] rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-bold text-blue-700 transition-all hover:bg-blue-600 hover:text-white"
+                          >
+                            Praktik (FR.IA.02)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/skema/${item.id_skema}/fr-ia-03`)}
+                            className="w-[145px] rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-[11px] font-bold text-purple-700 transition-all hover:bg-purple-600 hover:text-white"
+                          >
+                            Observasi (FR.IA.03)
+                          </button>
+                        </div>
+                        
+                        <div className="flex gap-2 w-full justify-center">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/skema/${item.id_skema}/bank-soal`)}
+                            className="w-[298px] flex items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-bold text-indigo-700 transition-all hover:bg-indigo-600 hover:border-indigo-600 hover:text-white"
+                          >
+                            Bank Soal Ujian Tulis (FR.IA.05)
+                          </button>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-center">
@@ -521,6 +544,9 @@ const Skema = () => {
           </div>
         )}
       </div>
+
+      {/* Sisa Modal dll tetap sama, tidak dirubah... */}
+      {/* ... */}
 
       {/* MODAL FORM CREATE/EDIT */}
       {showModal && (

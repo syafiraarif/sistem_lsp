@@ -25,7 +25,7 @@ const FrIa02 = sequelize.define("fr_ia_02", {
 
   id_asesor: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: true
   },
 
   id_asesi: {
@@ -37,6 +37,16 @@ const FrIa02 = sequelize.define("fr_ia_02", {
     type: DataTypes.DATEONLY,
     allowNull: true
   },
+
+  status_validasi: {
+    type: DataTypes.ENUM("disetujui", "ditolak", "menunggu"),
+    defaultValue: "menunggu"
+  },  
+
+    catatan_admin: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },  
 
   created_by: DataTypes.INTEGER,
 
