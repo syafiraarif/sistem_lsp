@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -22,317 +23,356 @@ const defaultOpsi = [
   { kode_opsi: "E", jawaban: "", is_benar: false },
 ];
 
+const createEmptySoal = (urutan = 1) => ({
+  pertanyaan: "",
+  gambar_file: null,
+  gambar_preview: "",
+  gambar_lama: "",
+  hapus_gambar: false,
+  urutan,
+  opsi: defaultOpsi.map((item) => ({ ...item })),
+});
+
+const createEmptyAsesor = () => ({
+  id_asesor: "",
+  nama_lengkap: "",
+  no_reg_asesor: "",
+  ttd_path: "",
+  tanggal: "",
+});
+
+const getToday = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const getDefaultHeader = () => ({
+  tuk: "Tempat Kerja",
+  nama_asesor: "",
+  nama_asesi: "",
+  tanggal: getToday(),
+});
+
+const getHeaderStorageKey = (idSkema) => `fria05-header-${idSkema}`;
+const getSignatureStorageKey = (idSkema) => `fria05-signatures-${idSkema}`;
+
+const getStoredHeader = (idSkema) => {
+  try {
+    const saved = localStorage.getItem(getHeaderStorageKey(idSkema));
+
+    return {
+      ...getDefaultHeader(),
+      ...(saved ? JSON.parse(saved) : {}),
+    };
+  } catch {
+    return getDefaultHeader();
+  }
+};
+
+const getStoredSignatureDates = (idSkema) => {
+  try {
+    const saved = localStorage.getItem(getSignatureStorageKey(idSkema));
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+};
+
+const storeSignatureDates = (idSkema, signatureDates) => {
+  try {
+    localStorage.setItem(
+      getSignatureStorageKey(idSkema),
+      JSON.stringify(signatureDates)
+    );
+  } catch (error) {
+    console.error("SAVE FR.IA.05 SIGNATURE DATES ERROR:", error);
+  }
+};
+
+const saveStoredHeader = (idSkema, header) => {
+  try {
+    localStorage.setItem(
+      getHeaderStorageKey(idSkema),
+      JSON.stringify(header)
+    );
+  } catch (error) {
+    console.error("SAVE FR.IA.05 HEADER ERROR:", error);
+  }
+};
+
+const getAsesorData = (item = {}) => {
+  const profile = item?.asesor || item;
+
+  return {
+    id_asesor: item?.id_asesor || profile?.id_user || "",
+    nama_lengkap:
+      profile?.nama_lengkap ||
+      profile?.nama_asesor ||
+      profile?.nama ||
+      "",
+    no_reg_asesor:
+      profile?.no_reg_asesor ||
+      profile?.no_lisensi ||
+      profile?.nomor_met ||
+      "",
+    ttd_path:
+      profile?.ttd_path ||
+      profile?.tanda_tangan ||
+      profile?.ttd ||
+      "",
+    tanggal: item?.tanggal || "",
+  };
+};
+
+const getSignatureDateKey = (jenis, idAsesor) =>
+  `${jenis}-${idAsesor}`;
+
 export default function FRIA05() {
   const params = useParams();
   const navigate = useNavigate();
-
-  const idSkema =
-    params.id_skema ||
-    params.idSkema ||
-    params.id;
+  const idSkema = params.id_skema || params.idSkema || params.id;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const [skema, setSkema] = useState(null);
   const [asesorList, setAsesorList] = useState([]);
-  const [penyusun, setPenyusun] = useState([]);
-  const [validator, setValidator] = useState([]);
+  const [penyusun, setPenyusun] = useState([createEmptyAsesor()]);
+  const [validator, setValidator] = useState([createEmptyAsesor()]);
   const [paket, setPaket] = useState(null);
+  const [header, setHeader] = useState(() => getStoredHeader(idSkema));
+  const [showSoalModal, setShowSoalModal] = useState(false);
+  const [editingSoal, setEditingSoal] = useState(null);
+  const [formSoal, setFormSoal] = useState(createEmptySoal());
 
-  const [formPaket, setFormPaket] = useState({
-    kode_paket: "",
-    judul_paket: "Paket Soal FR.IA.05",
-    passing_grade: 70,
-    waktu: "",
-  });
-
-  const [showSoalModal, setShowSoalModal] =
-    useState(false);
-
-  const [editingSoal, setEditingSoal] =
-    useState(null);
-
-  const [formSoal, setFormSoal] = useState({
-    pertanyaan: "",
-    gambar_file: null,
-    gambar_preview: "",
-    gambar_lama: "",
-    hapus_gambar: false,
-    urutan: "",
-    opsi: defaultOpsi.map((item) => ({
-      ...item,
-    })),
-  });
+  const soalList = Array.isArray(paket?.soal)
+    ? [...paket.soal].sort(
+        (a, b) => Number(a?.urutan || 0) - Number(b?.urutan || 0)
+      )
+    : [];
 
   useEffect(() => {
-    fetchData();
+    setHeader(getStoredHeader(idSkema));
+    fetchData(true);
   }, [idSkema]);
 
-  const fetchData = async () => {
+  const updateHeader = (field, value) => {
+    setHeader((previous) => {
+      const next = {
+        ...previous,
+        [field]: value,
+      };
+
+      saveStoredHeader(idSkema, next);
+      return next;
+    });
+  };
+
+  const rememberSignatureDates = (nextPenyusun, nextValidator) => {
+    const dates = getStoredSignatureDates(idSkema);
+
+    nextPenyusun.forEach((item) => {
+      if (item?.id_asesor && item?.tanggal) {
+        dates[getSignatureDateKey("penyusun", item.id_asesor)] =
+          item.tanggal;
+      }
+    });
+
+    nextValidator.forEach((item) => {
+      if (item?.id_asesor && item?.tanggal) {
+        dates[getSignatureDateKey("validator", item.id_asesor)] =
+          item.tanggal;
+      }
+    });
+
+    storeSignatureDates(idSkema, dates);
+  };
+
+  const mapSignatureRows = (items, jenis, masterTanggal = "") => {
+    const savedDates = getStoredSignatureDates(idSkema);
+
+    return items.map((item) => {
+      const asesor = getAsesorData(item);
+      const dateKey = getSignatureDateKey(jenis, asesor.id_asesor);
+
+      return {
+        ...asesor,
+        tanggal:
+          item?.tanggal ||
+          savedDates[dateKey] ||
+          masterTanggal ||
+          (asesor.id_asesor ? getToday() : ""),
+      };
+    });
+  };
+
+  const fetchData = async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      }
 
       if (!idSkema) {
-        throw new Error(
-          "ID Skema tidak ditemukan di URL."
-        );
+        throw new Error("ID Skema tidak ditemukan di URL.");
       }
 
-      const [skemaRes, paketRes, asesorRes] =
-        await Promise.all([
-          api.get("/asesor/skema"),
-          api.get(
-            `/asesor/fr-ia05/komite/skema/${idSkema}`
-          ),
-          api.get("/asesor/fr-ia05/komite/asesor"),
-        ]);
+      const [paketResult, asesorResult] = await Promise.all([
+        api.get(`/asesor/skema/${idSkema}/fr-ia05`),
+        api.get("/asesor/fr-ia05/komite/asesor"),
+      ]);
 
-      const daftarSkema =
-        Array.isArray(
-          skemaRes.data?.data
-        )
-          ? skemaRes.data.data
-          : Array.isArray(
-              skemaRes.data
-            )
-            ? skemaRes.data
-            : [];
+      const responseData =
+        paketResult.data?.data || paketResult.data || {};
+      const master = responseData.master || responseData.paket || null;
+      const asesorResponse =
+        asesorResult.data?.data ?? asesorResult.data;
 
-      const foundSkema =
-        daftarSkema.find(
-          (item) =>
-            String(
-              item?.id_skema ||
-                item?.skema?.id_skema ||
-                item?.Skema?.id_skema ||
-                item?.id
-            ) ===
-            String(idSkema)
-        );
+      const profiles = Array.isArray(asesorResponse)
+        ? asesorResponse
+        : [];
 
-      setSkema(
-        foundSkema?.skema ||
-          foundSkema?.Skema ||
-          foundSkema ||
-          null
+      const validators = Array.isArray(master?.validator)
+        ? master.validator
+        : [];
+
+      const penyusunRows = validators.filter(
+        (item) => item?.peran === "penyusun"
       );
 
-      const paketData =
-        paketRes.data?.data ||
-        paketRes.data ||
-        {};
-
-      setPaket(
-        paketData?.paket ||
-          paketData ||
-          null
+      const validatorRows = validators.filter(
+        (item) => item?.peran === "validator"
       );
 
+      const mappedPenyusun = mapSignatureRows(
+        penyusunRows,
+        "penyusun",
+        master?.tanggal
+      );
+
+      const mappedValidator = mapSignatureRows(
+        validatorRows,
+        "validator",
+        master?.tanggal
+      );
+
+      setSkema(responseData.skema || master?.skema || null);
+      setPaket(master);
+      setAsesorList(profiles);
       setPenyusun(
-        paketData?.penyusun?.length
-          ? paketData.penyusun
-          : paketData?.validator?.filter(
-              (item) =>
-                item?.peran ===
-                "penyusun"
-            ) || []
+        mappedPenyusun.length ? mappedPenyusun : [createEmptyAsesor()]
       );
-
       setValidator(
-        paketData?.validator?.filter(
-          (item) =>
-            item?.peran ===
-            "validator"
-        ) || []
+        mappedValidator.length ? mappedValidator : [createEmptyAsesor()]
       );
 
-      setAsesorList(
-        Array.isArray(
-          asesorRes.data?.data
-        )
-          ? asesorRes.data.data
-          : Array.isArray(
-              asesorRes.data
-            )
-            ? asesorRes.data
-            : []
-      );
+      const storedHeader = getStoredHeader(idSkema);
 
-      const paket =
-        paketData?.paket ||
-        paketData ||
-        null;
-
-      if (paket) {
-        setFormPaket((prev) => ({
-          ...prev,
-          kode_paket:
-            paket?.kode_paket ||
-            `FRIA05-${idSkema}`,
-          judul_paket:
-            paket?.judul_paket ||
-            "Paket Soal FR.IA.05",
-          passing_grade:
-            paket?.passing_grade ??
-            70,
-          waktu:
-            paket?.waktu ||
-            "",
-        }));
-      } else {
-        setFormPaket((prev) => ({
-          ...prev,
-          kode_paket:
-            `FRIA05-${idSkema}`,
-        }));
+      if (!storedHeader.nama_asesor && mappedPenyusun[0]?.nama_lengkap) {
+        storedHeader.nama_asesor = mappedPenyusun[0].nama_lengkap;
       }
-    } catch (err) {
-      console.error(
-        "LOAD FR.IA.05 ERROR:",
-        err
-      );
 
-      const message =
-        err.response?.data?.message ||
-        err.message ||
-        "Gagal memuat data FR.IA.05.";
+      setHeader(storedHeader);
+      saveStoredHeader(idSkema, storedHeader);
+      rememberSignatureDates(mappedPenyusun, mappedValidator);
+    } catch (error) {
+      console.error("LOAD FR.IA.05 ERROR:", error);
 
-      await Swal.fire(
-        "Gagal",
-        message,
-        "error"
-      );
-
-      try {
-        const asesorRes =
-          await api.get(
-            "/asesor/fr-ia05/komite/asesor"
-          );
-
-        setAsesorList(
-          Array.isArray(
-            asesorRes.data?.data
-          )
-            ? asesorRes.data.data
-            : []
+      if (showLoader) {
+        await Swal.fire(
+          "Gagal",
+          error.response?.data?.message ||
+            error.response?.data?.error ||
+            error.message ||
+            "Gagal memuat data FR.IA.05.",
+          "error"
         );
-      } catch {
-        setAsesorList([]);
       }
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   };
 
-  const skemaData =
-    getSkema(skema, paket);
+  const skemaData = getSkema(skema, paket);
 
-  const soalList =
-    Array.isArray(
-      paket?.soal
-    )
-      ? paket.soal
-      : [];
+  const buildValidators = () => [
+    ...penyusun
+      .filter((item) => item?.id_asesor)
+      .map((item, index) => ({
+        id_asesor: Number(item.id_asesor),
+        peran: "penyusun",
+        urutan: index + 1,
+      })),
+    ...validator
+      .filter((item) => item?.id_asesor)
+      .map((item, index) => ({
+        id_asesor: Number(item.id_asesor),
+        peran: "validator",
+        urutan: index + 1,
+      })),
+  ];
+
+  const buildPaketPayload = () => ({
+    id_skema: Number(idSkema),
+    kode_paket: paket?.kode_paket || `FRIA05-${idSkema}`,
+    judul_paket: paket?.judul_paket || "Paket Soal FR.IA.05",
+    validators: buildValidators(),
+  });
+
+  const handleAsesorChange = (jenis, index, id) => {
+    const selected = asesorList.find(
+      (item) => String(item?.id_user) === String(id)
+    );
+
+    const nextData = selected
+      ? {
+          ...getAsesorData(selected),
+          tanggal: getToday(),
+        }
+      : createEmptyAsesor();
+
+    const currentRows = jenis === "penyusun" ? penyusun : validator;
+    const setRows = jenis === "penyusun" ? setPenyusun : setValidator;
+
+    const nextRows = currentRows.map((item, itemIndex) =>
+      itemIndex === index ? nextData : item
+    );
+
+    setRows(nextRows);
+    rememberSignatureDates(
+      jenis === "penyusun" ? nextRows : penyusun,
+      jenis === "validator" ? nextRows : validator
+    );
+
+    if (jenis === "penyusun" && index === 0) {
+      updateHeader("nama_asesor", selected?.nama_lengkap || "");
+    }
+  };
 
   const tambahPenyusun = () => {
-    setPenyusun((prev) => [
-      ...prev,
-      {
-        id_asesor: "",
-        nama_lengkap: "",
-        no_reg_asesor: "",
-        ttd_path: "",
-      },
-    ]);
+    setPenyusun((previous) => [...previous, createEmptyAsesor()]);
   };
 
   const tambahValidator = () => {
-    setValidator((prev) => [
-      ...prev,
-      {
-        id_asesor: "",
-        nama_lengkap: "",
-        no_reg_asesor: "",
-        ttd_path: "",
-      },
-    ]);
+    setValidator((previous) => [...previous, createEmptyAsesor()]);
   };
 
   const hapusPenyusun = (index) => {
-    setPenyusun((prev) =>
-      prev.filter(
-        (_, itemIndex) =>
-          itemIndex !== index
-      )
-    );
+    setPenyusun((previous) => {
+      const next = previous.filter((_, itemIndex) => itemIndex !== index);
+      return next.length ? next : [createEmptyAsesor()];
+    });
   };
 
   const hapusValidator = (index) => {
-    setValidator((prev) =>
-      prev.filter(
-        (_, itemIndex) =>
-          itemIndex !== index
-      )
-    );
-  };
-
-  const handleAsesorChange = (
-    jenis,
-    index,
-    id
-  ) => {
-    const selected =
-      asesorList.find(
-        (item) =>
-          String(
-            item?.id_user
-          ) === String(id)
-      );
-
-    if (!selected) {
-      return;
-    }
-
-    const nextData = {
-      id_asesor:
-        selected.id_user,
-      nama_lengkap:
-        selected.nama_lengkap ||
-        "",
-      no_reg_asesor:
-        selected.no_reg_asesor ||
-        "",
-      ttd_path:
-        selected.ttd_path ||
-        "",
-    };
-
-    if (jenis === "penyusun") {
-      setPenyusun((prev) =>
-        prev.map((item, itemIndex) =>
-          itemIndex === index
-            ? nextData
-            : item
-        )
-      );
-    } else {
-      setValidator((prev) =>
-        prev.map((item, itemIndex) =>
-          itemIndex === index
-            ? nextData
-            : item
-        )
-      );
-    }
-  };
-
-  const handlePaketChange = (e) => {
-    setFormPaket((prev) => ({
-      ...prev,
-      [e.target.name]:
-        e.target.value,
-    }));
+    setValidator((previous) => {
+      const next = previous.filter((_, itemIndex) => itemIndex !== index);
+      return next.length ? next : [createEmptyAsesor()];
+    });
   };
 
   const savePaket = async () => {
@@ -340,103 +380,42 @@ export default function FRIA05() {
       setSaving(true);
 
       if (!idSkema) {
-        throw new Error(
-          "ID Skema tidak ditemukan."
-        );
+        throw new Error("ID Skema tidak ditemukan.");
       }
 
-      const payload = {
-        id_skema:
-          Number(idSkema),
-        kode_paket:
-          formPaket.kode_paket,
-        judul_paket:
-          formPaket.judul_paket,
-        passing_grade:
-          Number(
-            formPaket.passing_grade
-          ) || 70,
-        waktu:
-          formPaket.waktu
-            ? Number(
-                formPaket.waktu
-              )
-            : null,
-        validators: [
-          ...penyusun
-            .filter(
-              (item) =>
-                item?.id_asesor
-            )
-            .map(
-              (
-                item,
-                index
-              ) => ({
-                id_asesor:
-                  Number(
-                    item.id_asesor
-                  ),
-                peran:
-                  "penyusun",
-                urutan:
-                  index + 1,
-              })
-            ),
+      saveStoredHeader(idSkema, header);
+      rememberSignatureDates(penyusun, validator);
 
-          ...validator
-            .filter(
-              (item) =>
-                item?.id_asesor
-            )
-            .map(
-              (
-                item,
-                index
-              ) => ({
-                id_asesor:
-                  Number(
-                    item.id_asesor
-                  ),
-                peran:
-                  "validator",
-                urutan:
-                  index + 1,
-              })
-            ),
-        ],
-      };
-
-      const res = await api.post(
-        "/asesor/fr-ia05/komite",
-        payload
+      const response = await api.post(
+        `/asesor/skema/${idSkema}/fr-ia05`,
+        buildPaketPayload()
       );
 
-      setPaket(
-        res.data?.data ||
-          null
-      );
+      const result = response.data?.data || {};
+      const savedMaster = result.master || result;
+
+      if (savedMaster?.id_fr_ia_05) {
+        setPaket(savedMaster);
+      }
 
       await Swal.fire({
         title: "Berhasil",
-        text: "Paket FR.IA.05 berhasil disimpan.",
+        text: "Instrumen FR.IA.05 berhasil disimpan.",
         icon: "success",
         timer: 1300,
         showConfirmButton: false,
       });
 
-      await fetchData();
-    } catch (err) {
-      console.error(
-        "SAVE FR.IA.05 ERROR:",
-        err
-      );
+      await fetchData(false);
+    } catch (error) {
+      console.error("SAVE FR.IA.05 ERROR:", error);
 
       await Swal.fire(
         "Gagal",
-        err.response?.data?.message ||
-          err.message ||
-          "Gagal menyimpan paket.",
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Gagal menyimpan FR.IA.05.",
         "error"
       );
     } finally {
@@ -449,73 +428,43 @@ export default function FRIA05() {
       return paket;
     }
 
-    const res = await api.post(
-      "/asesor/fr-ia05/komite",
-      {
-        id_skema:
-          Number(idSkema),
-        kode_paket:
-          formPaket.kode_paket ||
-          `FRIA05-${idSkema}`,
-        judul_paket:
-          formPaket.judul_paket ||
-          "Paket Soal FR.IA.05",
-        passing_grade:
-          Number(
-            formPaket.passing_grade
-          ) || 70,
-        waktu:
-          formPaket.waktu
-            ? Number(
-                formPaket.waktu
-              )
-            : null,
-      }
+    if (!idSkema) {
+      throw new Error("ID Skema tidak ditemukan.");
+    }
+
+    const response = await api.post(
+      `/asesor/skema/${idSkema}/fr-ia05`,
+      buildPaketPayload()
     );
 
-    const created =
-      res.data?.data;
+    const result = response.data?.data || {};
+    const created = result.master || result;
+
+    if (!created?.id_fr_ia_05) {
+      throw new Error("Paket FR.IA.05 belum berhasil dibuat.");
+    }
 
     setPaket(created);
-
     return created;
   };
 
   const openAddSoal = async () => {
     try {
       setSaving(true);
-
       await ensurePaket();
 
       setEditingSoal(null);
-
-      setFormSoal({
-        pertanyaan: "",
-        gambar_file: null,
-        gambar_preview: "",
-        gambar_lama: "",
-        hapus_gambar: false,
-        urutan:
-          soalList.length + 1,
-        opsi: defaultOpsi.map(
-          (item) => ({
-            ...item,
-          })
-        ),
-      });
-
+      setFormSoal(createEmptySoal(soalList.length + 1));
       setShowSoalModal(true);
-    } catch (err) {
-      console.error(
-        "CREATE PACKAGE ERROR:",
-        err
-      );
+    } catch (error) {
+      console.error("CREATE FR.IA.05 PACKAGE ERROR:", error);
 
       await Swal.fire(
         "Gagal",
-        err.response?.data?.message ||
-          err.message ||
-          "Gagal membuat paket soal.",
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Gagal menyiapkan paket soal.",
         "error"
       );
     } finally {
@@ -523,231 +472,140 @@ export default function FRIA05() {
     }
   };
 
-  const openEditSoal = (
-    soal
-  ) => {
+  const openEditSoal = (soal) => {
     const opsi =
-      Array.isArray(
-        soal?.opsi
-      ) &&
-      soal.opsi.length
-        ? soal.opsi.map(
-            (item) => ({
-              kode_opsi:
-                item?.kode_opsi,
-              jawaban:
-                item?.jawaban ||
-                "",
-              is_benar:
-                Boolean(
-                  item?.is_benar
-                ),
-            })
-          )
-        : defaultOpsi.map(
-            (item) => ({
-              ...item,
-            })
-          );
+      Array.isArray(soal?.opsi) && soal.opsi.length
+        ? soal.opsi.map((item) => ({
+            kode_opsi: item?.kode_opsi,
+            jawaban: item?.jawaban || "",
+            is_benar:
+              item?.is_benar === true ||
+              item?.is_benar === 1 ||
+              item?.is_benar === "1",
+          }))
+        : defaultOpsi.map((item) => ({ ...item }));
 
     setEditingSoal(soal);
 
     setFormSoal({
-      pertanyaan:
-        soal?.pertanyaan ||
-        "",
-      gambar_file:
-        null,
-      gambar_preview:
-        soal?.gambar
-          ? normalizeImageUrl(
-              soal.gambar
-            )
-          : "",
-      gambar_lama:
-        soal?.gambar ||
-        "",
-      hapus_gambar:
-        false,
-      urutan:
-        soal?.urutan ||
-        "",
+      pertanyaan: soal?.pertanyaan || "",
+      gambar_file: null,
+      gambar_preview: soal?.gambar
+        ? normalizeImageUrl(soal.gambar)
+        : "",
+      gambar_lama: soal?.gambar || "",
+      hapus_gambar: false,
+      urutan: soal?.urutan || soalList.length + 1,
       opsi,
     });
 
     setShowSoalModal(true);
   };
 
-  const closeSoalModal =
-    () => {
-      if (
-        formSoal.gambar_preview &&
-        formSoal.gambar_file
-      ) {
-        URL.revokeObjectURL(
-          formSoal.gambar_preview
-        );
-      }
+  const closeSoalModal = () => {
+    if (formSoal.gambar_preview && formSoal.gambar_file) {
+      URL.revokeObjectURL(formSoal.gambar_preview);
+    }
 
-      setShowSoalModal(false);
-      setEditingSoal(null);
+    setShowSoalModal(false);
+    setEditingSoal(null);
+    setFormSoal(createEmptySoal());
+  };
 
-      setFormSoal({
-        pertanyaan: "",
-        gambar_file: null,
-        gambar_preview: "",
-        gambar_lama: "",
-        hapus_gambar: false,
-        urutan: "",
-        opsi: defaultOpsi.map(
-          (item) => ({
-            ...item,
-          })
-        ),
-      });
-    };
+  const handleSoalChange = (event) => {
+    const { name, value } = event.target;
 
-  const handleSoalChange = (
-    e
-  ) => {
-    setFormSoal((prev) => ({
-      ...prev,
-      [e.target.name]:
-        e.target.value,
+    setFormSoal((previous) => ({
+      ...previous,
+      [name]: value,
     }));
   };
 
-  const handleGambarChange =
-    (e) => {
-      const file =
-        e.target.files?.[0];
+  const handleGambarChange = (event) => {
+    const file = event.target.files?.[0];
 
-      if (!file) {
-        return;
-      }
+    if (!file) {
+      return;
+    }
 
-      const allowed = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/webp",
-      ];
+    const allowed = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ];
 
-      if (
-        !allowed.includes(
-          file.type
-        )
-      ) {
-        Swal.fire(
-          "Format Salah",
-          "Gambar harus JPG, PNG, atau WEBP.",
-          "warning"
-        );
+    if (!allowed.includes(file.type)) {
+      Swal.fire(
+        "Format Salah",
+        "Gambar harus berformat JPG, PNG, atau WEBP.",
+        "warning"
+      );
+      event.target.value = "";
+      return;
+    }
 
-        e.target.value = "";
-        return;
-      }
+    if (file.size > 2 * 1024 * 1024) {
+      Swal.fire(
+        "Ukuran Terlalu Besar",
+        "Ukuran gambar maksimal 2 MB.",
+        "warning"
+      );
+      event.target.value = "";
+      return;
+    }
 
-      if (
-        file.size >
-        2 * 1024 * 1024
-      ) {
-        Swal.fire(
-          "Ukuran Terlalu Besar",
-          "Maksimal gambar 2 MB.",
-          "warning"
-        );
+    if (formSoal.gambar_preview && formSoal.gambar_file) {
+      URL.revokeObjectURL(formSoal.gambar_preview);
+    }
 
-        e.target.value = "";
-        return;
-      }
+    setFormSoal((previous) => ({
+      ...previous,
+      gambar_file: file,
+      gambar_preview: URL.createObjectURL(file),
+      hapus_gambar: false,
+    }));
+  };
 
-      const previewUrl =
-        URL.createObjectURL(
-          file
-        );
+  const hapusGambarSoal = () => {
+    if (formSoal.gambar_preview && formSoal.gambar_file) {
+      URL.revokeObjectURL(formSoal.gambar_preview);
+    }
 
-      setFormSoal((prev) => ({
-        ...prev,
-        gambar_file:
-          file,
-        gambar_preview:
-          previewUrl,
-        hapus_gambar:
-          false,
-      }));
-    };
+    setFormSoal((previous) => ({
+      ...previous,
+      gambar_file: null,
+      gambar_preview: "",
+      gambar_lama: "",
+      hapus_gambar: true,
+    }));
+  };
 
-  const hapusGambarSoal =
-    () => {
-      if (
-        formSoal.gambar_preview &&
-        formSoal.gambar_file
-      ) {
-        URL.revokeObjectURL(
-          formSoal.gambar_preview
-        );
-      }
-
-      setFormSoal((prev) => ({
-        ...prev,
-        gambar_file: null,
-        gambar_preview: "",
-        gambar_lama: "",
-        hapus_gambar: true,
-      }));
-    };
-
-  const handleOpsiChange = (
-    index,
-    field,
-    value
-  ) => {
-    setFormSoal((prev) => ({
-      ...prev,
-      opsi: prev.opsi.map(
-        (
-          item,
-          itemIndex
-        ) =>
-          itemIndex === index
-            ? {
-                ...item,
-                [field]:
-                  value,
-              }
-            : item
+  const handleOpsiChange = (index, value) => {
+    setFormSoal((previous) => ({
+      ...previous,
+      opsi: previous.opsi.map((item, itemIndex) =>
+        itemIndex === index
+          ? { ...item, jawaban: value }
+          : item
       ),
     }));
   };
 
-  const setJawabanBenar = (
-    index
-  ) => {
-    setFormSoal((prev) => ({
-      ...prev,
-      opsi: prev.opsi.map(
-        (
-          item,
-          itemIndex
-        ) => ({
-          ...item,
-          is_benar:
-            itemIndex ===
-            index,
-        })
-      ),
+  const setJawabanBenar = (index) => {
+    setFormSoal((previous) => ({
+      ...previous,
+      opsi: previous.opsi.map((item, itemIndex) => ({
+        ...item,
+        is_benar: itemIndex === index,
+      })),
     }));
   };
 
-  const saveSoal = async (
-    e
-  ) => {
-    e.preventDefault();
+  const saveSoal = async (event) => {
+    event.preventDefault();
 
-    if (
-      !formSoal.pertanyaan.trim()
-    ) {
+    if (!formSoal.pertanyaan.trim()) {
       await Swal.fire(
         "Validasi",
         "Pertanyaan wajib diisi.",
@@ -756,13 +614,7 @@ export default function FRIA05() {
       return;
     }
 
-    const opsiKosong =
-      formSoal.opsi.some(
-        (item) =>
-          !item.jawaban.trim()
-      );
-
-    if (opsiKosong) {
+    if (formSoal.opsi.some((item) => !item.jawaban.trim())) {
       await Swal.fire(
         "Validasi",
         "Semua opsi jawaban wajib diisi.",
@@ -771,13 +623,7 @@ export default function FRIA05() {
       return;
     }
 
-    const adaBenar =
-      formSoal.opsi.some(
-        (item) =>
-          item.is_benar
-      );
-
-    if (!adaBenar) {
+    if (!formSoal.opsi.some((item) => item.is_benar)) {
       await Swal.fire(
         "Validasi",
         "Pilih satu jawaban benar.",
@@ -789,90 +635,48 @@ export default function FRIA05() {
     try {
       setSaving(true);
 
-      const currentPaket =
-        await ensurePaket();
-
-      const formData =
-        new FormData();
+      const currentPaket = await ensurePaket();
+      const formData = new FormData();
 
       formData.append(
         "id_fr_ia_05",
-        currentPaket.id_fr_ia_05
+        String(currentPaket.id_fr_ia_05)
       );
-
-      formData.append(
-        "pertanyaan",
-        formSoal.pertanyaan
-      );
-
+      formData.append("pertanyaan", formSoal.pertanyaan.trim());
       formData.append(
         "urutan",
-        formSoal.urutan ||
-          soalList.length + 1
+        String(formSoal.urutan || soalList.length + 1)
       );
-
-      formData.append(
-        "opsi",
-        JSON.stringify(
-          formSoal.opsi
-        )
-      );
-
-      formData.append(
-        "gambar_lama",
-        formSoal.gambar_lama ||
-          ""
-      );
-
+      formData.append("opsi", JSON.stringify(formSoal.opsi));
+      formData.append("gambar_lama", formSoal.gambar_lama || "");
       formData.append(
         "hapus_gambar",
-        formSoal.hapus_gambar
-          ? "true"
-          : "false"
+        formSoal.hapus_gambar ? "true" : "false"
       );
 
-      if (
-        formSoal.gambar_file
-      ) {
-        formData.append(
-          "gambar_file",
-          formSoal.gambar_file
+      if (formSoal.gambar_file) {
+        formData.append("gambar_file", formSoal.gambar_file);
+      }
+
+      if (editingSoal?.id_soal) {
+        await api.put(
+          `/asesor/fr-ia05/komite/soal/${editingSoal.id_soal}`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
         );
-      }
-
-      let res;
-
-      if (editingSoal) {
-        res =
-          await api.put(
-            `/asesor/fr-ia05/komite/soal/${editingSoal.id_soal}`,
-            formData,
-            {
-              headers: {
-                "Content-Type":
-                  "multipart/form-data",
-              },
-            }
-          );
       } else {
-        res =
-          await api.post(
-            "/asesor/fr-ia05/komite/soal",
-            formData,
-            {
-              headers: {
-                "Content-Type":
-                  "multipart/form-data",
-              },
-            }
-          );
-      }
-
-      if (
-        res.data?.data
-      ) {
-        setPaket(
-          res.data.data
+        await api.post(
+          "/asesor/fr-ia05/komite/soal",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
         );
       }
 
@@ -886,17 +690,15 @@ export default function FRIA05() {
         showConfirmButton: false,
       });
 
-      await fetchData();
-    } catch (err) {
-      console.error(
-        "SAVE QUESTION ERROR:",
-        err
-      );
+      await fetchData(false);
+    } catch (error) {
+      console.error("SAVE FR.IA.05 QUESTION ERROR:", error);
 
       await Swal.fire(
         "Gagal",
-        err.response?.data?.message ||
-          err.message ||
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
           "Gagal menyimpan pertanyaan.",
         "error"
       );
@@ -905,87 +707,58 @@ export default function FRIA05() {
     }
   };
 
-  const deleteSoal =
-    async (soal) => {
-      const confirm =
-        await Swal.fire({
-          title:
-            "Hapus Pertanyaan?",
-          text:
-            "Pertanyaan dan opsi jawaban akan dihapus.",
-          icon: "warning",
-          showCancelButton:
-            true,
-          confirmButtonColor:
-            "#d33",
-          cancelButtonText:
-            "Batal",
-          confirmButtonText:
-            "Hapus",
-        });
+  const deleteSoal = async (soal) => {
+    const confirmation = await Swal.fire({
+      title: "Hapus Pertanyaan?",
+      text: "Pertanyaan dan opsi jawaban akan dihapus.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonText: "Batal",
+      confirmButtonText: "Hapus",
+    });
 
-      if (
-        !confirm.isConfirmed
-      ) {
-        return;
-      }
+    if (!confirmation.isConfirmed) {
+      return;
+    }
 
-      try {
-        setSaving(true);
+    try {
+      setSaving(true);
 
-        const res =
-          await api.delete(
-            `/asesor/fr-ia05/komite/soal/${soal.id_soal}`
-          );
+      await api.delete(
+        `/asesor/fr-ia05/komite/soal/${soal.id_soal}`
+      );
 
-        if (
-          res.data?.data
-        ) {
-          setPaket(
-            res.data.data
-          );
-        }
+      await Swal.fire({
+        title: "Terhapus",
+        text: "Pertanyaan berhasil dihapus.",
+        icon: "success",
+        timer: 1200,
+        showConfirmButton: false,
+      });
 
-        await Swal.fire({
-          title: "Terhapus",
-          text: "Pertanyaan berhasil dihapus.",
-          icon: "success",
-          timer: 1200,
-          showConfirmButton: false,
-        });
+      await fetchData(false);
+    } catch (error) {
+      console.error("DELETE FR.IA.05 QUESTION ERROR:", error);
 
-        await fetchData();
-      } catch (err) {
-        console.error(
-          "DELETE QUESTION ERROR:",
-          err
-        );
-
-        await Swal.fire(
-          "Gagal",
-          err.response?.data?.message ||
-            err.message ||
-            "Gagal menghapus pertanyaan.",
-          "error"
-        );
-      } finally {
-        setSaving(false);
-      }
-    };
-
-  const printPage =
-    () => {
-      window.print();
-    };
+      await Swal.fire(
+        "Gagal",
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Gagal menghapus pertanyaan.",
+        "error"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="flex items-center gap-3 font-bold text-slate-600">
-          <Loader2
-            size={22}
-            className="animate-spin"
-          />
+          <Loader2 size={22} className="animate-spin" />
           Memuat FR.IA.05...
         </div>
       </div>
@@ -997,9 +770,7 @@ export default function FRIA05() {
       <div className="mx-auto mb-5 flex w-[900px] justify-between print:hidden">
         <button
           type="button"
-          onClick={() =>
-            navigate(-1)
-          }
+          onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50"
         >
           <ArrowLeft size={18} />
@@ -1011,24 +782,21 @@ export default function FRIA05() {
             type="button"
             onClick={savePaket}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? (
-              <Loader2
-                size={18}
-                className="animate-spin"
-              />
+              <Loader2 size={18} className="animate-spin" />
             ) : (
               <Save size={18} />
             )}
-            Simpan Paket
+            Simpan Formulir
           </button>
 
           <button
             type="button"
             onClick={openAddSoal}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-slate-900 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Plus size={18} />
             Tambah Pertanyaan
@@ -1036,7 +804,7 @@ export default function FRIA05() {
 
           <button
             type="button"
-            onClick={printPage}
+            onClick={() => window.print()}
             className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50"
           >
             <Download size={18} />
@@ -1045,810 +813,179 @@ export default function FRIA05() {
         </div>
       </div>
 
-      <main className="mx-auto w-[794px] bg-white px-6 py-6 text-[11px] text-black shadow-lg print:w-full print:shadow-none print:px-4 print:py-4">
-        <div className="mb-6 text-center">
-          <h1 className="text-[18px] font-bold">
+      <main className="mx-auto w-[794px] bg-white px-6 py-6 text-[11px] text-black shadow-lg print:w-full print:shadow-none print:px-0 print:py-0">
+        <div className="mb-5 border border-black px-3 py-2 text-center">
+          <h1 className="text-[18px] font-bold leading-6">
             FR.IA.05A. DPT
           </h1>
-
-          <p className="text-[15px] font-semibold">
+          <p className="mt-1 text-[15px] font-semibold leading-5">
             PERTANYAAN TERTULIS PILIHAN GANDA
           </p>
         </div>
 
-        <table className="w-full border-collapse border border-black text-[11px]">
-          <tbody>
-            <tr>
-              <td
-                rowSpan="2"
-                className="w-[240px] border border-black px-1 py-[2px] align-middle text-[16px] font-bold leading-tight"
-              >
-                Skema Sertifikasi
-                <br />
-                (KKNI/Okupasi/Klaster)
-              </td>
+        <HeaderTable
+          skema={skemaData}
+          header={header}
+          asesorList={asesorList}
+          onChange={updateHeader}
+        />
 
-              <td className="w-[90px] border border-black px-1 py-[2px] font-bold">
-                Judul
-              </td>
+        <p className="mt-1 text-[11px] italic">
+          *Coret yang tidak perlu
+        </p>
 
-              <td className="w-[20px] border border-black px-1 py-[2px] text-center">
-                :
-              </td>
+        <div className="mb-2 mt-5 flex items-center justify-between gap-3">
+          <p>Jawab semua pertanyaan berikut:</p>
 
-              <td className="border border-black px-1 py-[2px] font-bold">
-                {
-                  skemaData.judul_skema
-                }
-              </td>
-            </tr>
-
-            <tr>
-              <td className="border border-black px-1 py-[2px] font-bold">
-                Nomor
-              </td>
-
-              <td className="border border-black px-1 py-[2px] text-center">
-                :
-              </td>
-
-              <td className="border border-black px-1 py-[2px] font-bold">
-                {
-                  skemaData.kode_skema
-                }
-              </td>
-            </tr>
-
-            <InfoRow
-              label="Kode Paket"
-              value={
-                formPaket.kode_paket
-              }
-            />
-
-            <InfoRow
-              label="Judul Paket"
-              value={
-                formPaket.judul_paket
-              }
-            />
-
-            <tr>
-              <td
-                colSpan="2"
-                className="border border-black px-1 py-[2px] font-bold"
-              >
-                Passing Grade
-              </td>
-
-              <td className="border border-black px-1 py-[2px] text-center">
-                :
-              </td>
-
-              <td className="border border-black px-1 py-[2px]">
-                <input
-                  type="number"
-                  name="passing_grade"
-                  value={
-                    formPaket.passing_grade
-                  }
-                  onChange={
-                    handlePaketChange
-                  }
-                  className="w-20 border-none bg-transparent outline-none print:hidden"
-                />
-
-                <span className="hidden print:inline">
-                  {
-                    formPaket.passing_grade
-                  }
-                </span>
-              </td>
-            </tr>
-
-            <tr>
-              <td
-                colSpan="2"
-                className="border border-black px-1 py-[2px] font-bold"
-              >
-                Waktu
-              </td>
-
-              <td className="border border-black px-1 py-[2px] text-center">
-                :
-              </td>
-
-              <td className="border border-black px-2 py-[2px]">
-                <div className="flex items-center gap-1 print:hidden">
-                  <input
-                    type="number"
-                    min="1"
-                    name="waktu"
-                    value={
-                      formPaket.waktu
-                    }
-                    onChange={
-                      handlePaketChange
-                    }
-                    className="w-14 border-none bg-transparent outline-none"
-                  />
-
-                  <span className="font-medium">
-                    menit
-                  </span>
-                </div>
-
-                <span className="hidden print:inline">
-                  {
-                    formPaket.waktu ||
-                    "-"
-                  }{" "}
-                  menit
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div className="mt-3">
-          <p className="italic text-[11px]">
-            *Coret yang tidak perlu
-          </p>
-
-          <div className="mt-2 flex items-center justify-between">
-            <p>
-              Jawab semua pertanyaan berikut:
-            </p>
-
-            <button
-              type="button"
-              onClick={openAddSoal}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#071E3D] px-4 py-2 text-xs font-bold text-white print:hidden"
-            >
-              <Plus size={15} />
-              Tambah Pertanyaan
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={openAddSoal}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#071E3D] px-4 py-2 text-xs font-bold text-white hover:bg-slate-900 disabled:opacity-60 print:hidden"
+          >
+            <Plus size={15} />
+            Tambah Pertanyaan
+          </button>
         </div>
 
-        <table className="mt-2 w-full border-collapse border border-black text-[13px]">
+        <table className="w-full border-collapse border border-black text-[12px]">
           <tbody>
-            {soalList.length ===
-            0 ? (
+            {soalList.length === 0 ? (
               <tr>
                 <td className="border border-black px-3 py-10 text-center text-slate-500">
-                  Belum ada pertanyaan.
-                  Klik tombol Tambah
-                  Pertanyaan.
+                  Belum ada pertanyaan. Klik tombol Tambah Pertanyaan untuk
+                  membuat soal pertama.
                 </td>
               </tr>
             ) : (
-              soalList.map(
-                (
-                  soal,
-                  soalIndex
-                ) => (
-                  <tr
-                    key={
-                      soal.id_soal
-                    }
-                  >
-                    <td className="w-[45px] border border-black px-2 py-2 align-top">
-                      {soalIndex +
-                        1}
-                    </td>
+              soalList.map((soal, soalIndex) => (
+                <React.Fragment key={soal.id_soal || soalIndex}>
+                  <tr className="break-inside-avoid">
+                    <td className="border border-black px-2 py-1 align-top">
+                      <div className="flex items-start gap-2">
+                        <span className="shrink-0">
+                          {soalIndex + 1}.
+                        </span>
 
-                    <td className="border border-black px-2 py-2 align-top">
-                      <div className="flex justify-between gap-3">
-                        <p className="font-semibold leading-6">
-                          {
-                            soal.pertanyaan
-                          }
-                        </p>
+                        <div className="min-w-0 flex-1 whitespace-pre-wrap leading-[18px]">
+                          {soal.pertanyaan}
+                        </div>
 
-                        <div className="flex gap-2 print:hidden">
+                        <div className="ml-2 flex shrink-0 gap-2 print:hidden">
                           <button
                             type="button"
-                            onClick={() =>
-                              openEditSoal(
-                                soal
-                              )
-                            }
+                            onClick={() => openEditSoal(soal)}
+                            title="Edit pertanyaan"
+                            aria-label="Edit pertanyaan"
                             className="text-blue-600 hover:text-blue-800"
                           >
-                            <Edit
-                              size={
-                                16
-                              }
-                            />
+                            <Edit size={15} />
                           </button>
 
                           <button
                             type="button"
-                            onClick={() =>
-                              deleteSoal(
-                                soal
-                              )
-                            }
+                            onClick={() => deleteSoal(soal)}
+                            title="Hapus pertanyaan"
+                            aria-label="Hapus pertanyaan"
                             className="text-red-600 hover:text-red-800"
                           >
-                            <Trash2
-                              size={
-                                16
-                              }
-                            />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </div>
 
                       {soal.gambar && (
-                        <div className="my-3 flex justify-center">
+                        <div className="my-2 flex justify-center">
                           <img
-                            src={normalizeImageUrl(
-                              soal.gambar
-                            )}
-                            alt="Gambar soal"
-                            className="max-h-[220px] max-w-full border object-contain"
-                            onError={(
-                              e
-                            ) => {
-                              e.currentTarget.style.display =
-                                "none";
+                            src={normalizeImageUrl(soal.gambar)}
+                            alt={`Gambar pertanyaan ${soalIndex + 1}`}
+                            className="max-h-[220px] max-w-full object-contain"
+                            onError={(event) => {
+                              event.currentTarget.style.display = "none";
                             }}
                           />
                         </div>
                       )}
+                    </td>
+                  </tr>
 
-                      <div className="mt-3 space-y-2 pl-5">
-                        {(
-                          soal.opsi ||
-                          []
-                        ).map(
-                          (
-                            opsi
-                          ) => (
+                  <tr className="break-inside-avoid">
+                    <td className="border border-black px-2 py-1">
+                      <div className="space-y-0 pl-5">
+                        {[...(soal.opsi || [])]
+                          .sort((a, b) =>
+                            String(a.kode_opsi || "").localeCompare(
+                              String(b.kode_opsi || "")
+                            )
+                          )
+                          .map((opsi, opsiIndex) => (
                             <div
                               key={
                                 opsi.id_opsi ||
-                                opsi.kode_opsi
+                                opsi.kode_opsi ||
+                                opsiIndex
                               }
-                              className="flex"
+                              className="flex min-h-[18px] gap-2 leading-[18px]"
                             >
-                              <span className="inline-block w-6 font-semibold">
+                              <span className="w-5 shrink-0">
                                 {String(
-                                  opsi.kode_opsi
+                                  opsi.kode_opsi ||
+                                    String.fromCharCode(65 + opsiIndex)
                                 ).toLowerCase()}
                                 .
                               </span>
 
-                              <span>
-                                {
-                                  opsi.jawaban
-                                }
+                              <span className="whitespace-pre-wrap">
+                                {opsi.jawaban}
                               </span>
                             </div>
-                          )
-                        )}
+                          ))}
                       </div>
                     </td>
                   </tr>
-                )
-              )
+                </React.Fragment>
+              ))
             )}
           </tbody>
         </table>
 
-        <section className="mt-8">
-          <p className="mb-2 text-center text-[11px] font-bold uppercase">
-            Penyusun dan Validator
-          </p>
-
-          <table className="w-full border-collapse border border-black text-[11px]">
-            <thead>
-              <tr>
-                <th className="border border-black py-1">
-                  STATUS
-                </th>
-
-                <th className="w-[45px] border border-black py-1">
-                  NO
-                </th>
-
-                <th className="border border-black py-1">
-                  NAMA
-                </th>
-
-                <th className="w-[140px] border border-black py-1">
-                  NOMOR MET
-                </th>
-
-                <th className="w-[180px] border border-black py-1">
-                  TANDA TANGAN DAN TANGGAL
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {penyusun.map(
-                (
-                  item,
-                  index
-                ) => (
-                  <tr
-                    key={`penyusun-${index}`}
-                  >
-                    {index ===
-                      0 && (
-                      <td
-                        rowSpan={
-                          penyusun.length
-                        }
-                        className="border border-black text-center align-middle"
-                      >
-                        Penyusun
-                      </td>
-                    )}
-
-                    <td className="border border-black text-center">
-                      {index + 1}
-                    </td>
-
-                    <td className="border border-black px-2">
-                      <div className="print:hidden">
-                        <select
-                          value={
-                            item?.id_asesor ||
-                            ""
-                          }
-                          onChange={(
-                            e
-                          ) =>
-                            handleAsesorChange(
-                              "penyusun",
-                              index,
-                              e.target.value
-                            )
-                          }
-                          className="w-full bg-transparent outline-none"
-                        >
-                          <option value="">
-                            Pilih Asesor
-                          </option>
-
-                          {asesorList.map(
-                            (
-                              asesor
-                            ) => (
-                              <option
-                                key={
-                                  asesor.id_user
-                                }
-                                value={
-                                  asesor.id_user
-                                }
-                              >
-                                {
-                                  asesor.nama_lengkap
-                                }
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-
-                      <p className="hidden print:block">
-                        {
-                          item?.nama_lengkap ||
-                          "-"
-                        }
-                      </p>
-                    </td>
-
-                    <td className="border border-black px-2">
-                      {
-                        item?.no_reg_asesor ||
-                        "-"
-                      }
-                    </td>
-
-                    <td className="border border-black">
-                      <div className="flex flex-col items-center justify-center py-2">
-                        {item?.ttd_path && (
-                          <img
-                            src={normalizeImageUrl(
-                              item.ttd_path
-                            )}
-                            className="max-h-16 object-contain"
-                            alt="TTD Penyusun"
-                          />
-                        )}
-
-                        <div className="mt-2 w-[140px] border-b border-black"></div>
-
-                        <p className="mt-2">
-                          -
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              )}
-
-              {validator.map(
-                (
-                  item,
-                  index
-                ) => (
-                  <tr
-                    key={`validator-${index}`}
-                  >
-                    {index ===
-                      0 && (
-                      <td
-                        rowSpan={
-                          validator.length
-                        }
-                        className="border border-black text-center align-middle"
-                      >
-                        Validator
-                      </td>
-                    )}
-
-                    <td className="border border-black text-center">
-                      {index + 1}
-                    </td>
-
-                    <td className="border border-black px-2">
-                      <div className="print:hidden">
-                        <select
-                          value={
-                            item?.id_asesor ||
-                            ""
-                          }
-                          onChange={(
-                            e
-                          ) =>
-                            handleAsesorChange(
-                              "validator",
-                              index,
-                              e.target.value
-                            )
-                          }
-                          className="w-full bg-transparent outline-none"
-                        >
-                          <option value="">
-                            Pilih Asesor
-                          </option>
-
-                          {asesorList.map(
-                            (
-                              asesor
-                            ) => (
-                              <option
-                                key={
-                                  asesor.id_user
-                                }
-                                value={
-                                  asesor.id_user
-                                }
-                              >
-                                {
-                                  asesor.nama_lengkap
-                                }
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-
-                      <p className="hidden print:block">
-                        {
-                          item?.nama_lengkap ||
-                          "-"
-                        }
-                      </p>
-                    </td>
-
-                    <td className="border border-black px-2">
-                      {
-                        item?.no_reg_asesor ||
-                        "-"
-                      }
-                    </td>
-
-                    <td className="border border-black">
-                      <div className="flex flex-col items-center justify-center py-2">
-                        {item?.ttd_path && (
-                          <img
-                            src={normalizeImageUrl(
-                              item.ttd_path
-                            )}
-                            className="max-h-16 object-contain"
-                            alt="TTD Validator"
-                          />
-                        )}
-
-                        <div className="mt-2 w-[140px] border-b border-black"></div>
-
-                        <p className="mt-2">
-                          -
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              )}
-            </tbody>
-          </table>
-
-          <div className="mt-3 flex gap-3 print:hidden">
-            <button
-              type="button"
-              onClick={
-                tambahPenyusun
-              }
-              className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white"
-            >
-              <Plus size={16} />
-              Tambah Penyusun
-            </button>
-
-            <button
-              type="button"
-              onClick={
-                tambahValidator
-              }
-              className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-sm font-bold text-white"
-            >
-              <Plus size={16} />
-              Tambah Validator
-            </button>
-          </div>
-
-          <div className="mt-2 flex gap-3 print:hidden">
-            {penyusun.length >
-              1 && (
-              <button
-                type="button"
-                onClick={() =>
-                  hapusPenyusun(
-                    penyusun.length -
-                      1
-                  )
-                }
-                className="text-xs font-bold text-red-600"
-              >
-                Hapus Penyusun Terakhir
-              </button>
-            )}
-
-            {validator.length >
-              1 && (
-              <button
-                type="button"
-                onClick={() =>
-                  hapusValidator(
-                    validator.length -
-                      1
-                  )
-                }
-                className="text-xs font-bold text-red-600"
-              >
-                Hapus Validator Terakhir
-              </button>
-            )}
-          </div>
-        </section>
+        <SignatureTable
+          penyusun={penyusun}
+          validator={validator}
+          asesorList={asesorList}
+          onAsesorChange={handleAsesorChange}
+          onAddPenyusun={tambahPenyusun}
+          onAddValidator={tambahValidator}
+          onRemovePenyusun={hapusPenyusun}
+          onRemoveValidator={hapusValidator}
+        />
       </main>
 
       {showSoalModal && (
-        <ModalWrapper>
-          <form
-            onSubmit={saveSoal}
-            className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
-          >
-            <div className="flex items-center justify-between border-b px-6 py-5">
-              <h3 className="text-lg font-black text-[#071E3D]">
-                {editingSoal
-                  ? "Edit Pertanyaan"
-                  : "Tambah Pertanyaan"}
-              </h3>
-
-              <button
-                type="button"
-                onClick={
-                  closeSoalModal
-                }
-                className="rounded-xl border p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="max-h-[75vh] space-y-4 overflow-y-auto p-6">
-              <div>
-                <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
-                  Nomor / Urutan
-                </label>
-
-                <input
-                  type="number"
-                  min="1"
-                  name="urutan"
-                  value={
-                    formSoal.urutan
-                  }
-                  onChange={
-                    handleSoalChange
-                  }
-                  className="w-full rounded-xl border px-4 py-3 font-bold outline-none focus:border-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
-                  Pertanyaan
-                </label>
-
-                <textarea
-                  name="pertanyaan"
-                  value={
-                    formSoal.pertanyaan
-                  }
-                  onChange={
-                    handleSoalChange
-                  }
-                  rows="4"
-                  className="w-full resize-none rounded-xl border px-4 py-3 font-bold outline-none focus:border-orange-500"
-                  placeholder="Tuliskan pertanyaan..."
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
-                  <Image size={15} />
-                  Gambar Soal dari Komputer
-                </label>
-
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={
-                    handleGambarChange
-                  }
-                  className="w-full rounded-xl border px-4 py-3 font-bold outline-none focus:border-orange-500"
-                />
-
-                {formSoal.gambar_preview && (
-                  <div className="mt-3 rounded-xl border bg-slate-50 p-3">
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-xs font-bold text-slate-500">
-                        Preview Gambar
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={
-                          hapusGambarSoal
-                        }
-                        className="text-xs font-bold text-red-600 hover:text-red-800"
-                      >
-                        Hapus Gambar
-                      </button>
-                    </div>
-
-                    <img
-                      src={
-                        formSoal.gambar_preview
-                      }
-                      alt="Preview gambar soal"
-                      className="max-h-[180px] max-w-full rounded-lg border object-contain"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-xl border bg-slate-50 p-4">
-                <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">
-                  Opsi Jawaban
-                </p>
-
-                <div className="space-y-3">
-                  {formSoal.opsi.map(
-                    (
-                      opsi,
-                      index
-                    ) => (
-                      <div
-                        key={
-                          opsi.kode_opsi
-                        }
-                        className="grid grid-cols-[45px_1fr_120px] items-center gap-3"
-                      >
-                        <div className="font-black text-[#071E3D]">
-                          {
-                            opsi.kode_opsi
-                          }
-                          .
-                        </div>
-
-                        <input
-                          value={
-                            opsi.jawaban
-                          }
-                          onChange={(
-                            e
-                          ) =>
-                            handleOpsiChange(
-                              index,
-                              "jawaban",
-                              e.target.value
-                            )
-                          }
-                          className="w-full rounded-xl border bg-white px-4 py-3 font-bold outline-none focus:border-orange-500"
-                          placeholder={`Jawaban ${opsi.kode_opsi}`}
-                          required
-                        />
-
-                        <label className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                          <input
-                            type="radio"
-                            name="jawaban_benar"
-                            checked={Boolean(
-                              opsi.is_benar
-                            )}
-                            onChange={() =>
-                              setJawabanBenar(
-                                index
-                              )
-                            }
-                          />
-                          Benar
-                        </label>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t px-6 py-5">
-              <button
-                type="button"
-                onClick={
-                  closeSoalModal
-                }
-                className="rounded-xl border px-6 py-3 text-sm font-black text-slate-700 hover:bg-slate-50"
-              >
-                Batal
-              </button>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-black text-white hover:bg-[#071E3D] disabled:opacity-60"
-              >
-                {saving ? (
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                  />
-                ) : (
-                  <Save size={16} />
-                )}
-                Simpan Pertanyaan
-              </button>
-            </div>
-          </form>
-        </ModalWrapper>
+        <QuestionModal
+          editing={Boolean(editingSoal)}
+          form={formSoal}
+          saving={saving}
+          onChange={handleSoalChange}
+          onImageChange={handleGambarChange}
+          onRemoveImage={hapusGambarSoal}
+          onOptionChange={handleOpsiChange}
+          onSetCorrect={setJawabanBenar}
+          onSubmit={saveSoal}
+          onClose={closeSoalModal}
+        />
       )}
 
       <style>{`
         @media print {
           @page {
             size: A4;
-            margin: 14mm;
+            margin: 12mm;
+          }
+
+          html,
+          body {
+            background: #fff !important;
           }
 
           input,
@@ -1856,10 +993,24 @@ export default function FRIA05() {
           select {
             border: none !important;
             outline: none !important;
+            box-shadow: none !important;
           }
 
-          .print-hidden {
+          button,
+          .print\\:hidden {
             display: none !important;
+          }
+
+          table {
+            page-break-inside: auto;
+          }
+
+          tr {
+            page-break-inside: avoid;
+          }
+
+          img {
+            max-width: 100% !important;
           }
         }
       `}</style>
@@ -1867,101 +1018,592 @@ export default function FRIA05() {
   );
 }
 
-function InfoRow({
-  label,
-  value,
-}) {
+function HeaderTable({ skema, header, asesorList, onChange }) {
+  const jenisRaw = String(skema?.jenis_skema || "kkni").toLowerCase();
+
+  const jenis =
+    jenisRaw.includes("klaster") || jenisRaw.includes("cluster")
+      ? "klaster"
+      : jenisRaw.includes("okupasi")
+        ? "okupasi"
+        : "kkni";
+
+  const labelJenis = (nilai) =>
+    jenis === nilai ? "" : "line-through text-slate-500";
+
   return (
-    <tr>
-      <td
-        colSpan="2"
-        className="border border-black px-1 py-[2px] font-bold"
-      >
-        {label}
-      </td>
+    <table className="w-full border-collapse border border-black text-[12px]">
+      <tbody>
+        <tr>
+          <td
+            rowSpan={6}
+            className="w-[185px] border border-black px-2 py-1 align-middle font-bold leading-tight"
+          >
+            <div className="text-[14px]">Skema Sertifikasi</div>
+            <div className="whitespace-nowrap text-[12px]">
+              (
+              <span className={labelJenis("kkni")}>KKNI</span>
+              {" / "}
+              <span className={labelJenis("okupasi")}>Okupasi</span>
+              {" / "}
+              <span className={labelJenis("klaster")}>Klaster</span>
+              )
+            </div>
+          </td>
 
-      <td className="border border-black px-1 py-[2px] text-center">
-        :
-      </td>
+          <td className="w-[80px] border border-black px-2 py-1 font-bold">
+            Judul
+          </td>
+          <td className="w-[20px] border border-black px-2 py-1 text-center">
+            :
+          </td>
+          <td className="border border-black px-3 py-1 font-semibold">
+            {skema?.judul_skema || "-"}
+          </td>
+        </tr>
 
-      <td className="border border-black px-1 py-[2px]">
-        {value || ""}
-      </td>
-    </tr>
+        <tr>
+          <td className="border border-black px-2 py-1 font-bold">Nomor</td>
+          <td className="border border-black px-2 py-1 text-center">:</td>
+          <td className="border border-black px-3 py-1 font-semibold">
+            {skema?.kode_skema || "-"}
+          </td>
+        </tr>
+
+        <tr>
+          <td className="border border-black px-2 py-1 font-bold">TUK</td>
+          <td className="border border-black px-2 py-1 text-center">:</td>
+          <td className="border border-black px-3 py-1">
+            <select
+              value={header.tuk || "Tempat Kerja"}
+              onChange={(event) => onChange("tuk", event.target.value)}
+              className="w-full bg-transparent outline-none print:hidden"
+            >
+              <option value="Sewaktu">Sewaktu</option>
+              <option value="Tempat Kerja">Tempat Kerja</option>
+              <option value="Mandiri">Mandiri</option>
+            </select>
+
+            <span className="hidden print:inline">
+              {header.tuk || "Tempat Kerja"}
+            </span>
+          </td>
+        </tr>
+
+        <tr>
+          <td className="border border-black px-2 py-1 font-bold">
+            Nama Asesor
+          </td>
+          <td className="border border-black px-2 py-1 text-center">:</td>
+          <td className="border border-black px-3 py-1">
+            <select
+              value={header.nama_asesor || ""}
+              onChange={(event) =>
+                onChange("nama_asesor", event.target.value)
+              }
+              className="w-full bg-transparent outline-none print:hidden"
+            >
+              <option value="">Pilih Asesor</option>
+              {asesorList.map((asesor) => (
+                <option
+                  key={asesor?.id_user || asesor?.nama_lengkap}
+                  value={asesor?.nama_lengkap || asesor?.nama || ""}
+                >
+                  {asesor?.nama_lengkap || asesor?.nama || "Asesor"}
+                </option>
+              ))}
+            </select>
+
+            <span className="hidden print:inline">
+              {header.nama_asesor || ""}
+            </span>
+          </td>
+        </tr>
+
+        <tr>
+          <td className="border border-black px-2 py-1 font-bold">
+            Nama Asesi
+          </td>
+          <td className="border border-black px-2 py-1 text-center">:</td>
+          <td className="border border-black px-3 py-1">
+            <input
+              type="text"
+              value={header.nama_asesi || ""}
+              onChange={(event) =>
+                onChange("nama_asesi", event.target.value)
+              }
+              placeholder="Masukkan nama asesi"
+              className="w-full bg-transparent outline-none placeholder:text-slate-400 print:hidden"
+            />
+
+            <span className="hidden print:inline">
+              {header.nama_asesi || ""}
+            </span>
+          </td>
+        </tr>
+
+        <tr>
+          <td className="border border-black px-2 py-1 font-bold">Tanggal</td>
+          <td className="border border-black px-2 py-1 text-center">:</td>
+          <td className="border border-black px-3 py-1">
+            <input
+              type="date"
+              value={header.tanggal || ""}
+              onChange={(event) => onChange("tanggal", event.target.value)}
+              className="w-full bg-transparent outline-none print:hidden"
+            />
+
+            <span className="hidden print:inline">
+              {formatTanggal(header.tanggal)}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   );
 }
 
-function ModalWrapper({
-  children,
+function SignatureTable({
+  penyusun,
+  validator,
+  asesorList,
+  onAsesorChange,
+  onAddPenyusun,
+  onAddValidator,
+  onRemovePenyusun,
+  onRemoveValidator,
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:hidden">
-      {children}
+    <section className="mt-8">
+      <p className="mb-2 text-center text-[11px] font-bold uppercase">
+        Penyusun dan Validator
+      </p>
+
+      <table className="w-full border-collapse border border-black text-[11px]">
+        <thead>
+          <tr>
+            <th className="border border-black px-2 py-1">STATUS</th>
+            <th className="w-[45px] border border-black px-2 py-1">NO</th>
+            <th className="border border-black px-2 py-1">NAMA</th>
+            <th className="w-[140px] border border-black px-2 py-1">
+              NOMOR MET
+            </th>
+            <th className="w-[180px] border border-black px-2 py-1">
+              TANDA TANGAN DAN TANGGAL
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {penyusun.map((item, index) => (
+            <tr key={`penyusun-${index}`}>
+              {index === 0 && (
+                <td
+                  rowSpan={penyusun.length}
+                  className="border border-black px-2 py-2 text-center align-middle"
+                >
+                  Penyusun
+                </td>
+              )}
+
+              <td className="border border-black px-2 py-2 text-center">
+                {index + 1}
+              </td>
+
+              <td className="border border-black px-2 py-2">
+                <select
+                  value={item?.id_asesor || ""}
+                  onChange={(event) =>
+                    onAsesorChange("penyusun", index, event.target.value)
+                  }
+                  className="w-full bg-transparent outline-none print:hidden"
+                >
+                  <option value="">Pilih Asesor</option>
+                  {asesorList.map((asesor) => (
+                    <option key={asesor.id_user} value={asesor.id_user}>
+                      {asesor.nama_lengkap || asesor.nama}
+                    </option>
+                  ))}
+                </select>
+
+                <span className="hidden print:inline">
+                  {item?.nama_lengkap || ""}
+                </span>
+              </td>
+
+              <td className="border border-black px-2 py-2">
+                {item?.no_reg_asesor || "-"}
+              </td>
+
+              <td className="border border-black px-2 py-2">
+                <SignatureCell item={item} />
+              </td>
+            </tr>
+          ))}
+
+          {validator.map((item, index) => (
+            <tr key={`validator-${index}`}>
+              {index === 0 && (
+                <td
+                  rowSpan={validator.length}
+                  className="border border-black px-2 py-2 text-center align-middle"
+                >
+                  Validator
+                </td>
+              )}
+
+              <td className="border border-black px-2 py-2 text-center">
+                {index + 1}
+              </td>
+
+              <td className="border border-black px-2 py-2">
+                <select
+                  value={item?.id_asesor || ""}
+                  onChange={(event) =>
+                    onAsesorChange("validator", index, event.target.value)
+                  }
+                  className="w-full bg-transparent outline-none print:hidden"
+                >
+                  <option value="">Pilih Asesor</option>
+                  {asesorList.map((asesor) => (
+                    <option key={asesor.id_user} value={asesor.id_user}>
+                      {asesor.nama_lengkap || asesor.nama}
+                    </option>
+                  ))}
+                </select>
+
+                <span className="hidden print:inline">
+                  {item?.nama_lengkap || ""}
+                </span>
+              </td>
+
+              <td className="border border-black px-2 py-2">
+                {item?.no_reg_asesor || "-"}
+              </td>
+
+              <td className="border border-black px-2 py-2">
+                <SignatureCell item={item} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="mt-3 flex flex-wrap gap-3 print:hidden">
+        <button
+          type="button"
+          onClick={onAddPenyusun}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-2 text-xs font-bold text-white"
+        >
+          <Plus size={14} />
+          Tambah Penyusun
+        </button>
+
+        <button
+          type="button"
+          onClick={onAddValidator}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-4 py-2 text-xs font-bold text-white"
+        >
+          <Plus size={14} />
+          Tambah Validator
+        </button>
+
+        {penyusun.length > 1 && (
+          <button
+            type="button"
+            onClick={() => onRemovePenyusun(penyusun.length - 1)}
+            className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600"
+          >
+            <Trash2 size={14} />
+            Hapus Penyusun Terakhir
+          </button>
+        )}
+
+        {validator.length > 1 && (
+          <button
+            type="button"
+            onClick={() => onRemoveValidator(validator.length - 1)}
+            className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600"
+          >
+            <Trash2 size={14} />
+            Hapus Validator Terakhir
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SignatureCell({ item }) {
+  return (
+    <div className="flex min-h-[65px] flex-col items-center justify-center py-2">
+      {item?.ttd_path ? (
+        <img
+          src={normalizeImageUrl(item.ttd_path)}
+          className="max-h-12 max-w-full object-contain"
+          alt={`Tanda tangan ${item.nama_lengkap || "asesor"}`}
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+        />
+      ) : (
+        <span className="text-[10px] text-slate-400 print:hidden">
+          TTD belum tersedia di profil
+        </span>
+      )}
+
+      <div className="mt-2 w-[120px] border-b border-black" />
+
+      <span className="mt-1 text-[10px]">
+        {formatTanggal(item?.tanggal)}
+      </span>
     </div>
   );
 }
 
-function getSkema(
-  skema,
-  paket
-) {
-  const source =
-    skema ||
-    paket?.skema ||
-    {};
+function QuestionModal({
+  editing,
+  form,
+  saving,
+  onChange,
+  onImageChange,
+  onRemoveImage,
+  onOptionChange,
+  onSetCorrect,
+  onSubmit,
+  onClose,
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:hidden">
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+      >
+        <div className="flex items-center justify-between border-b px-6 py-5">
+          <h3 className="text-lg font-black text-[#071E3D]">
+            {editing ? "Edit Pertanyaan" : "Tambah Pertanyaan"}
+          </h3>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"
+            aria-label="Tutup formulir"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="max-h-[75vh] space-y-4 overflow-y-auto p-6">
+          <div>
+            <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
+              Nomor / Urutan
+            </label>
+
+            <input
+              type="number"
+              min="1"
+              name="urutan"
+              value={form.urutan}
+              onChange={onChange}
+              className="w-full rounded-xl border px-4 py-3 font-bold outline-none focus:border-orange-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
+              Pertanyaan
+            </label>
+
+            <textarea
+              name="pertanyaan"
+              value={form.pertanyaan}
+              onChange={onChange}
+              rows={4}
+              className="w-full resize-y rounded-xl border px-4 py-3 font-bold outline-none focus:border-orange-500"
+              placeholder="Tuliskan pertanyaan..."
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
+              <Image size={15} />
+              Gambar Soal
+            </label>
+
+            <input
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={onImageChange}
+              className="w-full rounded-xl border px-4 py-3 font-bold outline-none focus:border-orange-500"
+            />
+
+            <p className="mt-1 text-xs text-slate-500">
+              Format JPG, PNG, atau WEBP. Maksimal 2 MB.
+            </p>
+
+            {form.gambar_preview && (
+              <div className="mt-3 rounded-xl border bg-slate-50 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-500">
+                    Preview Gambar
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={onRemoveImage}
+                    className="text-xs font-bold text-red-600 hover:text-red-800"
+                  >
+                    Hapus Gambar
+                  </button>
+                </div>
+
+                <img
+                  src={form.gambar_preview}
+                  alt="Preview gambar soal"
+                  className="max-h-[180px] max-w-full rounded-lg border object-contain"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border bg-slate-50 p-4">
+            <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">
+              Opsi Jawaban
+            </p>
+
+            <div className="space-y-3">
+              {form.opsi.map((opsi, index) => (
+                <div
+                  key={opsi.kode_opsi}
+                  className="grid grid-cols-[30px_minmax(0,1fr)_90px] items-center gap-3"
+                >
+                  <div className="font-black text-[#071E3D]">
+                    {opsi.kode_opsi}.
+                  </div>
+
+                  <input
+                    value={opsi.jawaban}
+                    onChange={(event) =>
+                      onOptionChange(index, event.target.value)
+                    }
+                    className="w-full rounded-xl border bg-white px-4 py-3 font-bold outline-none focus:border-orange-500"
+                    placeholder={`Jawaban ${opsi.kode_opsi}`}
+                    required
+                  />
+
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                    <input
+                      type="radio"
+                      name="jawaban_benar"
+                      checked={Boolean(opsi.is_benar)}
+                      onChange={() => onSetCorrect(index)}
+                    />
+                    Benar
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 border-t px-6 py-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border px-6 py-3 text-sm font-black text-slate-700 hover:bg-slate-50"
+          >
+            Batal
+          </button>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-black text-white hover:bg-[#071E3D] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Save size={16} />
+            )}
+            Simpan Pertanyaan
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function getSkema(skema, paket) {
+  const source = skema || paket?.skema || {};
 
   return {
-    id_skema:
-      source?.id_skema ||
-      paket?.id_skema ||
-      null,
-
+    id_skema: source?.id_skema || paket?.id_skema || null,
     judul_skema:
       source?.judul_skema ||
       source?.nama_skema ||
       paket?.judul_skema ||
       "-",
-
     kode_skema:
       source?.kode_skema ||
       source?.nomor_skema ||
       paket?.kode_skema ||
       "-",
+    jenis_skema:
+      source?.jenis_skema ||
+      source?.jenis ||
+      source?.tipe_skema ||
+      source?.kategori_skema ||
+      source?.bentuk_skema ||
+      paket?.jenis_skema ||
+      "kkni",
   };
 }
 
-function normalizeImageUrl(
-  value
-) {
+function normalizeImageUrl(value) {
   if (!value) {
     return "";
   }
 
-  if (
-    String(value).startsWith(
-      "http"
-    )
-  ) {
-    return value;
+  const clean = String(value).replace(/\\/g, "/");
+
+  if (/^https?:\/\//i.test(clean)) {
+    return clean;
   }
 
-  const base =
-    api.defaults.baseURL ||
-    "";
+  const baseUrl = api.defaults.baseURL || "http://localhost:3000/api";
+  const rootUrl = baseUrl.replace(/\/api\/?$/, "");
+  const uploadsMatch = clean.match(/(?:^|\/)(uploads\/.*)$/i);
+  const relativePath = uploadsMatch
+    ? uploadsMatch[1]
+    : clean.replace(/^\/+/, "");
 
-  const rootBase =
-    base.replace(
-      /\/api\/?$/,
-      ""
-    );
+  return `${rootUrl}/${relativePath}`;
+}
 
-  if (
-    String(value).startsWith(
-      "/"
-    )
-  ) {
-    return `${rootBase}${value}`;
+function formatTanggal(value) {
+  if (!value) {
+    return "-";
   }
 
-  return `${rootBase}/${value}`;
+  const stringValue = String(value);
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(stringValue)) {
+    const [year, month, day] = stringValue.slice(0, 10).split("-");
+    return `${day}/${month}/${year}`;
+  }
+
+  const date = new Date(stringValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return stringValue;
+  }
+
+  return date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
