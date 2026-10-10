@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,8 +55,6 @@ export default function Registration() {
     kota_wilayah_uji: "",
     wilayah_rji: "",
     pendidikan_terakhir: "",
-    id_skema: "",
-    skema_yang_dipilih: "",
     captchaToken: ""
   });
 
@@ -65,7 +64,6 @@ export default function Registration() {
   const [kelurahan, setKelurahan] = useState([]);
   const [provinsiWilayahUji, setProvinsiWilayahUji] = useState([]);
   const [kotaWilayahUji, setKotaWilayahUji] = useState([]);
-  const [skemaList, setSkemaList] = useState([]);
 
   useEffect(() => {
     axios
@@ -74,16 +72,9 @@ export default function Registration() {
         setProvinsi(res.data || []);
         setProvinsiWilayahUji(res.data || []);
       })
-      .catch((err) =>
-        console.error("Gagal load provinsi:", err)
-      );
-
-    axios
-      .get(`${API_URL}/dropdown/skema`)
-      .then((res) => setSkemaList(res.data || []))
-      .catch((err) =>
-        console.error("Gagal load skema:", err)
-      );
+      .catch((err) => {
+        console.error("Gagal load provinsi:", err);
+      });
   }, []);
 
   useEffect(() => {
@@ -119,9 +110,7 @@ export default function Registration() {
 
     if (id) {
       try {
-        const res = await axios.get(
-          `${API_URL}/kota/${id}`
-        );
+        const res = await axios.get(`${API_URL}/kota/${id}`);
         setKota(res.data || []);
       } catch (err) {
         console.error("Gagal load kota:", err);
@@ -159,9 +148,7 @@ export default function Registration() {
 
     if (id) {
       try {
-        const res = await axios.get(
-          `${API_URL}/kecamatan/${id}`
-        );
+        const res = await axios.get(`${API_URL}/kecamatan/${id}`);
         setKecamatan(res.data || []);
       } catch (err) {
         console.error("Gagal load kecamatan:", err);
@@ -189,9 +176,7 @@ export default function Registration() {
 
     if (id) {
       try {
-        const res = await axios.get(
-          `${API_URL}/kelurahan/${id}`
-        );
+        const res = await axios.get(`${API_URL}/kelurahan/${id}`);
         setKelurahan(res.data || []);
       } catch (err) {
         console.error("Gagal load kelurahan:", err);
@@ -237,15 +222,10 @@ export default function Registration() {
 
     if (id) {
       try {
-        const res = await axios.get(
-          `${API_URL}/kota/${id}`
-        );
+        const res = await axios.get(`${API_URL}/kota/${id}`);
         setKotaWilayahUji(res.data || []);
       } catch (err) {
-        console.error(
-          "Gagal load kota/kabupaten wilayah uji:",
-          err
-        );
+        console.error("Gagal load kota/kabupaten wilayah uji:", err);
         setKotaWilayahUji([]);
       }
     } else {
@@ -270,25 +250,6 @@ export default function Registration() {
       kota_wilayah_uji_id: id,
       kota_wilayah_uji: name,
       wilayah_rji: `${prev.provinsi_wilayah_uji} - ${name}`
-    }));
-  };
-
-  const handleSkemaChange = (e) => {
-    const selectedOption = e.target.selectedOptions[0];
-    const id = e.target.value;
-    const namaSkema = selectedOption.dataset.nama || "";
-
-    if (errors.id_skema) {
-      setErrors((prev) => ({
-        ...prev,
-        id_skema: null
-      }));
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      id_skema: id,
-      skema_yang_dipilih: namaSkema
     }));
   };
 
@@ -359,11 +320,7 @@ export default function Registration() {
         newErrors.nik = "NIK harus tepat 16 digit";
       }
 
-      if (
-        !formData.email.match(
-          /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        )
-      ) {
+      if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
         newErrors.email = "Format email tidak valid";
       }
 
@@ -388,18 +345,15 @@ export default function Registration() {
       }
 
       if (!formData.kota_id) {
-        newErrors.kota_nama =
-          "Pilih kota/kabupaten";
+        newErrors.kota_nama = "Pilih kota/kabupaten";
       }
 
       if (!formData.alamat_lengkap.trim()) {
-        newErrors.alamat_lengkap =
-          "Alamat lengkap wajib diisi";
+        newErrors.alamat_lengkap = "Alamat lengkap wajib diisi";
       }
 
       if (!formData.provinsi_wilayah_uji_id) {
-        newErrors.provinsi_wilayah_uji =
-          "Pilih provinsi wilayah uji";
+        newErrors.provinsi_wilayah_uji = "Pilih provinsi wilayah uji";
       }
 
       if (!formData.kota_wilayah_uji_id) {
@@ -410,22 +364,15 @@ export default function Registration() {
 
     if (step === 3) {
       if (!formData.pendidikan_terakhir) {
-        newErrors.pendidikan_terakhir =
-          "Pilih pendidikan terakhir";
-      }
-
-      if (!formData.id_skema) {
-        newErrors.id_skema = "Pilih keahlian";
+        newErrors.pendidikan_terakhir = "Pilih pendidikan terakhir";
       }
 
       if (!formData.captchaToken) {
-        newErrors.captchaToken =
-          "Verifikasi Captcha diperlukan";
+        newErrors.captchaToken = "Verifikasi Captcha diperlukan";
       }
     }
 
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
 
@@ -462,8 +409,6 @@ export default function Registration() {
       kota_wilayah_uji: "",
       wilayah_rji: "",
       pendidikan_terakhir: "",
-      id_skema: "",
-      skema_yang_dipilih: "",
       captchaToken: ""
     });
 
@@ -496,15 +441,10 @@ export default function Registration() {
         kota: formData.kota_nama,
         kecamatan: formData.kecamatan_nama,
         kelurahan: formData.kelurahan_nama,
-        provinsi_wilayah_uji:
-          formData.provinsi_wilayah_uji,
-        kota_wilayah_uji:
-          formData.kota_wilayah_uji,
+        provinsi_wilayah_uji: formData.provinsi_wilayah_uji,
+        kota_wilayah_uji: formData.kota_wilayah_uji,
         wilayah_rji: `${formData.provinsi_wilayah_uji} - ${formData.kota_wilayah_uji}`,
-        program_studi:
-          formData.pendidikan_terakhir,
-        kompetensi_keahlian:
-          formData.skema_yang_dipilih
+        program_studi: formData.pendidikan_terakhir
       };
 
       await submitPendaftaran(payload);
@@ -631,9 +571,7 @@ export default function Registration() {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setSubmitStatus(null)
-                      }
+                      onClick={() => setSubmitStatus(null)}
                       className="mt-2 text-[9px] font-bold uppercase tracking-widest text-slate-500 transition-opacity hover:opacity-60"
                     >
                       Tutup Notifikasi
@@ -657,8 +595,8 @@ export default function Registration() {
                       step === num
                         ? "bg-[#071E3D] text-white shadow-md shadow-[#071E3D]/15"
                         : step > num
-                        ? "bg-emerald-500 text-white"
-                        : "border border-slate-200 bg-white text-slate-400"
+                          ? "bg-emerald-500 text-white"
+                          : "border border-slate-200 bg-white text-slate-400"
                     }`}
                   >
                     {step > num ? (
@@ -703,8 +641,8 @@ export default function Registration() {
                       {step === 1
                         ? "Informasi Akun & Pribadi"
                         : step === 2
-                        ? "Domisili & Lokasi Uji"
-                        : "Data Kompetensi"}
+                          ? "Domisili & Lokasi Uji"
+                          : "Pendidikan & Verifikasi"}
                     </h2>
                   </div>
                 </div>
@@ -798,9 +736,7 @@ export default function Registration() {
                           value={formData.provinsi_nama}
                           error={errors.provinsi_nama}
                         >
-                          <option value="">
-                            Pilih Provinsi
-                          </option>
+                          <option value="">Pilih Provinsi</option>
 
                           {provinsi.map((p) => (
                             <option
@@ -820,9 +756,7 @@ export default function Registration() {
                           disabled={!formData.provinsi_id}
                           error={errors.kota_nama}
                         >
-                          <option value="">
-                            Pilih Kota / Kabupaten
-                          </option>
+                          <option value="">Pilih Kota / Kabupaten</option>
 
                           {kota.map((k) => (
                             <option
@@ -841,9 +775,7 @@ export default function Registration() {
                           value={formData.kecamatan_nama}
                           disabled={!formData.kota_id}
                         >
-                          <option value="">
-                            Pilih Kecamatan
-                          </option>
+                          <option value="">Pilih Kecamatan</option>
 
                           {kecamatan.map((kec) => (
                             <option
@@ -862,9 +794,7 @@ export default function Registration() {
                           value={formData.kelurahan_nama}
                           disabled={!formData.kecamatan_id}
                         >
-                          <option value="">
-                            Pilih Kelurahan
-                          </option>
+                          <option value="">Pilih Kelurahan</option>
 
                           {kelurahan.map((kel) => (
                             <option
@@ -879,19 +809,11 @@ export default function Registration() {
 
                         <SelectGroup
                           label="Provinsi Wilayah Uji*"
-                          onChange={
-                            handleProvinsiWilayahUjiChange
-                          }
-                          value={
-                            formData.provinsi_wilayah_uji
-                          }
-                          error={
-                            errors.provinsi_wilayah_uji
-                          }
+                          onChange={handleProvinsiWilayahUjiChange}
+                          value={formData.provinsi_wilayah_uji}
+                          error={errors.provinsi_wilayah_uji}
                         >
-                          <option value="">
-                            Pilih Provinsi Wilayah Uji
-                          </option>
+                          <option value="">Pilih Provinsi Wilayah Uji</option>
 
                           {provinsiWilayahUji.map((p) => (
                             <option
@@ -906,18 +828,10 @@ export default function Registration() {
 
                         <SelectGroup
                           label="Kota / Kabupaten Wilayah Uji*"
-                          onChange={
-                            handleKotaWilayahUjiChange
-                          }
-                          value={
-                            formData.kota_wilayah_uji
-                          }
-                          disabled={
-                            !formData.provinsi_wilayah_uji_id
-                          }
-                          error={
-                            errors.kota_wilayah_uji
-                          }
+                          onChange={handleKotaWilayahUjiChange}
+                          value={formData.kota_wilayah_uji}
+                          disabled={!formData.provinsi_wilayah_uji_id}
+                          error={errors.kota_wilayah_uji}
                         >
                           <option value="">
                             Pilih Kota / Kabupaten Wilayah Uji
@@ -967,58 +881,20 @@ export default function Registration() {
                         duration: 0.25
                       }}
                     >
-                      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-5">
                         <SelectGroup
                           label="Pendidikan Terakhir*"
                           name="pendidikan_terakhir"
-                          value={
-                            formData.pendidikan_terakhir
-                          }
+                          value={formData.pendidikan_terakhir}
                           onChange={handleChange}
-                          error={
-                            errors.pendidikan_terakhir
-                          }
+                          error={errors.pendidikan_terakhir}
                         >
-                          <option value="">
-                            Pilih Pendidikan Terakhir
-                          </option>
-                          <option value="D3">
-                            D3
-                          </option>
-                          <option value="D4">
-                            D4
-                          </option>
-                          <option value="S1">
-                            S1
-                          </option>
-                          <option value="S2">
-                            S2
-                          </option>
-                          <option value="S3">
-                            S3
-                          </option>
-                        </SelectGroup>
-
-                        <SelectGroup
-                          label="Keahlian yang Dipilih*"
-                          name="id_skema"
-                          value={formData.id_skema}
-                          onChange={handleSkemaChange}
-                          error={errors.id_skema}
-                        >
-                          <option value="">
-                            Pilih Keahlian
-                          </option>
-
-                          {skemaList.map((s) => (
-                            <option
-                              key={s.id_skema}
-                              value={s.id_skema}
-                              data-nama={s.judul_skema}
-                            >
-                              {s.judul_skema}
-                            </option>
-                          ))}
+                          <option value="">Pilih Pendidikan Terakhir</option>
+                          <option value="D3">D3</option>
+                          <option value="D4">D4</option>
+                          <option value="S1">S1</option>
+                          <option value="S2">S2</option>
+                          <option value="S3">S3</option>
                         </SelectGroup>
                       </div>
 
@@ -1034,8 +910,7 @@ export default function Registration() {
                             </h3>
 
                             <p className="mt-1 text-[10px] font-medium text-slate-400">
-                              Selesaikan verifikasi untuk
-                              mengirim pendaftaran.
+                              Selesaikan verifikasi untuk mengirim pendaftaran.
                             </p>
                           </div>
                         </div>
@@ -1081,11 +956,7 @@ export default function Registration() {
 
                   <button
                     type="button"
-                    onClick={
-                      step === 3
-                        ? handleSubmit
-                        : nextStep
-                    }
+                    onClick={step === 3 ? handleSubmit : nextStep}
                     disabled={loading}
                     className={`flex items-center gap-2 rounded-lg px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.16em] transition-all duration-300 ${
                       step === 3
@@ -1099,10 +970,7 @@ export default function Registration() {
                   >
                     {loading ? (
                       <>
-                        <Loader2
-                          className="animate-spin"
-                          size={15}
-                        />
+                        <Loader2 className="animate-spin" size={15} />
                         Memproses...
                       </>
                     ) : step === 3 ? (
@@ -1185,8 +1053,7 @@ export default function Registration() {
                     </h4>
 
                     <p className="mt-1 text-[11px] font-medium leading-5 text-slate-500">
-                      Lihat panduan lengkap mengenai
-                      proses pendaftaran asesi.
+                      Lihat panduan lengkap mengenai proses pendaftaran asesi.
                     </p>
                   </div>
                 </div>
@@ -1354,8 +1221,8 @@ function SelectGroup({
             disabled
               ? "cursor-not-allowed border-slate-100 bg-slate-100 text-slate-400"
               : error
-              ? "border-red-300 focus:border-red-400 focus:ring-red-500/5"
-              : "cursor-pointer border-slate-200 focus:border-[#CC6B27] focus:ring-[#CC6B27]/5"
+                ? "border-red-300 focus:border-red-400 focus:ring-red-500/5"
+                : "cursor-pointer border-slate-200 focus:border-[#CC6B27] focus:ring-[#CC6B27]/5"
           }`}
         >
           {children}
