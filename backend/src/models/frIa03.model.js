@@ -25,7 +25,7 @@ const FrIa03 = sequelize.define("fr_ia_03", {
 
   id_asesor: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: true
   },
 
   id_asesi: {

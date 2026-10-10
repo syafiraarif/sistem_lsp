@@ -32,6 +32,10 @@ import LaporanSertifikasi from "../pages/admin/LaporanSertifikasi";
 import FRAK04Detail from "../pages/shared/FRAK04Detail";
 import MasterFRIA05 from "../pages/admin/MasterFRIA05";
 
+// IMPORT HALAMAN BARU FR.IA.02 dan FR.IA.03
+import AdminFRIA02 from "../pages/admin/AdminFRIA02";
+import AdminFRIA03 from "../pages/admin/AdminFRIA03";
+
 /* PROTECTED */
 const getUser = () => {
   const user = localStorage.getItem("user");
@@ -64,7 +68,9 @@ export default function AdminRoutes() {
           <Route path="skema/:id/persyaratan-tuk" element={<SkemaPersyaratanTuk />} />
           <Route path="skema/:id/biaya-uji" element={<BiayaUji />} />
 
-          {/* RUTE BARU UNTUK KELOLA BANK SOAL MASTER */}
+          {/* RUTE INSTRUMEN UJI SKEMA */}
+          <Route path="skema/:id_skema/fr-ia-02" element={<AdminFRIA02 />} />
+          <Route path="skema/:id_skema/fr-ia-03" element={<AdminFRIA03 />} />
           <Route path="skema/:id_skema/bank-soal" element={<MasterFRIA05 />} />
 
           {/* RUTE LAINNYA */}

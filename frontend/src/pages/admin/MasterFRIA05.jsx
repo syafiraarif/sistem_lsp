@@ -1,89 +1,84 @@
+// frontend/src/pages/admin/MasterFRIA05.jsx
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Edit, Image, Loader2, Plus, Save, Trash2, X, Download } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Edit, Loader2, Plus, Save, Trash2, X, Download, ArrowLeft } from "lucide-react";
 import Swal from "sweetalert2";
 import api from "../../services/api";
 
 const defaultOpsi = [
-  { kode_opsi: "A", jawaban: "", is_benar: false },
-  { kode_opsi: "B", jawaban: "", is_benar: false },
-  { kode_opsi: "C", jawaban: "", is_benar: false },
-  { kode_opsi: "D", jawaban: "", is_benar: false },
+  { kode_opsi: "A", jawaban: "", is_benar: false }, { kode_opsi: "B", jawaban: "", is_benar: false },
+  { kode_opsi: "C", jawaban: "", is_benar: false }, { kode_opsi: "D", jawaban: "", is_benar: false },
   { kode_opsi: "E", jawaban: "", is_benar: false },
 ];
 
-export default function MasterFRIA05() {                                                          
+export default function MasterFRIA05() {
   const { id_skema } = useParams();
+  const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
   const [skema, setSkema] = useState(null);
   const [paket, setPaket] = useState(null);
+  const [listAsesor, setListAsesor] = useState([]);
+
+  const [formPaket, setFormPaket] = useState({ kode_paket: "", judul_paket: "Master Paket Soal FR.IA.05", passing_grade: 70, waktu: 90 });
   
-  const [formPaket, setFormPaket] = useState({
-    kode_paket: "",
-    judul_paket: "Master Paket Soal FR.IA.05",
-    passing_grade: 70,
-    waktu: 90,
-  });
-  const [showSoalModal, setShowSoalModal] = useState(false);
-  const [editingSoal, setEditingSoal] = useState(null);
-  const [formSoal, setFormSoal] = useState({
-    pertanyaan: "",
-    gambar_file: null,
-    gambar_preview: "",
-    gambar_lama: "",
-    hapus_gambar: false,
-    urutan: "",
-    opsi: defaultOpsi.map((item) => ({ ...item })),
+  const [formPerson, setFormPerson] = useState({
+    penyusun: [{ id_user: "", nama: "", nomor_met: "", ttd: "", tanggal: "" }],
+    validator: [{ id_user: "", nama: "", nomor_met: "", ttd: "", tanggal: "" }],
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [id_skema]);
+  const [showSoalModal, setShowSoalModal] = useState(false);
+  const [editingSoal, setEditingSoal] = useState(null);
+  const [formSoal, setFormSoal] = useState({ pertanyaan: "", gambar_file: null, gambar_preview: "", gambar_lama: "", hapus_gambar: false, urutan: "", opsi: defaultOpsi.map(i => ({...i})) });
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/admin/fr-ia05/skema/${id_skema}`);
-      const data = res.data?.data || {};
-      
-      setSkema(data.skema);
-      setPaket(data.paket);
-      if (data.paket) {
-        setFormPaket({
-          kode_paket: data.paket.kode_paket || `MASTER-FRIA05-${id_skema}`,
-          judul_paket: data.paket.judul_paket || "Master Paket Soal FR.IA.05",
-          passing_grade: data.paket.passing_grade || 70,
-          waktu: data.paket.waktu || 90,
-        });
-      } else {
-        setFormPaket((prev) => ({ ...prev, kode_paket: `MASTER-FRIA05-${id_skema}` }));
+      const [fria05Res, asesorRes] = await Promise.allSettled([
+        api.get(`/admin/fr-ia05/skema/${id_skema}`),
+        api.get("/admin/asesor")
+      ]);
+
+      if (asesorRes.status === "fulfilled") setListAsesor(Array.isArray(asesorRes.value.data?.data) ? asesorRes.value.data.data : []);
+
+      if (fria05Res.status === "fulfilled") {
+        const data = fria05Res.value.data?.data || {};
+        setSkema(data.skema); setPaket(data.paket);
+        if (data.paket) {
+          setFormPaket({ kode_paket: data.paket.kode_paket, judul_paket: data.paket.judul_paket, passing_grade: data.paket.passing_grade, waktu: data.paket.waktu });
+          
+          if (data.paket.validator) {
+             const penyusun = []; const validator = [];
+             data.paket.validator.forEach((item) => {
+                const vData = { id_user: item?.id_asesor || "", nama: item?.asesor?.nama_lengkap || "", nomor_met: item?.asesor?.no_lisensi || item?.asesor?.no_reg_asesor || "", ttd: item?.asesor?.ttd_path || "", tanggal: item?.tanggal || "" };
+                if (item?.peran === "penyusun") penyusun.push(vData);
+                if (item?.peran === "validator") validator.push(vData);
+             });
+             setFormPerson({ penyusun: penyusun.length ? penyusun : formPerson.penyusun, validator: validator.length ? validator : formPerson.validator });
+          }
+        } else {
+          setFormPaket(p => ({ ...p, kode_paket: `MASTER-FRIA05-${id_skema}` }));
+        }
       }
-    } catch (err) {
-      console.error(err);
-      Swal.fire("Gagal", err.response?.data?.message || "Gagal memuat master soal", "error");
     } finally {
       setLoading(false);
     }
   };
-
-  const handlePaketChange = (e) => {
-    setFormPaket((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  useEffect(() => { fetchData(); }, [id_skema]);
 
   const savePaket = async () => {
     try {
       setSaving(true);
-      const res = await api.post("/admin/fr-ia05/paket", {
-        id_skema,
-        ...formPaket
-      });
+      const validators = [
+        ...formPerson.penyusun.filter(i => i.id_user).map((i, idx) => ({ id_asesor: Number(i.id_user), peran: "penyusun", urutan: idx + 1 })),
+        ...formPerson.validator.filter(i => i.id_user).map((i, idx) => ({ id_asesor: Number(i.id_user), peran: "validator", urutan: idx + 1 })),
+      ];
+      const res = await api.post("/admin/fr-ia05/paket", { id_skema, ...formPaket, validators });
       setPaket(res.data?.data || null);
-      Swal.fire({ title: "Berhasil", text: "Header Master Paket berhasil disimpan", icon: "success", timer: 1300, showConfirmButton: false });
+      Swal.fire({ title: "Berhasil", icon: "success", timer: 1300, showConfirmButton: false });
     } catch (err) {
-      Swal.fire("Gagal", err.response?.data?.message || "Gagal menyimpan paket", "error");
+      Swal.fire("Gagal", "Gagal menyimpan paket", "error");
     } finally {
       setSaving(false);
     }
@@ -92,179 +87,103 @@ export default function MasterFRIA05() {
   const ensurePaket = async () => {
     if (paket?.id_fr_ia_05) return paket;
     const res = await api.post("/admin/fr-ia05/paket", { id_skema, ...formPaket });
-    setPaket(res.data?.data);
-    return res.data?.data;
+    setPaket(res.data?.data); return res.data?.data;
   };
 
   const openAddSoal = async () => {
-    try {
-      setSaving(true);
-      await ensurePaket();
-      setEditingSoal(null);
-      setFormSoal({
-        pertanyaan: "", gambar_file: null, gambar_preview: "", gambar_lama: "", hapus_gambar: false,
-        urutan: (paket?.soal?.length || 0) + 1,
-        opsi: defaultOpsi.map((item) => ({ ...item })),
-      });
-      setShowSoalModal(true);
-    } catch (err) {
-      Swal.fire("Gagal", "Gagal membuat paket soal", "error");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const openEditSoal = (soal) => {
-    const opsi = Array.isArray(soal.opsi) && soal.opsi.length
-      ? soal.opsi.map((item) => ({ kode_opsi: item.kode_opsi, jawaban: item.jawaban || "", is_benar: Boolean(item.is_benar) }))
-      : defaultOpsi.map((item) => ({ ...item }));
-    setEditingSoal(soal);
-    setFormSoal({
-      pertanyaan: soal.pertanyaan || "",
-      gambar_file: null,
-      gambar_preview: soal.gambar ? normalizeImageUrl(soal.gambar) : "",
-      gambar_lama: soal.gambar || "",
-      hapus_gambar: false,
-      urutan: soal.urutan || "",
-      opsi,
-    });
-    setShowSoalModal(true);
-  };
-
-  const closeSoalModal = () => {
-    if (formSoal.gambar_preview && formSoal.gambar_file) URL.revokeObjectURL(formSoal.gambar_preview);
-    setShowSoalModal(false);
+    await ensurePaket();
     setEditingSoal(null);
-  };
-
-  const handleGambarChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return Swal.fire("Ukuran Besar", "Maksimal gambar 2 MB", "warning");
-    setFormSoal((prev) => ({ ...prev, gambar_file: file, gambar_preview: URL.createObjectURL(file), hapus_gambar: false }));
+    setFormSoal({ pertanyaan: "", gambar_file: null, gambar_preview: "", gambar_lama: "", hapus_gambar: false, urutan: (paket?.soal?.length || 0) + 1, opsi: defaultOpsi.map(i => ({...i})) });
+    setShowSoalModal(true);
   };
 
   const saveSoal = async (e) => {
     e.preventDefault();
-    if (!formSoal.pertanyaan.trim()) return Swal.fire("Validasi", "Pertanyaan wajib diisi", "warning");
-    if (formSoal.opsi.some((item) => !item.jawaban.trim())) return Swal.fire("Validasi", "Semua opsi wajib diisi", "warning");
-    if (!formSoal.opsi.some((item) => item.is_benar)) return Swal.fire("Validasi", "Pilih satu jawaban benar", "warning");
     try {
       setSaving(true);
       const currentPaket = await ensurePaket();
       const formData = new FormData();
-      
       formData.append("id_fr_ia_05", currentPaket.id_fr_ia_05);
       formData.append("pertanyaan", formSoal.pertanyaan);
       formData.append("urutan", formSoal.urutan || (paket?.soal?.length || 0) + 1);
       formData.append("opsi", JSON.stringify(formSoal.opsi));
-      formData.append("gambar_lama", formSoal.gambar_lama || "");
       formData.append("hapus_gambar", formSoal.hapus_gambar ? "true" : "false");
       if (formSoal.gambar_file) formData.append("gambar_file", formSoal.gambar_file);
-      let res = editingSoal 
-        ? await api.put(`/admin/fr-ia05/soal/${editingSoal.id_soal}`, formData, { headers: { "Content-Type": "multipart/form-data" }})
-        : await api.post("/admin/fr-ia05/soal", formData, { headers: { "Content-Type": "multipart/form-data" }});
+      
+      let res = editingSoal ? await api.put(`/admin/fr-ia05/soal/${editingSoal.id_soal}`, formData) : await api.post("/admin/fr-ia05/soal", formData);
       setPaket(res.data?.data || null);
-      closeSoalModal();
-      Swal.fire({ title: "Berhasil", text: "Pertanyaan berhasil disimpan", icon: "success", timer: 1300, showConfirmButton: false });
+      setShowSoalModal(false);
+      Swal.fire({ title: "Berhasil", icon: "success", timer: 1300, showConfirmButton: false });
     } catch (err) {
-      Swal.fire("Gagal", err.response?.data?.message || "Gagal menyimpan pertanyaan", "error");
+      Swal.fire("Gagal", "Gagal menyimpan pertanyaan", "error");
     } finally {
       setSaving(false);
     }
   };
 
   const deleteSoal = async (soal) => {
-    const confirm = await Swal.fire({ title: "Hapus Pertanyaan?", icon: "warning", showCancelButton: true, confirmButtonColor: "#d33", confirmButtonText: "Hapus" });
+    const confirm = await Swal.fire({ title: "Hapus?", icon: "warning", showCancelButton: true });
     if (!confirm.isConfirmed) return;
-    try {
-      setSaving(true);
-      const res = await api.delete(`/admin/fr-ia05/soal/${soal.id_soal}`);
-      setPaket(res.data?.data || null);
-      Swal.fire({ title: "Terhapus", text: "Pertanyaan berhasil dihapus", icon: "success", timer: 1200, showConfirmButton: false });
-    } catch (err) {
-      Swal.fire("Gagal", err.response?.data?.message || "Gagal menghapus", "error");
-    } finally {
-      setSaving(false);
-    }
+    const res = await api.delete(`/admin/fr-ia05/soal/${soal.id_soal}`);
+    setPaket(res.data?.data || null);
   };
+
+  const updatePerson = (type, index, field, value) => setFormPerson(p => ({ ...p, [type]: p[type].map((item, i) => i === index ? { ...item, [field]: value } : item) }));
+  const addPerson = (type) => setFormPerson(p => ({ ...p, [type]: [...p[type], { id_user: "", nama: "", nomor_met: "", ttd: "", tanggal: "" }] }));
+  const removePerson = (type, index) => setFormPerson(p => ({ ...p, [type]: p[type].filter((_, i) => i !== index) }));
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#CC6B27]" size={32} /></div>;
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] py-6 print:bg-white print:py-0">
-      <div className="mx-auto mb-5 flex w-[900px] justify-end print:hidden">
+      <style>{`@media print { @page { size: A4; margin: 10mm; } input, select { border: none !important; appearance: none; background: transparent; } .print-hidden { display: none !important; } }`}</style>
+      
+      <div className="mx-auto mb-5 flex w-[900px] justify-between print-hidden">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 bg-white px-5 py-3 rounded-xl font-bold shadow-sm"><ArrowLeft size={18}/> Kembali</button>
         <div className="flex gap-3">
-          <button type="button" onClick={savePaket} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[#CC6B27] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#a8561f]">
-            {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Simpan Info Master
-          </button>
-          <button type="button" onClick={openAddSoal} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#182D4A]">
-            <Plus size={18} /> Tambah Pertanyaan
-          </button>
+          <button onClick={savePaket} disabled={saving} className="flex gap-2 bg-orange-100 text-orange-600 px-5 py-3 rounded-xl font-bold"><Save size={18}/> Simpan Header</button>
+          <button onClick={openAddSoal} className="flex gap-2 bg-[#071E3D] text-white px-5 py-3 rounded-xl font-bold"><Plus size={18}/> Tambah Pertanyaan</button>
+          <button onClick={() => window.print()} className="flex gap-2 bg-emerald-600 text-white px-5 py-3 rounded-xl font-bold"><Download size={18}/> Cetak</button>
         </div>
       </div>
-      <main className="mx-auto w-[794px] bg-white px-8 py-8 text-[11px] text-black shadow-lg print:w-full print:shadow-none print:px-4 print:py-4">
+
+      <main className="mx-auto w-[900px] bg-white px-10 py-8 text-[12px] text-black shadow-lg print:w-full print:shadow-none print:px-4">
         <div className="mb-6 text-center">
-          <h1 className="text-[18px] font-bold">MASTER FR.IA.05A. DPT</h1>
-          <p className="text-[15px] font-semibold">PERTANYAAN TERTULIS PILIHAN GANDA (MASTER SOAL)</p>
+          <h1 className="text-[18px] font-bold">FR.IA.05A. DPT</h1>
+          <p className="text-[14px] font-semibold">PERTANYAAN TERTULIS PILIHAN GANDA</p>
         </div>
-        <table className="w-full border-collapse border border-black text-[12px]">
+        
+        <table className="w-full border-collapse border border-black text-[13px] mb-5">
           <tbody>
-            <tr>
-              <td rowSpan="2" className="w-[240px] border border-black px-2 py-1 font-bold leading-tight">
-                Skema Sertifikasi
-              </td>
-              <td className="w-[90px] border border-black px-2 py-1 font-bold">Judul</td>
-              <td className="w-[20px] border border-black px-2 py-1 text-center">:</td>
-              <td className="border border-black px-2 py-1 font-bold text-[#CC6B27]">{skema?.judul_skema || "-"}</td>
-            </tr>
-            <tr>
-              <td className="border border-black px-2 py-1 font-bold">Nomor</td>
-              <td className="border border-black px-2 py-1 text-center">:</td>
-              <td className="border border-black px-2 py-1 font-bold text-[#CC6B27]">{skema?.kode_skema || "-"}</td>
-            </tr>
-            <tr>
-              <td colSpan="2" className="border border-black px-2 py-1 font-bold">Kode Paket Master</td>
-              <td className="border border-black px-2 py-1 text-center">:</td>
-              <td className="border border-black px-2 py-1">
-                <input type="text" name="kode_paket" value={formPaket.kode_paket} onChange={handlePaketChange} className="w-full font-bold outline-none text-[#071E3D] border-b border-dashed border-slate-300 print:border-none" />
-              </td>
-            </tr>
-            <tr>
-              <td colSpan="2" className="border border-black px-2 py-1 font-bold">Alokasi Waktu (Menit)</td>
-              <td className="border border-black px-2 py-1 text-center">:</td>
-              <td className="border border-black px-2 py-1">
-                <input type="number" name="waktu" value={formPaket.waktu} onChange={handlePaketChange} className="w-20 font-bold outline-none text-[#071E3D] border-b border-dashed border-slate-300 print:border-none" /> Menit
-              </td>
-            </tr>
+            <tr><td rowSpan="2" className="w-[240px] border border-black px-2 py-1 font-bold">Skema Sertifikasi</td><td className="w-[90px] border border-black px-2 py-1 font-bold">Judul</td><td className="w-[20px] border border-black px-2 py-1 text-center">:</td><td className="border border-black px-2 py-1 font-bold">{skema?.judul_skema || "-"}</td></tr>
+            <tr><td className="border border-black px-2 py-1 font-bold">Nomor</td><td className="border border-black px-2 py-1 text-center">:</td><td className="border border-black px-2 py-1 font-bold">{skema?.kode_skema || "-"}</td></tr>
+            <tr><td colSpan="2" className="border border-black px-2 py-1 font-bold">Kode Paket</td><td className="border border-black px-2 py-1 text-center">:</td><td className="border border-black px-2 py-1"><input value={formPaket.kode_paket} onChange={e => setFormPaket({...formPaket, kode_paket: e.target.value})} className="w-full font-bold outline-none border-b border-dashed border-slate-300 print:border-none bg-transparent" /></td></tr>
+            <tr><td colSpan="2" className="border border-black px-2 py-1 font-bold">Waktu</td><td className="border border-black px-2 py-1 text-center">:</td><td className="border border-black px-2 py-1"><input value={formPaket.waktu} onChange={e => setFormPaket({...formPaket, waktu: e.target.value})} className="w-16 font-bold outline-none border-b border-dashed border-slate-300 print:border-none bg-transparent" /> Menit</td></tr>
           </tbody>
         </table>
-        <table className="mt-6 w-full border-collapse border border-black text-[13px]">
+
+        <p className="italic mb-2 text-[12px]">*Coret yang tidak perlu <br/> Jawab semua pertanyaan berikut:</p>
+
+        {/* Tabel Pertanyaan */}
+        <table className="w-full border-collapse border border-black text-[13px]">
           <tbody>
             {!paket?.soal?.length ? (
-              <tr><td className="border border-black px-3 py-10 text-center text-slate-500 font-bold">Belum ada pertanyaan di Master Bank Soal ini.</td></tr>
+              <tr><td className="border border-black px-3 py-10 text-center text-slate-500 font-bold">Belum ada pertanyaan. Klik tombol Tambah Pertanyaan.</td></tr>
             ) : (
-              paket.soal.map((soal, soalIndex) => (
+              paket.soal.map((soal, i) => (
                 <tr key={soal.id_soal}>
-                  <td className="w-[45px] border border-black px-2 py-3 align-top text-center font-bold">{soalIndex + 1}</td>
+                  <td className="w-[40px] border border-black px-2 py-3 align-top text-center font-bold">{i + 1}.</td>
                   <td className="border border-black px-4 py-3 align-top">
-                    <div className="flex justify-between gap-3">
-                      <p className="font-semibold leading-6 text-justify">{soal.pertanyaan}</p>
-                      <div className="flex gap-2 print:hidden shrink-0">
-                        <button type="button" onClick={() => openEditSoal(soal)} className="text-blue-600 hover:text-blue-800 bg-blue-50 p-1.5 rounded"><Edit size={16} /></button>
-                        <button type="button" onClick={() => deleteSoal(soal)} className="text-red-600 hover:text-red-800 bg-red-50 p-1.5 rounded"><Trash2 size={16} /></button>
+                    <div className="flex justify-between">
+                      <p className="font-semibold">{soal.pertanyaan}</p>
+                      <div className="flex gap-2 print-hidden">
+                        <button onClick={() => {setEditingSoal(soal); setFormSoal({...soal, opsi: soal.opsi}); setShowSoalModal(true);}} className="text-blue-600 bg-blue-50 p-1 rounded"><Edit size={14}/></button>
+                        <button onClick={() => deleteSoal(soal)} className="text-red-600 bg-red-50 p-1 rounded"><Trash2 size={14}/></button>
                       </div>
                     </div>
-                    {soal.gambar && (
-                      <div className="my-3"><img src={normalizeImageUrl(soal.gambar)} alt="Gambar soal" className="max-h-[150px] border rounded object-contain" /></div>
-                    )}
-                    <div className="mt-3 space-y-2 pl-2">
-                      {(soal.opsi || []).map((opsi) => (
-                        <div key={opsi.kode_opsi} className={`flex items-start gap-2 p-1.5 rounded ${opsi.is_benar ? "bg-emerald-50 text-emerald-800 font-bold border border-emerald-200" : ""}`}>
-                          <span className="w-5">{opsi.kode_opsi}.</span>
-                          <span className="flex-1">{opsi.jawaban}</span>
-                          {opsi.is_benar && <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full print:hidden">Kunci Jawaban</span>}
-                        </div>
+                    <div className="mt-2 space-y-1">
+                      {soal.opsi.map(o => (
+                        <div key={o.kode_opsi} className="flex gap-2"><span className="w-5">{o.kode_opsi}.</span><span>{o.jawaban}</span> {o.is_benar && <span className="print-hidden text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full ml-2">Kunci</span>}</div>
                       ))}
                     </div>
                   </td>
@@ -273,68 +192,66 @@ export default function MasterFRIA05() {
             )}
           </tbody>
         </table>
-      </main>
-      
-      {/* Modal Soal (Sama dengan Asesor) */}
-      {showSoalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/50 p-4 backdrop-blur-sm print:hidden">
-          <form onSubmit={saveSoal} className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b px-6 py-4 bg-[#FAFAFA]">
-              <h3 className="text-lg font-black text-[#071E3D]">{editingSoal ? "Edit Master Pertanyaan" : "Tambah Master Pertanyaan"}</h3>
-              <button type="button" onClick={closeSoalModal} className="rounded-xl border p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"><X size={18} /></button>
-            </div>
-            <div className="max-h-[75vh] overflow-y-auto p-6 space-y-5 custom-scrollbar">
-              <div>
-                <label className="mb-2 block text-xs font-black uppercase text-slate-500">Pertanyaan</label>
-                <textarea name="pertanyaan" value={formSoal.pertanyaan} onChange={(e) => setFormSoal(p=>({...p, pertanyaan: e.target.value}))} rows="3" className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-[#CC6B27]" placeholder="Tuliskan pertanyaan..." required />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-black uppercase text-slate-500">Gambar Pendukung (Opsional)</label>
-                <input type="file" accept="image/*" onChange={handleGambarChange} className="w-full rounded-xl border px-4 py-2 text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#CC6B27]/10 file:text-[#CC6B27]" />
-                {formSoal.gambar_preview && (
-                  <div className="mt-3 relative inline-block border p-2 rounded-xl bg-slate-50">
-                    <button type="button" onClick={() => setFormSoal(p=>({...p, gambar_file: null, gambar_preview: "", hapus_gambar: true}))} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={14}/></button>
-                    <img src={formSoal.gambar_preview} alt="Preview" className="max-h-32 rounded-lg" />
-                  </div>
-                )}
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="mb-3 text-xs font-black uppercase text-slate-500">Pilihan Ganda & Kunci Jawaban</p>
-                <div className="space-y-3">
-                  {formSoal.opsi.map((opsi, index) => (
-                    <div key={opsi.kode_opsi} className={`flex items-center gap-3 p-2 rounded-lg border ${opsi.is_benar ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-200 bg-white'}`}>
-                      <div className="font-black text-[#071E3D] w-6">{opsi.kode_opsi}.</div>
-                      <input value={opsi.jawaban} onChange={(e) => setFormSoal(p=>({...p, opsi: p.opsi.map((o, i) => i === index ? {...o, jawaban: e.target.value} : o)}))} className="flex-1 bg-transparent border-none outline-none text-sm font-semibold" placeholder={`Jawaban ${opsi.kode_opsi}`} required />
-                      <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-                        <input type="radio" name="jawaban_benar" className="w-4 h-4 accent-emerald-600" checked={Boolean(opsi.is_benar)} onChange={() => setFormSoal(p=>({...p, opsi: p.opsi.map((o, i) => ({...o, is_benar: i === index}))}))} />
-                        Kunci
-                      </label>
+
+        {/* Tabel Penyusun Validator FR.IA.05 */}
+        <section className="mt-10">
+          <table className="w-full border-collapse border border-black text-[13px] text-center">
+            <thead>
+              <tr className="bg-slate-50 print:bg-white"><th colSpan={6} className="border border-black p-2 text-left">PENYUSUNAN DAN VALIDASI INSTRUMEN</th></tr>
+              <tr className="bg-slate-50 print:bg-white"><th className="border border-black p-2">STATUS</th><th className="border border-black p-2">NO</th><th className="border border-black p-2">NAMA</th><th className="border border-black p-2">NOMOR MET</th><th className="border border-black p-2">TANDA TANGAN & TANGGAL</th><th className="border border-black print-hidden"></th></tr>
+            </thead>
+            <tbody>
+              {["penyusun", "validator"].map(type => formPerson[type].map((item, index) => (
+                <tr key={`${type}-${index}`}>
+                  {index === 0 && <td rowSpan={formPerson[type].length} className="border border-black p-2 font-bold capitalize align-middle">{type}</td>}
+                  <td className="border border-black p-2">{index + 1}</td>
+                  <td className="border border-black p-2 text-left">
+                    <select value={item.id_user} onChange={e => { const a = listAsesor.find(x => String(x.id_user) === e.target.value); updatePerson(type, index, "id_user", e.target.value); updatePerson(type, index, "nama", a?.nama_lengkap||""); updatePerson(type, index, "nomor_met", a?.no_lisensi||a?.nomor_met||""); updatePerson(type, index, "tanggal", new Date().toISOString().slice(0, 10)); }} className="w-full bg-transparent outline-none appearance-none font-semibold">
+                      <option value="">Pilih Asesor</option>
+                      {listAsesor.map(a => <option key={a.id_user} value={a.id_user}>{a.nama_lengkap}</option>)}
+                    </select>
+                  </td>
+                  <td className="border border-black p-2">{item.nomor_met || "-"}</td>
+                  <td className="border border-black p-2">
+                    <div className="flex flex-col items-center justify-center py-3">
+                      <div className="w-[150px] mt-6 border-b border-black"></div>
+                      <p className="mt-1 text-[11px]">{item.tanggal || "-"}</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 border-t bg-[#FAFAFA] px-6 py-4">
-              <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#CC6B27] px-6 py-2.5 text-[13px] font-bold text-white hover:bg-[#a8561f] disabled:opacity-60">
-                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Simpan Pertanyaan
-              </button>
-            </div>
+                  </td>
+                  <td className="border border-black print-hidden"><button onClick={() => removePerson(type, index)} className="text-red-500"><Trash2 size={14}/></button></td>
+                </tr>
+              )))}
+            </tbody>
+          </table>
+          <div className="mt-3 flex gap-3 print-hidden">
+            <button onClick={() => addPerson("penyusun")} className="flex gap-2 bg-slate-800 text-white px-3 py-2 text-xs font-bold rounded-lg"><Plus size={14}/> Tambah Penyusun</button>
+            <button onClick={() => addPerson("validator")} className="flex gap-2 bg-slate-800 text-white px-3 py-2 text-xs font-bold rounded-lg"><Plus size={14}/> Tambah Validator</button>
+          </div>
+        </section>
+      </main>
+
+      {/* Modal Tambah Pertanyaan sama seperti sebelumnya */}
+      {showSoalModal && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 p-4 print-hidden">
+          <form onSubmit={saveSoal} className="w-full max-w-2xl bg-white p-6 rounded-2xl shadow-xl">
+             <h3 className="text-lg font-black mb-4">{editingSoal ? "Edit Pertanyaan" : "Tambah Pertanyaan"}</h3>
+             <textarea value={formSoal.pertanyaan} onChange={e => setFormSoal({...formSoal, pertanyaan: e.target.value})} className="w-full border p-3 rounded-lg outline-none mb-4" rows={3} placeholder="Pertanyaan..." required />
+             <div className="space-y-2">
+               {formSoal.opsi.map((o, i) => (
+                 <div key={i} className="flex gap-3 items-center border p-2 rounded">
+                   <span className="font-bold w-6">{o.kode_opsi}.</span>
+                   <input value={o.jawaban} onChange={e => setFormSoal(p=>({...p, opsi: p.opsi.map((opt, idx) => idx===i ? {...opt, jawaban: e.target.value} : opt)}))} className="flex-1 outline-none" placeholder={`Opsi ${o.kode_opsi}`} required />
+                   <label className="flex items-center gap-1 text-xs font-bold"><input type="radio" checked={o.is_benar} onChange={() => setFormSoal(p=>({...p, opsi: p.opsi.map((opt, idx) => ({...opt, is_benar: idx===i}))}))} name="kunci_fria05" /> Kunci</label>
+                 </div>
+               ))}
+             </div>
+             <div className="mt-5 flex justify-end gap-2">
+                <button type="button" onClick={() => setShowSoalModal(false)} className="px-5 py-2 bg-slate-100 rounded-lg font-bold">Batal</button>
+                <button type="submit" disabled={saving} className="px-5 py-2 bg-[#CC6B27] text-white rounded-lg font-bold">Simpan</button>
+             </div>
           </form>
         </div>
       )}
-      <style dangerouslySetInnerHTML={{ __html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #CC6B27; border-radius: 10px; }
-      `}} />
     </div>
   );
-}
-
-function normalizeImageUrl(value) {
-  if (!value) return "";
-  if (String(value).startsWith("http") || String(value).startsWith("blob:")) return value;
-  const base = api.defaults.baseURL || "http://localhost:3000/api";
-  const rootBase = base.replace(/\/api\/?$/, "");
-  return String(value).startsWith("/") ? `${rootBase}${value}` : `${rootBase}/${value}`;
 }
