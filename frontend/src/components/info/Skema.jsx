@@ -3,12 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import axios from "axios";
 import {
   AlertTriangle,
-  ArrowDownRight,
   Award,
-  BookOpen,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   ClipboardList,
   Clock3,
   ExternalLink,
@@ -58,7 +57,7 @@ const formatDateRange = (start, end) => {
     return formatDate(start);
   }
 
-  if (start && end) return `${formatDate(start)} – ${formatDate(end)}`;
+  if (start && end) return `${formatDate(start)} sampai ${formatDate(end)}`;
   if (start) return `Mulai ${formatDate(start)}`;
   if (end) return `Sampai ${formatDate(end)}`;
   return "Tanggal belum ditentukan";
@@ -80,12 +79,15 @@ const getMethod = (method) => {
     return { label: "Offline", detail: "Luring", online: false };
   }
 
-  return { label: "Belum ditentukan", detail: "Metode pelaksanaan", online: false };
+  return {
+    label: "Belum ditentukan",
+    detail: "Metode pelaksanaan",
+    online: false,
+  };
 };
 
-const getRequirements = (scheme) => {
-  return Array.isArray(scheme.persyaratans) ? scheme.persyaratans : [];
-};
+const getRequirements = (scheme) =>
+  Array.isArray(scheme.persyaratans) ? scheme.persyaratans : [];
 
 const getFees = (scheme) => {
   if (Array.isArray(scheme.biayaUji)) return scheme.biayaUji;
@@ -105,11 +107,28 @@ const getUnits = (scheme) => {
   return scheme.skemaUnit
     .filter((item) => item.unit)
     .slice()
-    .sort((a, b) => (a.urutan ?? Number.MAX_SAFE_INTEGER) - (b.urutan ?? Number.MAX_SAFE_INTEGER));
+    .sort(
+      (a, b) =>
+        (a.urutan ?? Number.MAX_SAFE_INTEGER) -
+        (b.urutan ?? Number.MAX_SAFE_INTEGER)
+    );
+};
+
+const getElements = (unit) => {
+  if (!Array.isArray(unit?.elemen)) return [];
+
+  return unit.elemen
+    .slice()
+    .sort(
+      (a, b) =>
+        (a.urutan ?? Number.MAX_SAFE_INTEGER) -
+        (b.urutan ?? Number.MAX_SAFE_INTEGER)
+    );
 };
 
 const getIsRequired = (requirement) => {
-  const relation = requirement.skema_persyaratan || requirement.SkemaPersyaratan || {};
+  const relation =
+    requirement.skema_persyaratan || requirement.SkemaPersyaratan || {};
   const value = relation.wajib ?? requirement.wajib;
 
   if (value === undefined || value === null) return true;
@@ -122,6 +141,7 @@ export default function Skema() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [openSchemeId, setOpenSchemeId] = useState(null);
+  const [openUnitByScheme, setOpenUnitByScheme] = useState({});
 
   useEffect(() => {
     let isMounted = true;
@@ -132,14 +152,17 @@ export default function Skema() {
         setError("");
 
         const response = await axios.get(`${API_URL}/skema`);
-        const result = response.data?.success && Array.isArray(response.data?.data)
-          ? response.data.data
-          : [];
+        const result =
+          response.data?.success && Array.isArray(response.data?.data)
+            ? response.data.data
+            : [];
 
         if (isMounted) setSchemes(result);
       } catch (err) {
         console.error("Gagal mengambil data skema:", err);
-        if (isMounted) setError("Daftar skema belum dapat dimuat. Silakan coba kembali.");
+        if (isMounted) {
+          setError("Daftar skema belum dapat dimuat. Silakan coba kembali.");
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -177,6 +200,13 @@ export default function Skema() {
     setOpenSchemeId((current) => (current === id ? null : id));
   };
 
+  const toggleUnit = (schemeId, unitId) => {
+    setOpenUnitByScheme((current) => ({
+      ...current,
+      [schemeId]: current[schemeId] === unitId ? null : unitId,
+    }));
+  };
+
   return (
     <section className="relative">
       <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -191,7 +221,7 @@ export default function Skema() {
             Skema Sertifikasi
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Pilih skema untuk melihat persyaratan, biaya, unit kompetensi,
+            Pilih skema untuk melihat persyaratan asesi, unit kompetensi,
             elemen, dan jadwal pelaksanaannya.
           </p>
         </div>
@@ -234,7 +264,10 @@ export default function Skema() {
 
       {loading ? (
         <div className="border border-slate-200 bg-white py-16 text-center">
-          <Loader2 size={32} className="mx-auto mb-3 animate-spin text-[#CC6B27]" />
+          <Loader2
+            size={32}
+            className="mx-auto mb-3 animate-spin text-[#CC6B27]"
+          />
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
             Memuat Data Skema
           </p>
@@ -260,6 +293,7 @@ export default function Skema() {
               const requirements = getRequirements(scheme);
               const fees = getFees(scheme);
               const schedules = getSchedules(scheme);
+              const openUnitId = openUnitByScheme[scheme.id_skema];
 
               return (
                 <motion.article
@@ -275,9 +309,15 @@ export default function Skema() {
                       : "border-slate-200 shadow-sm hover:border-[#CC6B27]/30"
                   }`}
                 >
-                  <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                    <div className="flex min-w-0 items-start gap-4">
-                      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${isOpen ? "bg-[#071E3D] text-[#CC6B27]" : "bg-[#CC6B27]/10 text-[#CC6B27]"}`}>
+                  <div className="flex flex-col gap-4 p-5 sm:px-6 sm:py-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-start gap-4 lg:flex-1">
+                      <div
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${
+                          isOpen
+                            ? "bg-[#071E3D] text-[#CC6B27]"
+                            : "bg-[#CC6B27]/10 text-[#CC6B27]"
+                        }`}
+                      >
                         <Award size={19} />
                       </div>
 
@@ -299,7 +339,10 @@ export default function Skema() {
 
                         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] font-semibold uppercase tracking-wide text-slate-400">
                           <span className="inline-flex items-center gap-1.5">
-                            <CheckCircle2 size={11} className="text-emerald-500" />
+                            <CheckCircle2
+                              size={11}
+                              className="text-emerald-500"
+                            />
                             Tersedia
                           </span>
                           <span>{units.length} Unit Kompetensi</span>
@@ -308,21 +351,60 @@ export default function Skema() {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      aria-expanded={isOpen}
-                      aria-controls={`scheme-detail-${scheme.id_skema}`}
-                      onClick={() => toggleScheme(scheme.id_skema)}
-                      className={`inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-lg px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-colors sm:self-center ${
-                        isOpen
-                          ? "bg-[#071E3D] text-white"
-                          : "bg-[#CC6B27]/10 text-[#CC6B27] hover:bg-[#CC6B27] hover:text-white"
-                      }`}
-                    >
-                      <ClipboardList size={14} />
-                      Persyaratan
-                      <ChevronDown size={14} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                    </button>
+                    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-stretch lg:w-[390px] lg:shrink-0">
+                      <div className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-[#F8F9FB] px-3.5 py-3">
+                        <div className="mb-2 flex items-center gap-2">
+                          <Wallet size={14} className="text-[#CC6B27]" />
+                          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                            Biaya Sertifikasi
+                          </p>
+                        </div>
+
+                        {fees.length > 0 ? (
+                          <div className="flex flex-wrap gap-x-4 gap-y-2">
+                            {fees.map((fee) => {
+                              const method = getMethod(fee.metode_uji);
+
+                              return (
+                                <div key={fee.id_biaya} className="min-w-[105px]">
+                                  <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">
+                                    {method.label}
+                                  </p>
+                                  <p className="mt-0.5 text-xs font-black text-[#071E3D]">
+                                    {formatCurrency(fee.nominal)}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-xs font-semibold text-slate-400">
+                            Belum tersedia
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={`scheme-detail-${scheme.id_skema}`}
+                        onClick={() => toggleScheme(scheme.id_skema)}
+                        className={`inline-flex shrink-0 items-center justify-center gap-2 self-stretch rounded-lg px-4 py-3 text-[10px] font-bold uppercase tracking-wider transition-colors sm:self-center lg:self-stretch ${
+                          isOpen
+                            ? "bg-[#071E3D] text-white"
+                            : "bg-[#CC6B27]/10 text-[#CC6B27] hover:bg-[#CC6B27] hover:text-white"
+                        }`}
+                      >
+                        <ClipboardList size={14} />
+                        {isOpen ? "Tutup Detail" : "Detail Skema"}
+                        <ChevronDown
+                          size={14}
+                          className={`transition-transform ${
+                            isOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                    </div>
                   </div>
 
                   <AnimatePresence initial={false}>
@@ -335,11 +417,11 @@ export default function Skema() {
                         transition={{ duration: 0.28 }}
                         className="overflow-hidden"
                       >
-                        <div className="border-t border-slate-200 bg-[#FAFBFC] p-5 sm:p-6 lg:p-7">
-                          <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+                        <div className="border-t border-slate-200 bg-[#FAFBFC] p-4 sm:p-6 lg:p-7">
+                          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
                             <div>
                               <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#CC6B27]">
-                                Informasi Skema
+                                Detail Skema
                               </p>
                               <h4 className="mt-1 text-base font-black text-[#071E3D]">
                                 {scheme.judul_skema}
@@ -359,53 +441,32 @@ export default function Skema() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                            <DetailSection
-                              icon={<Wallet size={17} />}
-                              title="Biaya Sertifikasi"
-                              description="Biaya berdasarkan metode pelaksanaan uji"
-                            >
-                              {fees.length > 0 ? (
-                                <div className="space-y-3">
-                                  {fees.map((fee) => {
-                                    const method = getMethod(fee.metode_uji);
-                                    return (
-                                      <div key={fee.id_biaya} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-                                        <div>
-                                          <p className="text-xs font-bold text-[#071E3D]">{method.label} ({method.detail})</p>
-                                          {fee.keterangan && (
-                                            <p className="mt-1 text-[10px] leading-5 text-slate-500">{fee.keterangan}</p>
-                                          )}
-                                        </div>
-                                        <p className="shrink-0 text-sm font-black text-[#CC6B27]">
-                                          {formatCurrency(fee.nominal)}
-                                        </p>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              ) : (
-                                <EmptyDetail text="Biaya untuk skema ini belum dicantumkan." />
-                              )}
-                            </DetailSection>
-
-                            <DetailSection
+                          <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+                            <DetailPanel
                               icon={<FileCheck size={17} />}
                               title="Persyaratan Asesi"
-                              description="Dokumen yang perlu disiapkan untuk skema ini"
+                              description="Dokumen yang perlu disiapkan untuk mengikuti sertifikasi"
+                              count={`${requirements.length} persyaratan`}
                             >
                               {requirements.length > 0 ? (
                                 <div className="space-y-2.5">
-                                  {requirements.map((requirement) => {
+                                  {requirements.map((requirement, index) => {
                                     const required = getIsRequired(requirement);
+
                                     return (
-                                      <div key={requirement.id_persyaratan} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3.5">
+                                      <div
+                                        key={
+                                          requirement.id_persyaratan || index
+                                        }
+                                        className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3.5"
+                                      >
                                         <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#CC6B27]/10 text-[#CC6B27]">
                                           <FileCheck size={14} />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                           <p className="text-[11px] font-bold leading-5 text-[#071E3D]">
-                                            {requirement.nama_persyaratan}
+                                            {requirement.nama_persyaratan ||
+                                              "Persyaratan"}
                                           </p>
                                           <div className="mt-1.5 flex flex-wrap gap-2">
                                             {requirement.jenis_persyaratan && (
@@ -413,7 +474,13 @@ export default function Skema() {
                                                 {requirement.jenis_persyaratan}
                                               </span>
                                             )}
-                                            <span className={`text-[8px] font-bold uppercase tracking-wider ${required ? "text-emerald-700" : "text-slate-400"}`}>
+                                            <span
+                                              className={`text-[8px] font-bold uppercase tracking-wider ${
+                                                required
+                                                  ? "text-emerald-700"
+                                                  : "text-slate-400"
+                                              }`}
+                                            >
                                               {required ? "Wajib" : "Opsional"}
                                             </span>
                                           </div>
@@ -430,68 +497,116 @@ export default function Skema() {
                               ) : (
                                 <EmptyDetail text="Persyaratan untuk skema ini belum tersedia." />
                               )}
-                            </DetailSection>
-                          </div>
+                            </DetailPanel>
 
-                          <div className="mt-5">
-                            <DetailSection
+                            <DetailPanel
                               icon={<Layers3 size={17} />}
-                              title="Unit Kompetensi dan Elemen"
-                              description="Unit kompetensi yang termasuk dalam skema beserta elemen di setiap unit"
+                              title="Unit Kompetensi"
+                              description="Pilih unit untuk melihat elemen kompetensinya"
+                              count={`${units.length} unit`}
                             >
                               {units.length > 0 ? (
-                                <div className="space-y-3">
+                                <div className="space-y-2.5">
                                   {units.map((link, unitIndex) => {
                                     const unit = link.unit;
-                                    const elements = Array.isArray(unit.elemen)
-                                      ? unit.elemen.slice().sort((a, b) => (a.urutan ?? Number.MAX_SAFE_INTEGER) - (b.urutan ?? Number.MAX_SAFE_INTEGER))
-                                      : [];
+                                    const unitId = link.id_unit || unit.id_unit;
+                                    const elements = getElements(unit);
+                                    const isUnitOpen = openUnitId === unitId;
 
                                     return (
-                                      <div key={unit.id_unit} className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-                                        <div className="flex items-start gap-3">
-                                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#071E3D] text-[10px] font-black text-white">
+                                      <div
+                                        key={unitId || unitIndex}
+                                        className={`overflow-hidden rounded-lg border bg-white transition-colors ${
+                                          isUnitOpen
+                                            ? "border-[#CC6B27]/40"
+                                            : "border-slate-200"
+                                        }`}
+                                      >
+                                        <button
+                                          type="button"
+                                          aria-expanded={isUnitOpen}
+                                          onClick={() =>
+                                            toggleUnit(scheme.id_skema, unitId)
+                                          }
+                                          className="flex w-full items-start gap-3 p-3.5 text-left transition-colors hover:bg-[#FAFBFC]"
+                                        >
+                                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#071E3D] text-[10px] font-black text-white">
                                             {unitIndex + 1}
                                           </span>
-                                          <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-center gap-2">
+
+                                          <span className="min-w-0 flex-1">
+                                            <span className="flex flex-wrap items-center gap-2">
                                               <span className="text-[9px] font-bold uppercase tracking-wider text-[#CC6B27]">
-                                                {unit.kode_unit || "Kode unit belum tersedia"}
+                                                {unit.kode_unit ||
+                                                  "Kode unit belum tersedia"}
                                               </span>
                                               {link.kelompok?.nama_kelompok && (
-                                                <span className="rounded bg-slate-100 px-2 py-1 text-[8px] font-semibold text-slate-500">
+                                                <span className="rounded bg-slate-100 px-2 py-0.5 text-[8px] font-semibold text-slate-500">
                                                   {link.kelompok.nama_kelompok}
                                                 </span>
                                               )}
-                                            </div>
-                                            <h5 className="mt-1 text-xs font-bold leading-5 text-[#071E3D]">
-                                              {unit.judul_unit || "Judul unit belum tersedia"}
-                                            </h5>
-                                          </div>
-                                        </div>
+                                            </span>
+                                            <span className="mt-1 block text-[11px] font-bold leading-5 text-[#071E3D]">
+                                              {unit.judul_unit ||
+                                                "Judul unit belum tersedia"}
+                                            </span>
+                                            <span className="mt-1 block text-[9px] font-medium text-slate-400">
+                                              {elements.length} elemen kompetensi
+                                            </span>
+                                          </span>
 
-                                        <div className="ml-11 mt-4 border-l-2 border-[#CC6B27]/20 pl-4">
-                                          <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                                            Elemen Kompetensi ({elements.length})
-                                          </p>
+                                          <ChevronRight
+                                            size={16}
+                                            className={`mt-1 shrink-0 text-[#CC6B27] transition-transform ${
+                                              isUnitOpen ? "rotate-90" : ""
+                                            }`}
+                                          />
+                                        </button>
 
-                                          {elements.length > 0 ? (
-                                            <ol className="space-y-2">
-                                              {elements.map((element, elementIndex) => (
-                                                <li key={element.id_elemen} className="flex items-start gap-2 text-[11px] leading-5 text-slate-600">
-                                                  <span className="mt-0.5 text-[9px] font-bold text-[#CC6B27]">
-                                                    {element.urutan || elementIndex + 1}.
-                                                  </span>
-                                                  <span>{element.nama_elemen}</span>
-                                                </li>
-                                              ))}
-                                            </ol>
-                                          ) : (
-                                            <p className="text-[10px] text-slate-400">
-                                              Elemen untuk unit ini belum tersedia.
-                                            </p>
+                                        <AnimatePresence initial={false}>
+                                          {isUnitOpen && (
+                                            <motion.div
+                                              initial={{ height: 0, opacity: 0 }}
+                                              animate={{ height: "auto", opacity: 1 }}
+                                              exit={{ height: 0, opacity: 0 }}
+                                              transition={{ duration: 0.2 }}
+                                              className="overflow-hidden"
+                                            >
+                                              <div className="border-t border-slate-100 bg-[#F8F9FB] px-4 py-3 pl-14">
+                                                <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                                  Elemen Kompetensi
+                                                </p>
+                                                {elements.length > 0 ? (
+                                                  <ol className="space-y-2">
+                                                    {elements.map(
+                                                      (element, elementIndex) => (
+                                                        <li
+                                                          key={
+                                                            element.id_elemen ||
+                                                            elementIndex
+                                                          }
+                                                          className="flex items-start gap-2 text-[10px] leading-5 text-slate-600"
+                                                        >
+                                                          <span className="shrink-0 font-bold text-[#CC6B27]">
+                                                            {element.urutan ||
+                                                              elementIndex + 1}.
+                                                          </span>
+                                                          <span>
+                                                            {element.nama_elemen}
+                                                          </span>
+                                                        </li>
+                                                      )
+                                                    )}
+                                                  </ol>
+                                                ) : (
+                                                  <p className="text-[10px] text-slate-400">
+                                                    Elemen untuk unit ini belum tersedia.
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </motion.div>
                                           )}
-                                        </div>
+                                        </AnimatePresence>
                                       </div>
                                     );
                                   })}
@@ -499,102 +614,140 @@ export default function Skema() {
                               ) : (
                                 <EmptyDetail text="Unit kompetensi untuk skema ini belum tersedia." />
                               )}
-                            </DetailSection>
+                            </DetailPanel>
                           </div>
 
                           <div className="mt-5">
-                            <DetailSection
-                              icon={<CalendarDays size={17} />}
-                              title="Jadwal Pelaksanaan"
-                              description="Jadwal uji kompetensi yang sedang dibuka untuk skema ini"
-                            >
-                              {schedules.length > 0 ? (
-                                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                                  {schedules.map((schedule) => {
-                                    const method = getMethod(schedule.pelaksanaan_uji);
-                                    const tuk = schedule.tuk || {};
-                                    const validAgendaUrl = /^https?:\/\//i.test(schedule.url_agenda || "");
-
-                                    return (
-                                      <article key={schedule.id_jadwal} className="rounded-lg border border-slate-200 bg-white p-4">
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                          <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-wider ${method.online ? "bg-blue-50 text-blue-700" : "bg-[#CC6B27]/10 text-[#CC6B27]"}`}>
-                                            {method.online ? <Monitor size={12} /> : <MapPin size={12} />}
-                                            {method.label} ({method.detail})
-                                          </span>
-                                          <span className="text-[8px] font-bold uppercase tracking-wider text-emerald-700">
-                                            Pendaftaran Dibuka
-                                          </span>
-                                        </div>
-
-                                        <h5 className="mt-3 text-sm font-bold leading-5 text-[#071E3D]">
-                                          {schedule.nama_kegiatan || "Jadwal Uji Kompetensi"}
-                                        </h5>
-
-                                        {schedule.kode_jadwal && (
-                                          <p className="mt-1 text-[9px] font-semibold text-slate-400">
-                                            {schedule.kode_jadwal}
-                                          </p>
-                                        )}
-
-                                        <div className="mt-4 space-y-3 border-t border-slate-100 pt-3">
-                                          <ScheduleInfo
-                                            icon={<CalendarDays size={14} />}
-                                            label="Tanggal Uji"
-                                            value={formatDateRange(schedule.tgl_awal, schedule.tgl_akhir)}
-                                          />
-                                          {schedule.tgl_pra_asesmen && (
-                                            <ScheduleInfo
-                                              icon={<ClipboardList size={14} />}
-                                              label="Pra-Asesmen"
-                                              value={formatDate(schedule.tgl_pra_asesmen)}
-                                            />
-                                          )}
-                                          <ScheduleInfo
-                                            icon={<Clock3 size={14} />}
-                                            label="Waktu"
-                                            value={formatTime(schedule.jam)}
-                                          />
-
-                                          {method.online ? (
-                                            <ScheduleInfo
-                                              icon={<Monitor size={14} />}
-                                              label="Metode"
-                                              value="Dilaksanakan secara online"
-                                            />
-                                          ) : (
-                                            <ScheduleInfo
-                                              icon={<MapPin size={14} />}
-                                              label="Lokasi TUK"
-                                              value={[
-                                                tuk.nama_tuk,
-                                                tuk.alamat,
-                                                tuk.kota,
-                                                tuk.provinsi,
-                                              ].filter(Boolean).join(", ") || "Lokasi TUK belum dicantumkan"}
-                                            />
-                                          )}
-                                        </div>
-
-                                        {validAgendaUrl && (
-                                          <a
-                                            href={schedule.url_agenda}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="mt-4 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#CC6B27] transition-colors hover:text-[#071E3D]"
-                                          >
-                                            Buka Informasi Jadwal
-                                            <ExternalLink size={12} />
-                                          </a>
-                                        )}
-                                      </article>
-                                    );
-                                  })}
+                            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                              <div className="flex items-center gap-3 border-b border-slate-200 bg-[#F8F9FB] px-5 py-4">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#071E3D] text-[#CC6B27]">
+                                  <CalendarDays size={17} />
                                 </div>
-                              ) : (
-                                <EmptyDetail text="Belum ada jadwal yang dibuka untuk skema ini." />
-                              )}
-                            </DetailSection>
+                                <div>
+                                  <h4 className="text-xs font-black text-[#071E3D] sm:text-sm">
+                                    Jadwal Pelaksanaan
+                                  </h4>
+                                  <p className="mt-1 text-[9px] leading-4 text-slate-400">
+                                    Jadwal uji kompetensi yang sedang dibuka untuk skema ini
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="p-4 sm:p-5">
+                                {schedules.length > 0 ? (
+                                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                                    {schedules.map((schedule) => {
+                                      const method = getMethod(
+                                        schedule.pelaksanaan_uji
+                                      );
+                                      const tuk = schedule.tuk || {};
+                                      const validAgendaUrl = /^https?:\/\//i.test(
+                                        schedule.url_agenda || ""
+                                      );
+
+                                      return (
+                                        <article
+                                          key={schedule.id_jadwal}
+                                          className="rounded-lg border border-slate-200 bg-white p-4"
+                                        >
+                                          <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <span
+                                              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-wider ${
+                                                method.online
+                                                  ? "bg-blue-50 text-blue-700"
+                                                  : "bg-[#CC6B27]/10 text-[#CC6B27]"
+                                              }`}
+                                            >
+                                              {method.online ? (
+                                                <Monitor size={12} />
+                                              ) : (
+                                                <MapPin size={12} />
+                                              )}
+                                              {method.label}
+                                            </span>
+                                            <span className="text-[8px] font-bold uppercase tracking-wider text-emerald-700">
+                                              Pendaftaran Dibuka
+                                            </span>
+                                          </div>
+
+                                          <h5 className="mt-3 text-sm font-bold leading-5 text-[#071E3D]">
+                                            {schedule.nama_kegiatan ||
+                                              "Jadwal Uji Kompetensi"}
+                                          </h5>
+
+                                          {schedule.kode_jadwal && (
+                                            <p className="mt-1 text-[9px] font-semibold text-slate-400">
+                                              {schedule.kode_jadwal}
+                                            </p>
+                                          )}
+
+                                          <div className="mt-4 space-y-3 border-t border-slate-100 pt-3">
+                                            <ScheduleInfo
+                                              icon={<CalendarDays size={14} />}
+                                              label="Tanggal Uji"
+                                              value={formatDateRange(
+                                                schedule.tgl_awal,
+                                                schedule.tgl_akhir
+                                              )}
+                                            />
+                                            {schedule.tgl_pra_asesmen && (
+                                              <ScheduleInfo
+                                                icon={<ClipboardList size={14} />}
+                                                label="Pra-Asesmen"
+                                                value={formatDate(
+                                                  schedule.tgl_pra_asesmen
+                                                )}
+                                              />
+                                            )}
+                                            <ScheduleInfo
+                                              icon={<Clock3 size={14} />}
+                                              label="Waktu"
+                                              value={formatTime(schedule.jam)}
+                                            />
+
+                                            {method.online ? (
+                                              <ScheduleInfo
+                                                icon={<Monitor size={14} />}
+                                                label="Metode Pelaksanaan"
+                                                value="Dilaksanakan secara online"
+                                              />
+                                            ) : (
+                                              <ScheduleInfo
+                                                icon={<MapPin size={14} />}
+                                                label="Lokasi TUK"
+                                                value={[
+                                                  tuk.nama_tuk,
+                                                  tuk.alamat,
+                                                  tuk.kota,
+                                                  tuk.provinsi,
+                                                ]
+                                                  .filter(Boolean)
+                                                  .join(", ") ||
+                                                  "Lokasi TUK belum dicantumkan"}
+                                              />
+                                            )}
+                                          </div>
+
+                                          {validAgendaUrl && (
+                                            <a
+                                              href={schedule.url_agenda}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="mt-4 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#CC6B27] transition-colors hover:text-[#071E3D]"
+                                            >
+                                              Buka Informasi Jadwal
+                                              <ExternalLink size={12} />
+                                            </a>
+                                          )}
+                                        </article>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <EmptyDetail text="Belum ada jadwal yang dibuka untuk skema ini." />
+                                )}
+                              </div>
+                            </section>
                           </div>
                         </div>
                       </motion.div>
@@ -629,19 +782,30 @@ export default function Skema() {
   );
 }
 
-function DetailSection({ icon, title, description, children }) {
+function DetailPanel({ icon, title, description, count, children }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-      <div className="mb-4 flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#CC6B27]/10 text-[#CC6B27]">
-          {icon}
+    <section className="flex h-[420px] min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white lg:h-[440px]">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-[#F8F9FB] px-4 py-4 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#CC6B27]/10 text-[#CC6B27]">
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <h4 className="text-xs font-black text-[#071E3D] sm:text-sm">
+              {title}
+            </h4>
+            <p className="mt-1 text-[9px] leading-4 text-slate-400">
+              {description}
+            </p>
+          </div>
         </div>
-        <div>
-          <h4 className="text-xs font-black text-[#071E3D] sm:text-sm">{title}</h4>
-          <p className="mt-1 text-[9px] leading-4 text-slate-400">{description}</p>
-        </div>
+        <span className="shrink-0 rounded-md bg-white px-2 py-1 text-[8px] font-bold text-slate-500">
+          {count}
+        </span>
       </div>
-      {children}
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+        {children}
+      </div>
     </section>
   );
 }
@@ -649,14 +813,9 @@ function DetailSection({ icon, title, description, children }) {
 function EmptyDetail({ text }) {
   return (
     <div className="rounded-md border border-dashed border-slate-200 bg-[#FAFBFC] px-4 py-7 text-center">
-      <InfoIcon />
-      <p className="mt-2 text-[10px] font-medium text-slate-400">{text}</p>
+      <p className="text-[10px] font-medium text-slate-400">{text}</p>
     </div>
   );
-}
-
-function InfoIcon() {
-  return <ArrowDownRight size={19} className="mx-auto text-slate-300" />;
 }
 
 function ScheduleInfo({ icon, label, value }) {
@@ -664,8 +823,12 @@ function ScheduleInfo({ icon, label, value }) {
     <div className="flex items-start gap-2.5">
       <span className="mt-0.5 shrink-0 text-[#CC6B27]">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
-        <p className="mt-0.5 break-words text-[10px] font-semibold leading-5 text-[#071E3D]">{value}</p>
+        <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">
+          {label}
+        </p>
+        <p className="mt-0.5 break-words text-[10px] font-semibold leading-5 text-[#071E3D]">
+          {value}
+        </p>
       </div>
     </div>
   );
