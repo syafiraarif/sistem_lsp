@@ -81,7 +81,6 @@ export default function FAQSection() {
             }}
             className="mb-4 flex justify-center"
           >
-            <div className="h-1 w-10 bg-[#CC6B27]" />
           </motion.div>
 
           <motion.div

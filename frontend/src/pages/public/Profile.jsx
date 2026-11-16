@@ -199,7 +199,6 @@ export default function About() {
                   }}
                   className="max-w-3xl"
                 >
-                  <div className="mb-7 h-1 w-12 bg-[#CC6B27]" />
 
                   <h1 className="text-4xl font-black leading-[1.05] text-white md:text-6xl lg:text-7xl">
                     {slides[currentSlide].title}
@@ -260,7 +259,6 @@ export default function About() {
         <div className="relative mx-auto max-w-7xl px-6">
           {/* Garis perbatasan penuh */}
           <div className="mb-12 flex items-center">
-            <div className="h-1 w-14 shrink-0 bg-[#CC6B27]" />
             <div className="h-[1px] w-full bg-slate-200" />
           </div>
 
@@ -393,7 +391,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* VISI, TUJUAN & MISI */}
       <section className="relative overflow-hidden bg-[#F8FAFC] py-24 lg:py-28">
         <div className="pointer-events-none absolute right-0 top-0 h-[450px] w-[450px] rounded-full bg-[#CC6B27]/[0.04] blur-[120px]" />
 
@@ -415,7 +412,6 @@ export default function About() {
             }}
             className="mb-10"
           >
-            <div className="mb-5 h-1 w-12 bg-[#CC6B27]" />
 
             <h2 className="text-4xl font-black leading-tight text-[#071E3D] md:text-5xl">
               Visi, Tujuan <span className="text-[#CC6B27]">&</span> Misi
@@ -549,7 +545,6 @@ export default function About() {
               once: true
             }}
           >
-            <div className="mx-auto mb-5 h-1 w-12 bg-[#CC6B27]" />
 
             <h2 className="text-3xl font-black text-white md:text-4xl">
               Kompetensi yang Terukur,

@@ -14,7 +14,6 @@ export default function InfoTabs() {
             initial={{ opacity: 0, scaleX: 0 }}
             animate={{ opacity: 1, scaleX: 1 }}
             transition={{ duration: 0.45 }}
-            className="mx-auto mb-6 h-1 w-12 origin-center rounded-full bg-[#CC6B27]"
           />
 
           <motion.h1

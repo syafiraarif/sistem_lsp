@@ -500,7 +500,6 @@ export default function Registration() {
         <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-12 lg:gap-14">
           <div className="lg:col-span-8">
             <header className="mb-8">
-              <div className="mb-5 h-1 w-12 bg-[#CC6B27]" />
 
               <motion.h1
                 initial={{

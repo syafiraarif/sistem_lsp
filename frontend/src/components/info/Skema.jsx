@@ -212,7 +212,6 @@ export default function Skema() {
       <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <span className="h-[3px] w-7 bg-[#CC6B27]" />
             <p className="text-[9px] font-bold uppercase tracking-[0.17em] text-[#CC6B27]">
               Daftar Sertifikasi
             </p>

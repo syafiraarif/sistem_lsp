@@ -337,7 +337,7 @@ export default function LatestUpdates() {
           }}
           className="mx-auto max-w-3xl text-center"
         >
-          <div className="mx-auto mb-5 h-1 w-12 bg-[#CC6B27]" />
+
 
           <h2 className="text-4xl font-black leading-[1.05] tracking-tight text-[#071E3D] md:text-5xl lg:text-6xl">
             Feedback{" "}

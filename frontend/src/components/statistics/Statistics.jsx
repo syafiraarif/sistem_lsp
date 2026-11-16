@@ -125,8 +125,6 @@ export default function Statistics() {
             </span>
           </h2>
 
-          <div className="mx-auto mt-5 h-1 w-14 rounded-full bg-[#CC6B27]" />
-
           <p className="mx-auto mt-6 max-w-2xl text-[14px] font-medium leading-relaxed text-white/60 md:text-[15px]">
             Data capaian real-time pelaksanaan sertifikasi kompetensi
             nasional yang terukur dan akurat.
