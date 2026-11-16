@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import {
   AlertCircle,
@@ -7,272 +7,283 @@ import {
   ArrowRight,
   CheckCircle2,
   Loader2,
-  Mail,
-  ShieldCheck
+  Mail
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
-const API =
-  import.meta.env.VITE_API_BASE ||
-  "http://localhost:3000/api";
+// Import aset yang sama dengan halaman Login
+import logoApp from "../../assets/images/logo.png";
+import bgLogin from "../../assets/images/about/about-1.jpg";
+
+const API = import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
 
 export default function LupaAkses() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const selectedRole = location.state?.role || localStorage.getItem("last_login_role");
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    setLoading(true);
-    setSuccess("");
     setError("");
+    setSuccess("");
+
+    if (!email.trim()) {
+      setError("Silakan masukkan alamat email yang terdaftar.");
+      return;
+    }
 
     try {
-      const res = await axios.post(
-        `${API}/auth/forgot-access`,
-        {
-          email: email.trim()
-        }
-      );
+      setLoading(true);
+
+      const res = await axios.post(`${API}/auth/forgot-access`, {
+        email: email.trim(),
+        role: selectedRole
+      });
 
       setSuccess(
         res.data?.message ||
-          "Link pemulihan akses telah dikirim ke email Anda."
+          "Link pemulihan telah dikirim ke email Anda. Silakan periksa kotak masuk atau folder spam."
       );
     } catch (err) {
-      const status = err.response?.status;
-      const message = err.response?.data?.message;
-
-      if (status === 404) {
-        setError(
-          message ||
-            "Email tidak terdaftar. Silakan minta admin membuatkan akun terlebih dahulu."
-        );
-      } else if (status === 403) {
-        setError(
-          message ||
-            "Akun dengan email tersebut tidak aktif. Silakan hubungi admin."
-        );
-      } else {
-        setError(
-          message ||
-            "Gagal mengirim link pemulihan akses."
-        );
-      }
+      setError(
+        err.response?.data?.message ||
+          "Email tidak terdaftar atau terjadi kesalahan pada server."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1 }
+  };
+
   return (
-    <div className="min-h-screen w-full flex bg-[#071E3D] font-sans selection:bg-orange-500/30">
-      <div className="hidden lg:flex lg:w-3/5 relative flex-col justify-between p-16 overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2000"
-            alt="SIMLSP"
-            className="w-full h-full object-cover opacity-20 scale-105"
-          />
+    <div className="flex min-h-screen w-full bg-white font-sans selection:bg-[#CC6B27]/30">
+      {/* KIRI - BACKGROUND IMAGE & BRANDING (SERAGAM DENGAN LOGIN) */}
+      <div className="relative hidden overflow-hidden bg-[#071E3D] p-14 lg:flex lg:w-[55%] lg:flex-col lg:justify-center xl:w-[60%] xl:p-20">
+        {/* Foto Background */}
+        <img
+          src={bgLogin}
+          alt="LSP Pustaka Ilmiah Elektronik"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
+        />
 
-          <div className="absolute inset-0 bg-gradient-to-br from-[#071E3D] via-[#071E3D]/90 to-transparent" />
+        {/* Overlay Gelap & Gradient */}
+        <div className="pointer-events-none absolute inset-0 bg-[#071E3D]/80" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-[#071E3D] via-[#071E3D]/75 to-[#CC6B27]/20" />
 
-          <motion.div
-            animate={{
-              scale: [1, 1.2, 1],
-              rotate: [0, 90, 0]
-            }}
-            transition={{
-              duration: 20,
-              repeat: Infinity
-            }}
-            className="absolute -top-20 -left-20 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl"
-          />
-        </div>
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-              <ShieldCheck
-                className="text-white"
-                size={28}
+        {/* Konten Utama di Tengah Vertikal & Rata Kiri */}
+        <div className="relative z-10 max-w-[540px]">
+          <Link
+            to="/"
+            className="group mb-12 inline-flex items-center gap-3.5"
+          >
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/95 p-1.5 shadow-lg transition-transform duration-300 group-hover:scale-105">
+              <img
+                src={logoApp}
+                alt="Logo LSP Pustaka Ilmiah Elektronik"
+                className="h-full w-full object-contain"
               />
             </div>
 
-            <span className="font-black text-white tracking-tighter text-2xl">
-              SIMLSP
-            </span>
-          </div>
-
-          <motion.div
-            initial={{
-              opacity: 0,
-              x: -40
-            }}
-            animate={{
-              opacity: 1,
-              x: 0
-            }}
-            transition={{
-              duration: 0.8
-            }}
-          >
-            <h1 className="text-7xl font-black text-white leading-[1.1] mb-8">
-              Recover
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">
-                Your Access.
+            <div className="leading-tight">
+              <span className="block text-base font-black tracking-tight text-white xl:text-lg">
+                PUSTAKA ILMIAH ELEKTRONIK
               </span>
+              <span className="block text-[11px] font-bold uppercase tracking-widest text-[#CC6B27]">
+                Lembaga Sertifikasi Profesi
+              </span>
+            </div>
+          </Link>
+
+          {/* Headline Utama */}
+          <motion.div
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            <div className="mb-6 h-1 w-12 bg-[#CC6B27]" />
+
+            <h1 className="mb-6 text-5xl font-black leading-[1.08] tracking-tight text-white xl:text-[60px]">
+              Pulihkan
+              <br />
+              <span className="text-[#CC6B27]">Akses Anda.</span>
             </h1>
 
-            <p className="text-slate-400 text-xl max-w-lg leading-relaxed font-light">
-              Pulihkan akses akun SIMLSP Anda melalui email yang terdaftar.
+            <p className="max-w-[460px] text-[15px] font-medium leading-relaxed text-slate-200/90 xl:text-[16px]">
+              Pulihkan akses akun Sistem Informasi Manajemen LSP Pustaka Ilmiah
+              Elektronik Anda melalui alamat email yang terdaftar.
             </p>
           </motion.div>
         </div>
-
-        <p className="relative z-10 text-slate-500 text-[9px] font-bold uppercase tracking-[0.3em]">
-          SIMLSP Integrated System • 2026
-        </p>
       </div>
 
-      <div className="w-full lg:w-2/5 flex items-center justify-center p-8 bg-[#071E3D] lg:bg-white">
-        <div className="w-full max-w-md">
-          <button
-            type="button"
-            onClick={() => navigate("/login")}
-            className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-orange-500 transition-colors mb-10"
-          >
-            <ArrowLeft size={16} />
-            Kembali ke Login
-          </button>
-
-          <div className="mb-10">
-            <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 mb-6">
-              <Mail size={28} />
-            </div>
-
-            <h2 className="text-4xl font-black text-white lg:text-[#071E3D] tracking-tight">
-              Lupa
-              <span className="text-orange-500">
-                {" "}Akses?
+      {/* KANAN - FORM LUPA AKSES (EMAIL) */}
+      <div className="relative flex w-full items-center justify-center bg-white p-6 sm:p-12 lg:w-[45%] xl:w-[40%]">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="relative z-10 w-full max-w-[400px] rounded-3xl border border-slate-100 bg-white p-8 shadow-xl shadow-[#071E3D]/5 sm:p-10 lg:border-none lg:p-0 lg:shadow-none"
+        >
+          {/* Logo versi mobile */}
+          <div className="mb-8 flex items-center justify-center gap-3 lg:hidden">
+            <img
+              src={logoApp}
+              alt="Logo LSP"
+              className="h-10 w-10 object-contain"
+            />
+            <div className="text-left leading-tight">
+              <span className="block text-xs font-black text-[#071E3D]">
+                PUSTAKA ILMIAH ELEKTRONIK
               </span>
-            </h2>
-
-            <p className="mt-3 text-slate-400 font-medium leading-relaxed">
-              Masukkan email yang terdaftar untuk memulihkan akses akun Anda.
-            </p>
+              <span className="block text-[9px] font-bold uppercase tracking-widest text-[#CC6B27]">
+                Lembaga Sertifikasi Profesi
+              </span>
+            </div>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-6"
+          {/* Tombol Kembali ke Login */}
+          <motion.div variants={itemVariants} className="mb-8">
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 transition-colors hover:text-[#CC6B27]"
+            >
+              <ArrowLeft size={14} strokeWidth={2.5} />
+              Kembali ke Login
+            </button>
+          </motion.div>
+
+          {/* Header Form */}
+          <motion.div
+            variants={itemVariants}
+            className="mb-9 text-center lg:text-left"
           >
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-white lg:text-[#071E3D] uppercase ml-1 tracking-widest opacity-70">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white px-4 py-1.5">
+              <Mail size={14} className="text-[#CC6B27]" />
+              <span className="text-[10px] font-black uppercase tracking-[0.15em] text-[#CC6B27]">
+                Pemulihan Akses
+              </span>
+            </div>
+
+            <h2 className="mb-2 text-[32px] font-black tracking-tight text-[#071E3D]">
+              Lupa <span className="text-[#CC6B27]">Akses?</span>
+            </h2>
+
+            <p className="text-[13px] font-medium text-slate-500">
+              Masukkan email yang terdaftar untuk memulihkan akses akun Anda.
+            </p>
+          </motion.div>
+
+          {/* Form Input Email */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <motion.div variants={itemVariants}>
+              <label className="mb-2 ml-1 block text-[11px] font-bold uppercase tracking-widest text-[#071E3D]/70">
                 Email Terdaftar
               </label>
 
-              <div className="relative group">
-                <div className="absolute left-0 w-12 h-full flex items-center justify-center text-slate-400 group-focus-within:text-orange-500 transition-colors">
-                  <Mail size={20} />
+              <div className="group relative flex items-center">
+                <div className="absolute left-4 text-slate-400 transition-colors group-focus-within:text-[#CC6B27]">
+                  <Mail size={18} strokeWidth={2.5} />
                 </div>
 
                 <input
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setSuccess("");
-                    setError("");
-                  }}
                   placeholder="nama@email.com"
-                  className="w-full pl-12 pr-6 py-4 bg-slate-500/10 lg:bg-slate-50 border-b-2 border-slate-700 lg:border-slate-100 focus:border-orange-500 focus:bg-white lg:rounded-2xl transition-all font-bold text-white lg:text-[#071E3D] placeholder:text-slate-500 outline-none"
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-[#DCE4EC] bg-[#F0F4F8] py-3.5 pl-11 pr-4 text-[13px] font-bold text-[#071E3D] transition-all placeholder:text-slate-400 focus:border-[#CC6B27] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#CC6B27]/10"
                 />
               </div>
-            </div>
+            </motion.div>
 
-            {error && (
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: 8
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0
-                }}
-                className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl text-xs font-bold flex items-start gap-3"
-              >
-                <AlertCircle
-                  size={18}
-                  className="shrink-0 mt-0.5"
-                />
+            <AnimatePresence mode="wait">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-600"
+                >
+                  <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                  <span className="text-[12px] font-semibold leading-relaxed">
+                    {error}
+                  </span>
+                </motion.div>
+              )}
 
-                <span className="leading-relaxed">
-                  {error}
-                </span>
-              </motion.div>
-            )}
+              {success && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700"
+                >
+                  <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+                  <span className="text-[12px] font-bold leading-relaxed">
+                    {success}
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {success && (
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: 8
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0
-                }}
-                className="bg-green-50 border border-green-200 text-green-600 p-4 rounded-xl text-xs font-bold flex items-start gap-3"
-              >
-                <CheckCircle2
-                  size={18}
-                  className="shrink-0 mt-0.5"
-                />
-
-                <span className="leading-relaxed">
-                  {success}
-                </span>
-              </motion.div>
-            )}
-
-            <button
+            <motion.button
               type="submit"
-              disabled={
-                loading ||
-                !!success
-              }
-              className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-xs transition-all duration-300 shadow-xl shadow-orange-500/20 flex items-center justify-center gap-4"
+              variants={itemVariants}
+              whileHover={{ x: 3 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={loading || !!success}
+              className="group mt-2 flex w-full items-center justify-center gap-3 rounded-xl bg-[#CC6B27] py-4 text-[12px] font-black uppercase tracking-widest text-white shadow-lg shadow-[#CC6B27]/20 transition-all duration-300 hover:bg-[#b55b1f] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
             >
               {loading ? (
-                <Loader2
-                  className="animate-spin"
-                  size={20}
-                />
+                <Loader2 className="animate-spin" size={18} />
               ) : (
                 <>
-                  <span>
-                    Kirim Link Pemulihan
-                  </span>
-
-                  <ArrowRight size={18} />
+                  <span>Kirim Link Pemulihan</span>
+                  <ArrowRight
+                    className="transition-transform group-hover:translate-x-1.5"
+                    size={16}
+                  />
                 </>
               )}
-            </button>
+            </motion.button>
           </form>
 
-          <div className="mt-10 rounded-2xl border border-slate-100 bg-slate-50 p-5">
-            <p className="text-xs font-semibold text-slate-500 leading-relaxed">
-              Link pemulihan hanya berlaku selama 15 menit. Setelah password berhasil diubah, Anda dapat login kembali menggunakan password baru.
+          {/* Kotak Info Masa Berlaku Link (sama seperti di screenshot) */}
+          <motion.div
+            variants={itemVariants}
+            className="mt-7 rounded-xl border border-[#DCE4EC] bg-[#F0F4F8]/70 p-4"
+          >
+            <p className="text-[12px] font-medium leading-relaxed text-slate-500">
+              Link pemulihan hanya berlaku selama{" "}
+              <span className="font-bold text-[#071E3D]">15 menit</span>.
+              Setelah password berhasil diubah, Anda dapat login kembali
+              menggunakan password baru.
             </p>
-          </div>
-        </div>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="mt-10 text-center">
+            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">
+              LSP Pustaka Ilmiah Elektronik &bull; 2026
+            </p>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );
