@@ -431,8 +431,8 @@ export default function AdminFRIA02() {
             </tbody>
           </table>
           <div className="mt-3 flex gap-3 print-hidden">
-            {!isReadOnly && <button onClick={() => addPerson("penyusun")} className="flex gap-2 bg-slate-100 border border-slate-300 text-slate-700 px-3 py-2 text-xs font-bold rounded-lg hover:bg-slate-200"><Plus size={14}/> Tambah Penyusun</button>}
-            {!isReadOnly && <button onClick={() => addPerson("validator")} className="flex gap-2 bg-slate-100 border border-slate-300 text-slate-700 px-3 py-2 text-xs font-bold rounded-lg hover:bg-slate-200"><Plus size={14}/> Tambah Validator</button>}
+            {!isReadOnly && <button onClick={() => addPerson("penyusun")} className="flex items-center gap-1.5 bg-slate-800 text-white px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-700 transition-colors"><Plus size={14}/> Tambah Penyusun</button>}
+            {!isReadOnly && <button onClick={() => addPerson("validator")} className="flex items-center gap-1.5 bg-slate-800 text-white px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-700 transition-colors"><Plus size={14}/> Tambah Validator</button>}
           </div>
         </section>
       </main>

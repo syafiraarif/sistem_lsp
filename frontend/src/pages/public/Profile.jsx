@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
@@ -8,8 +8,7 @@ import {
   Target,
   Eye,
   Building2,
-  CalendarDays,
-  CheckCircle2
+  CalendarDays
 } from "lucide-react";
 
 import about1 from "../../assets/images/about/about-1.jpg";
@@ -80,28 +79,37 @@ export default function About() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [openAccordion, setOpenAccordion] = useState(0);
   const [dragStart, setDragStart] = useState(null);
+  const isHoveredRef = useRef(false);
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
   };
 
   const prevSlide = () => {
-    setCurrentSlide(
-      (prev) => (prev - 1 + slides.length) % slides.length
-    );
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   };
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (!isHoveredRef.current) {
+        setCurrentSlide((prev) => (prev + 1) % slides.length);
+      }
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   const toggleAccordion = (index) => {
-    setOpenAccordion((prev) =>
-      prev === index ? null : index
-    );
+    setOpenAccordion((prev) => (prev === index ? null : index));
   };
 
   const handleDragStart = (_, info) => {
     setDragStart(info.point.x);
+    isHoveredRef.current = true;
   };
 
   const handleDragEnd = (_, info) => {
+    isHoveredRef.current = false;
     if (dragStart === null) return;
 
     const difference = info.point.x - dragStart;
@@ -119,7 +127,16 @@ export default function About() {
 
   return (
     <main className="min-h-screen bg-white">
-      <section className="relative overflow-hidden bg-[#071E3D]">
+      {/* HERO SLIDER */}
+      <section
+        onMouseEnter={() => {
+          isHoveredRef.current = true;
+        }}
+        onMouseLeave={() => {
+          isHoveredRef.current = false;
+        }}
+        className="relative overflow-hidden bg-[#071E3D]"
+      >
         <motion.div
           drag="x"
           dragConstraints={{
@@ -151,18 +168,16 @@ export default function About() {
               transition={{
                 duration: 0.6
               }}
-              className="absolute inset-0 h-full w-full object-cover"
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
               draggable="false"
             />
           </AnimatePresence>
 
-          <div className="absolute inset-0 bg-[#071E3D]/30" />
+          <div className="pointer-events-none absolute inset-0 bg-[#071E3D]/30" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#071E3D]/80 via-transparent to-black/10" />
 
-          <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
-
-          <div className="absolute inset-0 bg-gradient-to-t from-[#071E3D]/80 via-transparent to-black/10" />
-
-          <div className="absolute inset-0 flex items-center">
+          <div className="pointer-events-none absolute inset-0 flex items-center">
             <div className="mx-auto w-full max-w-7xl px-6">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -237,13 +252,21 @@ export default function About() {
         </motion.div>
       </section>
 
+      {/* TENTANG LEMBAGA */}
       <section className="relative overflow-hidden bg-white py-24 lg:py-28">
         <div className="pointer-events-none absolute right-0 top-0 h-[500px] w-[500px] rounded-full bg-[#CC6B27]/[0.04] blur-[120px]" />
-
         <div className="pointer-events-none absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-[#071E3D]/[0.03] blur-[110px]" />
 
         <div className="relative mx-auto max-w-7xl px-6">
-          <div className="grid grid-cols-1 items-start gap-14 lg:grid-cols-[1fr_0.65fr] lg:gap-20">
+          {/* Garis perbatasan penuh */}
+          <div className="mb-12 flex items-center">
+            <div className="h-1 w-14 shrink-0 bg-[#CC6B27]" />
+            <div className="h-[1px] w-full bg-slate-200" />
+          </div>
+
+          {/* Grid dengan items-center agar kartu di kanan berada tepat di tengah vertikal */}
+          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1fr_0.65fr] lg:gap-20">
+            {/* Kolom Kiri: Judul + Paragraf */}
             <motion.div
               initial={{
                 opacity: 0,
@@ -260,8 +283,6 @@ export default function About() {
                 duration: 0.6
               }}
             >
-              <div className="mb-6 h-1 w-12 bg-[#CC6B27]" />
-
               <h2 className="text-4xl font-black leading-[1.08] tracking-tight text-[#071E3D] md:text-5xl">
                 Tentang Lembaga
                 <br />
@@ -290,11 +311,13 @@ export default function About() {
                   (LSP-PIE) adalah lembaga sertifikasi pihak ketiga resmi
                   (LSP-P3) yang berlisensi BNSP dengan nomor SK lisensi
                   <span className="font-black text-[#071E3D]">
-                    {" "}KEP.2321/BNSP/IX/2024
+                    {" "}
+                    KEP.2321/BNSP/IX/2024
                   </span>{" "}
                   dan nomor lisensi
                   <span className="font-black text-[#071E3D]">
-                    {" "}BNSP-LSP-2542-ID.
+                    {" "}
+                    BNSP-LSP-2542-ID.
                   </span>
                 </p>
 
@@ -323,6 +346,7 @@ export default function About() {
               </div>
             </motion.div>
 
+            {/* Kolom Kanan: Kartu Info (Centered secara vertikal) */}
             <motion.div
               initial={{
                 opacity: 0,
@@ -359,28 +383,17 @@ export default function About() {
                 value="LSP Pihak Ketiga"
               />
 
-              <div className="mt-7 border-t border-slate-100 pt-7">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
-                    <Building2 size={18} />
-                  </div>
-
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                      Fokus Sertifikasi
-                    </p>
-
-                    <p className="mt-1 text-sm font-black text-[#071E3D]">
-                      Perpustakaan & Terbitan Ilmiah
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <InfoCard
+                icon={Building2}
+                title="Fokus Sertifikasi"
+                value="Perpustakaan & Terbitan Ilmiah"
+              />
             </motion.div>
           </div>
         </div>
       </section>
 
+      {/* VISI, TUJUAN & MISI */}
       <section className="relative overflow-hidden bg-[#F8FAFC] py-24 lg:py-28">
         <div className="pointer-events-none absolute right-0 top-0 h-[450px] w-[450px] rounded-full bg-[#CC6B27]/[0.04] blur-[120px]" />
 
@@ -405,19 +418,17 @@ export default function About() {
             <div className="mb-5 h-1 w-12 bg-[#CC6B27]" />
 
             <h2 className="text-4xl font-black leading-tight text-[#071E3D] md:text-5xl">
-              Visi, Tujuan{" "}
-              <span className="text-[#CC6B27]">&</span> Misi
+              Visi, Tujuan <span className="text-[#CC6B27]">&</span> Misi
             </h2>
 
             <p className="mt-5 max-w-2xl text-sm font-medium leading-7 text-slate-500 md:text-base">
-              Landasan yang menjadi arah dan komitmen dalam pengembangan
-              LSP Pustaka Ilmiah Elektronik.
+              Landasan yang menjadi arah dan komitmen dalam pengembangan LSP
+              Pustaka Ilmiah Elektronik.
             </p>
           </motion.div>
 
           <div className="space-y-4">
             {accordionItems.map((item, index) => {
-              const Icon = item.icon;
               const isOpen = openAccordion === index;
 
               return (
@@ -449,21 +460,7 @@ export default function About() {
                     className="flex w-full items-center justify-between gap-5 px-5 py-5 text-left md:px-6"
                   >
                     <div className="flex items-center gap-4">
-                      <div
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-all duration-300 ${
-                          isOpen
-                            ? "bg-[#CC6B27] text-white"
-                            : "bg-[#CC6B27]/10 text-[#CC6B27]"
-                        }`}
-                      >
-                        <Icon size={19} />
-                      </div>
-
                       <div>
-                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#CC6B27]">
-                          Arah Lembaga
-                        </p>
-
                         <h3 className="mt-1 text-base font-black text-[#071E3D] md:text-lg">
                           {item.title}
                         </h3>
@@ -503,25 +500,20 @@ export default function About() {
                         <div className="border-t border-slate-100 px-5 pb-6 pt-5 md:px-6">
                           {Array.isArray(item.content) ? (
                             <div className="space-y-3">
-                              {item.content.map(
-                                (mission, missionIndex) => (
-                                  <div
-                                    key={missionIndex}
-                                    className="flex items-start gap-3"
-                                  >
-                                    <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center">
-                                      <CheckCircle2
-                                        size={15}
-                                        className="text-[#CC6B27]"
-                                      />
-                                    </div>
+                              {item.content.map((mission, missionIndex) => (
+                                <div
+                                  key={missionIndex}
+                                  className="flex items-start gap-3"
+                                >
+                                  <span className="w-5 shrink-0 text-sm font-bold leading-7 text-black md:text-base">
+                                    {missionIndex + 1}.
+                                  </span>
 
-                                    <p className="text-justify text-sm font-medium leading-7 text-slate-600 md:text-base">
-                                      {mission}
-                                    </p>
-                                  </div>
-                                )
-                              )}
+                                  <p className="text-justify text-sm font-medium leading-7 text-slate-600 md:text-base">
+                                    {mission}
+                                  </p>
+                                </div>
+                              ))}
                             </div>
                           ) : (
                             <p className="max-w-4xl text-justify text-sm font-medium leading-7 text-slate-600 md:text-base">
@@ -539,6 +531,7 @@ export default function About() {
         </div>
       </section>
 
+      {/* CTA / BANNER PENUTUP */}
       <section className="relative overflow-hidden bg-[#071E3D] py-20">
         <div className="pointer-events-none absolute right-0 top-0 h-[300px] w-[300px] rounded-full bg-[#CC6B27]/10 blur-[100px]" />
 
@@ -561,7 +554,8 @@ export default function About() {
             <h2 className="text-3xl font-black text-white md:text-4xl">
               Kompetensi yang Terukur,
               <span className="text-[#CC6B27]">
-                {" "}Profesionalisme yang Terjaga.
+                {" "}
+                Profesionalisme yang Terjaga.
               </span>
             </h2>
 
@@ -589,9 +583,7 @@ function InfoCard({ icon: Icon, title, value }) {
             {title}
           </p>
 
-          <p className="mt-1 text-sm font-black text-[#071E3D]">
-            {value}
-          </p>
+          <p className="mt-1 text-sm font-black text-[#071E3D]">{value}</p>
         </div>
       </div>
     </div>
