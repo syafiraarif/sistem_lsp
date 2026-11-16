@@ -1,13 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import {
-  ChevronRight,
-  ShieldCheck,
-  Globe,
-  Zap,
-  CheckCircle2,
-} from "lucide-react";
+import { ChevronRight, CheckCircle2 } from "lucide-react";
 
 export default function Hero() {
   const navigate = useNavigate();
@@ -37,42 +31,30 @@ export default function Hero() {
     },
   };
 
-  const benefits = [
-    {
-      icon: <Globe size={18} />,
-      title: "Pendaftaran Online 24/7",
-      desc: "Akses kapan saja",
-    },
-    {
-      icon: <Zap size={18} />,
-      title: "Proses Cepat & Terintegrasi",
-      desc: "Sistem satu pintu",
-    },
-    {
-      icon: <ShieldCheck size={18} />,
-      title: "Standar Nasional BNSP",
-      desc: "Sertifikasi resmi",
-    },
+  const advantages = [
+    "Pendaftaran Real-time Online",
+    "Manajemen Asesor Terintegrasi",
+    "Penjadwalan Otomatis TUK",
+    "E-Sertifikat & Validasi QR",
   ];
 
   return (
-    <section className="relative overflow-hidden bg-white py-20 lg:py-32">
-      <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-[600px] h-[600px] bg-[#CC6B27]/10 rounded-full blur-[120px] pointer-events-none" />
+    <section className="relative overflow-hidden bg-white py-20 lg:py-24">
+      <div className="pointer-events-none absolute right-0 top-0 h-[600px] w-[600px] translate-x-1/4 -translate-y-1/4 rounded-full bg-[#CC6B27]/10 blur-[120px]" />
+      <div className="pointer-events-none absolute bottom-0 left-0 h-[400px] w-[400px] -translate-x-1/4 translate-y-1/4 rounded-full bg-[#071E3D]/10 blur-[100px]" />
 
-      <div className="absolute bottom-0 left-0 translate-y-1/4 -translate-x-1/4 w-[400px] h-[400px] bg-[#071E3D]/10 rounded-full blur-[100px] pointer-events-none" />
-
-      <div className="relative max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="z-10 -mt-10 lg:-mt-20"
+          className="z-10"
         >
           <motion.h1
             variants={itemVariants}
-            className="text-5xl md:text-6xl xl:text-7xl font-black text-[#071E3D] leading-[1.1]"
+            className="text-5xl font-black leading-[1.1] text-[#071E3D] md:text-6xl xl:text-7xl"
           >
-            Sistem Informasi <br />
+            Sistem <br /> Informasi <br />
             <span className="relative text-[#CC6B27]">
               Manajemen LSP
               <svg
@@ -94,7 +76,7 @@ export default function Hero() {
 
           <motion.p
             variants={itemVariants}
-            className="mt-8 text-gray-500 text-lg md:text-xl max-w-xl leading-relaxed font-medium"
+            className="mt-8 max-w-xl text-lg font-medium leading-relaxed text-gray-500 md:text-xl"
           >
             Platform digital terpadu untuk percepatan sertifikasi kompetensi nasional.
             Kelola pendaftaran, asesmen, hingga penerbitan sertifikat dalam satu pintu.
@@ -105,17 +87,19 @@ export default function Hero() {
             className="mt-10 flex flex-wrap gap-4"
           >
             <button
+              type="button"
               onClick={() => navigate("/pendaftaran")}
-              className="group px-8 py-4 rounded-2xl bg-[#CC6B27] text-white font-black shadow-xl shadow-[#CC6B27]/20 hover:bg-[#A8561F] transition-all flex items-center gap-2 uppercase text-xs tracking-widest"
+              className="group flex items-center gap-2 rounded-xl bg-[#CC6B27] px-8 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-[#CC6B27]/20 transition-all hover:bg-[#A8561F]"
             >
               Daftar Uji Kompetensi
               <ChevronRight
-                className="group-hover:translate-x-1 transition-transform"
+                className="transition-transform group-hover:translate-x-1"
                 size={18}
               />
             </button>
 
             <button
+              type="button"
               onClick={() =>
                 navigate("/informasi", {
                   state: {
@@ -123,92 +107,47 @@ export default function Hero() {
                   },
                 })
               }
-              className="px-8 py-4 rounded-2xl border-2 border-[#071E3D]/10 text-[#071E3D] font-black hover:bg-[#071E3D] hover:text-white transition-all uppercase text-xs tracking-widest"
+              className="rounded-xl border-2 border-[#071E3D]/10 px-8 py-4 text-xs font-black uppercase tracking-widest text-[#071E3D] transition-all hover:bg-[#071E3D] hover:text-white"
             >
               Lihat Skema Kami
             </button>
-          </motion.div>
-
-          <motion.div
-            variants={itemVariants}
-            className="mt-12 flex flex-wrap items-start gap-x-10 gap-y-6 pt-6 border-t border-gray-100"
-          >
-            {benefits.map((benefit, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-3 group"
-              >
-                <div className="w-10 h-10 rounded-xl bg-[#CC6B27]/10 text-[#CC6B27] flex items-center justify-center group-hover:bg-[#CC6B27] group-hover:text-white transition-all">
-                  {benefit.icon}
-                </div>
-
-                <div>
-                  <h4 className="text-[13px] font-black text-[#071E3D] uppercase tracking-wide">
-                    {benefit.title}
-                  </h4>
-
-                  <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1 font-bold">
-                    {benefit.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
           </motion.div>
         </motion.div>
 
         <motion.div
           initial={{
             opacity: 0,
-            scale: 0.8,
-            x: 50,
+            y: 24,
           }}
           animate={{
             opacity: 1,
-            scale: 1,
-            x: 0,
+            y: 0,
           }}
           transition={{
-            duration: 0.8,
+            duration: 0.7,
           }}
-          className="relative"
+          className="relative w-full lg:ml-auto lg:max-w-[620px]"
         >
-          <div className="relative z-20 bg-white p-8 md:p-12 rounded-[40px] shadow-[0_32px_64px_-16px_rgba(7,30,61,0.12)] border border-gray-100">
-            <div className="flex items-center justify-between mb-8">
-              <div className="h-3 w-12 bg-[#CC6B27] rounded-full" />
-
-              <div className="flex gap-2">
-                <div className="h-2 w-2 bg-gray-100 rounded-full" />
-                <div className="h-2 w-2 bg-gray-100 rounded-full" />
-              </div>
-            </div>
-
-            <h3 className="text-2xl font-black text-[#071E3D] mb-6 tracking-tight">
-              Keunggulan{" "}
-              <span className="text-[#CC6B27]">
-                Utama
-              </span>
+          <div className="relative z-20 rounded-3xl border border-gray-100 bg-white p-7 shadow-[0_24px_56px_-20px_rgba(7,30,61,0.16)] md:p-10">
+            <h3 className="mb-7 text-2xl font-black tracking-tight text-[#071E3D] md:text-[27px]">
+              Keunggulan <span className="text-[#CC6B27]">Utama</span>
             </h3>
 
-            <div className="space-y-4">
-              {[
-                "Pendaftaran Real-time Online",
-                "Manajemen Asesor Terintegrasi",
-                "Penjadwalan Otomatis TUK",
-                "E-Sertifikat & Validasi QR",
-              ].map((item, i) => (
+            <div className="space-y-3.5">
+              {advantages.map((item, index) => (
                 <motion.div
-                  key={i}
-                  whileHover={{ x: 10 }}
-                  className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border border-transparent hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/5 transition-all group"
+                  key={item}
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.35, delay: 0.25 + index * 0.1 }}
+                  whileHover={{ x: 4 }}
+                  className="group flex items-center gap-4 rounded-xl border border-gray-100 bg-[#F8F9FB] p-4 transition-colors hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/5"
                 >
-                  <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-[#CC6B27]">
-                    <CheckCircle2
-                      size={20}
-                      className="text-[#CC6B27]"
-                    />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#CC6B27] shadow-sm transition-colors group-hover:bg-[#CC6B27] group-hover:text-white">
+                    <CheckCircle2 size={20} />
                   </div>
 
-                  <span className="text-[#071E3D] font-bold text-sm">
+                  <span className="text-sm font-bold text-[#071E3D]">
                     {item}
                   </span>
                 </motion.div>

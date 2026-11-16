@@ -104,7 +104,7 @@ export default function Statistics() {
     {
       id: 4,
       value: statistics.asesi,
-      label: "Peserta Tersertifikasi",
+      label: "Asesi Tersertifikasi",
       icon: <Users size={28} />,
     },
   ];

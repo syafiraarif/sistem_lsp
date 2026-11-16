@@ -12,6 +12,7 @@ import LupaAkses from "../pages/public/LupaAkses";
 import ResetAkses from "../pages/public/ResetAkses";
 import AssessorProfile from "../pages/public/AssessorProfile";
 import AssessorExplore from "../pages/public/AssessorExplore";
+import TukExplore from "../pages/public/TukExplore";
 import JadwalDetail from "../pages/public/JadwalDetail";
 import Jadwal from "../components/info/Jadwal";
 import FeedbackPublic from "../pages/public/Feedback";
@@ -70,6 +71,10 @@ export default function AppRoutes() {
       <Route
         path="/explore-assessors"
         element={<AssessorExplore />}
+      />
+      <Route
+        path="/explore-tuk"
+        element={<TukExplore />}
       />
       <Route
         path="/jadwal-detail/:id"

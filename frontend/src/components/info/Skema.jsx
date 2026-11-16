@@ -1,426 +1,672 @@
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import axios from "axios";
 import {
-  Search,
+  AlertTriangle,
+  ArrowDownRight,
   Award,
+  BookOpen,
+  CalendarDays,
   CheckCircle2,
   ChevronDown,
-  BookOpen,
+  ClipboardList,
+  Clock3,
+  ExternalLink,
+  FileCheck,
+  Layers3,
   Loader2,
-  AlertTriangle,
-  Info,
-  LayoutGrid
+  MapPin,
+  Monitor,
+  Search,
+  Wallet,
 } from "lucide-react";
 
 const API_URL = "http://localhost:3000/api/public";
 
+const formatCurrency = (amount) => {
+  if (amount === null || amount === undefined || amount === "") {
+    return "Belum tersedia";
+  }
+
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return "Belum tersedia";
+
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const formatDate = (value) => {
+  if (!value) return "Belum ditentukan";
+
+  const normalized = String(value).slice(0, 10);
+  const date = new Date(`${normalized}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+};
+
+const formatDateRange = (start, end) => {
+  if (start && end && String(start).slice(0, 10) === String(end).slice(0, 10)) {
+    return formatDate(start);
+  }
+
+  if (start && end) return `${formatDate(start)} – ${formatDate(end)}`;
+  if (start) return `Mulai ${formatDate(start)}`;
+  if (end) return `Sampai ${formatDate(end)}`;
+  return "Tanggal belum ditentukan";
+};
+
+const formatTime = (value) => {
+  if (!value) return "Belum ditentukan";
+  return String(value).slice(0, 5);
+};
+
+const getMethod = (method) => {
+  const value = String(method || "").toLowerCase();
+
+  if (value === "daring" || value === "online") {
+    return { label: "Online", detail: "Daring", online: true };
+  }
+
+  if (value === "luring" || value === "offline") {
+    return { label: "Offline", detail: "Luring", online: false };
+  }
+
+  return { label: "Belum ditentukan", detail: "Metode pelaksanaan", online: false };
+};
+
+const getRequirements = (scheme) => {
+  return Array.isArray(scheme.persyaratans) ? scheme.persyaratans : [];
+};
+
+const getFees = (scheme) => {
+  if (Array.isArray(scheme.biayaUji)) return scheme.biayaUji;
+  if (Array.isArray(scheme.biaya_uji)) return scheme.biaya_uji;
+  return [];
+};
+
+const getSchedules = (scheme) => {
+  if (Array.isArray(scheme.jadwalList)) return scheme.jadwalList;
+  if (Array.isArray(scheme.jadwals)) return scheme.jadwals;
+  return [];
+};
+
+const getUnits = (scheme) => {
+  if (!Array.isArray(scheme.skemaUnit)) return [];
+
+  return scheme.skemaUnit
+    .filter((item) => item.unit)
+    .slice()
+    .sort((a, b) => (a.urutan ?? Number.MAX_SAFE_INTEGER) - (b.urutan ?? Number.MAX_SAFE_INTEGER));
+};
+
+const getIsRequired = (requirement) => {
+  const relation = requirement.skema_persyaratan || requirement.SkemaPersyaratan || {};
+  const value = relation.wajib ?? requirement.wajib;
+
+  if (value === undefined || value === null) return true;
+  return value === true || value === 1 || value === "1";
+};
+
 export default function Skema() {
   const [schemes, setSchemes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [openSkemaId, setOpenSkemaId] = useState(null);
+  const [openSchemeId, setOpenSchemeId] = useState(null);
 
   useEffect(() => {
-    const fetchSkema = async () => {
+    let isMounted = true;
+
+    const fetchSchemes = async () => {
       try {
         setLoading(true);
-        setError(null);
+        setError("");
 
-        const response = await axios.get(
-          `${API_URL}/skema`
-        );
+        const response = await axios.get(`${API_URL}/skema`);
+        const result = response.data?.success && Array.isArray(response.data?.data)
+          ? response.data.data
+          : [];
 
-        if (response.data.success) {
-          setSchemes(response.data.data || []);
-        } else {
-          setSchemes([]);
-        }
+        if (isMounted) setSchemes(result);
       } catch (err) {
-        console.error("Gagal ambil skema:", err);
-        setError("Gagal memuat daftar skema.");
+        console.error("Gagal mengambil data skema:", err);
+        if (isMounted) setError("Daftar skema belum dapat dimuat. Silakan coba kembali.");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
-    fetchSkema();
+    fetchSchemes();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const filteredSchemes = schemes.filter((item) =>
-    (item.judul_skema || "")
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+  const filteredSchemes = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return schemes;
 
-  const toggleSkema = (idSkema) => {
-    setOpenSkemaId((prev) =>
-      prev === idSkema ? null : idSkema
-    );
-  };
+    return schemes.filter((scheme) => {
+      const searchable = [
+        scheme.kode_skema,
+        scheme.judul_skema,
+        scheme.jenis_skema,
+        scheme.bidang,
+        scheme.level_kkni,
+        scheme.jenjang_kualifikasi,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-  const getUnitKompetensi = (scheme) => {
-    if (!Array.isArray(scheme.skemaUnit)) {
-      return [];
-    }
+      return searchable.includes(keyword);
+    });
+  }, [schemes, search]);
 
-    return scheme.skemaUnit
-      .filter((item) => item.unit)
-      .map((item) => ({
-        id_unit: item.unit.id_unit,
-        kode_unit: item.unit.kode_unit,
-        judul_unit: item.unit.judul_unit,
-        urutan: item.urutan
-      }))
-      .sort((a, b) => {
-        if (
-          a.urutan === null ||
-          a.urutan === undefined
-        ) {
-          return 1;
-        }
-
-        if (
-          b.urutan === null ||
-          b.urutan === undefined
-        ) {
-          return -1;
-        }
-
-        return a.urutan - b.urutan;
-      });
+  const toggleScheme = (id) => {
+    setOpenSchemeId((current) => (current === id ? null : id));
   };
 
   return (
-    <section className="relative overflow-hidden bg-white py-4 lg:py-8">
-      <div className="pointer-events-none absolute right-0 top-0 h-[420px] w-[420px] rounded-full bg-[#CC6B27]/[0.025] blur-[110px]" />
+    <section className="relative">
+      <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="h-[3px] w-7 bg-[#CC6B27]" />
+            <p className="text-[9px] font-bold uppercase tracking-[0.17em] text-[#CC6B27]">
+              Daftar Sertifikasi
+            </p>
+          </div>
+          <h2 className="text-2xl font-black tracking-tight text-[#071E3D] sm:text-3xl">
+            Skema Sertifikasi
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            Pilih skema untuk melihat persyaratan, biaya, unit kompetensi,
+            elemen, dan jadwal pelaksanaannya.
+          </p>
+        </div>
 
-      <div className="pointer-events-none absolute bottom-0 left-0 h-[360px] w-[360px] rounded-full bg-[#071E3D]/[0.02] blur-[110px]" />
-
-      <div className="relative mx-auto max-w-5xl px-1">
-        <header className="mx-auto max-w-3xl text-center">
-          <motion.h2
-            initial={{
-              opacity: 0,
-              y: 12
-            }}
-            whileInView={{
-              opacity: 1,
-              y: 0
-            }}
-            viewport={{
-              once: true
-            }}
-            transition={{
-              duration: 0.4
-            }}
-            className="text-2xl font-black tracking-tight text-[#071E3D] sm:text-3xl"
+        <div className="w-full lg:max-w-[380px]">
+          <label
+            htmlFor="search-skema"
+            className="mb-2 block text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500"
           >
-            Skema{" "}
-            <span className="text-[#CC6B27]">
-              Sertifikasi
-            </span>
-          </motion.h2>
-
-          <motion.p
-            initial={{
-              opacity: 0,
-              y: 8
-            }}
-            whileInView={{
-              opacity: 1,
-              y: 0
-            }}
-            viewport={{
-              once: true
-            }}
-            transition={{
-              duration: 0.4,
-              delay: 0.08
-            }}
-            className="mx-auto mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-500"
-          >
-            Daftar skema sertifikasi yang tersedia beserta
-            unit kompetensi yang menjadi bagian dari setiap
-            skema.
-          </motion.p>
-        </header>
-
-        <div className="mx-auto mt-8 max-w-3xl">
+            Cari Skema
+          </label>
           <div className="relative">
             <Search
               size={18}
               className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
             />
-
             <input
+              id="search-skema"
               type="text"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setOpenSkemaId(null);
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setOpenSchemeId(null);
               }}
-              placeholder="Cari skema sertifikasi..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-5 text-sm font-semibold text-[#071E3D] transition-all placeholder:text-slate-300 focus:border-[#CC6B27] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#CC6B27]/5"
+              placeholder="Nama, kode, atau bidang skema..."
+              className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm font-medium text-[#071E3D] shadow-sm outline-none transition-colors placeholder:text-slate-400 focus:border-[#CC6B27]"
             />
           </div>
         </div>
+      </div>
 
-        <div className="mx-auto mt-6 max-w-4xl">
-          {loading ? (
-            <div className="rounded-xl border border-slate-100 bg-white py-16 text-center">
-              <Loader2
-                size={30}
-                className="mx-auto mb-3 animate-spin text-[#CC6B27]"
-              />
+      {!loading && !error && (
+        <div className="mb-5 flex items-center justify-between border-b border-[#071E3D]/10 pb-3">
+          <p className="text-xs font-bold text-[#071E3D]">Semua Skema</p>
+          <p className="text-[11px] font-medium text-slate-400">
+            {filteredSchemes.length} dari {schemes.length} skema
+          </p>
+        </div>
+      )}
 
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                Memuat Data Skema
-              </p>
-            </div>
-          ) : error ? (
-            <div className="rounded-xl border border-red-100 bg-red-50 px-6 py-10 text-center">
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white text-red-500 shadow-sm">
-                <AlertTriangle size={18} />
-              </div>
+      {loading ? (
+        <div className="border border-slate-200 bg-white py-16 text-center">
+          <Loader2 size={32} className="mx-auto mb-3 animate-spin text-[#CC6B27]" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+            Memuat Data Skema
+          </p>
+        </div>
+      ) : error ? (
+        <div className="border border-red-100 bg-white px-6 py-12 text-center">
+          <AlertTriangle size={30} className="mx-auto mb-3 text-red-400" />
+          <p className="text-sm font-bold text-red-700">{error}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-5 rounded-lg bg-[#071E3D] px-5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#CC6B27]"
+          >
+            Muat Ulang
+          </button>
+        </div>
+      ) : filteredSchemes.length > 0 ? (
+        <div className="space-y-4">
+          <AnimatePresence initial={false}>
+            {filteredSchemes.map((scheme) => {
+              const isOpen = openSchemeId === scheme.id_skema;
+              const units = getUnits(scheme);
+              const requirements = getRequirements(scheme);
+              const fees = getFees(scheme);
+              const schedules = getSchedules(scheme);
 
-              <p className="text-sm font-bold text-red-700">
-                {error}
-              </p>
-            </div>
-          ) : filteredSchemes.length > 0 ? (
-            <div className="space-y-3">
-              <AnimatePresence initial={false}>
-                {filteredSchemes.map((scheme, index) => {
-                  const isOpen =
-                    openSkemaId === scheme.id_skema;
+              return (
+                <motion.article
+                  key={scheme.id_skema}
+                  layout
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.24 }}
+                  className={`overflow-hidden rounded-xl border bg-white transition-colors ${
+                    isOpen
+                      ? "border-[#CC6B27]/35 shadow-md"
+                      : "border-slate-200 shadow-sm hover:border-[#CC6B27]/30"
+                  }`}
+                >
+                  <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <div className="flex min-w-0 items-start gap-4">
+                      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${isOpen ? "bg-[#071E3D] text-[#CC6B27]" : "bg-[#CC6B27]/10 text-[#CC6B27]"}`}>
+                        <Award size={19} />
+                      </div>
 
-                  const unitKompetensi =
-                    getUnitKompetensi(scheme);
+                      <div className="min-w-0">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          {scheme.kode_skema && (
+                            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#CC6B27]">
+                              {scheme.kode_skema}
+                            </span>
+                          )}
+                          <span className="rounded-md bg-slate-100 px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">
+                            {scheme.jenis_skema || "Skema Sertifikasi"}
+                          </span>
+                        </div>
 
-                  return (
-                    <motion.div
-                      key={scheme.id_skema || index}
-                      initial={{
-                        opacity: 0,
-                        y: 8
-                      }}
-                      whileInView={{
-                        opacity: 1,
-                        y: 0
-                      }}
-                      viewport={{
-                        once: true
-                      }}
-                      transition={{
-                        duration: 0.25,
-                        delay: index * 0.02
-                      }}
-                      className={`overflow-hidden rounded-xl border bg-white transition-all duration-300 ${
+                        <h3 className="text-sm font-black leading-6 text-[#071E3D] sm:text-base">
+                          {scheme.judul_skema}
+                        </h3>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] font-semibold uppercase tracking-wide text-slate-400">
+                          <span className="inline-flex items-center gap-1.5">
+                            <CheckCircle2 size={11} className="text-emerald-500" />
+                            Tersedia
+                          </span>
+                          <span>{units.length} Unit Kompetensi</span>
+                          {scheme.bidang && <span>{scheme.bidang}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      aria-controls={`scheme-detail-${scheme.id_skema}`}
+                      onClick={() => toggleScheme(scheme.id_skema)}
+                      className={`inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-lg px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-colors sm:self-center ${
                         isOpen
-                          ? "border-[#CC6B27]/30 shadow-[0_16px_40px_-28px_rgba(204,107,39,0.32)]"
-                          : "border-slate-100 hover:border-[#CC6B27]/20"
+                          ? "bg-[#071E3D] text-white"
+                          : "bg-[#CC6B27]/10 text-[#CC6B27] hover:bg-[#CC6B27] hover:text-white"
                       }`}
                     >
-                      <button
-                        type="button"
-                        onClick={() =>
-                          toggleSkema(
-                            scheme.id_skema
-                          )
-                        }
-                        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left sm:px-6"
+                      <ClipboardList size={14} />
+                      Persyaratan
+                      <ChevronDown size={14} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  </div>
+
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        id={`scheme-detail-${scheme.id_skema}`}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.28 }}
+                        className="overflow-hidden"
                       >
-                        <div className="flex min-w-0 items-center gap-4">
-                          <div
-                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-300 ${
-                              isOpen
-                                ? "bg-[#071E3D] text-[#CC6B27]"
-                                : "bg-[#CC6B27]/10 text-[#CC6B27]"
-                            }`}
-                          >
-                            <Award size={17} />
-                          </div>
-
-                          <div className="min-w-0">
-                            <p className="text-[8px] font-bold uppercase tracking-[0.16em] text-[#CC6B27]">
-                              Skema Sertifikasi
-                            </p>
-
-                            <h3
-                              className={`mt-1 text-xs font-black leading-5 sm:text-sm ${
-                                isOpen
-                                  ? "text-[#071E3D]"
-                                  : "text-slate-700"
-                              }`}
-                            >
-                              {scheme.judul_skema}
-                            </h3>
-
-                            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                              <span className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-slate-400">
-                                <CheckCircle2
-                                  size={11}
-                                  className={
-                                    scheme.status ===
-                                    "aktif"
-                                      ? "text-emerald-500"
-                                      : "text-slate-300"
-                                  }
-                                />
-
-                                {scheme.status === "aktif"
-                                  ? "Tersedia"
-                                  : "Tidak Aktif"}
-                              </span>
-
-                              <span className="text-[8px] font-bold uppercase tracking-[0.1em] text-slate-400">
-                                {unitKompetensi.length} Unit
-                                Kompetensi
-                              </span>
+                        <div className="border-t border-slate-200 bg-[#FAFBFC] p-5 sm:p-6 lg:p-7">
+                          <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#CC6B27]">
+                                Informasi Skema
+                              </p>
+                              <h4 className="mt-1 text-base font-black text-[#071E3D]">
+                                {scheme.judul_skema}
+                              </h4>
                             </div>
-                          </div>
-                        </div>
-
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-300 ${
-                            isOpen
-                              ? "bg-[#071E3D] text-white"
-                              : "bg-slate-50 text-slate-400"
-                          }`}
-                        >
-                          <ChevronDown
-                            size={16}
-                            className={`transition-transform duration-300 ${
-                              isOpen ? "rotate-180" : ""
-                            }`}
-                          />
-                        </div>
-                      </button>
-
-                      <AnimatePresence initial={false}>
-                        {isOpen && (
-                          <motion.div
-                            initial={{
-                              height: 0,
-                              opacity: 0
-                            }}
-                            animate={{
-                              height: "auto",
-                              opacity: 1
-                            }}
-                            exit={{
-                              height: 0,
-                              opacity: 0
-                            }}
-                            transition={{
-                              duration: 0.25
-                            }}
-                            className="overflow-hidden"
-                          >
-                            <div className="border-t border-slate-100 px-5 pb-6 pt-5 sm:px-6">
-                              <div className="mb-4 flex items-center gap-3">
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
-                                  <BookOpen size={15} />
-                                </div>
-
-                                <div>
-                                  <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-[#CC6B27]">
-                                    Detail Skema
-                                  </p>
-
-                                  <h4 className="mt-1 text-xs font-black text-[#071E3D]">
-                                    Unit Kompetensi
-                                  </h4>
-                                </div>
-                              </div>
-
-                              {unitKompetensi.length > 0 ? (
-                                <div className="space-y-3">
-                                  {unitKompetensi.map(
-                                    (
-                                      unit,
-                                      unitIndex
-                                    ) => (
-                                      <motion.div
-                                        key={
-                                          unit.id_unit ||
-                                          unitIndex
-                                        }
-                                        initial={{
-                                          opacity: 0,
-                                          y: 6
-                                        }}
-                                        animate={{
-                                          opacity: 1,
-                                          y: 0
-                                        }}
-                                        transition={{
-                                          delay:
-                                            unitIndex *
-                                            0.03
-                                        }}
-                                        className="flex items-start gap-3 rounded-lg border border-slate-100 bg-slate-50 p-4 transition-all duration-200 hover:border-[#CC6B27]/20 hover:bg-white"
-                                      >
-                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[9px] font-black text-[#CC6B27] shadow-sm">
-                                          {unitIndex + 1}
-                                        </div>
-
-                                        <div className="min-w-0 flex-1">
-                                          <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#CC6B27]">
-                                            {unit.kode_unit ||
-                                              "Kode Unit Belum Ada"}
-                                          </p>
-
-                                          <p className="mt-1 text-[10px] font-bold leading-5 text-[#071E3D] sm:text-[11px]">
-                                            {unit.judul_unit ||
-                                              "Judul unit belum tersedia"}
-                                          </p>
-                                        </div>
-                                      </motion.div>
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
-                                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white text-slate-300">
-                                    <LayoutGrid size={20} />
-                                  </div>
-
-                                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                                    Unit kompetensi untuk
-                                    skema ini belum tersedia.
-                                  </p>
-                                </div>
+                            <div className="flex flex-wrap gap-2 text-[9px] font-semibold text-slate-500">
+                              {scheme.level_kkni && (
+                                <span className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5">
+                                  Level KKNI {scheme.level_kkni}
+                                </span>
+                              )}
+                              {scheme.jenjang_kualifikasi && (
+                                <span className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5">
+                                  Jenjang {scheme.jenjang_kualifikasi}
+                                </span>
                               )}
                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 py-14 text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-white text-slate-300 shadow-sm">
-                <Search size={22} />
-              </div>
+                          </div>
 
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                Skema sertifikasi tidak ditemukan.
-              </p>
+                          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                            <DetailSection
+                              icon={<Wallet size={17} />}
+                              title="Biaya Sertifikasi"
+                              description="Biaya berdasarkan metode pelaksanaan uji"
+                            >
+                              {fees.length > 0 ? (
+                                <div className="space-y-3">
+                                  {fees.map((fee) => {
+                                    const method = getMethod(fee.metode_uji);
+                                    return (
+                                      <div key={fee.id_biaya} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                          <p className="text-xs font-bold text-[#071E3D]">{method.label} ({method.detail})</p>
+                                          {fee.keterangan && (
+                                            <p className="mt-1 text-[10px] leading-5 text-slate-500">{fee.keterangan}</p>
+                                          )}
+                                        </div>
+                                        <p className="shrink-0 text-sm font-black text-[#CC6B27]">
+                                          {formatCurrency(fee.nominal)}
+                                        </p>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <EmptyDetail text="Biaya untuk skema ini belum dicantumkan." />
+                              )}
+                            </DetailSection>
 
-              <p className="mt-2 text-[10px] font-medium text-slate-400">
-                Coba gunakan kata kunci pencarian yang
-                berbeda.
-              </p>
-            </div>
+                            <DetailSection
+                              icon={<FileCheck size={17} />}
+                              title="Persyaratan Asesi"
+                              description="Dokumen yang perlu disiapkan untuk skema ini"
+                            >
+                              {requirements.length > 0 ? (
+                                <div className="space-y-2.5">
+                                  {requirements.map((requirement) => {
+                                    const required = getIsRequired(requirement);
+                                    return (
+                                      <div key={requirement.id_persyaratan} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3.5">
+                                        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#CC6B27]/10 text-[#CC6B27]">
+                                          <FileCheck size={14} />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-[11px] font-bold leading-5 text-[#071E3D]">
+                                            {requirement.nama_persyaratan}
+                                          </p>
+                                          <div className="mt-1.5 flex flex-wrap gap-2">
+                                            {requirement.jenis_persyaratan && (
+                                              <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400">
+                                                {requirement.jenis_persyaratan}
+                                              </span>
+                                            )}
+                                            <span className={`text-[8px] font-bold uppercase tracking-wider ${required ? "text-emerald-700" : "text-slate-400"}`}>
+                                              {required ? "Wajib" : "Opsional"}
+                                            </span>
+                                          </div>
+                                          {requirement.keterangan && (
+                                            <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                                              {requirement.keterangan}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <EmptyDetail text="Persyaratan untuk skema ini belum tersedia." />
+                              )}
+                            </DetailSection>
+                          </div>
+
+                          <div className="mt-5">
+                            <DetailSection
+                              icon={<Layers3 size={17} />}
+                              title="Unit Kompetensi dan Elemen"
+                              description="Unit kompetensi yang termasuk dalam skema beserta elemen di setiap unit"
+                            >
+                              {units.length > 0 ? (
+                                <div className="space-y-3">
+                                  {units.map((link, unitIndex) => {
+                                    const unit = link.unit;
+                                    const elements = Array.isArray(unit.elemen)
+                                      ? unit.elemen.slice().sort((a, b) => (a.urutan ?? Number.MAX_SAFE_INTEGER) - (b.urutan ?? Number.MAX_SAFE_INTEGER))
+                                      : [];
+
+                                    return (
+                                      <div key={unit.id_unit} className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+                                        <div className="flex items-start gap-3">
+                                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#071E3D] text-[10px] font-black text-white">
+                                            {unitIndex + 1}
+                                          </span>
+                                          <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <span className="text-[9px] font-bold uppercase tracking-wider text-[#CC6B27]">
+                                                {unit.kode_unit || "Kode unit belum tersedia"}
+                                              </span>
+                                              {link.kelompok?.nama_kelompok && (
+                                                <span className="rounded bg-slate-100 px-2 py-1 text-[8px] font-semibold text-slate-500">
+                                                  {link.kelompok.nama_kelompok}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <h5 className="mt-1 text-xs font-bold leading-5 text-[#071E3D]">
+                                              {unit.judul_unit || "Judul unit belum tersedia"}
+                                            </h5>
+                                          </div>
+                                        </div>
+
+                                        <div className="ml-11 mt-4 border-l-2 border-[#CC6B27]/20 pl-4">
+                                          <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                            Elemen Kompetensi ({elements.length})
+                                          </p>
+
+                                          {elements.length > 0 ? (
+                                            <ol className="space-y-2">
+                                              {elements.map((element, elementIndex) => (
+                                                <li key={element.id_elemen} className="flex items-start gap-2 text-[11px] leading-5 text-slate-600">
+                                                  <span className="mt-0.5 text-[9px] font-bold text-[#CC6B27]">
+                                                    {element.urutan || elementIndex + 1}.
+                                                  </span>
+                                                  <span>{element.nama_elemen}</span>
+                                                </li>
+                                              ))}
+                                            </ol>
+                                          ) : (
+                                            <p className="text-[10px] text-slate-400">
+                                              Elemen untuk unit ini belum tersedia.
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <EmptyDetail text="Unit kompetensi untuk skema ini belum tersedia." />
+                              )}
+                            </DetailSection>
+                          </div>
+
+                          <div className="mt-5">
+                            <DetailSection
+                              icon={<CalendarDays size={17} />}
+                              title="Jadwal Pelaksanaan"
+                              description="Jadwal uji kompetensi yang sedang dibuka untuk skema ini"
+                            >
+                              {schedules.length > 0 ? (
+                                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                                  {schedules.map((schedule) => {
+                                    const method = getMethod(schedule.pelaksanaan_uji);
+                                    const tuk = schedule.tuk || {};
+                                    const validAgendaUrl = /^https?:\/\//i.test(schedule.url_agenda || "");
+
+                                    return (
+                                      <article key={schedule.id_jadwal} className="rounded-lg border border-slate-200 bg-white p-4">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                          <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-wider ${method.online ? "bg-blue-50 text-blue-700" : "bg-[#CC6B27]/10 text-[#CC6B27]"}`}>
+                                            {method.online ? <Monitor size={12} /> : <MapPin size={12} />}
+                                            {method.label} ({method.detail})
+                                          </span>
+                                          <span className="text-[8px] font-bold uppercase tracking-wider text-emerald-700">
+                                            Pendaftaran Dibuka
+                                          </span>
+                                        </div>
+
+                                        <h5 className="mt-3 text-sm font-bold leading-5 text-[#071E3D]">
+                                          {schedule.nama_kegiatan || "Jadwal Uji Kompetensi"}
+                                        </h5>
+
+                                        {schedule.kode_jadwal && (
+                                          <p className="mt-1 text-[9px] font-semibold text-slate-400">
+                                            {schedule.kode_jadwal}
+                                          </p>
+                                        )}
+
+                                        <div className="mt-4 space-y-3 border-t border-slate-100 pt-3">
+                                          <ScheduleInfo
+                                            icon={<CalendarDays size={14} />}
+                                            label="Tanggal Uji"
+                                            value={formatDateRange(schedule.tgl_awal, schedule.tgl_akhir)}
+                                          />
+                                          {schedule.tgl_pra_asesmen && (
+                                            <ScheduleInfo
+                                              icon={<ClipboardList size={14} />}
+                                              label="Pra-Asesmen"
+                                              value={formatDate(schedule.tgl_pra_asesmen)}
+                                            />
+                                          )}
+                                          <ScheduleInfo
+                                            icon={<Clock3 size={14} />}
+                                            label="Waktu"
+                                            value={formatTime(schedule.jam)}
+                                          />
+
+                                          {method.online ? (
+                                            <ScheduleInfo
+                                              icon={<Monitor size={14} />}
+                                              label="Metode"
+                                              value="Dilaksanakan secara online"
+                                            />
+                                          ) : (
+                                            <ScheduleInfo
+                                              icon={<MapPin size={14} />}
+                                              label="Lokasi TUK"
+                                              value={[
+                                                tuk.nama_tuk,
+                                                tuk.alamat,
+                                                tuk.kota,
+                                                tuk.provinsi,
+                                              ].filter(Boolean).join(", ") || "Lokasi TUK belum dicantumkan"}
+                                            />
+                                          )}
+                                        </div>
+
+                                        {validAgendaUrl && (
+                                          <a
+                                            href={schedule.url_agenda}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="mt-4 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#CC6B27] transition-colors hover:text-[#071E3D]"
+                                          >
+                                            Buka Informasi Jadwal
+                                            <ExternalLink size={12} />
+                                          </a>
+                                        )}
+                                      </article>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <EmptyDetail text="Belum ada jadwal yang dibuka untuk skema ini." />
+                              )}
+                            </DetailSection>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.article>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className="border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
+          <Search size={26} className="mx-auto mb-3 text-slate-300" />
+          <h3 className="text-sm font-bold text-[#071E3D]">
+            Skema sertifikasi tidak ditemukan
+          </h3>
+          <p className="mt-2 text-xs text-slate-400">
+            Coba gunakan kata kunci pencarian yang berbeda.
+          </p>
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="mt-4 rounded-lg bg-[#071E3D] px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#CC6B27]"
+            >
+              Hapus Pencarian
+            </button>
           )}
         </div>
-      </div>
+      )}
     </section>
+  );
+}
+
+function DetailSection({ icon, title, description, children }) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+      <div className="mb-4 flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#CC6B27]/10 text-[#CC6B27]">
+          {icon}
+        </div>
+        <div>
+          <h4 className="text-xs font-black text-[#071E3D] sm:text-sm">{title}</h4>
+          <p className="mt-1 text-[9px] leading-4 text-slate-400">{description}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function EmptyDetail({ text }) {
+  return (
+    <div className="rounded-md border border-dashed border-slate-200 bg-[#FAFBFC] px-4 py-7 text-center">
+      <InfoIcon />
+      <p className="mt-2 text-[10px] font-medium text-slate-400">{text}</p>
+    </div>
+  );
+}
+
+function InfoIcon() {
+  return <ArrowDownRight size={19} className="mx-auto text-slate-300" />;
+}
+
+function ScheduleInfo({ icon, label, value }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className="mt-0.5 shrink-0 text-[#CC6B27]">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+        <p className="mt-0.5 break-words text-[10px] font-semibold leading-5 text-[#071E3D]">{value}</p>
+      </div>
+    </div>
   );
 }

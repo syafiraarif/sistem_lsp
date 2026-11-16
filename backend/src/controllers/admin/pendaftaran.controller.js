@@ -1,3 +1,4 @@
+
 const Pendaftaran = require("../../models/pendaftaranAsesi.model");
 const ProfileAsesi = require("../../models/profileAsesi.model");
 const Role = require("../../models/role.model");
@@ -7,7 +8,33 @@ const { createNotifikasi } = require("../../services/notifikasi.service");
 const { sendAccountEmail } = require("../../services/email.service");
 const response = require("../../utils/response.util");
 const sequelize = require("../../config/database");
-const { Op } = require("sequelize");
+
+const normalizeText = (value) => String(value || "").trim();
+
+const normalizeEmail = (value) =>
+  normalizeText(value).toLowerCase();
+
+const buildProfileData = (pendaftaran, idUser) => ({
+  id_user: idUser,
+  nik: normalizeText(pendaftaran.nik),
+  nama_lengkap: pendaftaran.nama_lengkap,
+  provinsi: pendaftaran.provinsi,
+  kota: pendaftaran.kota,
+  kecamatan: pendaftaran.kecamatan,
+  kelurahan: pendaftaran.kelurahan,
+  alamat: pendaftaran.alamat_lengkap,
+  pendidikan_terakhir:
+    pendaftaran.pendidikan_terakhir ||
+    pendaftaran.program_studi ||
+    null,
+  pekerjaan: pendaftaran.pekerjaan || null,
+  jabatan: pendaftaran.jabatan || null,
+  nama_perusahaan: pendaftaran.nama_perusahaan || null,
+  alamat_perusahaan: pendaftaran.alamat_perusahaan || null,
+  telp_perusahaan: pendaftaran.telp_perusahaan || null,
+  fax_perusahaan: pendaftaran.fax_perusahaan || null,
+  email_perusahaan: pendaftaran.email_perusahaan || null,
+});
 
 exports.getAll = async (req, res) => {
   try {
@@ -17,153 +44,296 @@ exports.getAll = async (req, res) => {
 
     return response.success(res, "List pendaftaran asesi", data);
   } catch (err) {
+    console.error("GET PENDAFTARAN ERROR:", err);
     return response.error(res, err.message);
   }
 };
 
 exports.approvePendaftaran = async (req, res) => {
-  const t = await sequelize.transaction();
+  let transaction = null;
+  let user = null;
+  let rawPassword = null;
+  let createdNewUser = false;
+  let reusedExistingUser = false;
 
   try {
+    transaction = await sequelize.transaction();
+
     const pendaftaran = await Pendaftaran.findByPk(req.params.id, {
-      transaction: t,
+      transaction,
+      lock: transaction.LOCK.UPDATE,
     });
 
     if (!pendaftaran) {
-      await t.rollback();
-      return response.error(res, "Data tidak ditemukan", 404);
+      await transaction.rollback();
+      return response.error(res, "Data pendaftaran tidak ditemukan", 404);
     }
 
     if (pendaftaran.status !== "pending") {
-      await t.rollback();
-      return response.error(res, "Pendaftaran sudah diproses", 400);
+      await transaction.rollback();
+      return response.error(
+        res,
+        "Pendaftaran sudah diproses",
+        400
+      );
+    }
+
+    const nik = normalizeText(pendaftaran.nik);
+    const email = normalizeEmail(pendaftaran.email);
+
+    if (!nik || !email) {
+      await transaction.rollback();
+      return response.error(
+        res,
+        "NIK dan email pendaftar wajib tersedia",
+        400
+      );
     }
 
     let roleAsesi = await Role.findOne({
-      where: { role_name: "ASESI" },
-      transaction: t,
+      where: {
+        role_name: "ASESI",
+      },
+      transaction,
     });
 
     if (!roleAsesi) {
       roleAsesi = await Role.create(
-        { role_name: "ASESI" },
-        { transaction: t }
+        {
+          role_name: "ASESI",
+        },
+        {
+          transaction,
+        }
       );
     }
 
-    const existingUser = await User.findOne({
-      where: {
-        [Op.or]: [
-          { email: pendaftaran.email },
-          { username: pendaftaran.nik },
-        ],
-      },
-      transaction: t,
-    });
+    const [userByEmail, userByUsername] = await Promise.all([
+      User.findOne({
+        where: {
+          email,
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      }),
+      User.findOne({
+        where: {
+          username: nik,
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      }),
+    ]);
 
-    if (existingUser) {
-      await t.rollback();
+    if (
+      userByEmail &&
+      userByUsername &&
+      String(userByEmail.id_user) !== String(userByUsername.id_user)
+    ) {
+      await transaction.rollback();
+
       return response.error(
         res,
-        "Email atau NIK sudah terdaftar sebagai user",
+        "Email dan NIK terhubung dengan dua akun berbeda. Periksa data akun terlebih dahulu.",
         400
       );
+    }
+
+    const existingUser = userByEmail || userByUsername;
+
+    if (existingUser) {
+      const usernameSama =
+        normalizeText(existingUser.username) === nik;
+
+      const emailSama =
+        normalizeEmail(existingUser.email) === email;
+
+      if (!usernameSama || !emailSama) {
+        await transaction.rollback();
+
+        return response.error(
+          res,
+          "NIK atau email sudah dipakai akun lain dengan data berbeda. Periksa akun yang ditemukan sebelum melanjutkan approval.",
+          400
+        );
+      }
+
+      if (
+        Number(existingUser.id_role) !== Number(roleAsesi.id_role)
+      ) {
+        await transaction.rollback();
+
+        return response.error(
+          res,
+          "Akun dengan NIK dan email tersebut bukan akun berperan ASESI. Approval tidak dapat menggunakan akun itu secara otomatis.",
+          400
+        );
+      }
+
+      user = existingUser;
+      reusedExistingUser = true;
     }
 
     const existingProfile = await ProfileAsesi.findOne({
-      where: { nik: pendaftaran.nik },
-      transaction: t,
+      where: {
+        nik,
+      },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
     });
 
-    if (existingProfile) {
-      await t.rollback();
+    if (existingProfile && !user) {
+      await transaction.rollback();
+
       return response.error(
         res,
-        "Profile asesi dengan NIK ini sudah ada",
+        "Profil asesi dengan NIK ini sudah ada tetapi akun user yang cocok tidak ditemukan. Periksa hubungan id_user dan nik sebelum melanjutkan.",
         400
       );
     }
 
-    const { createUser } = require("../../services/account.service");
+    if (
+      existingProfile &&
+      user &&
+      String(existingProfile.id_user) !== String(user.id_user)
+    ) {
+      await transaction.rollback();
 
-    const { user, rawPassword } = await createUser(
-      {
-        username: pendaftaran.nik,
-        email: pendaftaran.email,
-        no_hp: pendaftaran.no_hp,
-        id_role: roleAsesi.id_role,
-      },
-      { transaction: t }
-    );
-
-    await ProfileAsesi.create(
-      {
-        id_user: user.id_user,
-        nik: pendaftaran.nik,
-        nama_lengkap: pendaftaran.nama_lengkap,
-        provinsi: pendaftaran.provinsi,
-        kota: pendaftaran.kota,
-        kecamatan: pendaftaran.kecamatan,
-        kelurahan: pendaftaran.kelurahan,
-        alamat: pendaftaran.alamat_lengkap,
-        pendidikan_terakhir:
-          pendaftaran.pendidikan_terakhir ||
-          pendaftaran.program_studi ||
-          null,
-        pekerjaan: pendaftaran.pekerjaan || null,
-        jabatan: pendaftaran.jabatan || null,
-        nama_perusahaan: pendaftaran.nama_perusahaan || null,
-        alamat_perusahaan: pendaftaran.alamat_perusahaan || null,
-        telp_perusahaan: pendaftaran.telp_perusahaan || null,
-        fax_perusahaan: pendaftaran.fax_perusahaan || null,
-        email_perusahaan: pendaftaran.email_perusahaan || null,
-      },
-      { transaction: t }
-    );
-
-    await pendaftaran.update(
-      { status: "approved" },
-      { transaction: t }
-    );
-
-    await t.commit();
-
-    let statusKirim = "terkirim";
-    let pesanNotif = `Akun asesi berhasil dibuat. Username: ${user.username}`;
-    let emailErrorMessage = null;
-
-    try {
-      await sendAccountEmail(user.email, user.username, rawPassword);
-    } catch (emailErr) {
-      console.error("GAGAL KIRIM EMAIL AKUN:", emailErr);
-      statusKirim = "gagal";
-      emailErrorMessage = emailErr.message;
-      pesanNotif = `Akun asesi berhasil dibuat, tetapi email gagal dikirim. Username: ${user.username}`;
+      return response.error(
+        res,
+        "Profil dengan NIK ini terhubung ke akun lain. Approval dibatalkan untuk menjaga data akun.",
+        400
+      );
     }
 
-    await createNotifikasi({
-      channel: "email",
-      tujuan: user.email,
-      pesan: pesanNotif,
-      status_kirim: statusKirim,
-      ref_type: "akun",
-      ref_id: user.id_user,
-    });
+    if (!user) {
+      const { createUser } = require("../../services/account.service");
 
-    return response.success(res, "Pendaftaran berhasil di-approve", {
-      username: user.username,
-      email: user.email,
-      email_status: statusKirim,
-      email_error: emailErrorMessage,
-      password_default: rawPassword,
-    });
+      const created = await createUser(
+        {
+          username: nik,
+          email: normalizeText(pendaftaran.email),
+          no_hp: pendaftaran.no_hp,
+          id_role: roleAsesi.id_role,
+        },
+        {
+          transaction,
+        }
+      );
+
+      user = created.user;
+      rawPassword = created.rawPassword;
+      createdNewUser = true;
+    }
+
+    const profileData = buildProfileData(
+      pendaftaran,
+      user.id_user
+    );
+
+    if (existingProfile) {
+      await existingProfile.update(profileData, {
+        transaction,
+      });
+    } else {
+      await ProfileAsesi.create(profileData, {
+        transaction,
+      });
+    }
+
+    await pendaftaran.update(
+      {
+        status: "approved",
+      },
+      {
+        transaction,
+      }
+    );
+
+    await transaction.commit();
+    transaction = null;
   } catch (err) {
-    await t.rollback();
+    if (transaction && !transaction.finished) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error(
+          "ROLLBACK APPROVE PENDAFTARAN ERROR:",
+          rollbackError
+        );
+      }
+    }
 
     console.error("APPROVE PENDAFTARAN ERROR:", err);
 
-    return response.error(res, err.message);
+    if (err.name === "SequelizeUniqueConstraintError") {
+      return response.error(
+        res,
+        "NIK atau email terdeteksi duplikat pada database. Periksa data user dan profil asesi.",
+        400
+      );
+    }
+
+    return response.error(
+      res,
+      err.message || "Gagal memproses approval pendaftaran"
+    );
   }
+
+  let emailStatus = reusedExistingUser
+    ? "akun_sudah_ada"
+    : "terkirim";
+
+  let emailErrorMessage = null;
+
+  if (createdNewUser) {
+    try {
+      await sendAccountEmail(
+        user.email,
+        user.username,
+        rawPassword
+      );
+    } catch (emailErr) {
+      console.error("GAGAL KIRIM EMAIL AKUN:", emailErr);
+
+      emailStatus = "gagal";
+      emailErrorMessage = emailErr.message;
+    }
+
+    try {
+      await createNotifikasi({
+        channel: "email",
+        tujuan: user.email,
+        pesan:
+          emailStatus === "terkirim"
+            ? `Akun asesi berhasil dibuat. Username: ${user.username}`
+            : `Akun asesi berhasil dibuat, tetapi email gagal dikirim. Username: ${user.username}`,
+        status_kirim: emailStatus,
+        ref_type: "akun",
+        ref_id: user.id_user,
+      });
+    } catch (notificationError) {
+      console.error(
+        "GAGAL MENYIMPAN NOTIFIKASI APPROVAL:",
+        notificationError
+      );
+    }
+  }
+
+  const successMessage = reusedExistingUser
+    ? "Pendaftaran berhasil di-approve. Akun user yang sesuai sudah ada dan digunakan kembali."
+    : "Pendaftaran berhasil di-approve dan akun asesi berhasil dibuat.";
+
+  return response.success(res, successMessage, {
+    id_pendaftaran: Number(req.params.id),
+    id_user: user.id_user,
+    username: user.username,
+    email: user.email,
+    akun_digunakan_kembali: reusedExistingUser,
+    email_status: emailStatus,
+    email_error: emailErrorMessage,
+    password_default: createdNewUser ? rawPassword : null,
+  });
 };
 
 exports.rejectPendaftaran = async (req, res) => {
@@ -208,7 +378,11 @@ exports.deletePendaftaran = async (req, res) => {
     const pendaftaran = await Pendaftaran.findByPk(req.params.id);
 
     if (!pendaftaran) {
-      return response.error(res, "Data pendaftaran tidak ditemukan", 404);
+      return response.error(
+        res,
+        "Data pendaftaran tidak ditemukan",
+        404
+      );
     }
 
     await pendaftaran.destroy();

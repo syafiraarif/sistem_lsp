@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowUpRight,
   Award,
@@ -12,6 +12,7 @@ const API_BASE =
 export default function AssessorCard({
   id,
   id_asesor,
+  id_user,
   nama,
   nama_lengkap,
   foto,
@@ -25,10 +26,9 @@ export default function AssessorCard({
   status_asesor,
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const assessorId =
-    id ||
-    id_asesor;
+  const assessorId = id || id_asesor || id_user;
 
   const displayName =
     nama_lengkap ||
@@ -56,9 +56,7 @@ export default function AssessorCard({
     "";
 
   const getImageUrl = (path) => {
-    if (!path) {
-      return "";
-    }
+    if (!path) return "";
 
     const value = String(path);
 
@@ -91,11 +89,13 @@ export default function AssessorCard({
   };
 
   const handleDetail = () => {
-    if (!assessorId) {
-      return;
+    if (!assessorId) return;
+
+    if (location.pathname === "/") {
+      sessionStorage.setItem("simlsp-home-scroll-target", "assessor-section");
     }
 
-    navigate(`/explore-assessors/${assessorId}`);
+    navigate(`/assessor/${assessorId}`);
   };
 
   return (
@@ -109,18 +109,12 @@ export default function AssessorCard({
               className="h-full w-full object-cover"
               onError={(event) => {
                 event.currentTarget.style.display = "none";
-                event.currentTarget.nextElementSibling?.classList.remove(
-                  "hidden"
-                );
+                event.currentTarget.nextElementSibling?.classList.remove("hidden");
               }}
             />
           ) : null}
 
-          <div
-            className={`${
-              imageUrl ? "hidden" : "flex"
-            } h-full w-full items-center justify-center`}
-          >
+          <div className={`${imageUrl ? "hidden" : "flex"} h-full w-full items-center justify-center`}>
             <span className="text-[42px] font-black text-[#071E3D]">
               {getInitial()}
             </span>
@@ -133,14 +127,10 @@ export default function AssessorCard({
 
         <p
           className={`mt-0.5 text-[9px] font-black uppercase tracking-[0.2em] ${
-            isActive
-              ? "text-[#182D4A]/60"
-              : "text-red-500"
+            isActive ? "text-[#182D4A]/60" : "text-red-500"
           }`}
         >
-          {isActive
-            ? "Asesor Tersertifikasi"
-            : "Non-Aktif"}
+          {isActive ? "Asesor Tersertifikasi" : "Non-Aktif"}
         </p>
       </div>
 

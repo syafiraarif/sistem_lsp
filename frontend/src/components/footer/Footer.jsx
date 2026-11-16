@@ -1,20 +1,21 @@
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Mail,
   Phone,
   MapPin,
   Instagram,
-  Facebook,
-  Twitter,
-  Linkedin,
+  Youtube,
+  Send,
+  Music2,
   ArrowRight,
 } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const menuLinks = [
     { label: "Beranda", href: "/" },
@@ -31,61 +32,57 @@ export default function Footer() {
   ];
 
   const informasiLinks = [
-    {
-      label: "Persyaratan",
-      tab: "persyaratan",
-    },
-    {
-      label: "Jadwal",
-      tab: "jadwal",
-    },
-    {
-      label: "Tempat Uji Kompetensi",
-      tab: "tuk",
-    },
-    {
-      label: "Skema Kompetensi",
-      tab: "skema",
-    },
+    { label: "Skema Kompetensi" },
   ];
 
   const socialLinks = [
     {
       label: "Instagram",
       icon: Instagram,
-      href: "#",
+      href: "https://www.instagram.com/relawanjurnal_id/",
     },
     {
-      label: "LinkedIn",
-      icon: Linkedin,
-      href: "#",
+      label: "YouTube",
+      icon: Youtube,
+      href: "https://www.youtube.com/channel/UCigdxKIM5YjDaGnP8amSZ-w",
     },
     {
-      label: "Twitter",
-      icon: Twitter,
-      href: "#",
+      label: "Telegram",
+      icon: Send,
+      href: "https://t.me/joinchat/QEeNo_PesJPOW0bL",
     },
     {
-      label: "Facebook",
-      icon: Facebook,
-      href: "#",
+      label: "TikTok",
+      icon: Music2,
+      href: "https://www.tiktok.com/@relawanjurnal.id?is_from_webapp=1&sender_device=pc",
     },
   ];
 
   const alamatMaps =
     "https://www.bing.com/maps/search?mepi=0%7E%7EEmbedded%7EAddress_Link&ty=18&v=2&sV=1&FORM=MPSRPL&ss=id.ypid%3AYN927CF5A5DB7A045F&q=Kantor+Pusat+Relawan+Jurnal+Indonesia&ppois=-7.831090927124023_110.3165054321289_Kantor+Pusat+Relawan+Jurnal+Indonesia_YN927CF5A5DB7A045F%7E&cp=-7.831091%7E110.316505&lvl=16&style=r";
 
-  const handleInformasiClick = (tab) => {
-    navigate("/informasi", {
-      state: {
-        activeTab: tab,
-      },
-    });
-
+  const scrollToTop = () => {
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
+  };
+
+  useEffect(() => {
+    if (location.pathname !== "/") {
+      scrollToTop();
+    }
+  }, [location.pathname]);
+
+  const handleSamePageNavigation = (href) => {
+    if (location.pathname === href) {
+      scrollToTop();
+    }
+  };
+
+  const handleInformasiClick = () => {
+    navigate("/informasi");
+    scrollToTop();
   };
 
   const handleWhatsApp = () => {
@@ -103,11 +100,13 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-16 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-5">
           <div className="space-y-6 lg:col-span-1">
-            <Link to="/" className="group flex w-fit items-center gap-3">
+            <Link
+              to="/"
+              onClick={() => handleSamePageNavigation("/")}
+              className="group flex w-fit items-center gap-3"
+            >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#CC6B27] transition-transform duration-300 group-hover:scale-105">
-                <span className="text-xl font-black italic text-white">
-                  S
-                </span>
+                <span className="text-xl font-black italic text-white">S</span>
               </div>
 
               <h3 className="text-2xl font-black tracking-tight text-white">
@@ -125,9 +124,10 @@ export default function Footer() {
                 <motion.a
                   key={label}
                   href={href}
-                  target={href === "#" ? undefined : "_blank"}
-                  rel={href === "#" ? undefined : "noopener noreferrer"}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={label}
+                  title={label}
                   whileHover={{ y: -4 }}
                   className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-400 transition-all hover:border-[#CC6B27] hover:text-[#CC6B27]"
                 >
@@ -147,13 +147,13 @@ export default function Footer() {
                 <li key={item.label}>
                   <Link
                     to={item.href}
+                    onClick={() => handleSamePageNavigation(item.href)}
                     className="group flex items-center gap-2 text-sm font-semibold transition-colors hover:text-white"
                   >
                     <ArrowRight
                       size={14}
                       className="ml-[-1.25rem] text-[#CC6B27] opacity-0 transition-all group-hover:ml-0 group-hover:opacity-100"
                     />
-
                     <span>{item.label}</span>
                   </Link>
                 </li>
@@ -171,13 +171,13 @@ export default function Footer() {
                 <li key={item.label}>
                   <Link
                     to={item.href}
+                    onClick={() => handleSamePageNavigation(item.href)}
                     className="group flex items-center gap-2 text-sm font-semibold transition-colors hover:text-white"
                   >
                     <ArrowRight
                       size={14}
                       className="ml-[-1.25rem] text-[#CC6B27] opacity-0 transition-all group-hover:ml-0 group-hover:opacity-100"
                     />
-
                     <span>{item.label}</span>
                   </Link>
                 </li>
@@ -195,14 +195,13 @@ export default function Footer() {
                 <li key={item.label}>
                   <button
                     type="button"
-                    onClick={() => handleInformasiClick(item.tab)}
+                    onClick={handleInformasiClick}
                     className="group flex items-center gap-2 text-left text-sm font-semibold transition-colors hover:text-white"
                   >
                     <ArrowRight
                       size={14}
                       className="ml-[-1.25rem] shrink-0 text-[#CC6B27] opacity-0 transition-all group-hover:ml-0 group-hover:opacity-100"
                     />
-
                     <span>{item.label}</span>
                   </button>
                 </li>
@@ -273,20 +272,14 @@ export default function Footer() {
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="text-xs font-bold uppercase tracking-widest opacity-50">
               © {currentYear} SIM
-              <span className="text-[#CC6B27]">LSP</span> — Certified Profession
+              <span className="text-[#CC6B27]">LSP</span> | Certified Profession
               Platform
             </div>
 
             <div className="flex gap-8 text-xs font-bold uppercase tracking-widest">
               <button
                 type="button"
-                onClick={() =>
-                  navigate("/informasi", {
-                    state: {
-                      activeTab: "persyaratan",
-                    },
-                  })
-                }
+                onClick={() => handleInformasiClick("persyaratan")}
                 className="transition-colors hover:text-[#CC6B27]"
               >
                 Privacy Policy
@@ -294,13 +287,7 @@ export default function Footer() {
 
               <button
                 type="button"
-                onClick={() =>
-                  navigate("/informasi", {
-                    state: {
-                      activeTab: "persyaratan",
-                    },
-                  })
-                }
+                onClick={() => handleInformasiClick("persyaratan")}
                 className="transition-colors hover:text-[#CC6B27]"
               >
                 Terms of Service

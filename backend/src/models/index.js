@@ -458,10 +458,12 @@ UnitKompetensi.belongsTo(Skkni, {
   as: "skkni"
 });
 Skema.hasMany(BiayaUji, {
-  foreignKey: "id_skema"
+  foreignKey: "id_skema",
+  as: "biayaUji"
 });
 BiayaUji.belongsTo(Skema, {
-  foreignKey: "id_skema"
+  foreignKey: "id_skema",
+  as: "skema"
 });
 Skema.belongsToMany(Persyaratan, {
   through: SkemaPersyaratan,
@@ -502,7 +504,8 @@ Tuk.belongsToMany(Skema, {
   foreignKey: "id_tuk"
 });
 Skema.hasMany(Jadwal, {
-  foreignKey: "id_skema"
+  foreignKey: "id_skema",
+  as: "jadwalList"
 });
 Jadwal.belongsTo(Skema, {
   foreignKey: "id_skema",
