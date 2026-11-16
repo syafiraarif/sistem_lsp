@@ -187,7 +187,7 @@ export default function Footer() {
 
           <div>
             <h4 className="mb-8 text-xs font-bold uppercase tracking-widest text-white">
-              Informasi
+              Sertifikasi
             </h4>
 
             <ul className="space-y-4">
