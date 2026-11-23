@@ -25,7 +25,7 @@ const information = {
   tuk: [
     "TUK Universitas Muhammadiyah Yogyakarta",
     "TUK Universitas AMIKOM Yogyakarta",
-    "TUK Online (Daring)",
+    "TUK Online (Online)",
   ],
 
   schemes: [

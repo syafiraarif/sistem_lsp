@@ -95,8 +95,8 @@ export default function Jadwal() {
 
   const formatJenis = (jenis) => {
     const map = {
-      luring: "Luring",
-      daring: "Daring",
+      offline: "Offline",
+      online: "Online",
       hybrid: "Hybrid",
       onsite: "On-Site"
     };

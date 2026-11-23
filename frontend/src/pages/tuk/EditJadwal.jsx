@@ -91,7 +91,7 @@ const EditJadwal = () => {
       tgl_akhir: "",
       jam: "",
       pelaksanaan_uji:
-        "luring",
+        "offline",
       url_agenda: "",
       status: "draft",
     });
@@ -151,7 +151,7 @@ const EditJadwal = () => {
               "",
             pelaksanaan_uji:
               data.pelaksanaan_uji ||
-              "luring",
+              "offline",
             url_agenda:
               data.url_agenda ||
               "",
@@ -775,7 +775,7 @@ const EditJadwal = () => {
 
                       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                         <TypeButton
-                          label="Luring"
+                          label="Offline"
                           description="Tatap muka"
                           icon={
                             <MapPin
@@ -786,18 +786,18 @@ const EditJadwal = () => {
                           }
                           active={
                             form.pelaksanaan_uji ===
-                            "luring"
+                            "offline"
                           }
                           onClick={() =>
                             handleTypeChange(
-                              "luring"
+                              "offline"
                             )
                           }
                         />
 
                         <TypeButton
-                          label="Daring"
-                          description="Online"
+                          label="Online"
+                          description="Daring"
                           icon={
                             <Video
                               size={
@@ -807,11 +807,11 @@ const EditJadwal = () => {
                           }
                           active={
                             form.pelaksanaan_uji ===
-                            "daring"
+                            "online"
                           }
                           onClick={() =>
                             handleTypeChange(
-                              "daring"
+                              "online"
                             )
                           }
                         />

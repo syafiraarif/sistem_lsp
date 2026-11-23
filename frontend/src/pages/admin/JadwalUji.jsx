@@ -59,7 +59,7 @@ const JadwalUji = () => {
     tgl_awal: "",
     tgl_akhir: "",
     jam: "",
-    pelaksanaan_uji: "luring",
+    pelaksanaan_uji: "offline",
     url_agenda: "",
     status: "draft",
   };
@@ -146,7 +146,7 @@ const JadwalUji = () => {
       tgl_awal: formatDate(item.tgl_awal),
       tgl_akhir: formatDate(item.tgl_akhir),
       jam: item.jam || "",
-      pelaksanaan_uji: item.pelaksanaan_uji || "luring",
+      pelaksanaan_uji: item.pelaksanaan_uji || "Offline",
       url_agenda: item.url_agenda || "",
       status: item.status || "draft",
     });
@@ -408,7 +408,7 @@ const JadwalUji = () => {
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                              {item.pelaksanaan_uji || "Luring"}
+                              {item.pelaksanaan_uji || "Offline"}
                             </span>
                             <span className="inline-flex items-center gap-1 rounded bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#CC6B27]">
                               <Clock size={12} />
@@ -702,8 +702,8 @@ const JadwalUji = () => {
                         onChange={handleInputChange}
                         className={inputClass}
                       >
-                        <option value="luring">Luring (Offline)</option>
-                        <option value="daring">Daring (Online)</option>
+                        <option value="offline">Offline</option>
+                        <option value="online">Online</option>
                       </select>
                     </div>
                     <div>
