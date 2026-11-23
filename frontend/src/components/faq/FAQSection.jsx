@@ -57,7 +57,7 @@ export default function FAQSection() {
   };
 
   return (
-    <section className="relative overflow-hidden bg-white py-16 sm:py-20 lg:py-24">
+    <section className="relative overflow-hidden bg-white pt-8 pb-16 sm:pt-6 sm:pb-20 lg:pt-6 lg:pb-24">
       <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-[#CC6B27]/[0.035] blur-[100px]" />
 
       <div className="pointer-events-none absolute bottom-0 left-0 h-72 w-72 rounded-full bg-[#071E3D]/[0.025] blur-[90px]" />
@@ -118,7 +118,7 @@ export default function FAQSection() {
               duration: 0.45,
               delay: 0.08,
             }}
-            className="mt-3 text-3xl font-black tracking-tight text-[#071E3D] sm:text-4xl md:text-[42px]"
+            className="mt-1 text-3xl font-black tracking-tight text-[#071E3D] sm:text-4xl md:text-[42px]"
           >
             Frequently Asked{" "}
             <span className="relative inline-block text-[#CC6B27]">
