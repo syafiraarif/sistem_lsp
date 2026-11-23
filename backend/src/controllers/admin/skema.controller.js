@@ -97,8 +97,8 @@ exports.getDetail = async (req, res) => {
   try {
     const data = await Skema.findByPk(req.params.id, {
       include: [
-        { model: Skkni, as: 'skknis' },
-        BiayaUji,
+        { model: Skkni, as: "skknis" },
+        { model: BiayaUji, as: "biayaUji" }, // <-- Tambahkan as: 'biayaUji'
         Persyaratan,
         PersyaratanTuk,
         KelompokPekerjaan,

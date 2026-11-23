@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -100,7 +99,7 @@ export default function TukList() {
             </span>
           </h2>
 
-          <p className="mx-auto mt-7 max-w-2xl text-[14px] font-medium leading-relaxed text-blue-100/65 md:text-[15px]">
+          <p className="mx-auto mt-7 text-[14px] font-medium leading-relaxed text-blue-100/65 md:whitespace-nowrap md:text-[15px]">
             Kenali lokasi Tempat Uji Kompetensi yang terdaftar untuk mendukung pelaksanaan sertifikasi kompetensi.
           </p>
         </motion.div>
@@ -178,7 +177,7 @@ export default function TukList() {
             <button
               type="button"
               onClick={handleExplore}
-              className="group inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-[#071E3D] transition-colors hover:border-[#CC6B27] hover:bg-[#CC6B27] hover:text-white"
+              className="group inline-flex items-center gap-2 rounded-lg border border-[#CC6B27] bg-[#CC6B27] px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-white transition-colors hover:border-white hover:bg-white hover:text-[#071E3D]"
             >
               Lihat Semua TUK
 
@@ -193,4 +192,3 @@ export default function TukList() {
     </section>
   );
 }
-    
