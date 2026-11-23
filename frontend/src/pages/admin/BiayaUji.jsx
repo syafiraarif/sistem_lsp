@@ -32,7 +32,7 @@ const BiayaUji = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const initialForm = {
-    metode_uji: "luring",
+    metode_uji: "offline",
     nominal: "",
     keterangan: "",
   };
@@ -186,7 +186,7 @@ const BiayaUji = () => {
 
   // --- STATS CALCULATION ---
   const totalNominal = biayaList.reduce((total, item) => total + Number(item.nominal || 0), 0);
-  const totalLuring = biayaList.filter((item) => item.metode_uji === "luring").length;
+  const totalOffline = biayaList.filter((item) => item.metode_uji === "offline").length;
 
   if (loading) {
     return (
@@ -233,7 +233,7 @@ const BiayaUji = () => {
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           <StatCard icon={<ClipboardList size={22} />} label="Total Data Biaya" value={`${biayaList.length} Item`} tone="navy" />
           <StatCard icon={<Wallet size={22} />} label="Total Nominal" value={formatRupiah(totalNominal)} tone="green" />
-          <StatCard icon={<BadgeCheck size={22} />} label="Metode Luring" value={`${totalLuring} Item`} tone="orange" />
+          <StatCard icon={<BadgeCheck size={22} />} label="Metode Offline" value={`${totalOffline} Item`} tone="orange" />
         </div>
 
         {/* CONTENT CARD */}
@@ -275,7 +275,7 @@ const BiayaUji = () => {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                            item.metode_uji === "daring"
+                            item.metode_uji === "online"
                               ? "bg-blue-50 text-blue-600 border-blue-200"
                               : "bg-green-50 text-green-600 border-green-200"
                           }`}
@@ -358,8 +358,8 @@ const BiayaUji = () => {
                     required
                     className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-4 py-2.5 text-[13px] font-medium text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
                   >
-                    <option value="luring">Luring</option>
-                    <option value="daring">Daring</option>
+                    <option value="offline">Offline</option>
+                    <option value="online">Online</option>
                   </select>
                 </div>
 

@@ -81,7 +81,7 @@ const BuatJadwal = () => {
     tgl_awal: "",
     tgl_akhir: "",
     jam: "09:00",
-    pelaksanaan_uji: "luring",
+    pelaksanaan_uji: "offline",
     url_agenda: "",
     status: "draft",
   });
@@ -695,7 +695,7 @@ const BuatJadwal = () => {
 
                       <div className="grid grid-cols-2 gap-3">
                         <TypeButton
-                          label="Luring"
+                          label="Offline"
                           description="Tatap muka"
                           icon={
                             <MapPin
@@ -704,18 +704,18 @@ const BuatJadwal = () => {
                           }
                           active={
                             form.pelaksanaan_uji ===
-                            "luring"
+                            "offline"
                           }
                           onClick={() =>
                             handleTypeChange(
-                              "luring"
+                              "offline"
                             )
                           }
                         />
 
                         <TypeButton
-                          label="Daring"
-                          description="Online"
+                          label="Online"
+                          description="Daring"
                           icon={
                             <Video
                               size={17}
@@ -723,11 +723,11 @@ const BuatJadwal = () => {
                           }
                           active={
                             form.pelaksanaan_uji ===
-                            "daring"
+                            "online"
                           }
                           onClick={() =>
                             handleTypeChange(
-                              "daring"
+                              "online"
                             )
                           }
                         />

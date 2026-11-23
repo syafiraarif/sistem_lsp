@@ -38,7 +38,7 @@ export default function FAQSection() {
       id: 5,
       question: "Di mana lokasi Tempat Uji Kompetensi (TUK)?",
       answer:
-        "TUK dapat dilaksanakan secara luring di lokasi yang ditentukan atau secara daring sesuai kebijakan.",
+        "TUK dapat dilaksanakan secara offline di lokasi yang ditentukan atau secara online sesuai kebijakan.",
     },
   ];
 

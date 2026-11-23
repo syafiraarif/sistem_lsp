@@ -305,10 +305,8 @@ const createJadwal = async (req, res) => {
     }
 
     const allowedPelaksanaan = [
-      "luring",
-      "daring",
-      "hybrid",
-      "onsite"
+      "offline",
+      "online"
     ];
 
     const data =
@@ -363,7 +361,7 @@ const createJadwal = async (req, res) => {
               req.body.pelaksanaan_uji
             )
               ? req.body.pelaksanaan_uji
-              : "luring",
+              : "offline",
 
           url_agenda:
             req.body.url_agenda ||
@@ -670,10 +668,8 @@ const updateJadwal = async (
     }
 
     const allowedPelaksanaan = [
-      "luring",
-      "daring",
-      "hybrid",
-      "onsite"
+      "offline",
+      "online"
     ];
 
     const payload = {

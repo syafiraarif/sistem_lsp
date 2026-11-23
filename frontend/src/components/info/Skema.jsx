@@ -69,12 +69,12 @@ const formatTime = (value) => {
 const getMethod = (method) => {
   const value = String(method || "").toLowerCase();
 
-  if (value === "daring" || value === "online") {
-    return { label: "Online", detail: "Daring", online: true };
+  if (value === "online" || value === "online") {
+    return { label: "Online", detail: "Online", online: true };
   }
 
-  if (value === "luring" || value === "offline") {
-    return { label: "Offline", detail: "Luring", online: false };
+  if (value === "offline" || value === "offline") {
+    return { label: "Offline", detail: "Offline", online: false };
   }
 
   return {
