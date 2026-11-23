@@ -3,7 +3,7 @@ import api from "../../services/api";
 import { notifikasi } from "../../components/ui/notifikasi";
 import { getProvinsi, getKota, getKecamatan, getKelurahan } from "../../services/wilayah.service";
 import {
-  Search, Plus, Eye, Edit2, Trash2, X, Save, User as UserIcon, Loader2, FileSpreadsheet, Briefcase, GraduationCap, MapPin, Mail, Users, Filter, Sparkles, BadgeCheck, ShieldCheck, Download, ClipboardList, Upload
+  Search, Plus, Eye, Edit2, Trash2, X, Save, User as UserIcon, Loader2, FileSpreadsheet, Briefcase, GraduationCap, MapPin, Mail, Users, Filter, ChevronDown, BadgeCheck, ShieldCheck, Download, ClipboardList, Upload
 } from "lucide-react";
 
 const Asesor = () => {
@@ -559,7 +559,8 @@ const Asesor = () => {
       setLoading(false);
     }
   };
-const handleImportExcel = async (e) => {
+
+  const handleImportExcel = async (e) => {
     e.preventDefault();
 
     if (!fileExcel) {
@@ -574,20 +575,17 @@ const handleImportExcel = async (e) => {
     try {
       const response = await api.post("/admin/import-asesor", formUpload, { headers: { "Content-Type": "multipart/form-data" } });
       
-      // Ambil respons data yang merincikan berhasil dan gagal
       const resultData = response.data?.data || response.data;
       const berhasil = resultData.berhasil || 0;
       const gagal = resultData.gagal || 0;
       const msg = `Berhasil (termasuk diproses email): ${berhasil}, Gagal: ${gagal}`;
 
       if (gagal > 0) {
-        // Tampilkan warning jika terdapat error pada baris tertentu
         notifikasi.peringatan(
           "Import Selesai (Ada Catatan)", 
           `${msg}\n\nCatatan Error:\n${(resultData.rincian_error || []).join('\n')}`
         );
       } else {
-        // Tampilkan sukses jika semua baris ter-import
         notifikasi.sukses("Import Selesai", msg);
       }
 
@@ -634,54 +632,76 @@ const handleImportExcel = async (e) => {
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
       <div className="flex flex-col gap-6">
-        <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-          <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
-          <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">Data Asesor</h2>
-              <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">Kelola data profil, sertifikasi, dan akun login asesor.</p>
-            </div>
 
-            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-              <button type="button" onClick={handleDownloadTemplate} className="flex-1 rounded-lg border border-[#CC6B27]/50 bg-white px-4 py-2.5 text-[13px] font-bold text-[#CC6B27] shadow-sm transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27]/10 md:flex-none">
-                <span className="flex items-center justify-center gap-2"><Download size={18} /> Template Excel</span>
-              </button>
-
-              <button type="button" onClick={() => setShowImportModal(true)} className="flex-1 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 md:flex-none">
-                <span className="flex items-center justify-center gap-2"><FileSpreadsheet size={18} /> Import Data Asesor (Excel)</span>
-              </button>
-
-              <button type="button" onClick={handleAdd} className="flex-1 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] hover:shadow-md md:flex-none">
-                <span className="flex items-center justify-center gap-2"><Plus size={18} /> Tambah Asesor</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
+        {/* STAT CARDS */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           <StatCard icon={<Users size={22} />} label="Total Asesor" value={`${data.length} Data`} />
           <StatCard icon={<BadgeCheck size={22} />} label="Asesor Aktif" value={`${totalAktif} Aktif`} tone="green" />
           <StatCard icon={<ShieldCheck size={22} />} label="Nonaktif" value={`${totalNonaktif} Nonaktif`} tone="red" />
         </div>
 
-        <div className="rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-          <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+        {/* CONTENT CARD */}
+        <div className="flex flex-col gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
+          
+          {/* Header Daftar Asesor & Tombol Aksi di Kanan */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-1">
             <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
               <ClipboardList size={18} className="text-[#CC6B27]" />
               Daftar Asesor
             </h4>
 
-            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-              <div className="group relative w-full sm:w-64">
-                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
-                <input type="text" placeholder="Cari Nama atau NIK..." className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] py-2.5 pl-10 pr-4 text-[13px] text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-              </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg border border-[#CC6B27]/50 bg-white px-4 py-2.5 text-[13px] font-bold text-[#CC6B27] shadow-sm transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27]/10"
+              >
+                <Download size={16} /> Template Excel
+              </button>
 
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-4 py-2.5 text-[13px] font-bold text-[#071E3D] outline-none focus:border-[#CC6B27]">
+              <button
+                type="button"
+                onClick={() => setShowImportModal(true)}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5"
+              >
+                <FileSpreadsheet size={16} /> Import Data Asesor (Excel)
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAdd}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f]"
+              >
+                <Plus size={16} /> Tambah Asesor
+              </button>
+            </div>
+          </div>
+
+          {/* Search & Filter (Disamakan dengan Halaman Dokumen Mutu) */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-2">
+            <div className="group relative flex-1">
+              <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#182D4A]/40 transition-colors group-focus-within:text-[#CC6B27]" />
+              <input
+                type="text"
+                placeholder="Cari Nama atau NIK..."
+                className="w-full rounded-lg border border-[#071E3D]/15 bg-[#FAFAFA] py-2.5 pl-10 pr-4 text-[13px] text-[#071E3D] outline-none transition-all placeholder:text-[#182D4A]/40 focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="group relative w-full sm:w-56">
+              <Filter size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full cursor-pointer appearance-none rounded-lg border border-[#071E3D]/15 bg-[#FAFAFA] py-2.5 pl-10 pr-9 text-[13px] font-bold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
+              >
                 <option value="">Semua Status</option>
                 <option value="aktif">Aktif</option>
                 <option value="nonaktif">Non-Aktif</option>
               </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50" />
             </div>
           </div>
 

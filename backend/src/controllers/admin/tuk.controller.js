@@ -20,7 +20,7 @@ exports.createTuk = async (req, res) => {
       jenis_tuk: req.body.jenis_tuk,
       institusi_induk: req.body.institusi_induk,
       email: req.body.email,
-      nama_penanggung_jawab: req.body.nama_penanggung_jawab || null, // Tambahan
+      nama_penanggung_jawab: req.body.nama_penanggung_jawab || null,
       telepon: req.body.telepon,
       alamat: req.body.alamat,
       provinsi: req.body.provinsi,
@@ -49,71 +49,159 @@ exports.createTuk = async (req, res) => {
   }
 };
 
+// --- TAMBAHAN BARU: DOWNLOAD TEMPLATE EXCEL TUK ---
+exports.downloadTemplate = async (req, res) => {
+  try {
+    const headers = [
+      "kode_tuk",
+      "nama_tuk",
+      "jenis_tuk",
+      "institusi_induk",
+      "nama_penanggung_jawab",
+      "email",
+      "telepon",
+      "alamat",
+      "provinsi",
+      "kota",
+      "kecamatan",
+      "kelurahan",
+      "kode_pos",
+      "no_lisensi",
+      "masa_berlaku_lisensi"
+    ];
+
+    const exampleData = [
+      {
+        kode_tuk: "TUK-001",
+        nama_tuk: "TUK Sewaktu Informatika Utama",
+        jenis_tuk: "sewaktu", // Pilihan: mandiri | sewaktu | tempat_kerja
+        institusi_induk: "PT Teknologi Nusantara",
+        nama_penanggung_jawab: "Budi Santoso, S.Kom.",
+        email: "tuk.contoh@gmail.com",
+        telepon: "'081234567890", // Kutip tunggal agar angka 0 di depan tidak hilang di Excel
+        alamat: "Jl. Kaliurang Km. 5 No. 45",
+        provinsi: "DI Yogyakarta",
+        kota: "Kabupaten Sleman",
+        kecamatan: "Depok",
+        kelurahan: "Caturtunggal",
+        kode_pos: "'55281",
+        no_lisensi: "KEP-LSP/012/2025",
+        masa_berlaku_lisensi: "2030-12-31"
+      }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(exampleData, { header: headers });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template_TUK");
+
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=Template_Import_TUK.xlsx");
+
+    return res.end(buffer);
+  } catch (err) {
+    console.error("Gagal buat template TUK:", err);
+    return res.status(500).json({ message: err.message });
+  }
+};
+
 exports.importTukExcel = async (req, res) => {
   try {
     if (!req.file) return response.error(res, "File tidak ditemukan", 400);
-    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer", cellDates: true });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet);
+    const rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: "" });
     if (!rows.length) return response.error(res, "File Excel kosong", 400);
+
     let success = 0;
     let failed = 0;
+
+    const cleanStr = (val) => {
+      if (!val) return "";
+      const str = String(val).trim();
+      return str.startsWith("'") ? str.substring(1).trim() : str;
+    };
+
+    const parseDate = (dateVal) => {
+      if (!dateVal) return null;
+      const d = new Date(dateVal);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
     for (const row of rows) {
       const t = await sequelize.transaction();
       try {
+        const kodeTuk = cleanStr(row.kode_tuk);
+        const namaTuk = cleanStr(row.nama_tuk);
+        const emailStr = cleanStr(row.email).toLowerCase();
+        const teleponStr = cleanStr(row.telepon).replace(/\D/g, "");
+        const kodePosStr = cleanStr(row.kode_pos);
+        const namaPj = cleanStr(row.nama_penanggung_jawab) || namaTuk;
+
+        if (!kodeTuk || !namaTuk || !emailStr) {
+          throw new Error("Kode TUK, Nama TUK, atau Email kosong");
+        }
+
         let role = await Role.findOne({ where: { role_name: "TUK" }, transaction: t });
         if (!role) role = await Role.create({ role_name: "TUK" }, { transaction: t });
+
         const { user, rawPassword } = await createUser({
-          username: row.kode_tuk,
-          email: row.email,
-          no_hp: row.telepon,
+          username: kodeTuk,
+          email: emailStr,
+          no_hp: teleponStr,
           id_role: role.id_role
         }, { transaction: t });
+
         await Tuk.create({
-          kode_tuk: row.kode_tuk,
-          nama_tuk: row.nama_tuk,
-          jenis_tuk: row.jenis_tuk || "sewaktu",
-          institusi_induk: row.institusi_induk,
-          telepon: row.telepon,
-          email: row.email,
-          nama_penanggung_jawab: row.nama_penanggung_jawab || row.nama_tuk, // Tambahan
-          alamat: row.alamat,
-          provinsi: row.provinsi,
-          kota: row.kota,
-          kecamatan: row.kecamatan,
-          kelurahan: row.kelurahan,
-          kode_pos: row.kode_pos,
-          no_lisensi: row.no_lisensi,
-          masa_berlaku_lisensi: row.masa_berlaku_lisensi || null,
+          kode_tuk: kodeTuk,
+          nama_tuk: namaTuk,
+          jenis_tuk: cleanStr(row.jenis_tuk) || "sewaktu",
+          institusi_induk: cleanStr(row.institusi_induk) || null,
+          telepon: teleponStr,
+          email: emailStr,
+          nama_penanggung_jawab: namaPj,
+          alamat: cleanStr(row.alamat) || null,
+          provinsi: cleanStr(row.provinsi) || null,
+          kota: cleanStr(row.kota) || null,
+          kecamatan: cleanStr(row.kecamatan) || null,
+          kelurahan: cleanStr(row.kelurahan) || null,
+          kode_pos: kodePosStr || null,
+          no_lisensi: cleanStr(row.no_lisensi) || null,
+          masa_berlaku_lisensi: parseDate(row.masa_berlaku_lisensi),
           status: "nonaktif",
           id_penanggung_jawab: user.id_user 
         }, { transaction: t });
+
         await ProfileTuk.upsert({
           id_user: user.id_user,
-          nama_lengkap: row.nama_penanggung_jawab || row.nama_tuk, // Lempar ke profil
-          alamat: row.alamat,
-          provinsi: row.provinsi,
-          kota: row.kota,
-          kecamatan: row.kecamatan,
-          kelurahan: row.kelurahan,
-          kode_pos: row.kode_pos
+          nama_lengkap: namaPj,
+          alamat: cleanStr(row.alamat) || null,
+          provinsi: cleanStr(row.provinsi) || null,
+          kota: cleanStr(row.kota) || null,
+          kecamatan: cleanStr(row.kecamatan) || null,
+          kelurahan: cleanStr(row.kelurahan) || null,
+          kode_pos: kodePosStr || null
         }, { transaction: t });
+
         await t.commit(); 
+
         let statusKirim = "terkirim";
         try {
-          await sendAccountEmail(row.email, user.username, rawPassword);
+          await sendAccountEmail(emailStr, user.username, rawPassword);
         } catch (emailErr) {
-          console.error(`Email gagal dikirim ke ${row.email}:`, emailErr.message);
+          console.error(`Email gagal dikirim ke ${emailStr}:`, emailErr.message);
           statusKirim = "gagal";
         }
+
         await createNotifikasi({
           channel: "email",
-          tujuan: row.email,
-          pesan: `Akun TUK berhasil dibuat melalui Import.\nUsername: ${row.kode_tuk}`,
+          tujuan: emailStr,
+          pesan: `Akun TUK berhasil dibuat melalui Import.\nUsername: ${kodeTuk}`,
           status_kirim: statusKirim,
           ref_type: "akun",
           ref_id: user.id_user
         });
+
         success++;
       } catch (err) {
         await t.rollback();
@@ -138,7 +226,7 @@ exports.getAll = async (req, res) => {
       whereClause[Op.or] = [
         { kode_tuk: { [Op.like]: `%${search}%` } },
         { nama_tuk: { [Op.like]: `%${search}%` } },
-        { nama_penanggung_jawab: { [Op.like]: `%${search}%` } } // Bisa cari dari nama penanggung jawab
+        { nama_penanggung_jawab: { [Op.like]: `%${search}%` } }
       ];
     }
     if (status) {
@@ -190,7 +278,7 @@ exports.update = async (req, res) => {
     
     if (tuk.id_penanggung_jawab) {
       await ProfileTuk.update({
-        nama_lengkap: req.body.nama_penanggung_jawab || req.body.nama_tuk, // Lempar ke profil
+        nama_lengkap: req.body.nama_penanggung_jawab || req.body.nama_tuk,
         alamat: req.body.alamat,
         provinsi: req.body.provinsi,
         kota: req.body.kota,
@@ -315,7 +403,7 @@ exports.generateAccount = async (req, res) => {
     
     await ProfileTuk.upsert({
       id_user: user.id_user,
-      nama_lengkap: tuk.nama_penanggung_jawab || tuk.nama_tuk, // Lempar ke profil
+      nama_lengkap: tuk.nama_penanggung_jawab || tuk.nama_tuk,
       alamat: tuk.alamat,
       provinsi: tuk.provinsi,
       kota: tuk.kota,

@@ -209,18 +209,6 @@ const DokumenMutu = () => {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8 flex flex-col gap-6">
-      {/* HEADER SECTION */}
-      <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-        <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">Manajemen Dokumen Mutu</h2>
-            <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">Kelola dokumen ISO 9001:2015, regulasi LSP, file utama, dan file pendukung.</p>
-          </div>
-          <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-          </div>
-        </div>
-      </div>
 
       {/* STATISTIK */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">

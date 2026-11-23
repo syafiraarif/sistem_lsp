@@ -5,8 +5,8 @@ import { getProvinsi, getKota, getKecamatan, getKelurahan } from "../../services
 import { 
   Search, Eye, Edit2, Trash2, X, Save, 
   User as UserIcon, Loader2, Upload, FileSpreadsheet,
-  GraduationCap, MapPin, Mail, Briefcase, Users, Key, Sparkles, ChevronLeft, ChevronRight, Download
-} from 'lucide-react'; // ✅ Tambah icon Download
+  GraduationCap, MapPin, Mail, Briefcase, Users, Key, ChevronLeft, ChevronRight, Download
+} from 'lucide-react';
 
 const TambahAsesi = () => {
   // --- STATE UTAMA ---
@@ -272,7 +272,7 @@ const TambahAsesi = () => {
     });
   };
 
-  // ✅ LOGIKA DOWNLOAD TEMPLATE EXCEL
+  // LOGIKA DOWNLOAD TEMPLATE EXCEL
   const handleDownloadTemplate = async () => {
     try {
       const response = await api.get("/admin/download-template-asesi", { responseType: "blob" });
@@ -394,43 +394,36 @@ const TambahAsesi = () => {
   return (
     <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
       
-      {/* HEADER SECTION */}
-      <div className="relative overflow-hidden bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
-        <div className="absolute right-0 top-0 w-72 h-72 bg-[#CC6B27]/10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/2"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">Data Asesi</h2>
-            <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">Kelola data profil dan akun asesi.</p>
-          </div>
-          
-          {/* ✅ DITAMBAHKAN TOMBOL DOWNLOAD TEMPLATE DI SINI */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-            <button 
-              onClick={handleDownloadTemplate}
-              className="flex-1 md:flex-none px-4 py-2.5 rounded-lg font-bold bg-white text-[#CC6B27] border border-[#CC6B27]/50 hover:bg-[#CC6B27]/10 hover:border-[#CC6B27] shadow-sm transition-all flex items-center justify-center gap-2 text-[13px]"
-            >
-              <Download size={18} /> Template Excel
-            </button>
-            <button 
-              className="flex-1 md:flex-none px-4 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 text-[13px]"
-              onClick={() => setShowImportModal(true)}
-            >
-              <FileSpreadsheet size={18} /> Import Data Asesi (Excel)
-            </button>
-          </div>
-
-        </div>
-      </div>
-
       {/* TABLE SECTION */}
-      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6">
+      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-4">
         
-        {/* Search Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        {/* Header Daftar Asesi & Tombol Aksi di Kanan */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-1">
           <h4 className="text-[16px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
             <Users size={18} className="text-[#CC6B27]"/> Daftar Asesi
           </h4>
-          <div className="w-full md:w-80 relative group">
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button 
+              type="button"
+              onClick={handleDownloadTemplate}
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-bold bg-white text-[#CC6B27] border border-[#CC6B27]/50 hover:bg-[#CC6B27]/10 hover:border-[#CC6B27] shadow-sm transition-all flex items-center justify-center gap-2 text-[13px]"
+            >
+              <Download size={16} /> Template Excel
+            </button>
+            <button 
+              type="button"
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-bold bg-[#CC6B27] text-white hover:bg-[#a8561f] shadow-sm transition-all flex items-center justify-center gap-2 text-[13px]"
+              onClick={() => setShowImportModal(true)}
+            >
+              <FileSpreadsheet size={16} /> Import Data Asesi (Excel)
+            </button>
+          </div>
+        </div>
+
+        {/* Search Bar di Bawah Kiri Judul */}
+        <div className="flex justify-start mb-2">
+          <div className="w-full md:w-96 relative group">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
             <input 
               type="text" 
@@ -506,7 +499,7 @@ const TambahAsesi = () => {
 
         {/* PAGINATION */}
         {filteredData.length > 0 && (
-          <div className="flex justify-between items-center mt-6 text-[13px] text-[#182D4A] font-medium">
+          <div className="flex justify-between items-center mt-2 text-[13px] text-[#182D4A] font-medium">
             <span>
               Halaman {pagination.page} dari {pagination.totalPages || 1}
             </span>

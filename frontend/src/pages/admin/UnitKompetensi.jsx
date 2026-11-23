@@ -381,20 +381,6 @@ const UnitKompetensi = () => {
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        {/* HEADER HERO */}
-        <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-          <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
-          <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">
-                Unit Kompetensi per Kelompok
-              </h2>
-              <p className="m-0 max-w-2xl text-[14px] font-medium text-[#182D4A]/70">
-                Kelola Kelompok Pekerjaan, Unit Kompetensi, Elemen, hingga Kriteria Unjuk Kerja (KUK) untuk setiap skema.
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* --- DATA DINAMIS (STATISTIK) DIBUAT 1 BARIS --- */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
@@ -442,16 +428,6 @@ const UnitKompetensi = () => {
             </div>
             {/* ACTION BUTTONS */}
             <div className="flex items-end gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={refreshCurrentData}
-                disabled={loading}
-                className="inline-flex h-[42px] items-center justify-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-4 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 disabled:opacity-50"
-                title="Refresh"
-              >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
-                Refresh
-              </button>
               <button
                 type="button"
                 onClick={openKelompokModal}

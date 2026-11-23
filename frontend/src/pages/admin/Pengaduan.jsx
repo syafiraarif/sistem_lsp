@@ -145,20 +145,6 @@ const Pengaduan = () => {
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
       <div className="flex flex-col gap-6">
-        
-        {/* HEADER SECTION */}
-        <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-          <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
-          <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">Daftar Pengaduan</h2>
-              <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">
-                Kelola keluhan, masukan, dan laporan pengguna sistem secara terstruktur.
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* STAT CARDS */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
           <StatCard icon={<Inbox size={22} />} label="Total Laporan" value={`${data.length} Data`} tone="navy" />
@@ -172,7 +158,7 @@ const Pengaduan = () => {
           <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
               <ClipboardList size={18} className="text-[#CC6B27]" />
-              Daftar Laporan Masuk
+              Daftar Pengaduan
             </h4>
 
             <div className="group relative w-full sm:w-72">

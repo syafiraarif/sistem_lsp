@@ -274,32 +274,6 @@ const ProfileAdmin = () => {
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8 flex flex-col gap-6">
       
-      {/* HEADER HERO */}
-      <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-        <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
-        <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">
-              Profil Administrator
-            </h2>
-            <p className="m-0 max-w-2xl text-[14px] font-medium text-[#182D4A]/70">
-              Kelola informasi akun, data diri, domisili, pendidikan, dan lisensi Anda di dalam sistem.
-            </p>
-          </div>
-          
-          <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-            <button
-              type="button"
-              onClick={handleEditClick}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] md:flex-none"
-            >
-              <Edit2 size={16} />
-              Edit Profil
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* INFO GRID */}
       <div className="grid grid-cols-1 gap-6 items-start lg:grid-cols-[380px_1fr]">
         
@@ -329,7 +303,7 @@ const ProfileAdmin = () => {
               <Shield size={14} /> {userAccount.role}
             </div>
           </div>
-          <div className="border-t border-[#071E3D]/10 bg-[#FAFAFA] p-5">
+          <div className="border-t border-[#071E3D]/10 bg-[#FAFAFA] p-5 flex flex-col gap-4">
             <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-4 shadow-sm">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                 <IdCard size={18}/>
@@ -341,6 +315,15 @@ const ProfileAdmin = () => {
                 </p>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={handleEditClick}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f]"
+            >
+              <Edit2 size={16} />
+              Edit Profil
+            </button>
           </div>
         </aside>
 

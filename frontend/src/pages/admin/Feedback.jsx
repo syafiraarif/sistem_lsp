@@ -82,24 +82,13 @@ const FeedbackAdmin = () => {
   return (
     <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
       
-      {/* HEADER SECTION */}
-      <div className="relative overflow-hidden bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
-        <div className="absolute right-0 top-0 w-72 h-72 bg-[#CC6B27]/10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/2"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">Data Feedback & Ulasan</h2>
-            <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">Kelola dan tampilkan ulasan dari asesi, asesor, atau masyarakat umum.</p>
-          </div>
-        </div>
-      </div>
-
       {/* TABLE SECTION */}
       <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6">
         
         {/* Search Bar & Title - Icon diubah menjadi FileText */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <h4 className="text-[16px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
-            <FileText size={18} className="text-[#CC6B27]"/> Daftar Ulasan Masuk
+            <FileText size={18} className="text-[#CC6B27]"/> Daftar Ulasan 
           </h4>
           <div className="w-full md:w-80 relative group">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />

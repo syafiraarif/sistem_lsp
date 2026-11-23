@@ -79,6 +79,7 @@ router.get("/download-template-asesi", asesiAdmin.downloadTemplate);
 // ======================= MANAJEMEN TUK =======================
 router.post("/tuk", upload, tukAdmin.createTuk);
 router.post("/import-tuk", uploadExcel.single("file"), tukAdmin.importTukExcel);
+router.get("/download-template-tuk", tukAdmin.downloadTemplate); 
 router.get("/tuk", tukAdmin.getAll);
 router.get("/tuk/:id", tukAdmin.getById);
 router.put("/tuk/:id", upload, tukAdmin.update);

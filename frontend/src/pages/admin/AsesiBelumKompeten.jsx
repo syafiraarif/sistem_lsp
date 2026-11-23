@@ -96,18 +96,6 @@ const AsesiBelumKompeten = () => {
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
       <div className="flex flex-col gap-6">
-        
-        <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-          <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-red-500/10 blur-3xl" />
-          <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">Asesi Belum Kompeten</h2>
-              <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">
-                Daftar asesi yang belum lulus uji kompetensi dan direkomendasikan belum kompeten.
-              </p>
-            </div>
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           <StatCard icon={<BadgeX size={22} />} label="Total BK" value={`${asesiList.length} Asesi`} tone="red" />

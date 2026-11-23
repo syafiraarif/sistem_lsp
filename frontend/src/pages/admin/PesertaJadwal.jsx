@@ -497,32 +497,6 @@ const PesertaJadwal = () => {
                   : "Mengelola asesi dan menentukan asesor pengujinya."}
               </p>
             </div>
-
-            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-              <button
-                type="button"
-                onClick={
-                  fetchData
-                }
-                disabled={
-                  loading
-                }
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#071E3D] shadow-sm transition-all hover:bg-[#071E3D]/5 disabled:opacity-50 md:flex-none"
-              >
-                {loading ? (
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                  />
-                ) : (
-                  <RefreshCcw
-                    size={16}
-                  />
-                )}
-
-                Refresh
-              </button>
-            </div>
           </div>
         </div>
 

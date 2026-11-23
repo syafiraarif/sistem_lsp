@@ -15,8 +15,7 @@ import {
   ClipboardList,
   UserCheck,
   Clock,
-  AlertTriangle,
-  MapPin // MapPin ditambahkan di sini
+  MapPin
 } from "lucide-react";
 import Swal from "sweetalert2";
 import api from "../../services/api";
@@ -65,7 +64,7 @@ const VerifikasiPendaftaran = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-    setSelectedIds([]); // Reset checklist saat search/pindah data
+    setSelectedIds([]);
   }, [searchQuery]);
 
   // --- LOGIC CHECKBOX ---
@@ -200,27 +199,6 @@ const VerifikasiPendaftaran = () => {
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
       <div className="flex flex-col gap-6">
-        
-        {/* HEADER SECTION */}
-        <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-          <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
-          <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">Pendaftar Baru</h2>
-              <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">
-                Validasi data calon asesi baru yang mendaftar ke sistem.
-              </p>
-            </div>
-            {selectedIds.length > 0 && (
-              <button
-                onClick={handleBulkDelete}
-                className="flex items-center gap-2 rounded-lg bg-red-50 px-5 py-2.5 text-[13px] font-bold text-red-600 border border-red-200 transition-all hover:bg-red-600 hover:text-white"
-              >
-                <Trash2 size={16} /> Hapus {selectedIds.length} Data Terpilih
-              </button>
-            )}
-          </div>
-        </div>
 
         {/* STAT CARDS */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
@@ -230,15 +208,30 @@ const VerifikasiPendaftaran = () => {
         </div>
 
         {/* CONTENT CARD */}
-        <div className="rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
           
-          {/* Header & Search */}
-          <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+          {/* Header & Tombol Bulk Delete di Kanan */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-1">
             <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
               <CheckSquare size={18} className="text-[#CC6B27]" />
               Daftar Antrian Pendaftaran
             </h4>
-            <div className="group relative w-full sm:w-72">
+
+            {selectedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={handleBulkDelete}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-[13px] font-bold text-red-600 shadow-sm transition-all hover:bg-red-600 hover:text-white"
+              >
+                <Trash2 size={16} />
+                Hapus {selectedIds.length} Data Terpilih
+              </button>
+            )}
+          </div>
+
+          {/* Search Bar di Bawah Kiri Judul */}
+          <div className="flex justify-start mb-2">
+            <div className="group relative w-full md:w-96">
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
               <input
                 type="text"
@@ -349,7 +342,7 @@ const VerifikasiPendaftaran = () => {
 
           {/* --- PAGINATION --- */}
           {filteredData.length > 0 && (
-            <div className="mt-6 flex items-center justify-between border-t border-[#071E3D]/10 pt-5 text-[13px] font-medium text-[#182D4A]">
+            <div className="mt-2 flex items-center justify-between border-t border-[#071E3D]/10 pt-5 text-[13px] font-medium text-[#182D4A]">
               <span>
                 Menampilkan {((currentPage - 1) * limit) + 1} - {Math.min(currentPage * limit, filteredData.length)} dari {filteredData.length} data
               </span>

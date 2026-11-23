@@ -5,7 +5,7 @@ import { getProvinsi, getKota, getKecamatan, getKelurahan } from "../../services
 import { 
   Search, Plus, Eye, Edit2, Trash2, X, Save, Upload, FileSpreadsheet,
   MapPin, User, Building2, Loader2, FileText, Home, Mail, Key, CheckCircle,
-  Filter, Sparkles, Download, FileSearch
+  Filter, Download, FileSearch
 } from 'lucide-react';
 
 const TempatUji = () => {
@@ -137,7 +137,7 @@ const TempatUji = () => {
 
   const handleKotaChange = async (e) => {
     const id = e.target.value;
-    const name = id ? kotaList.find(p => String(p.id) === String(id))?.name : '';
+    const name = id ? kotaList.find(k => String(k.id) === String(id))?.name : '';
     setFormData(prev => ({ ...prev, kota: name || '', kecamatan: '', kelurahan: '' }));
     setKecamatanList([]); setKelurahanList([]);
     if (id) {
@@ -150,7 +150,7 @@ const TempatUji = () => {
 
   const handleKecamatanChange = async (e) => {
     const id = e.target.value;
-    const name = id ? kecamatanList.find(p => String(p.id) === String(id))?.name : '';
+    const name = id ? kecamatanList.find(k => String(k.id) === String(id))?.name : '';
     setFormData(prev => ({ ...prev, kecamatan: name || '', kelurahan: '' }));
     setKelurahanList([]);
     if (id) {
@@ -379,6 +379,25 @@ const TempatUji = () => {
     }
   };
 
+  // --- TAMBAHAN BARU: DOWNLOAD TEMPLATE EXCEL ---
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get('/admin/download-template-tuk', { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'Template_Import_TUK.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      Swal.fire({ title: 'Berhasil', text: 'Template Excel TUK berhasil diunduh', icon: 'success', confirmButtonColor: '#CC6B27' });
+    } catch (error) {
+      Swal.fire({ title: 'Error', text: 'Gagal mengunduh template dari server', icon: 'error', confirmButtonColor: '#CC6B27' });
+    }
+  };
+
   const handleImportSubmit = async (e) => {
     e.preventDefault();
     if (!selectedImportFile) return Swal.fire({title: 'Peringatan', text: 'Pilih file excel terlebih dahulu', icon: 'warning', confirmButtonColor: '#CC6B27'});
@@ -403,84 +422,86 @@ const TempatUji = () => {
   };
 
   return (
-    <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
-      
-      {/* HEADER */}
-      <div className="relative overflow-hidden bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
-        <div className="absolute right-0 top-0 w-72 h-72 bg-[#CC6B27]/10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/2"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">
-              Data Tempat Uji Kompetensi (TUK)
-            </h2>
-            <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">
-              Kelola data TUK, lokasi, surat penugasan dan status lisensi.
-            </p>
-          </div>
-          <div className="flex gap-3 w-full md:w-auto">
-            <button 
-              className="flex-1 md:flex-none px-4 py-2.5 bg-white border border-[#071E3D]/20 text-[#182D4A] rounded-lg hover:bg-[#E2E8F0] shadow-sm transition-all font-bold flex items-center justify-center gap-2 text-[13px]" 
+    <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8 flex flex-col gap-6">
+      {/* CARD TABEL */}
+      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-4">
+        
+        {/* Header Card & Tombol Aksi Berdampingan di Kanan */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
+          <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
+            <Building2 size={18} className="text-[#CC6B27]" />
+            Daftar Tempat Uji Kompetensi
+          </h4>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* TOMBOL TEMPLATE EXCEL BARU */}
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg border border-[#CC6B27]/50 bg-white px-4 py-2.5 text-[13px] font-bold text-[#CC6B27] shadow-sm transition-all hover:border-[#CC6B27] hover:bg-[#CC6B27]/10"
+            >
+              <Download size={16} />
+              Template Excel
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 setSelectedImportFile(null);
                 setShowImportModal(true);
               }}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg border border-[#071E3D]/20 bg-white px-4 py-2.5 text-[13px] font-bold text-[#182D4A] shadow-sm transition-all hover:bg-[#E2E8F0]"
             >
-              <FileSpreadsheet size={18} /> Import
+              <FileSpreadsheet size={16} />
+              Import Data TUK (Excel)
+            </button>
+
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f]"
+            >
+              <Plus size={16} />
+              Tambah TUK
             </button>
           </div>
         </div>
-      </div>
 
-      {/* CONTENT */}
-      <div className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-6">
-        
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h4 className="text-[16px] font-bold text-[#071E3D] m-0 flex items-center gap-2">
-            <Building2 size={18} className="text-[#CC6B27]" />
-            Daftar Tempat Uji Kompetensi
-          </h4>
-            <button 
-              className="flex-1 md:flex-none px-4 py-2.5 bg-[#CC6B27] text-white rounded-lg hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all font-bold flex items-center justify-center gap-2 text-[13px]" 
-              onClick={openCreateModal}
-            >
-              <Plus size={18} /> Tambah TUK
-            </button>
-        </div>
-
-        {/* --- PENCARIAN & FILTER --- */}
-        <div className="flex flex-col md:flex-row gap-3 w-full bg-[#FAFAFA] p-4 rounded-xl border border-[#071E3D]/10">
-          <div className="w-full md:w-80 relative group">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 group-focus-within:text-[#CC6B27] transition-colors" />
-            <input 
-              type="text" 
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-medium" 
+        {/* Search & Filter */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_280px] mb-2">
+          <div className="relative w-full group">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
+            <input
+              type="text"
               placeholder="Cari Kode atau Nama TUK..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setPagination(prev => ({...prev, page: 1})); 
+                setPagination(prev => ({ ...prev, page: 1 }));
               }}
+              className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] focus:bg-white py-2.5 pl-10 pr-4 text-[13px] text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10"
             />
           </div>
-          <div className="relative w-full md:w-48">
-            <Filter size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 z-10" />
-            <select 
+
+          <div className="relative w-full group">
+            <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#182D4A]/50 transition-colors group-focus-within:text-[#CC6B27]" />
+            <select
               value={filterStatus}
               onChange={(e) => {
                 setFilterStatus(e.target.value);
-                setPagination(prev => ({...prev, page: 1})); 
+                setPagination(prev => ({ ...prev, page: 1 }));
               }}
-              className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#071E3D] bg-white focus:outline-none focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 transition-all text-[13px] font-bold appearance-none cursor-pointer"
+              className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] focus:bg-white py-2.5 pl-10 pr-4 text-[13px] font-bold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/10 appearance-none cursor-pointer"
             >
               <option value="">Semua Status</option>
-              <option value="aktif">Status: Aktif</option>
-              <option value="nonaktif">Status: Nonaktif</option>
+              <option value="aktif">Aktif</option>
+              <option value="nonaktif">Nonaktif</option>
             </select>
           </div>
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
+        <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10 custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-max bg-white">
             <thead className="bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27]">
               <tr>
@@ -528,7 +549,6 @@ const TempatUji = () => {
                       </span>
                     </td>
                     <td className="py-4 px-4 text-center">
-                      {/* PENYESUAIAN CLASS ICON UNTUK SESUAI DENGAN MODUL SKKNI */}
                       <div className="flex justify-center gap-2">
                         <button 
                           onClick={() => handleSendEmail(item.id_tuk, !!item.penanggungJawab)} 
