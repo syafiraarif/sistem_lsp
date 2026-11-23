@@ -3,9 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import axios from "axios";
 import {
   AlertTriangle,
-  Award,
   CalendarDays,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   ClipboardList,
@@ -208,14 +206,9 @@ export default function Skema() {
   };
 
   return (
-    <section className="relative">
+    <section className="relative font-sans">
       <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="mb-2 flex items-center gap-2">
-            <p className="text-[9px] font-bold uppercase tracking-[0.17em] text-[#CC6B27]">
-              Daftar Sertifikasi
-            </p>
-          </div>
           <h2 className="text-2xl font-black tracking-tight text-[#071E3D] sm:text-3xl">
             Skema Sertifikasi
           </h2>
@@ -252,15 +245,6 @@ export default function Skema() {
         </div>
       </div>
 
-      {!loading && !error && (
-        <div className="mb-5 flex items-center justify-between border-b border-[#071E3D]/10 pb-3">
-          <p className="text-xs font-bold text-[#071E3D]">Semua Skema</p>
-          <p className="text-[11px] font-medium text-slate-400">
-            {filteredSchemes.length} dari {schemes.length} skema
-          </p>
-        </div>
-      )}
-
       {loading ? (
         <div className="border border-slate-200 bg-white py-16 text-center">
           <Loader2
@@ -286,11 +270,14 @@ export default function Skema() {
       ) : filteredSchemes.length > 0 ? (
         <div className="space-y-4">
           <AnimatePresence initial={false}>
-            {filteredSchemes.map((scheme) => {
+            {filteredSchemes.map((scheme, index) => {
               const isOpen = openSchemeId === scheme.id_skema;
               const units = getUnits(scheme);
               const requirements = getRequirements(scheme);
               const fees = getFees(scheme);
+              const feeAmounts = [
+                ...new Set(fees.map((fee) => formatCurrency(fee.nominal))),
+              ];
               const schedules = getSchedules(scheme);
               const openUnitId = openUnitByScheme[scheme.id_skema];
 
@@ -317,7 +304,7 @@ export default function Skema() {
                             : "bg-[#CC6B27]/10 text-[#CC6B27]"
                         }`}
                       >
-                        <Award size={19} />
+                        <span className="text-lg font-black leading-none">{index + 1}</span>
                       </div>
 
                       <div className="min-w-0">
@@ -337,15 +324,13 @@ export default function Skema() {
                         </h3>
 
                         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                          <span className="inline-flex items-center gap-1.5">
-                            <CheckCircle2
-                              size={11}
-                              className="text-emerald-500"
-                            />
-                            Tersedia
-                          </span>
+                          {scheme.level_kkni && (
+                            <span>Level KKNI {scheme.level_kkni}</span>
+                          )}
                           <span>{units.length} Unit Kompetensi</span>
-                          {scheme.bidang && <span>{scheme.bidang}</span>}
+                          {scheme.jenjang_kualifikasi && (
+                            <span>Jenjang {scheme.jenjang_kualifikasi}</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -359,22 +344,16 @@ export default function Skema() {
                           </p>
                         </div>
 
-                        {fees.length > 0 ? (
-                          <div className="flex flex-wrap gap-x-4 gap-y-2">
-                            {fees.map((fee) => {
-                              const method = getMethod(fee.metode_uji);
-
-                              return (
-                                <div key={fee.id_biaya} className="min-w-[105px]">
-                                  <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">
-                                    {method.label}
-                                  </p>
-                                  <p className="mt-0.5 text-xs font-black text-[#071E3D]">
-                                    {formatCurrency(fee.nominal)}
-                                  </p>
-                                </div>
-                              );
-                            })}
+                        {feeAmounts.length > 0 ? (
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            {feeAmounts.map((amount, index) => (
+                              <p
+                                key={`${scheme.id_skema}-biaya-${index}`}
+                                className="text-xs font-black text-[#071E3D]"
+                              >
+                                {amount}
+                              </p>
+                            ))}
                           </div>
                         ) : (
                           <p className="text-xs font-semibold text-slate-400">
@@ -417,29 +396,6 @@ export default function Skema() {
                         className="overflow-hidden"
                       >
                         <div className="border-t border-slate-200 bg-[#FAFBFC] p-4 sm:p-6 lg:p-7">
-                          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#CC6B27]">
-                                Detail Skema
-                              </p>
-                              <h4 className="mt-1 text-base font-black text-[#071E3D]">
-                                {scheme.judul_skema}
-                              </h4>
-                            </div>
-                            <div className="flex flex-wrap gap-2 text-[9px] font-semibold text-slate-500">
-                              {scheme.level_kkni && (
-                                <span className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5">
-                                  Level KKNI {scheme.level_kkni}
-                                </span>
-                              )}
-                              {scheme.jenjang_kualifikasi && (
-                                <span className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5">
-                                  Jenjang {scheme.jenjang_kualifikasi}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
                           <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
                             <DetailPanel
                               icon={<FileCheck size={17} />}
@@ -653,8 +609,8 @@ export default function Skema() {
                                             <span
                                               className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-wider ${
                                                 method.online
-                                                  ? "bg-blue-50 text-blue-700"
-                                                  : "bg-[#CC6B27]/10 text-[#CC6B27]"
+                                                  ? "bg-[#2563EB]/10 text-[#2563EB]"
+                                                  : "bg-[#059669]/10 text-[#059669]"
                                               }`}
                                             >
                                               {method.online ? (
@@ -663,9 +619,6 @@ export default function Skema() {
                                                 <MapPin size={12} />
                                               )}
                                               {method.label}
-                                            </span>
-                                            <span className="text-[8px] font-bold uppercase tracking-wider text-emerald-700">
-                                              Pendaftaran Dibuka
                                             </span>
                                           </div>
 

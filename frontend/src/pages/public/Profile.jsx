@@ -527,40 +527,7 @@ export default function About() {
         </div>
       </section>
 
-      {/* CTA / BANNER PENUTUP */}
-      <section className="relative overflow-hidden bg-[#071E3D] py-20">
-        <div className="pointer-events-none absolute right-0 top-0 h-[300px] w-[300px] rounded-full bg-[#CC6B27]/10 blur-[100px]" />
-
-        <div className="relative mx-auto max-w-5xl px-6 text-center">
-          <motion.div
-            initial={{
-              opacity: 0,
-              y: 15
-            }}
-            whileInView={{
-              opacity: 1,
-              y: 0
-            }}
-            viewport={{
-              once: true
-            }}
-          >
-
-            <h2 className="text-3xl font-black text-white md:text-4xl">
-              Kompetensi yang Terukur,
-              <span className="text-[#CC6B27]">
-                {" "}
-                Profesionalisme yang Terjaga.
-              </span>
-            </h2>
-
-            <p className="mx-auto mt-5 max-w-2xl text-sm font-medium leading-relaxed text-blue-100/60 md:text-base">
-              LSP-PIE berkomitmen menghadirkan proses sertifikasi kompetensi
-              yang profesional, terukur, dan selaras dengan kebutuhan profesi.
-            </p>
-          </motion.div>
-        </div>
-      </section>
+     
     </main>
   );
 }
