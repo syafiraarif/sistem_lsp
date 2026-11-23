@@ -48,7 +48,7 @@ router.get("/surveillance/export", ctrl.exportSurveillance);
 
 // ======================= PROFILE ADMIN =======================
 router.get("/profile", adminProfile.getProfile);
-router.put("/profile", adminProfile.updateProfile);
+router.put("/profile", upload, adminProfile.updateProfile);
 
 // ======================= DOKUMEN MUTU =======================
 router.post("/dokumen-mutu", upload, dokumenMutuController.createDokumen);

@@ -28,8 +28,7 @@ export default function AssessorList() {
 
         const response = await axios.get(`${API_URL}/asesor`);
         const result =
-          response.data?.success &&
-          Array.isArray(response.data?.data)
+          response.data?.success && Array.isArray(response.data?.data)
             ? response.data.data
             : [];
 
@@ -56,7 +55,7 @@ export default function AssessorList() {
     };
   }, []);
 
-  const displayedAssessors = assessors.slice(0, 5);
+  const displayedAssessors = assessors.slice(0, 6);
 
   return (
     <section
@@ -129,18 +128,18 @@ export default function AssessorList() {
                 transition: { staggerChildren: 0.1 },
               },
             }}
-            className="flex flex-wrap justify-center gap-5"
+            className="flex flex-wrap justify-center gap-6"
           >
             <AnimatePresence>
               {displayedAssessors.map((assessor) => (
                 <motion.div
-                  key={assessor.id || assessor.id_user}
+                  key={assessor.id || assessor.id_asesor || assessor.id_user}
                   variants={{
                     hidden: { opacity: 0, y: 18 },
                     visible: { opacity: 1, y: 0 },
                   }}
                   transition={{ duration: 0.35 }}
-                  className="w-full sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)] xl:w-[calc(25%-15px)] xl:max-w-[300px]"
+                  className="w-full max-w-[400px] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
                 >
                   <AssessorCard {...assessor} />
                 </motion.div>

@@ -427,12 +427,6 @@ const TempatUji = () => {
             >
               <FileSpreadsheet size={18} /> Import
             </button>
-            <button 
-              className="flex-1 md:flex-none px-4 py-2.5 bg-[#CC6B27] text-white rounded-lg hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all font-bold flex items-center justify-center gap-2 text-[13px]" 
-              onClick={openCreateModal}
-            >
-              <Plus size={18} /> Tambah TUK
-            </button>
           </div>
         </div>
       </div>
@@ -445,6 +439,12 @@ const TempatUji = () => {
             <Building2 size={18} className="text-[#CC6B27]" />
             Daftar Tempat Uji Kompetensi
           </h4>
+            <button 
+              className="flex-1 md:flex-none px-4 py-2.5 bg-[#CC6B27] text-white rounded-lg hover:bg-[#a8561f] shadow-sm hover:shadow-md transition-all font-bold flex items-center justify-center gap-2 text-[13px]" 
+              onClick={openCreateModal}
+            >
+              <Plus size={18} /> Tambah TUK
+            </button>
         </div>
 
         {/* --- PENCARIAN & FILTER --- */}

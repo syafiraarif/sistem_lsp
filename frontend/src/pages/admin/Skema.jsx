@@ -313,14 +313,6 @@ const Skema = () => {
               {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
               Refresh
             </button>
-            <button
-              type="button"
-              onClick={openAddModal}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] md:flex-none"
-            >
-              <Plus size={16} />
-              Tambah Skema
-            </button>
           </div>
         </div>
       </div>
@@ -342,6 +334,14 @@ const Skema = () => {
             <ClipboardList size={18} className="text-[#CC6B27]" />
             Daftar Skema Sertifikasi
           </h4>
+            <button
+              type="button"
+              onClick={openAddModal}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] md:flex-none"
+            >
+              <Plus size={16} />
+              Tambah Skema
+            </button>
         </div>
 
         {/* Filters */}

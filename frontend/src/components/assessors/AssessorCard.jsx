@@ -1,10 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  ArrowUpRight,
-  Award,
-  Building2,
-} from "lucide-react";
+import { Award, BadgeCheck, GraduationCap } from "lucide-react";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE || "http://localhost:3000/api";
@@ -18,42 +14,37 @@ export default function AssessorCard({
   foto,
   foto_profil,
   bidang_keahlian,
-  unit_kerja,
-  nama_tuk,
-  tuk,
-  tempat,
   no_reg_asesor,
-  status_asesor,
+  no_met,
+  met,
+  institut_asal,
+  institution,
+  universitas,
+  perguruan_tinggi,
+  pendidikan_terakhir,
 }) {
   const navigate = useNavigate();
   const location = useLocation();
 
   const assessorId = id || id_asesor || id_user;
 
-  const displayName =
-    nama_lengkap ||
-    nama ||
-    "Nama Asesor";
+  const displayName = nama_lengkap || nama || "Nama Asesor";
+
+  const university =
+    institut_asal ||
+    institution ||
+    universitas ||
+    perguruan_tinggi ||
+    pendidikan_terakhir ||
+    "";
+
+  const nomorMet =
+    no_reg_asesor || no_met || met || "Belum tersedia";
 
   const expertise =
-    bidang_keahlian ||
-    "Bidang keahlian belum tersedia";
+    bidang_keahlian || "Belum tersedia";
 
-  const unitKerja =
-    unit_kerja ||
-    nama_tuk ||
-    tuk ||
-    tempat ||
-    "Belum tersedia";
-
-  const isActive =
-    !status_asesor ||
-    String(status_asesor).toLowerCase() === "aktif";
-
-  const imagePath =
-    foto_profil ||
-    foto ||
-    "";
+  const imagePath = foto_profil || foto || "";
 
   const getImageUrl = (path) => {
     if (!path) return "";
@@ -69,7 +60,6 @@ export default function AssessorCard({
     }
 
     const baseUrl = API_BASE.replace(/\/api\/?$/, "");
-
     return `${baseUrl}/${value.replace(/^\/+/, "")}`;
   };
 
@@ -99,9 +89,13 @@ export default function AssessorCard({
   };
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-[28px] border-2 border-[#CC6B27]/25 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#CC6B27]/45 hover:shadow-lg">
-      <div className="flex flex-col items-center text-center">
-        <div className="flex h-[146px] w-[146px] items-center justify-center overflow-hidden rounded-[24px] border-2 border-[#CC6B27]/25 bg-[#FAFAFA]">
+    <article
+      onClick={handleDetail}
+      className="group flex h-full w-full min-w-[330px] max-w-[400px] cursor-pointer flex-col overflow-hidden rounded-3xl border-2 border-[#CC6B27]/25 bg-white p-5 shadow-[0_18px_40px_-20px_rgba(7,30,61,0.14)] transition-all duration-300 hover:-translate-y-1 hover:border-[#CC6B27]/50 hover:shadow-[0_24px_48px_-20px_rgba(204,107,39,0.22)]"
+    >
+      {/* Bagian Atas: Avatar Kotak, Nama & Universitas Terakhir */}
+      <div className="flex items-center gap-3.5 text-left">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#CC6B27]/25 bg-[#F5F6F8] shadow-sm transition-colors duration-300 group-hover:border-[#CC6B27]/45">
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -114,74 +108,64 @@ export default function AssessorCard({
             />
           ) : null}
 
-          <div className={`${imageUrl ? "hidden" : "flex"} h-full w-full items-center justify-center`}>
-            <span className="text-[42px] font-black text-[#071E3D]">
+          <div
+            className={`${
+              imageUrl ? "hidden" : "flex"
+            } h-full w-full items-center justify-center bg-[#CC6B27]/10`}
+          >
+            <span className="text-lg font-black tracking-tight text-[#071E3D]">
               {getInitial()}
             </span>
           </div>
         </div>
 
-        <h3 className="mt-5 line-clamp-2 text-[18px] font-black leading-snug text-[#071E3D]">
-          {displayName}
-        </h3>
+        <div className="min-w-0 flex-1">
+          <h3 className="break-words text-base font-black leading-snug text-[#071E3D]">
+            {displayName}
+          </h3>
 
-        <p
-          className={`mt-0.5 text-[9px] font-black uppercase tracking-[0.2em] ${
-            isActive ? "text-[#182D4A]/60" : "text-red-500"
-          }`}
-        >
-          {isActive ? "Asesor Tersertifikasi" : "Non-Aktif"}
-        </p>
+          {university && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              <GraduationCap size={13} className="shrink-0 text-[#CC6B27]" />
+              <span className="break-words leading-snug">{university}</span>
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="my-6 border-t border-[#071E3D]/10" />
+      <div className="my-4 border-t border-slate-100" />
 
-      <div className="space-y-4">
-        <InfoRow
-          icon={<Award size={18} />}
-          label="Bidang Keahlian"
+      {/* Bagian Info: MET & Keahlian dalam 1 Box */}
+      <div className="mt-auto grid grid-cols-2 divide-x divide-slate-200/80 rounded-xl bg-[#F5F6F8] py-3.5">
+        <InfoColumn
+          icon={<BadgeCheck size={16} />}
+          label="Nomor MET"
+          value={nomorMet}
+        />
+
+        <InfoColumn
+          icon={<Award size={16} />}
+          label="Keahlian"
           value={expertise}
         />
-
-        <InfoRow
-          icon={<Building2 size={18} />}
-          label="Unit Kerja / TUK"
-          value={unitKerja}
-        />
-      </div>
-
-      <div className="mt-auto pt-6">
-        <button
-          type="button"
-          onClick={handleDetail}
-          disabled={!assessorId}
-          className="group/button flex w-full items-center justify-center gap-2 rounded-xl bg-[#071E3D] px-4 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-white transition-all duration-200 hover:bg-[#CC6B27] disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          Detail Profile
-
-          <ArrowUpRight
-            size={15}
-            className="transition-transform duration-200 group-hover/button:translate-x-0.5 group-hover/button:-translate-y-0.5"
-          />
-        </button>
       </div>
     </article>
   );
 }
 
-function InfoRow({ icon, label, value }) {
+function InfoColumn({ icon, label, value }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#CC6B27]/10 text-[#CC6B27]">
+    <div className="flex items-center gap-2.5 px-3.5 text-left">
+      <div className="shrink-0 text-[#CC6B27]">
         {icon}
       </div>
 
-      <div className="min-w-0 pt-0.5">
-        <p className="text-[9px] font-black uppercase tracking-widest text-[#182D4A]/45">
+      <div className="min-w-0 flex-1">
+        <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
           {label}
         </p>
 
-        <p className="mt-1 line-clamp-2 text-[12px] font-bold leading-relaxed text-[#071E3D]">
+        <p className="mt-1 break-words text-xs font-semibold leading-5 text-[#071E3D]">
           {value || "-"}
         </p>
       </div>

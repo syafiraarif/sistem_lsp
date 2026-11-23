@@ -1,23 +1,21 @@
-
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
   Award,
+  BadgeCheck,
   Building2,
-  Mail,
-  Briefcase,
-  MapPin,
-  Phone,
   CheckCircle2,
+  Mail,
+  MapPin,
   Loader2,
   AlertCircle,
-  ShieldCheck,
 } from "lucide-react";
 import axios from "axios";
 
 const API_URL = "http://localhost:3000/api/public";
+const ASSET_BASE = API_URL.replace(/\/api\/public\/?$/, "");
 
 const EMPTY_PROFILE = {
   id: null,
@@ -28,15 +26,8 @@ const EMPTY_PROFILE = {
   image: null,
   license: "-",
   email: null,
-  no_hp: null,
   kota_domisili: null,
   provinsi_domisili: null,
-  alamat_domisili: null,
-  rt_domisili: null,
-  rw_domisili: null,
-  kecamatan_domisili: null,
-  kelurahan_domisili: null,
-  kode_pos_domisili: null,
 };
 
 export default function AssessorProfile() {
@@ -94,31 +85,34 @@ export default function AssessorProfile() {
     };
   }, [slug]);
 
+  const rawImage = data.image || data.foto_profil || data.foto || "";
+  const imageUrl = !rawImage
+    ? ""
+    : /^(https?:\/\/|data:)/i.test(String(rawImage))
+    ? String(rawImage)
+    : `${ASSET_BASE}/${String(rawImage).replace(/^\/+/, "")}`;
+
   useEffect(() => {
     setImageError(false);
-  }, [data.image]);
+  }, [imageUrl]);
+
+  const displayName = data.nama_lengkap || data.name || data.nama || "Asesor LSP";
+  const nomorMet =
+    data.license || data.no_reg_asesor || data.no_met || data.met || "-";
+  const competencyText =
+    data.bidang_keahlian || data.competency || "Sertifikasi Kompetensi";
+  const institutionText =
+    data.institut_asal || data.institution || "LSP Teknologi Informasi";
 
   const isActive =
-    String(data.status || data.status_asesor || "").toLowerCase() === "aktif";
+    String(data.status || data.status_asesor || "aktif").toLowerCase() ===
+    "aktif";
 
-  const location = [data.kota_domisili, data.provinsi_domisili]
+  const wilayah = [data.kota_domisili, data.provinsi_domisili]
     .filter(Boolean)
     .join(", ");
 
-  const addressParts = [
-    data.alamat_domisili,
-    data.rt_domisili ? `RT ${data.rt_domisili}` : null,
-    data.rw_domisili ? `RW ${data.rw_domisili}` : null,
-    data.kelurahan_domisili ? `Kelurahan ${data.kelurahan_domisili}` : null,
-    data.kecamatan_domisili ? `Kecamatan ${data.kecamatan_domisili}` : null,
-    data.kota_domisili,
-    data.provinsi_domisili,
-    data.kode_pos_domisili,
-  ].filter(Boolean);
-
-  const fullAddress = addressParts.join(", ");
-
-  const skills = String(data.competency || "Asesor Kompetensi")
+  const skills = String(competencyText)
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
@@ -129,7 +123,7 @@ export default function AssessorProfile() {
       .split(/\s+/)
       .filter(Boolean);
 
-    if (words.length > 1) {
+    if (words.length >= 2) {
       return `${words[0][0]}${words[1][0]}`.toUpperCase();
     }
 
@@ -138,9 +132,9 @@ export default function AssessorProfile() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[65vh] flex-col items-center justify-center bg-[#F5F6F8]">
-        <Loader2 className="mb-4 animate-spin text-[#CC6B27]" size={36} />
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#182D4A]/50">
+      <div className="flex min-h-[65vh] flex-col items-center justify-center bg-slate-50/70">
+        <Loader2 className="mb-3 animate-spin text-[#CC6B27]" size={36} />
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
           Memuat profil asesor
         </p>
       </div>
@@ -149,20 +143,20 @@ export default function AssessorProfile() {
 
   if (error) {
     return (
-      <div className="flex min-h-[65vh] items-center justify-center bg-[#F5F6F8] px-6">
-        <div className="w-full max-w-md border border-slate-200 bg-white px-8 py-10 text-center shadow-sm">
-          <AlertCircle className="mx-auto mb-4 text-red-400" size={42} />
-          <h1 className="mb-2 text-xl font-bold text-[#071E3D]">
+      <div className="flex min-h-[65vh] items-center justify-center bg-slate-50/70 px-6">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white px-8 py-10 text-center shadow-sm">
+          <AlertCircle className="mx-auto mb-4 text-red-400" size={40} />
+          <h1 className="mb-2 text-lg font-black text-[#071E3D]">
             Profil asesor tidak ditemukan
           </h1>
-          <p className="mb-7 text-sm leading-relaxed text-slate-500">{error}</p>
+          <p className="mb-6 text-sm leading-relaxed text-slate-500">{error}</p>
           <button
             type="button"
             onClick={() => navigate("/explore-assessors")}
-            className="inline-flex items-center gap-2 rounded-md bg-[#071E3D] px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#CC6B27]"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#071E3D] px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#CC6B27]"
           >
             <ArrowLeft size={15} />
-            Kembali ke Daftar Asesor
+            Kembali ke Direktori Asesor
           </button>
         </div>
       </div>
@@ -170,232 +164,140 @@ export default function AssessorProfile() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F5F6F8] pb-20">
-      <section className="bg-[#071E3D]">
-        <div className="mx-auto max-w-7xl px-6 py-8 md:py-10">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="mb-8 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white/75 transition-colors hover:text-[#E58A4B]"
-          >
-            <ArrowLeft size={15} />
-            Kembali
-          </button>
+    <main className="min-h-screen bg-slate-50/70 pb-20 pt-8">
+      <div className="pointer-events-none absolute left-0 top-0 -z-10 h-[320px] w-full bg-gradient-to-b from-white to-transparent" />
 
-          <h1 className="text-3xl font-black tracking-tight text-white md:text-4xl">
-            Profil Asesor
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/65">
-            Informasi identitas, bidang keahlian, dan data profesional asesor
-            yang terdaftar di SIMLSP.
-          </p>
-        </div>
-        <div className="h-1 bg-[#CC6B27]" />
-      </section>
+      <div className="mx-auto max-w-5xl px-6">
+        {/* Tombol Kembali Ringkas */}
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="group mb-6 inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-[11px] font-bold text-[#071E3D] shadow-2xs transition-all hover:border-[#CC6B27]/40 hover:text-[#CC6B27]"
+        >
+          <ArrowLeft
+            size={14}
+            className="transition-transform group-hover:-translate-x-0.5"
+          />
+          Kembali
+        </button>
 
-      <section className="mx-auto max-w-7xl px-6 pt-8 md:pt-10">
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
-          <motion.aside
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35 }}
-            className="lg:col-span-4"
-          >
-            <div className="border border-slate-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
-                  Informasi Asesor
+        {/* Kartu Profil Utama yang Ringkas & Proporsional */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-sm"
+        >
+          {/* Header Identitas Asesor */}
+          <div className="flex flex-col gap-5 border-b border-slate-100 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#CC6B27]/25 bg-[#F5F6F8]">
+                {imageUrl && !imageError ? (
+                  <img
+                    src={imageUrl}
+                    alt={displayName}
+                    className="h-full w-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <span className="text-2xl font-black text-[#071E3D]">
+                    {getInitials(displayName)}
+                  </span>
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#CC6B27]">
+                  Profil Asesor Kompetensi
                 </p>
-                <span
-                  className={`inline-flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider ${
-                    isActive ? "text-green-700" : "text-red-600"
-                  }`}
-                >
-                </span>
-              </div>
-
-              <div className="p-6">
-                <div className="mx-auto flex h-36 w-32 items-center justify-center overflow-hidden border border-slate-200 bg-[#F1F3F6]">
-                  {data.image && !imageError ? (
-                    <img
-                      src={data.image}
-                      alt={data.name}
-                      className="h-full w-full object-cover"
-                      onError={() => setImageError(true)}
-                    />
-                  ) : (
-                    <span className="text-4xl font-black text-[#071E3D]">
-                      {getInitials(data.name)}
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-5 text-center">
-                  <h2 className="text-xl font-black leading-snug text-[#071E3D]">
-                    {data.name || "Asesor LSP"}
-                  </h2>
-                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Asesor Tersertifikasi
+                <h1 className="mt-1 break-words text-xl font-black leading-snug text-[#071E3D] sm:text-2xl">
+                  {displayName}
+                </h1>
+                {wilayah && (
+                  <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                    <MapPin size={13} className="shrink-0 text-[#CC6B27]" />
+                    {wilayah}
                   </p>
-                </div>
-
-                <div className="mt-6 border-t border-slate-100 pt-5">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">
-                    Nomor Registrasi
-                  </p>
-                  <p className="mt-1 break-words text-sm font-bold text-[#071E3D]">
-                    {data.license || data.no_reg_asesor || data.no_lisensi || "-"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t border-slate-100 bg-[#FAFAFB] px-6 py-5">
-                <div className="space-y-5">
-                  <ContactItem
-                    icon={<Mail size={16} />}
-                    label="Email Resmi"
-                    value={data.email || "Belum tersedia"}
-                  />
-                  <ContactItem
-                    icon={<Phone size={16} />}
-                    label="Nomor Telepon"
-                    value={data.no_hp || "Belum tersedia"}
-                  />
-                  <ContactItem
-                    icon={<MapPin size={16} />}
-                    label="Domisili"
-                    value={location || "Belum tersedia"}
-                  />
-                </div>
+                )}
               </div>
             </div>
-          </motion.aside>
 
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.05 }}
-            className="space-y-6 lg:col-span-8"
-          >
-            <section className="border border-slate-200 bg-white shadow-sm">
-              <SectionHeading
-                icon={<Award size={18} />}
-                title="Profil Profesional"
-                description="Ringkasan informasi profesional asesor"
+            <span
+              className={`inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider ${
+                isActive
+                  ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border border-slate-200 bg-slate-100 text-slate-500"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  isActive ? "bg-emerald-500" : "bg-slate-400"
+                }`}
               />
+              {isActive ? "Asesor Terverifikasi" : "Nonaktif"}
+            </span>
+          </div>
 
-              <div className="p-6 md:p-8">
-                <p className="text-sm leading-7 text-slate-600 md:text-[15px]">
-                  <span className="font-bold text-[#071E3D]">{data.name}</span>{" "}
-                  merupakan asesor kompetensi yang terdaftar dalam sistem LSP.
-                  Bidang keahlian yang dimiliki adalah{" "}
-                  <span className="font-semibold text-[#CC6B27]">
-                    {data.competency || "Sertifikasi Kompetensi"}
-                  </span>
-                  .
-                </p>
+          {/* Informasi Kunci untuk Publik */}
+          <div className="space-y-6 p-6 sm:p-8">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <InfoTile
+                icon={<BadgeCheck size={17} />}
+                label="Nomor Registrasi (MET)"
+                value={nomorMet}
+              />
+              <InfoTile
+                icon={<Building2 size={17} />}
+                label="Institusi / Afiliasi"
+                value={institutionText}
+              />
+              <InfoTile
+                icon={<Mail size={17} />}
+                label="Kontak Resmi"
+                value={data.email || "Tersedia melalui LSP"}
+              />
+            </div>
 
-                <div className="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="border border-[#CC6B27]/20 bg-[#FBF5F0] p-5">
-                    <div className="mb-5 flex h-10 w-10 items-center justify-center bg-[#CC6B27] text-white">
-                      <Briefcase size={19} />
-                    </div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">
-                      Bidang Spesialisasi
-                    </p>
-                    <p className="mt-2 text-base font-bold leading-snug text-[#071E3D]">
-                      {data.competency || "Asesor Kompetensi"}
-                    </p>
-                  </div>
-
-                  <div className="border border-[#071E3D] bg-[#071E3D] p-5">
-                    <div className="mb-5 flex h-10 w-10 items-center justify-center bg-white/10 text-[#E58A4B]">
-                      <Building2 size={19} />
-                    </div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/50">
-                      Institusi / TUK
-                    </p>
-                    <p className="mt-2 text-base font-bold leading-snug text-white">
-                      {data.institution || "LSP Teknologi Informasi"}
-                    </p>
-                  </div>
-                </div>
+            {/* Bidang Keahlian / Skema yang Diampu */}
+            <div className="rounded-2xl border border-slate-100 bg-[#F8F9FB] p-5">
+              <div className="flex items-center gap-2 text-[#071E3D]">
+                <Award size={16} className="text-[#CC6B27]" />
+                <h2 className="text-xs font-black uppercase tracking-[0.14em]">
+                  Bidang Keahlian & Kompetensi
+                </h2>
               </div>
-            </section>
 
-            <section className="border border-slate-200 bg-white shadow-sm">
-              <SectionHeading
-                icon={<CheckCircle2 size={18} />}
-                title="Skema yang Diampu"
-                description="Bidang kompetensi yang dimiliki asesor"
-                orange
-              />
-
-              <div className="flex flex-wrap gap-2 p-6 md:p-8">
+              <div className="mt-3.5 flex flex-wrap gap-2">
                 {skills.map((skill, index) => (
                   <span
                     key={`${skill}-${index}`}
-                    className="inline-flex items-center gap-2 border border-[#CC6B27]/20 bg-[#FBF5F0] px-3 py-2 text-xs font-semibold text-[#071E3D]"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#CC6B27]/20 bg-white px-3 py-1.5 text-xs font-semibold text-[#071E3D] shadow-2xs"
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#CC6B27]" />
+                    <CheckCircle2 size={13} className="text-[#CC6B27]" />
                     {skill}
                   </span>
                 ))}
               </div>
-            </section>
-
-            <section className="border border-slate-200 bg-white shadow-sm">
-              <SectionHeading
-                icon={<MapPin size={18} />}
-                title="Alamat Domisili"
-                description="Alamat yang tercatat pada data asesor"
-              />
-
-              <div className="p-6 md:p-8">
-                <div className="border-l-[3px] border-[#CC6B27] bg-[#F5F6F8] px-5 py-4">
-                  <p className="text-sm leading-7 text-slate-600">
-                    {fullAddress || "Alamat domisili belum tersedia."}
-                  </p>
-                </div>
-              </div>
-            </section>
-          </motion.div>
-        </div>
-      </section>
+            </div>
+          </div>
+        </motion.div>
+      </div>
     </main>
   );
 }
 
-function SectionHeading({ icon, title, description, orange = false }) {
+function InfoTile({ icon, label, value }) {
   return (
-    <div className="flex items-center gap-3 border-b border-slate-200 bg-[#F8F9FB] px-6 py-4 md:px-8">
-      <div
-        className={`flex h-9 w-9 items-center justify-center text-white ${
-          orange ? "bg-[#CC6B27]" : "bg-[#071E3D]"
-        }`}
-      >
+    <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-[#F8F9FB] p-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#CC6B27]/10 text-[#CC6B27]">
         {icon}
       </div>
-      <div>
-        <h2 className="text-base font-bold text-[#071E3D]">{title}</h2>
-        <p className="mt-0.5 text-[10px] text-slate-400">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function ContactItem({ icon, label, value }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-white text-[#CC6B27]">
-        {icon}
-      </div>
-      <div className="min-w-0 pt-0.5">
+      <div className="min-w-0 flex-1">
         <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
           {label}
         </p>
-        <p className="mt-1 break-words text-xs font-semibold leading-relaxed text-[#071E3D]">
-          {value}
+        <p className="mt-1 break-words text-xs font-bold leading-5 text-[#071E3D]">
+          {value || "-"}
         </p>
       </div>
     </div>

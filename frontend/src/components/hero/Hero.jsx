@@ -140,10 +140,9 @@ export default function Hero() {
                   initial={{ opacity: 0, x: 12 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.35, delay: 0.25 + index * 0.1 }}
-                  whileHover={{ x: 4 }}
-                  className="group flex items-center gap-4 rounded-xl border border-gray-100 bg-[#F8F9FB] p-4 transition-colors hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/5"
+                  className="flex cursor-default items-center gap-4 rounded-xl border border-gray-100 bg-[#F8F9FB] p-4"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#CC6B27] shadow-sm transition-colors group-hover:bg-[#CC6B27] group-hover:text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#CC6B27] shadow-sm">
                     <CheckCircle2 size={20} />
                   </div>
 

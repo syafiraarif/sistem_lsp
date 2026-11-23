@@ -3,13 +3,21 @@ import Swal from 'sweetalert2';
 import api from "../../services/api";
 import { 
   User, MapPin, Edit2, Save, X, Shield, 
-  GraduationCap, Loader2, Hash, Calendar, Camera,
-  IdCard, Home, Award, FileText
+  GraduationCap, Loader2, Camera,
+  IdCard, Home
 } from 'lucide-react';
 
 const ProfileAdmin = () => {
   // --- BASE URL UNTUK FOTO ---
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  const getFotoUrl = (fotoPath) => {
+    if (!fotoPath || typeof fotoPath !== 'string') return null;
+    if (fotoPath.startsWith('http')) return fotoPath;
+    const cleanPath = fotoPath.replace(/\\/g, '/').replace(/^\/+/, '');
+    if (cleanPath.startsWith('uploads/')) return `${API_URL}/${cleanPath}`;
+    return `${API_URL}/uploads/${cleanPath}`;
+  };
   
   // --- STATE DATA ---
   const [profile, setProfile] = useState({
@@ -28,6 +36,7 @@ const ProfileAdmin = () => {
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   // --- STATE WILAYAH ---
@@ -45,7 +54,6 @@ const ProfileAdmin = () => {
     setLoading(true);
     try {
       const response = await api.get('/admin/profile');
-      // Perbaikan: Ambil data secara aman, apa pun struktur response-nya
       const data = response.data?.data || response.data || {};
       
       setProfile({
@@ -107,7 +115,7 @@ const ProfileAdmin = () => {
   // --- HANDLERS WILAYAH ---
   const handleProvinsiChange = (e) => {
     const id = e.target.value;
-    const name = provinsiList.find(p => p.id === id)?.name || '';
+    const name = provinsiList.find(p => String(p.id) === String(id))?.name || '';
     setFormData(prev => ({ ...prev, provinsi: name, kota: '', kecamatan: '', kelurahan: '' }));
     setSelectedWilayahId(prev => ({ ...prev, provinsi: id, kota: '', kecamatan: '' }));
     setKotaList([]); setKecamatanList([]); setKelurahanList([]);
@@ -115,7 +123,7 @@ const ProfileAdmin = () => {
   };
   const handleKotaChange = (e) => {
     const id = e.target.value;
-    const name = kotaList.find(k => k.id === id)?.name || '';
+    const name = kotaList.find(k => String(k.id) === String(id))?.name || '';
     setFormData(prev => ({ ...prev, kota: name, kecamatan: '', kelurahan: '' }));
     setSelectedWilayahId(prev => ({ ...prev, kota: id, kecamatan: '' }));
     setKecamatanList([]); setKelurahanList([]);
@@ -123,7 +131,7 @@ const ProfileAdmin = () => {
   };
   const handleKecamatanChange = (e) => {
     const id = e.target.value;
-    const name = kecamatanList.find(k => k.id === id)?.name || '';
+    const name = kecamatanList.find(k => String(k.id) === String(id))?.name || '';
     setFormData(prev => ({ ...prev, kecamatan: name, kelurahan: '' }));
     setSelectedWilayahId(prev => ({ ...prev, kecamatan: id }));
     setKelurahanList([]);
@@ -131,7 +139,7 @@ const ProfileAdmin = () => {
   };
   const handleKelurahanChange = (e) => {
     const id = e.target.value;
-    const name = kelurahanList.find(k => k.id === id)?.name || '';
+    const name = kelurahanList.find(k => String(k.id) === String(id))?.name || '';
     setFormData(prev => ({ ...prev, kelurahan: name }));
   };
 
@@ -149,11 +157,10 @@ const ProfileAdmin = () => {
     }
   };
 
-  // Perbaikan: Auto-Load ID Wilayah saat Edit
   const handleEditClick = async () => {
     setFormData({ ...profile });
     setFotoFile(null);
-    setFotoPreview(profile.foto ? `${API_URL}/uploads/${profile.foto}` : null); 
+    setFotoPreview(getFotoUrl(profile.foto)); 
     setIsEditing(true);
 
     try {
@@ -206,7 +213,10 @@ const ProfileAdmin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
+
     try {
+      setSaving(true);
       Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
       
       const payload = new FormData();
@@ -215,23 +225,34 @@ const ProfileAdmin = () => {
           payload.append(key, formData[key]);
         }
       });
+
       if (fotoFile) {
         payload.append('foto', fotoFile);
       }
-      await api.put('/admin/profile', payload, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+
+      await api.put('/admin/profile', payload);
       
       const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      storedUser.name = formData.nama_lengkap; 
-      localStorage.setItem('user', JSON.stringify(storedUser));
+      if (formData.nama_lengkap) {
+        storedUser.name = formData.nama_lengkap;
+        localStorage.setItem('user', JSON.stringify(storedUser));
+      }
       
-      Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Profil berhasil diperbarui', timer: 1500, showConfirmButton: false });
+      await fetchProfile();
       setIsEditing(false);
-      fetchProfile();
-      setTimeout(() => window.location.reload(), 1500); 
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil',
+        text: 'Profil berhasil diperbarui',
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (error) {
+      console.error("Submit profile error:", error);
       Swal.fire('Error', error.response?.data?.message || 'Gagal update profil', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -291,7 +312,7 @@ const ProfileAdmin = () => {
           <div className="-mt-16 flex justify-center relative z-10">
             <div className="h-28 w-28 rounded-full border-4 border-white bg-[#FAFAFA] flex items-center justify-center overflow-hidden shadow-md">
               {profile.foto ? (
-                <img src={`${API_URL}/uploads/${profile.foto}`} alt="Profil" className="h-full w-full object-cover"/>
+                <img src={getFotoUrl(profile.foto)} alt="Profil" className="h-full w-full object-cover"/>
               ) : (
                 <User size={46} className="text-[#182D4A]/30"/>
               )}
@@ -523,10 +544,11 @@ const ProfileAdmin = () => {
               <button
                 type="submit"
                 form="edit-profile-form"
-                className="px-5 py-2.5 rounded-lg bg-[#CC6B27] text-white hover:bg-[#a8561f] font-bold flex items-center gap-2 text-[13px] transition-all"
+                disabled={saving}
+                className="px-5 py-2.5 rounded-lg bg-[#CC6B27] text-white hover:bg-[#a8561f] font-bold flex items-center gap-2 text-[13px] transition-all disabled:opacity-60"
               >
                 <Save size={16} />
-                Simpan Perubahan
+                {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
               </button>
             </div>
           </div>
