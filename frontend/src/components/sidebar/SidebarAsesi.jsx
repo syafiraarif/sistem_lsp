@@ -45,6 +45,31 @@ const SidebarAsesi = ({ isOpen = false, setIsOpen = () => {} }) => {
   }, [isPinned]);
 
   useEffect(() => {
+    const sendHeartbeat = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        await api.post("/auth/heartbeat");
+      } catch (error) {
+        if (error.response?.status === 403) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          localStorage.removeItem("user");
+          localStorage.removeItem("id_user");
+          localStorage.removeItem("id_peserta");
+          navigate("/login", { replace: true });
+        }
+      }
+    };
+
+    sendHeartbeat();
+    const heartbeatInterval = setInterval(sendHeartbeat, 30000);
+
+    return () => clearInterval(heartbeatInterval);
+  }, [navigate]);
+
+  useEffect(() => {
     const loadProfileName = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -142,13 +167,19 @@ const SidebarAsesi = ({ isOpen = false, setIsOpen = () => {} }) => {
     }
   };
 
-  const confirmLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("user");
-    localStorage.removeItem("id_user");
-    localStorage.removeItem("id_peserta");
-    navigate("/login", { replace: true });
+  const confirmLogout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (error) {
+      console.error("Gagal mencatat logout:", error);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("user");
+      localStorage.removeItem("id_user");
+      localStorage.removeItem("id_peserta");
+      navigate("/login", { replace: true });
+    }
   };
 
   const togglePin = () => {

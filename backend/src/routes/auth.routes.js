@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const authController = require("../controllers/auth/auth.controller");
+const authMiddleware = require("../middlewares/auth.middleware");
 const {
   loginLimiter,
   publicFormLimiter
@@ -24,7 +25,14 @@ router.post(
 );
 
 router.post(
+  "/heartbeat",
+  authMiddleware,
+  authController.heartbeat
+);
+
+router.post(
   "/logout",
+  authMiddleware,
   authController.logout
 );
 

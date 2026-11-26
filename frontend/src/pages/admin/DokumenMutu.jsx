@@ -10,6 +10,12 @@ import {
 const ALLOWED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const ALLOWED_FILE_EXTENSIONS = ["pdf", "jpg", "jpeg", "png"];
 const FILE_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+const MAX_DOCUMENT_NUMBER_LENGTH = 10;
+
+const formatLimitedText = (value, maxLength = MAX_DOCUMENT_NUMBER_LENGTH) => {
+  const text = String(value || "");
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text || "-";
+};
 
 const DokumenMutu = () => {
   const [data, setData] = useState([]);
@@ -89,8 +95,11 @@ const DokumenMutu = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    validateInput(name, value);
+    const limitedValue = ["nomor_dokumen", "nomor_revisi"].includes(name)
+      ? value.slice(0, MAX_DOCUMENT_NUMBER_LENGTH)
+      : value;
+    setFormData((prev) => ({ ...prev, [name]: limitedValue }));
+    validateInput(name, limitedValue);
   };
 
   const handleFileChange = (e, fieldName) => {
@@ -126,7 +135,9 @@ const DokumenMutu = () => {
     if (item) {
       setFormData({
         jenis_dokumen: item.jenis_dokumen || "", kategori: item.kategori || "", nama_dokumen: item.nama_dokumen || "",
-        deskripsi: item.deskripsi || "", nomor_dokumen: item.nomor_dokumen || "", nomor_revisi: item.nomor_revisi || "",
+        deskripsi: item.deskripsi || "",
+        nomor_dokumen: type === "edit" ? String(item.nomor_dokumen || "").slice(0, MAX_DOCUMENT_NUMBER_LENGTH) : item.nomor_dokumen || "",
+        nomor_revisi: type === "edit" ? String(item.nomor_revisi || "").slice(0, MAX_DOCUMENT_NUMBER_LENGTH) : item.nomor_revisi || "",
         penyusun: item.penyusun || "", review: item.review || "", disahkan_oleh: item.disahkan_oleh || "",
         tanggal_dokumen: item.tanggal_dokumen ? item.tanggal_dokumen.split("T")[0] : ""
       });
@@ -245,7 +256,7 @@ const DokumenMutu = () => {
         </div>
 
         {/* Tabel Terbungkus Border Rounded */}
-        <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10 custom-scrollbar">
+        <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
           <table className="w-full text-left border-collapse min-w-max bg-white">
             <thead>
               <tr>
@@ -272,8 +283,8 @@ const DokumenMutu = () => {
                     <td className="px-5 py-4 text-center text-[13.5px] font-semibold text-[#071E3D]">{(pagination.page - 1) * pagination.limit + index + 1}</td>
                     <td className="max-w-[200px] truncate px-5 py-4 text-[13.5px] font-bold text-[#071E3D]" title={item.nama_dokumen}>{item.nama_dokumen}</td>
                     <td className="px-5 py-4"><span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${getBadgeColor(item.jenis_dokumen)}`}>{item.jenis_dokumen?.replace("_", " ")}</span></td>
-                    <td className="px-5 py-4 text-[13px] font-semibold text-[#182D4A]/80">{item.nomor_dokumen || "-"}</td>
-                    <td className="px-5 py-4 text-center text-[13.5px] font-bold text-[#071E3D]">{item.nomor_revisi || "-"}</td>
+                    <td className="px-5 py-4 text-[13px] font-semibold text-[#182D4A]/80" title={item.nomor_dokumen || "-"}>{formatLimitedText(item.nomor_dokumen)}</td>
+                    <td className="px-5 py-4 text-center text-[13.5px] font-bold text-[#071E3D]" title={item.nomor_revisi || "-"}>{formatLimitedText(item.nomor_revisi)}</td>
                     <td className="px-5 py-4 text-[13px] font-semibold text-[#182D4A]/80">{item.tanggal_dokumen ? new Date(item.tanggal_dokumen).toLocaleDateString("id-ID") : "-"}</td>
                     <td className="px-5 py-4 text-center">
                       <div className="flex justify-center gap-2">
@@ -343,8 +354,8 @@ const DokumenMutu = () => {
                       </select>
                     </div>
                     <div className="lg:col-span-4"><Label>Deskripsi Dokumen</Label><textarea className={`${inputClass("deskripsi")} resize-none`} name="deskripsi" value={formData.deskripsi} onChange={handleInputChange} rows="3" disabled={modalType === "detail"} /></div>
-                    <div><Label>Nomor Dokumen</Label><input className={inputClass("nomor_dokumen")} type="text" name="nomor_dokumen" value={formData.nomor_dokumen} onChange={handleInputChange} disabled={modalType === "detail"} /></div>
-                    <div><Label>Nomor Revisi</Label><input className={inputClass("nomor_revisi")} type="text" name="nomor_revisi" value={formData.nomor_revisi} onChange={handleInputChange} disabled={modalType === "detail"} /></div>
+                    <div><Label>Nomor Dokumen</Label><input className={inputClass("nomor_dokumen")} type="text" name="nomor_dokumen" value={modalType === "detail" ? formatLimitedText(formData.nomor_dokumen) : formData.nomor_dokumen} onChange={handleInputChange} maxLength={MAX_DOCUMENT_NUMBER_LENGTH} disabled={modalType === "detail"} /></div>
+                    <div><Label>Nomor Revisi</Label><input className={inputClass("nomor_revisi")} type="text" name="nomor_revisi" value={modalType === "detail" ? formatLimitedText(formData.nomor_revisi) : formData.nomor_revisi} onChange={handleInputChange} maxLength={MAX_DOCUMENT_NUMBER_LENGTH} disabled={modalType === "detail"} /></div>
                     <div className="lg:col-span-2"><Label>Tanggal Dokumen</Label><input className={inputClass("tanggal_dokumen")} type="date" name="tanggal_dokumen" value={formData.tanggal_dokumen} onChange={handleInputChange} disabled={modalType === "detail"} /></div>
                     <div className="grid grid-cols-1 gap-5 border-t border-[#071E3D]/10 pt-5 lg:col-span-4 md:grid-cols-3">
                       <div><Label>Penyusun Dokumen</Label><input className={inputClass("penyusun")} type="text" name="penyusun" value={formData.penyusun} onChange={handleInputChange} disabled={modalType === "detail"} /></div>
@@ -370,7 +381,7 @@ const DokumenMutu = () => {
           </div>
         </div>
       )}
-      <style dangerouslySetInnerHTML={{ __html: `.custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #CC6B27; border-radius: 10px; }` }} />
+      <style dangerouslySetInnerHTML={{ __html: `.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 8px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }` }} />
     </div>
   );
 };

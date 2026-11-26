@@ -54,13 +54,22 @@ const VerifikasiPendaftaran = () => {
   }, []);
 
   // --- FILTER & PAGINATION ---
-  const filteredData = pendaftarList.filter((item) =>
-    (item.nama_lengkap || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.nik || "").includes(searchQuery) ||
-    (item.email || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Daftar antrean hanya menampilkan pendaftaran Pending dan Rejected.
+  // Pendaftaran Approved sudah dipindahkan ke Daftar Asesi.
+  const filteredData = pendaftarList
+    .filter((item) => String(item.status || "").trim().toLowerCase() !== "approved")
+    .filter((item) =>
+      (item.nama_lengkap || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.nik || "").includes(searchQuery) ||
+      (item.email || "").toLowerCase().includes(searchQuery.toLowerCase())
+    );
   const totalPages = Math.ceil(filteredData.length / limit) || 1;
-  const currentData = filteredData.slice((currentPage - 1) * limit, currentPage * limit);
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const currentData = filteredData.slice((safeCurrentPage - 1) * limit, safeCurrentPage * limit);
+
+  useEffect(() => {
+    if (currentPage !== safeCurrentPage) setCurrentPage(safeCurrentPage);
+  }, [currentPage, safeCurrentPage]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -108,9 +117,17 @@ const VerifikasiPendaftaran = () => {
       try {
         Swal.fire({ title: "Memproses...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         await api.post(`/admin/pendaftaran/${id}/approve`);
-        Swal.fire("Berhasil", "Pendaftaran disetujui dan email telah dikirim.", "success");
+        setPendaftarList((prev) =>
+          prev.map((item) =>
+            Number(item.id_pendaftaran) === Number(id)
+              ? { ...item, status: "approved" }
+              : item
+          )
+        );
+        setSelectedIds((prev) => prev.filter((selectedId) => Number(selectedId) !== Number(id)));
+        Swal.fire("Berhasil", "Pendaftaran disetujui dan dipindahkan ke Daftar Asesi.", "success");
         setShowModal(false);
-        fetchPendaftar();
+        await fetchPendaftar();
       } catch (error) {
         Swal.fire("Gagal", error.response?.data?.message || "Terjadi kesalahan saat menyetujui pendaftaran", "error");
       }
@@ -133,9 +150,16 @@ const VerifikasiPendaftaran = () => {
       try {
         Swal.fire({ title: "Memproses...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         await api.post(`/admin/pendaftaran/${id}/reject`);
-        Swal.fire("Ditolak", "Pendaftaran berhasil ditolak.", "success");
+        setPendaftarList((prev) =>
+          prev.map((item) =>
+            Number(item.id_pendaftaran) === Number(id)
+              ? { ...item, status: "rejected" }
+              : item
+          )
+        );
+        Swal.fire("Ditolak", "Pendaftaran ditolak dan tetap tercatat di Daftar Antrian Pendaftaran.", "success");
         setShowModal(false);
-        fetchPendaftar();
+        await fetchPendaftar();
       } catch (error) {
         Swal.fire("Gagal", error.response?.data?.message || "Terjadi kesalahan saat menolak pendaftaran", "error");
       }
@@ -344,23 +368,23 @@ const VerifikasiPendaftaran = () => {
           {filteredData.length > 0 && (
             <div className="mt-2 flex items-center justify-between border-t border-[#071E3D]/10 pt-5 text-[13px] font-medium text-[#182D4A]">
               <span>
-                Menampilkan {((currentPage - 1) * limit) + 1} - {Math.min(currentPage * limit, filteredData.length)} dari {filteredData.length} data
+                Menampilkan {filteredData.length === 0 ? 0 : ((safeCurrentPage - 1) * limit) + 1} - {Math.min(safeCurrentPage * limit, filteredData.length)} dari {filteredData.length} data
               </span>
               <div className="flex items-center gap-2">
                 <button 
                   className="rounded-md border border-[#071E3D]/20 p-1.5 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 hover:text-[#CC6B27] disabled:opacity-50 disabled:hover:border-[#071E3D]/20 disabled:hover:bg-transparent disabled:hover:text-[#182D4A]"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(prev => prev - 1)}
+                  disabled={safeCurrentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 >
                   <ChevronLeft size={18}/>
                 </button>
                 <span className="rounded-md border border-[#071E3D]/10 bg-[#FAFAFA] px-4 py-1.5 font-bold text-[#071E3D]">
-                  {currentPage} / {totalPages}
+                  {safeCurrentPage} / {totalPages}
                 </span>
                 <button 
                   className="rounded-md border border-[#071E3D]/20 p-1.5 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 hover:text-[#CC6B27] disabled:opacity-50 disabled:hover:border-[#071E3D]/20 disabled:hover:bg-transparent disabled:hover:text-[#182D4A]"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  disabled={safeCurrentPage >= totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 >
                   <ChevronRight size={18}/>
                 </button>

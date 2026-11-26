@@ -9,7 +9,8 @@ import {
   Eye,
   EyeOff,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  MessageCircle
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -71,6 +72,13 @@ export default function Login() {
 
   const normalizeRole = (role) => {
     return String(role || "").trim().toLowerCase();
+  };
+
+  const handleHubungiKami = () => {
+    const nomorWhatsApp = "6281234567890";
+    const pesan = "Halo admin LSP, saya ingin ...";
+    const url = `https://wa.me/${nomorWhatsApp}?text=${encodeURIComponent(pesan)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const handleLogin = async (e) => {
@@ -501,6 +509,16 @@ export default function Login() {
 
         </motion.div>
       </div>
+      <button
+        type="button"
+        onClick={handleHubungiKami}
+        aria-label="Hubungi Kami via WhatsApp"
+        className="group fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-full bg-[#25D366] px-5 py-3.5 text-sm font-bold text-white shadow-[0_10px_25px_-5px_rgba(37,211,102,0.5)] transition-all duration-300 hover:-translate-y-1 hover:bg-[#1ebe5d] hover:shadow-[0_14px_30px_-5px_rgba(37,211,102,0.65)] active:scale-95"
+      >
+        <MessageCircle className="h-5 w-5 fill-white text-white transition-transform duration-300 group-hover:rotate-12" />
+        <span>Hubungi Kami</span>
+      </button>
+
     </div>
   );
 }

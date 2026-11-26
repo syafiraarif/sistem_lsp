@@ -39,7 +39,7 @@ exports.login = async (req, res) => {
     if (user.status_user !== "aktif") {
       return res.status(403).json({
         success: false,
-        message: "Akun tidak aktif"
+        message: "Akun ini telah dinonaktifkan oleh Admin. Silakan hubungi Admin untuk mengaktifkannya kembali melalui tombol Hubungi Kami."
       });
     }
 
@@ -54,6 +54,11 @@ exports.login = async (req, res) => {
         message: "Password salah"
       });
     }
+
+    await user.update({
+      last_login_at: new Date(),
+      last_activity_at: new Date()
+    });
 
     const roleName =
       user.role?.role_name?.toLowerCase() ||
@@ -369,9 +374,24 @@ exports.resetAccess = async (req, res) => {
   }
 };
 
-exports.logout = async (req, res) => {
+exports.heartbeat = async (req, res) => {
   return res.json({
     success: true,
-    message: "Logout berhasil"
+    message: "Heartbeat berhasil"
   });
+};
+
+exports.logout = async (req, res) => {
+  try {
+    // Jangan kosongkan last_activity_at agar Admin tetap dapat melihat waktu terakhir asesi aktif.
+    return res.json({
+      success: true,
+      message: "Logout berhasil"
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mencatat logout"
+    });
+  }
 };

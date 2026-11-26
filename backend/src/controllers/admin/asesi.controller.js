@@ -248,7 +248,7 @@ exports.getAll = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id_user', 'email', 'no_hp', 'username'],
+          attributes: ['id_user', 'email', 'no_hp', 'username', 'status_user', 'last_login_at', 'last_activity_at'],
           required: false 
         }
       ],
@@ -257,10 +257,19 @@ exports.getAll = async (req, res) => {
       order: [['id_user', 'DESC']]
     });
 
+    const mappedRows = rows.map((row) => {
+      const plain = row.toJSON();
+      const user = plain.user || {};
+      plain.status_user = String(user.status_user || plain.status_user || "aktif").trim().toLowerCase();
+      plain.last_login_at = user.last_login_at || null;
+      plain.last_activity_at = user.last_activity_at || null;
+      return plain;
+    });
+
     res.json({
       success: true,
       data: {
-        data: rows,
+        data: mappedRows,
         pagination: {
           totalItems: count,
           currentPage: page,
@@ -278,7 +287,11 @@ exports.getAll = async (req, res) => {
 exports.getById = async (req, res) => {
   try {
     const data = await ProfileAsesi.findByPk(req.params.id, {
-      include: User
+      include: [{
+        model: User,
+        as: "user",
+        attributes: ["id_user", "email", "no_hp", "username", "status_user", "last_login_at", "last_activity_at"]
+      }]
     });
 
     if (!data)
@@ -292,22 +305,8 @@ exports.getById = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
-  try {
-    const asesi = await ProfileAsesi.findByPk(req.params.id);
-    if (!asesi)
-      return response.error(res, "Asesi tidak ditemukan", 404);
-
-    await asesi.update(req.body);
-
-    return response.success(res, "Asesi berhasil diperbarui", asesi);
-
-  } catch (err) {
-    return response.error(res, err.message);
-  }
-};
-
-exports.delete = async (req, res) => {
   const t = await sequelize.transaction();
+
   try {
     const asesi = await ProfileAsesi.findByPk(req.params.id, { transaction: t });
 
@@ -316,19 +315,86 @@ exports.delete = async (req, res) => {
       return response.error(res, "Asesi tidak ditemukan", 404);
     }
 
-    await User.destroy({
-      where: { id_user: asesi.id_user },
-      transaction: t
-    });
+    const { status_user: requestedStatus, ...profileData } = req.body;
+    const status_user = requestedStatus === undefined
+      ? undefined
+      : String(requestedStatus).trim().toLowerCase();
 
-    await asesi.destroy({ transaction: t });
+    if (status_user !== undefined && !["aktif", "nonaktif"].includes(status_user)) {
+      await t.rollback();
+      return response.error(res, "Status akun tidak valid", 400);
+    }
+
+    await asesi.update(profileData, { transaction: t });
+
+    if (status_user !== undefined) {
+      const user = await User.findByPk(asesi.id_user, { transaction: t });
+
+      if (!user) {
+        await t.rollback();
+        return response.error(res, "Akun asesi tidak ditemukan", 404);
+      }
+
+      // Simpan status akun tanpa menghapus waktu terakhir aktivitas asesi.
+      await user.update({ status_user }, { transaction: t });
+    }
 
     await t.commit();
 
-    return response.success(res, "Asesi berhasil dihapus");
+    const updatedAsesi = await ProfileAsesi.findByPk(req.params.id, {
+      include: [{
+        model: User,
+        as: "user",
+        attributes: ["id_user", "email", "no_hp", "username", "status_user", "last_login_at", "last_activity_at"]
+      }]
+    });
 
+    return response.success(res, "Data asesi dan status akun berhasil diperbarui", updatedAsesi);
   } catch (err) {
-    await t.rollback();
+    if (!t.finished) await t.rollback();
+    console.error("Update Asesi Error:", err);
+    return response.error(res, err.message);
+  }
+};
+
+exports.updateStatus = async (req, res) => {
+  try {
+    const { status_user } = req.body;
+
+    if (!["aktif", "nonaktif"].includes(status_user)) {
+      return response.error(res, "Status akun tidak valid", 400);
+    }
+
+    const user = await User.findOne({
+      where: { id_user: req.params.id },
+      include: [{
+        model: Role,
+        attributes: ["role_name"],
+        required: true,
+        where: { role_name: "ASESI" }
+      }]
+    });
+
+    if (!user) {
+      return response.error(res, "Akun asesi tidak ditemukan", 404);
+    }
+
+    await user.update({ status_user });
+
+    return response.success(
+      res,
+      status_user === "aktif"
+        ? "Akun asesi berhasil diaktifkan"
+        : "Akun asesi berhasil dinonaktifkan",
+      {
+        id_user: user.id_user,
+        status_user: user.status_user,
+        last_login_at: user.last_login_at,
+        last_activity_at: user.last_activity_at
+      }
+    );
+  } catch (err) {
+    console.error("Update Status Asesi Error:", err);
     return response.error(res, err.message);
   }
 };

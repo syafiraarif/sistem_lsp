@@ -30,6 +30,14 @@ const User = sequelize.define("users", {
   status_user: {
     type: DataTypes.ENUM("aktif", "nonaktif"),
     defaultValue: "aktif"
+  },
+  last_login_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  last_activity_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: "users",
