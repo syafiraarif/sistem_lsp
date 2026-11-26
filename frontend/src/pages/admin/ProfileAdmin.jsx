@@ -300,7 +300,7 @@ const ProfileAdmin = () => {
               {userAccount.username}
             </p>
             <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-[#CC6B27]/20 bg-[#CC6B27]/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#CC6B27]">
-              <Shield size={14} /> {userAccount.role}
+              {userAccount.role}
             </div>
           </div>
           <div className="border-t border-[#071E3D]/10 bg-[#FAFAFA] p-5 flex flex-col gap-4">

@@ -18,47 +18,37 @@ exports.getDashboardSummary = async (req, res) => {
     const Tuk = db.Tuk || db.tuk;
     const Pendaftaran = db.PendaftaranAsesi || db.pendaftaranAsesi;
     const Jadwal = db.Jadwal || db.jadwal;
+    const PesertaJadwal = db.PesertaJadwal || db.pesertaJadwal;
     const HasilKeputusan = db.HasilKeputusanAsesmen || db.hasil_keputusan_asesmen;
 
-    // ==========================================
-    // 1. FILTER ASESI REJECT (Arif Royani dkk)
-    // ==========================================
+    // 1. FILTER ASESI REJECT
     const rejectedPendaftar = Pendaftaran ? await Pendaftaran.findAll({
       where: { status: { [Op.like]: '%reject%' } },
-      attributes: ['nik'] // Ambil NIK yang ditolak
+      attributes: ['nik']
     }).catch(() => []) : [];
     
     const rejectedNiks = rejectedPendaftar.map(p => p.nik).filter(Boolean);
 
     const totalAsesi = ProfileAsesi ? await ProfileAsesi.count({
       where: rejectedNiks.length > 0 ? {
-        nik: { [Op.notIn]: rejectedNiks } // Exclude NIK yang ditolak dari total profil
+        nik: { [Op.notIn]: rejectedNiks }
       } : {}
-    }).catch((err) => {
-      console.log("Fallback Asesi Count:", err.message);
-      return ProfileAsesi.count(); // Jika tabel profile tidak pakai 'nik', hitung semua
-    }) : 0;
+    }).catch(() => ProfileAsesi.count()) : 0;
 
-    // ==========================================
-    // 2. HITUNG STATISTIK DASAR LAINNYA
-    // ==========================================
+    // 2. STATISTIK DASAR
     const totalSkema = Skema ? await Skema.count().catch(() => 0) : 0;
     const totalAsesor = ProfileAsesor ? await ProfileAsesor.count().catch(() => 0) : 0;
     const totalTuk = Tuk ? await Tuk.count().catch(() => 0) : 0;
 
-    // ==========================================
-    // 3. PERSENTASE KELULUSAN (FOOLPROOF ENUM)
-    // ==========================================
+    // 3. PERSENTASE KELULUSAN
     let kompeten = 0;
     let belum = 0;
 
     if (HasilKeputusan) {
-      // Hitung semua yang mengandung kata 'belum'
       belum = await HasilKeputusan.count({ 
         where: { hasil: { [Op.like]: '%belum%' } } 
       }).catch(() => 0);
 
-      // Hitung semua yang mengandung kata 'kompeten' TAPI BUKAN 'belum'
       kompeten = await HasilKeputusan.count({ 
         where: { 
           hasil: { [Op.like]: '%kompeten%' },
@@ -76,54 +66,104 @@ exports.getDashboardSummary = async (req, res) => {
       pBelum = 100 - pKomp;
     }
 
-    // ==========================================
-    // 4. GRAFIK PENDAFTAR PER SKEMA
-    // ==========================================
-    const validRegs = Pendaftaran ? await Pendaftaran.findAll({
-      where: { status: { [Op.notLike]: '%tolak%' } } // Jangan hitung yang ditolak
+    // 4. GRAFIK PENDAFTAR PER SKEMA (Ambil dari PesertaJadwal -> Jadwal -> Skema)
+    const allSkema = Skema ? await Skema.findAll({
+      attributes: ['id_skema', 'judul_skema']
     }).catch(() => []) : [];
 
+    const pesertaList = PesertaJadwal ? await PesertaJadwal.findAll({
+      include: [
+        {
+          model: Jadwal,
+          as: 'jadwal',
+          required: true,
+          include: [
+            {
+              model: Skema,
+              as: 'skema',
+              required: true,
+              attributes: ['id_skema', 'judul_skema']
+            }
+          ]
+        }
+      ]
+    }).catch((err) => {
+      console.error("Error fetch peserta per skema:", err.message);
+      return [];
+    }) : [];
+
+    // Inisialisasi semua skema yang ada agar tetap tampil meski 0 pendaftar (opsional)
     const schemaCounts = {};
-    validRegs.forEach((reg) => {
-      // Langsung ambil dari kompetensi_keahlian yang ada di pendaftaran
-      if (reg.kompetensi_keahlian) {
-        schemaCounts[reg.kompetensi_keahlian] = (schemaCounts[reg.kompetensi_keahlian] || 0) + 1;
+    allSkema.forEach((s) => {
+      if (s.judul_skema) schemaCounts[s.judul_skema] = 0;
+    });
+
+    pesertaList.forEach((p) => {
+      const judulSkema = p.jadwal?.skema?.judul_skema;
+      if (judulSkema) {
+        schemaCounts[judulSkema] = (schemaCounts[judulSkema] || 0) + 1;
       }
     });
 
+    const maxCount = Math.max(...Object.values(schemaCounts), 1);
     const sortedChart = Object.entries(schemaCounts)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
+      .slice(0, 5)
       .map(([label, val]) => {
-        const max = Math.max(...Object.values(schemaCounts), 1);
-        const width = `${Math.round((val / max) * 100)}%`;
-        return { label: label.length > 20 ? label.substring(0, 20) + "..." : label, val, width };
+        const width = val === 0 ? "0%" : `${Math.round((val / maxCount) * 100)}%`;
+        return {
+          label: label.length > 28 ? label.substring(0, 28) + "..." : label,
+          val,
+          width
+        };
       });
 
-    // ==========================================
     // 5. PENDAFTARAN & JADWAL TERBARU
-    // ==========================================
-    const recentRegistrations = Pendaftaran ? await Pendaftaran.findAll({
+    // Ambil dari PesertaJadwal terbaru supaya kolom Skema terisi, atau fallback ke PendaftaranAsesi
+    const recentPeserta = PesertaJadwal ? await PesertaJadwal.findAll({
       limit: 5,
-      order: [['tanggal_daftar', 'DESC']]
+      order: [['created_at', 'DESC']],
+      include: [
+        { model: ProfileAsesi, as: 'profileAsesi', attributes: ['nama_lengkap'] },
+        {
+          model: Jadwal,
+          as: 'jadwal',
+          include: [{ model: Skema, as: 'skema', attributes: ['judul_skema'] }]
+        }
+      ]
     }).catch(() => []) : [];
+
+    const recentRegistrations = recentPeserta.length > 0
+      ? recentPeserta.map((item) => ({
+          nama_lengkap: item.profileAsesi?.nama_lengkap || "Asesi",
+          kompetensi_keahlian: item.jadwal?.skema?.judul_skema || "Skema Tidak Diketahui",
+          tanggal_daftar: item.created_at,
+          status: item.status_asesmen || "terdaftar"
+        }))
+      : (Pendaftaran ? await Pendaftaran.findAll({
+          limit: 5,
+          order: [['tanggal_daftar', 'DESC']]
+        }).catch(() => []) : []);
 
     const schedules = Jadwal ? await Jadwal.findAll({
       limit: 5,
-      where: { tgl_awal: { [Op.gte]: new Date(new Date().setHours(0,0,0,0)) } },
+      where: { tgl_awal: { [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)) } },
       order: [['tgl_awal', 'ASC']]
     }).catch(() => []) : [];
 
-    // ==========================================
     // 6. KIRIM RESPONSE
-    // ==========================================
     res.json({
       success: true,
       data: {
         stats: { skema: totalSkema, asesor: totalAsesor, asesi: totalAsesi, tuk: totalTuk },
         recentRegistrations,
         chartData: sortedChart,
-        passRate: { kompeten: pKomp, belum: pBelum },
+        passRate: {
+          kompeten: pKomp,
+          belum: pBelum,
+          jumlahKompeten: kompeten, // Kirim angka real dari HasilKeputusan
+          jumlahBelum: belum
+        },
         schedules
       }
     });

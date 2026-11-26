@@ -324,18 +324,14 @@ export default function Registration() {
         newErrors.email = "Format email tidak valid";
       }
 
-      if (
-        formData.no_hp === "08" ||
-        formData.no_hp.length < 10
-      ) {
-        newErrors.no_hp =
-          "Nomor WhatsApp wajib diisi minimal 10 digit";
+      if (formData.no_hp === "08") {
+        newErrors.no_hp = "Nomor WhatsApp wajib diisi";
       } else if (
-        formData.no_hp.length < 12 ||
+        formData.no_hp.length < 11 ||
         formData.no_hp.length > 13
       ) {
         newErrors.no_hp =
-          "Nomor WhatsApp harus 12-13 digit";
+          "Nomor WhatsApp harus 11–13 digit";
       }
     }
 

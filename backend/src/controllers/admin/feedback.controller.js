@@ -1,43 +1,50 @@
 const Feedback = require("../../models/feedback.model");
 
-// Mengambil semua feedback (aktif maupun tidak aktif)
 exports.getAll = async (req, res) => {
   try {
     const data = await Feedback.findAll({
       order: [["created_at", "DESC"]]
     });
-    res.status(200).json({ data });
+    res.status(200).json({ success: true, data });
   } catch (err) {
     console.error("GET ALL FEEDBACK ERROR:", err);
-    res.status(500).json({ message: "Gagal mengambil data feedback" });
+    res.status(500).json({ success: false, message: "Gagal mengambil data feedback" });
   }
 };
 
-// Mengubah status aktif/tidak aktif
+// Mengubah status aktif/tidak aktif (mendukung body { status } dari modal maupun toggle langsung)
 exports.toggleStatus = async (req, res) => {
   try {
     const { id } = req.params;
+    const { status } = req.body || {};
     const feedback = await Feedback.findByPk(id);
 
     if (!feedback) {
-      return res.status(404).json({ message: "Feedback tidak ditemukan" });
+      return res.status(404).json({ success: false, message: "Feedback tidak ditemukan" });
     }
 
-    // Toggle status
-    feedback.status = feedback.status === "aktif" ? "tidak_aktif" : "aktif";
+    if (status) {
+      if (!["aktif", "tidak_aktif"].includes(status)) {
+        return res.status(400).json({ success: false, message: "Status tidak valid" });
+      }
+      feedback.status = status;
+    } else {
+      feedback.status = feedback.status === "aktif" ? "tidak_aktif" : "aktif";
+    }
+
     await feedback.save();
 
     res.status(200).json({ 
-      message: `Status berhasil diubah menjadi ${feedback.status}`,
+      success: true,
+      message: `Visibilitas ulasan berhasil diubah menjadi ${feedback.status === "aktif" ? "Ditampilkan" : "Disembunyikan"}`,
       data: feedback 
     });
   } catch (err) {
     console.error("TOGGLE STATUS ERROR:", err);
-    res.status(500).json({ message: "Gagal mengubah status feedback" });
+    res.status(500).json({ success: false, message: "Gagal mengubah status feedback" });
   }
 };
 
-// Menghapus feedback
 exports.delete = async (req, res) => {
   try {
     const { id } = req.params;
@@ -46,12 +53,12 @@ exports.delete = async (req, res) => {
     });
 
     if (!deleted) {
-      return res.status(404).json({ message: "Feedback tidak ditemukan" });
+      return res.status(404).json({ success: false, message: "Feedback tidak ditemukan" });
     }
 
-    res.status(200).json({ message: "Feedback berhasil dihapus" });
+    res.status(200).json({ success: true, message: "Feedback berhasil dihapus" });
   } catch (err) {
     console.error("DELETE FEEDBACK ERROR:", err);
-    res.status(500).json({ message: "Gagal menghapus feedback" });
+    res.status(500).json({ success: false, message: "Gagal menghapus feedback" });
   }
 };

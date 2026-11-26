@@ -1,3 +1,4 @@
+// frontend/src/pages/admin/UnitKompetensi.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../../services/api";
 import { notifikasi } from "../../components/ui/notifikasi";
@@ -15,10 +16,6 @@ import {
   ChevronRight,
   ClipboardList,
   ListChecks,
-  BadgeCheck,
-  RefreshCcw,
-  Info,
-  Sparkles,
   Briefcase,
 } from "lucide-react";
 
@@ -27,33 +24,33 @@ const UnitKompetensi = () => {
   const [unitList, setUnitList] = useState([]);
   const [skkniList, setSkkniList] = useState([]);
   const [kelompokList, setKelompokList] = useState([]);
-  
+
   const [selectedSkemaId, setSelectedSkemaId] = useState("");
   const [expandedUnits, setExpandedUnits] = useState({});
   const [selectedUnitId, setSelectedUnitId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   // STATE LOADING DIPISAH
-  const [loading, setLoading] = useState(false);       // Untuk loading halaman & refresh
-  const [isSaving, setIsSaving] = useState(false);     // Untuk loading tombol simpan modal
-  
+  const [loading, setLoading] = useState(false); // Untuk loading halaman & refresh
+  const [isSaving, setIsSaving] = useState(false); // Untuk loading tombol simpan modal
+
   // Modals State
   const [showKelompokModal, setShowKelompokModal] = useState(false);
   const [isEditingKelompok, setIsEditingKelompok] = useState(false);
   const [editKelompokId, setEditKelompokId] = useState(null);
   const [formKelompok, setFormKelompok] = useState({ nama_kelompok: "", deskripsi: "", urutan: "" });
-  
+
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [isEditingUnit, setIsEditingUnit] = useState(false);
   const [editUnitId, setEditUnitId] = useState(null);
   const [activeKelompok, setActiveKelompok] = useState(null);
   const [formUnit, setFormUnit] = useState({ id_kelompok: "", id_skkni: "", kode_unit: "", judul_unit: "", urutan: "" });
-  
+
   const [showElemenModal, setShowElemenModal] = useState(false);
   const [isEditingElemen, setIsEditingElemen] = useState(false);
   const [editElemenId, setEditElemenId] = useState(null);
   const [formElemen, setFormElemen] = useState({ id_unit: "", nama_elemen: "", urutan: "" });
-  
+
   const [showKukModal, setShowKukModal] = useState(false);
   const [isEditingKuk, setIsEditingKuk] = useState(false);
   const [editKukId, setEditKukId] = useState(null);
@@ -77,15 +74,6 @@ const UnitKompetensi = () => {
     setLoading(true);
     try {
       await Promise.all([fetchSkema(), fetchUnits(), fetchSkkni()]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const refreshCurrentData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([fetchUnits(), fetchKelompokBySkema(selectedSkemaId)]);
     } finally {
       setLoading(false);
     }
@@ -135,31 +123,35 @@ const UnitKompetensi = () => {
   const getSelectedSkema = () => skemaList.find((s) => Number(s.id_skema) === Number(selectedSkemaId));
   const getSkemaTitle = (s) => s?.judul_skema || s?.nama_skema || "Skema Sertifikasi";
   const getSkemaCode = (s) => s?.kode_skema || s?.nomor_skema || "-";
-  
+
   const getUnitId = (u) => u.id_unit || u.id_unit_kompetensi || u.id;
   const getUnitKode = (u) => u.kode_unit || u.kode || "-";
   const getUnitJudul = (u) => u.judul_unit || u.nama_unit || "-";
   const getUnitSkkniId = (u) => u.id_skkni || u.skkni?.id_skkni || "";
   const getUnitSkkniTitle = (u) => u.skkni?.judul_skkni || u.skkni?.no_skkni || "Tidak ada rujukan";
-  const getUnitKelompokId = (u) => u.skemaList?.find(s => String(s.id_skema) === String(selectedSkemaId))?.id_kelompok || u.id_kelompok || "";
-  const getUnitUrutan = (u) => u.skemaList?.find(s => String(s.id_skema) === String(selectedSkemaId))?.urutan || u.urutan || "";
-  
+  const getUnitKelompokId = (u) =>
+    u.skemaList?.find((s) => String(s.id_skema) === String(selectedSkemaId))?.id_kelompok || u.id_kelompok || "";
+  const getUnitUrutan = (u) =>
+    u.skemaList?.find((s) => String(s.id_skema) === String(selectedSkemaId))?.urutan || u.urutan || "";
+
   const getElemenList = (u) => u.elemen || u.unit_elemen || [];
   const getElemenId = (e) => e.id_elemen || e.id;
   const getElemenText = (e) => e.elemen_kompetensi || e.nama_elemen || "-";
-  
+
   const getKukList = (e) => e.kuk || e.unit_kuk || [];
   const getKukText = (k) => k.kriteria_unjuk_kerja || k.kuk || "-";
 
   const getUnitsByKelompok = (idKelompok) => {
     const keyword = searchTerm.trim().toLowerCase();
     let data = unitList.filter((unit) => {
-      const isSkemaMatch = (unit.skemaList || []).some(s => String(s.id_skema) === String(selectedSkemaId));
+      const isSkemaMatch = (unit.skemaList || []).some((s) => String(s.id_skema) === String(selectedSkemaId));
       const isKelompokMatch = String(getUnitKelompokId(unit)) === String(idKelompok);
       return isSkemaMatch && isKelompokMatch;
     });
     if (keyword) {
-      data = data.filter(u => getUnitKode(u).toLowerCase().includes(keyword) || getUnitJudul(u).toLowerCase().includes(keyword));
+      data = data.filter(
+        (u) => getUnitKode(u).toLowerCase().includes(keyword) || getUnitJudul(u).toLowerCase().includes(keyword)
+      );
     }
     return data.sort((a, b) => Number(getUnitUrutan(a) || 9999) - Number(getUnitUrutan(b) || 9999));
   };
@@ -167,13 +159,31 @@ const UnitKompetensi = () => {
   const displayedKelompokList = useMemo(() => {
     const sorted = [...kelompokList].sort((a, b) => Number(a.urutan || 9999) - Number(b.urutan || 9999));
     if (!searchTerm.trim()) return sorted;
-    return sorted.filter((k) => k.nama_kelompok?.toLowerCase().includes(searchTerm.toLowerCase()) || getUnitsByKelompok(k.id_kelompok).length > 0);
+    return sorted.filter(
+      (k) =>
+        k.nama_kelompok?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getUnitsByKelompok(k.id_kelompok).length > 0
+    );
   }, [kelompokList, unitList, selectedSkemaId, searchTerm]);
 
-  // Kalkulasi statistik untuk hero section
-  const filteredUnitCount = displayedKelompokList.reduce((acc, k) => acc + getUnitsByKelompok(k.id_kelompok).length, 0);
-  const totalElemen = displayedKelompokList.reduce((acc, k) => acc + getUnitsByKelompok(k.id_kelompok).reduce((s, u) => s + getElemenList(u).length, 0), 0);
-  const totalKuk = displayedKelompokList.reduce((acc, k) => acc + getUnitsByKelompok(k.id_kelompok).reduce((s, u) => s + getElemenList(u).reduce((ss, e) => ss + getKukList(e).length, 0), 0), 0);
+  // Kalkulasi statistik
+  const filteredUnitCount = displayedKelompokList.reduce(
+    (acc, k) => acc + getUnitsByKelompok(k.id_kelompok).length,
+    0
+  );
+  const totalElemen = displayedKelompokList.reduce(
+    (acc, k) => acc + getUnitsByKelompok(k.id_kelompok).reduce((s, u) => s + getElemenList(u).length, 0),
+    0
+  );
+  const totalKuk = displayedKelompokList.reduce(
+    (acc, k) =>
+      acc +
+      getUnitsByKelompok(k.id_kelompok).reduce(
+        (s, u) => s + getElemenList(u).reduce((ss, e) => ss + getKukList(e).length, 0),
+        0
+      ),
+    0
+  );
 
   const toggleUnit = (unit) => {
     const idUnit = getUnitId(unit);
@@ -201,24 +211,32 @@ const UnitKompetensi = () => {
   const openEditKelompokModal = (kelompok) => {
     setIsEditingKelompok(true);
     setEditKelompokId(kelompok.id_kelompok);
-    setFormKelompok({ nama_kelompok: kelompok.nama_kelompok || "", deskripsi: kelompok.deskripsi || "", urutan: kelompok.urutan || "" });
+    setFormKelompok({
+      nama_kelompok: kelompok.nama_kelompok || "",
+      deskripsi: kelompok.deskripsi || "",
+      urutan: kelompok.urutan || "",
+    });
     setShowKelompokModal(true);
   };
 
   const handleSaveKelompok = async (e) => {
     e.preventDefault();
     if (!formKelompok.nama_kelompok.trim()) return notifikasi.peringatan("Nama kelompok wajib diisi");
-    
-    setIsSaving(true); // Gunakan isSaving agar list belakang tidak hilang
+
+    setIsSaving(true);
     try {
-      const payload = { id_skema: selectedSkemaId, ...formKelompok, urutan: formKelompok.urutan || kelompokList.length + 1 };
-      
+      const payload = {
+        id_skema: selectedSkemaId,
+        ...formKelompok,
+        urutan: formKelompok.urutan || kelompokList.length + 1,
+      };
+
       if (isEditingKelompok) await api.put(`/admin/kelompok-pekerjaan/${editKelompokId}`, payload);
       else await api.post("/admin/kelompok-pekerjaan", payload);
-      
+
       await notifikasi.sukses(isEditingKelompok ? "Diperbarui" : "Ditambahkan");
       setShowKelompokModal(false);
-      await fetchKelompokBySkema(selectedSkemaId); // List akan refresh secara halus (silently)
+      await fetchKelompokBySkema(selectedSkemaId);
     } catch (error) {
       notifikasi.gagal("Terjadi kesalahan");
     } finally {
@@ -227,10 +245,11 @@ const UnitKompetensi = () => {
   };
 
   const handleDeleteKelompok = async (kelompok) => {
-    if (getUnitsByKelompok(kelompok.id_kelompok).length > 0) return notifikasi.peringatan("Hapus/pindahkan unit di dalam kelompok ini terlebih dahulu.");
+    if (getUnitsByKelompok(kelompok.id_kelompok).length > 0)
+      return notifikasi.peringatan("Hapus/pindahkan unit di dalam kelompok ini terlebih dahulu.");
     const confirmed = await notifikasi.konfirmasi("Hapus kelompok pekerjaan ini?");
     if (!confirmed.isConfirmed) return;
-    
+
     try {
       await api.delete(`/admin/kelompok-pekerjaan/${kelompok.id_kelompok}`);
       notifikasi.sukses("Terhapus");
@@ -244,7 +263,13 @@ const UnitKompetensi = () => {
   const openAddUnitModal = (kelompok) => {
     setActiveKelompok(kelompok);
     setIsEditingUnit(false);
-    setFormUnit({ id_kelompok: kelompok.id_kelompok, id_skkni: "", kode_unit: "", judul_unit: "", urutan: getUnitsByKelompok(kelompok.id_kelompok).length + 1 });
+    setFormUnit({
+      id_kelompok: kelompok.id_kelompok,
+      id_skkni: "",
+      kode_unit: "",
+      judul_unit: "",
+      urutan: getUnitsByKelompok(kelompok.id_kelompok).length + 1,
+    });
     setShowUnitModal(true);
   };
 
@@ -252,7 +277,13 @@ const UnitKompetensi = () => {
     setActiveKelompok(kelompok);
     setIsEditingUnit(true);
     setEditUnitId(getUnitId(unit));
-    setFormUnit({ id_kelompok: getUnitKelompokId(unit) || kelompok.id_kelompok, id_skkni: getUnitSkkniId(unit), kode_unit: unit.kode_unit || "", judul_unit: unit.judul_unit || "", urutan: getUnitUrutan(unit) || "" });
+    setFormUnit({
+      id_kelompok: getUnitKelompokId(unit) || kelompok.id_kelompok,
+      id_skkni: getUnitSkkniId(unit),
+      kode_unit: unit.kode_unit || "",
+      judul_unit: unit.judul_unit || "",
+      urutan: getUnitUrutan(unit) || "",
+    });
     setShowUnitModal(true);
   };
 
@@ -260,14 +291,19 @@ const UnitKompetensi = () => {
     e.preventDefault();
     if (!formUnit.id_skkni) return notifikasi.peringatan("Pilih Standar/SKKNI");
     if (!formUnit.kode_unit || !formUnit.judul_unit) return notifikasi.peringatan("Lengkapi kode & judul");
-    
+
     setIsSaving(true);
     try {
-      const payload = { id_skema: selectedSkemaId, ...formUnit, judul_unit: formUnit.judul_unit.trim(), kode_unit: formUnit.kode_unit.trim() };
-      
+      const payload = {
+        id_skema: selectedSkemaId,
+        ...formUnit,
+        judul_unit: formUnit.judul_unit.trim(),
+        kode_unit: formUnit.kode_unit.trim(),
+      };
+
       if (isEditingUnit) await api.put(`/admin/unit-kompetensi/${editUnitId}`, payload);
       else await api.post("/admin/unit-kompetensi", payload);
-      
+
       await notifikasi.sukses("Berhasil");
       setShowUnitModal(false);
       await fetchUnits();
@@ -284,7 +320,7 @@ const UnitKompetensi = () => {
       "Unit akan dilepaskan dari kelompok ini. Master unit beserta Elemen dan KUK hanya akan terhapus jika unit ini tidak digunakan di skema lain."
     );
     if (!confirmed.isConfirmed) return;
-    
+
     try {
       await api.delete(`/admin/unit-kompetensi/${getUnitId(unit)}?id_skema=${selectedSkemaId}`);
       notifikasi.sukses("Unit berhasil dihapus");
@@ -381,8 +417,7 @@ const UnitKompetensi = () => {
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
-
-        {/* --- DATA DINAMIS (STATISTIK) DIBUAT 1 BARIS --- */}
+        {/* --- STATISTIK 1 BARIS --- */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
           <StatCard label="Kelompok" value={`${kelompokList.length} Data`} icon={<Briefcase size={22} />} tone="navy" />
           <StatCard label="Unit" value={`${filteredUnitCount} Unit`} icon={<BookOpen size={22} />} tone="green" />
@@ -438,17 +473,21 @@ const UnitKompetensi = () => {
               </button>
             </div>
           </div>
-          
+
           {/* Info Skema Aktif */}
           {selectedSkemaId ? (
             <div className="mt-2 flex flex-col md:flex-row gap-4 rounded-xl border border-[#CC6B27]/20 bg-orange-50/50 p-4">
               <div className="flex-1 border-b md:border-b-0 md:border-r border-[#CC6B27]/20 pb-3 md:pb-0 md:pr-4">
                 <p className="text-[10px] font-black text-[#CC6B27] uppercase tracking-widest mb-1">Skema Aktif</p>
-                <p className="text-[13px] font-bold text-[#071E3D]">{getSkemaCode(getSelectedSkema())} - {getSkemaTitle(getSelectedSkema())}</p>
+                <p className="text-[13px] font-bold text-[#071E3D]">
+                  {getSkemaCode(getSelectedSkema())} - {getSkemaTitle(getSelectedSkema())}
+                </p>
               </div>
               <div className="flex-1">
                 <p className="text-[10px] font-black text-[#CC6B27] uppercase tracking-widest mb-1">Status</p>
-                <p className="text-[13px] font-bold text-[#071E3D]">{kelompokList.length} Kelompok Pekerjaan Ditemukan</p>
+                <p className="text-[13px] font-bold text-[#071E3D]">
+                  {kelompokList.length} Kelompok Pekerjaan Ditemukan
+                </p>
               </div>
             </div>
           ) : (
@@ -459,21 +498,30 @@ const UnitKompetensi = () => {
         </div>
 
         {/* DAFTAR KELOMPOK & UNIT */}
-        <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-[#071E3D]/10 p-6 sm:flex-row sm:items-center sm:justify-between bg-[#FAFAFA]/50">
-            <div>
-              <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
-                <ClipboardList size={18} className="text-[#CC6B27]" />
-                Hierarki Kompetensi
-              </h4>
-            </div>
+        <div className="overflow-hidden rounded-xl border border-[#071E3D]/15 bg-white shadow-sm">
+          {/* HEADER UTAMA BIRU NAVY (Hanya di bagian Hierarki Kompetensi) */}
+          <div className="flex flex-col gap-4 border-b-4 border-[#CC6B27] bg-[#071E3D] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <h4 className="m-0 flex items-center gap-2.5 text-[15px] font-bold uppercase tracking-wider text-[#FAFAFA]">
+              <ClipboardList size={18} className="text-[#CC6B27]" />
+              Hierarki Kompetensi
+            </h4>
+            {selectedSkemaId && (
+              <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold text-white">
+                {displayedKelompokList.length} Kelompok Ditampilkan
+              </span>
+            )}
           </div>
+
           <div className="p-6 bg-[#FAFAFA]">
             {!selectedSkemaId ? (
               <div className="py-16 text-center">
-                <BookOpen size={48} className="mx-auto mb-3 text-[#071E3D]/20" />
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#071E3D]/10 text-[#071E3D]">
+                  <BookOpen size={28} />
+                </div>
                 <h3 className="text-[16px] font-bold text-[#071E3D]">Pilih Skema Dahulu</h3>
-                <p className="mt-1 text-[13px] font-medium text-[#182D4A]/60">Pilih skema pada filter di atas untuk mengelola unit.</p>
+                <p className="mt-1 text-[13px] font-medium text-[#182D4A]/60">
+                  Pilih skema pada filter di atas untuk mengelola unit.
+                </p>
               </div>
             ) : loading ? (
               <div className="py-16 text-center">
@@ -516,7 +564,9 @@ const UnitKompetensi = () => {
               </div>
             ) : (
               <div className="py-16 text-center">
-                <Briefcase size={48} className="mx-auto mb-3 text-[#071E3D]/20" />
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#071E3D]/10 text-[#071E3D]">
+                  <Briefcase size={28} />
+                </div>
                 <h3 className="text-[16px] font-bold text-[#071E3D]">Belum Ada Kelompok Pekerjaan</h3>
                 <button
                   type="button"
@@ -531,15 +581,35 @@ const UnitKompetensi = () => {
         </div>
       </div>
 
-      {/* --- MODALS --- */}
+      {/* --- MODALS (ICON SESUAI TAMBAH / EDIT) --- */}
       {showKelompokModal && (
         <ModalWrapper onClose={closeKelompokModal}>
-          <ModalHeader title={isEditingKelompok ? "Edit Kelompok" : "Tambah Kelompok"} icon={<Briefcase size={20} />} onClose={closeKelompokModal} />
+          <ModalHeader
+            title={isEditingKelompok ? "Edit Kelompok" : "Tambah Kelompok"}
+            isEdit={isEditingKelompok}
+            onClose={closeKelompokModal}
+          />
           <form onSubmit={handleSaveKelompok} className="p-6 flex flex-col gap-5">
-            <FormInput label="Nama Kelompok Pekerjaan" name="nama_kelompok" value={formKelompok.nama_kelompok} onChange={handleKelompokInputChange} required />
-            <FormTextarea label="Deskripsi" name="deskripsi" value={formKelompok.deskripsi} onChange={handleKelompokInputChange} />
-            <FormInput label="Urutan" name="urutan" type="number" value={formKelompok.urutan} onChange={handleKelompokInputChange} />
-            {/* Pakai isSaving di sini */}
+            <FormInput
+              label="Nama Kelompok Pekerjaan"
+              name="nama_kelompok"
+              value={formKelompok.nama_kelompok}
+              onChange={handleKelompokInputChange}
+              required
+            />
+            <FormTextarea
+              label="Deskripsi"
+              name="deskripsi"
+              value={formKelompok.deskripsi}
+              onChange={handleKelompokInputChange}
+            />
+            <FormInput
+              label="Urutan"
+              name="urutan"
+              type="number"
+              value={formKelompok.urutan}
+              onChange={handleKelompokInputChange}
+            />
             <ModalFooter loading={isSaving} onCancel={closeKelompokModal} submitText="Simpan Kelompok" />
           </form>
         </ModalWrapper>
@@ -547,23 +617,57 @@ const UnitKompetensi = () => {
 
       {showUnitModal && (
         <ModalWrapper onClose={closeUnitModal}>
-          <ModalHeader title={isEditingUnit ? "Edit Unit" : "Tambah Unit Kompetensi"} icon={<BookOpen size={20} />} onClose={closeUnitModal} />
+          <ModalHeader
+            title={isEditingUnit ? "Edit Unit" : "Tambah Unit Kompetensi"}
+            isEdit={isEditingUnit}
+            onClose={closeUnitModal}
+          />
           <form onSubmit={handleSaveUnit} className="p-6 flex flex-col gap-5">
             <div className="rounded-lg border border-[#CC6B27]/20 bg-orange-50 p-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#CC6B27]">Kelompok Pekerjaan</p>
               <p className="text-[13px] font-bold text-[#071E3D]">{activeKelompok?.nama_kelompok || "-"}</p>
             </div>
             <div>
-              <label className="mb-2 block text-[11px] font-bold text-[#071E3D] uppercase tracking-wider">Standar Rujukan / SKKNI <span className="text-red-500">*</span></label>
-              <select name="id_skkni" value={formUnit.id_skkni} onChange={handleUnitInputChange} required className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-4 py-2.5 text-[13px] font-semibold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10">
+              <label className="mb-2 block text-[11px] font-bold text-[#071E3D] uppercase tracking-wider">
+                Standar Rujukan / SKKNI <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="id_skkni"
+                value={formUnit.id_skkni}
+                onChange={handleUnitInputChange}
+                required
+                className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-4 py-2.5 text-[13px] font-semibold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
+              >
                 <option value="">-- Pilih SKKNI --</option>
-                {skkniList.map((sk) => <option key={sk.id_skkni} value={sk.id_skkni}>{sk.judul_skkni} ({sk.no_skkni})</option>)}
+                {skkniList.map((sk) => (
+                  <option key={sk.id_skkni} value={sk.id_skkni}>
+                    {sk.judul_skkni} ({sk.no_skkni})
+                  </option>
+                ))}
               </select>
             </div>
-            <FormInput label="Judul Unit" name="judul_unit" value={formUnit.judul_unit} onChange={handleUnitInputChange} required />
+            <FormInput
+              label="Judul Unit"
+              name="judul_unit"
+              value={formUnit.judul_unit}
+              onChange={handleUnitInputChange}
+              required
+            />
             <div className="grid grid-cols-2 gap-4">
-              <FormInput label="Kode Unit" name="kode_unit" value={formUnit.kode_unit} onChange={handleUnitInputChange} required />
-              <FormInput label="Urutan" name="urutan" type="number" value={formUnit.urutan} onChange={handleUnitInputChange} />
+              <FormInput
+                label="Kode Unit"
+                name="kode_unit"
+                value={formUnit.kode_unit}
+                onChange={handleUnitInputChange}
+                required
+              />
+              <FormInput
+                label="Urutan"
+                name="urutan"
+                type="number"
+                value={formUnit.urutan}
+                onChange={handleUnitInputChange}
+              />
             </div>
             <ModalFooter loading={isSaving} onCancel={closeUnitModal} submitText="Simpan Unit" />
           </form>
@@ -572,10 +676,27 @@ const UnitKompetensi = () => {
 
       {showElemenModal && (
         <ModalWrapper onClose={() => setShowElemenModal(false)}>
-          <ModalHeader title={isEditingElemen ? "Edit Elemen" : "Tambah Elemen"} icon={<Layers size={20} />} onClose={() => setShowElemenModal(false)} />
+          <ModalHeader
+            title={isEditingElemen ? "Edit Elemen" : "Tambah Elemen"}
+            isEdit={isEditingElemen}
+            onClose={() => setShowElemenModal(false)}
+          />
           <form onSubmit={handleSaveElemen} className="p-6 flex flex-col gap-5">
-            <FormInput label="Urutan" name="urutan" type="number" value={formElemen.urutan} onChange={handleInputElemenChange} required />
-            <FormTextarea label="Nama Elemen" name="nama_elemen" value={formElemen.nama_elemen} onChange={handleInputElemenChange} required />
+            <FormInput
+              label="Urutan"
+              name="urutan"
+              type="number"
+              value={formElemen.urutan}
+              onChange={handleInputElemenChange}
+              required
+            />
+            <FormTextarea
+              label="Nama Elemen"
+              name="nama_elemen"
+              value={formElemen.nama_elemen}
+              onChange={handleInputElemenChange}
+              required
+            />
             <ModalFooter loading={isSaving} onCancel={() => setShowElemenModal(false)} submitText="Simpan Elemen" />
           </form>
         </ModalWrapper>
@@ -583,10 +704,27 @@ const UnitKompetensi = () => {
 
       {showKukModal && (
         <ModalWrapper onClose={() => setShowKukModal(false)}>
-          <ModalHeader title={isEditingKuk ? "Edit KUK" : "Tambah KUK"} icon={<ListChecks size={20} />} onClose={() => setShowKukModal(false)} />
+          <ModalHeader
+            title={isEditingKuk ? "Edit KUK" : "Tambah KUK"}
+            isEdit={isEditingKuk}
+            onClose={() => setShowKukModal(false)}
+          />
           <form onSubmit={handleSaveKuk} className="p-6 flex flex-col gap-5">
-            <FormInput label="Urutan KUK" name="urutan" type="number" value={formKuk.urutan} onChange={handleInputKukChange} required />
-            <FormTextarea label="Kriteria Unjuk Kerja" name="kuk" value={formKuk.kuk} onChange={handleInputKukChange} required />
+            <FormInput
+              label="Urutan KUK"
+              name="urutan"
+              type="number"
+              value={formKuk.urutan}
+              onChange={handleInputKukChange}
+              required
+            />
+            <FormTextarea
+              label="Kriteria Unjuk Kerja"
+              name="kuk"
+              value={formKuk.kuk}
+              onChange={handleInputKukChange}
+              required
+            />
             <ModalFooter loading={isSaving} onCancel={() => setShowKukModal(false)} submitText="Simpan KUK" />
           </form>
         </ModalWrapper>
@@ -600,7 +738,6 @@ const KelompokCard = ({
   kelompok,
   units,
   expandedUnits,
-  selectedUnitId,
   toggleUnit,
   openAddUnitModal,
   openEditUnitModal,
@@ -626,49 +763,78 @@ const KelompokCard = ({
 }) => {
   return (
     <div className="rounded-xl border border-[#071E3D]/10 bg-white overflow-hidden shadow-sm">
-      {/* HEADER KELOMPOK */}
+      {/* HEADER KELOMPOK PUTIH BERSIH */}
       <div className="border-b border-[#071E3D]/10 bg-white px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-[#CC6B27] mb-1">
             Kelompok Pekerjaan
           </p>
           <h3 className="text-[16px] font-black text-[#071E3D]">
-            {kelompok.urutan ? `${kelompok.urutan}. ` : ""}{kelompok.nama_kelompok}
+            {kelompok.urutan ? `${kelompok.urutan}. ` : ""}
+            {kelompok.nama_kelompok}
           </h3>
           <p className="text-[12px] font-medium text-[#182D4A]/60 mt-0.5">
             {kelompok.deskripsi || "Tanpa deskripsi"} • {units.length} Unit Kompetensi
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => openAddUnitModal(kelompok)} className="inline-flex items-center gap-1.5 rounded-lg bg-[#CC6B27] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#a8561f] transition-all">
+          <button
+            onClick={() => openAddUnitModal(kelompok)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#CC6B27] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#a8561f] transition-all"
+          >
             <Plus size={14} /> Tambah Unit
           </button>
-          <button onClick={() => openEditKelompokModal(kelompok)} className="rounded-lg bg-[#CC6B27]/10 p-1.5 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white flex items-center justify-center" title="Edit">
+          <button
+            onClick={() => openEditKelompokModal(kelompok)}
+            className="rounded-lg bg-[#CC6B27]/10 p-1.5 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white flex items-center justify-center"
+            title="Edit"
+          >
             <Edit2 size={16} />
           </button>
-          <button onClick={() => handleDeleteKelompok(kelompok)} className="rounded-lg border border-red-100 bg-red-50 p-1.5 text-red-600 transition-colors hover:bg-red-600 hover:text-white flex items-center justify-center" title="Hapus">
+          <button
+            onClick={() => handleDeleteKelompok(kelompok)}
+            className="rounded-lg border border-red-100 bg-red-50 p-1.5 text-red-600 transition-colors hover:bg-red-600 hover:text-white flex items-center justify-center"
+            title="Hapus"
+          >
             <Trash2 size={16} />
           </button>
         </div>
       </div>
+
+      {/* ISI UNIT KOMPETENSI */}
       <div className="p-5 bg-[#FAFAFA]/50 space-y-4">
         {units.length > 0 ? (
           units.map((unit, index) => {
             const idUnit = getUnitId(unit);
             const isExpanded = !!expandedUnits[idUnit];
             const elemenList = getElemenList(unit);
-            
+
             return (
-              <div key={idUnit || index} className={`rounded-lg border bg-white overflow-hidden transition-all ${isExpanded ? "border-[#CC6B27] shadow-sm" : "border-[#071E3D]/10 hover:border-[#CC6B27]/40"}`}>
+              <div
+                key={idUnit || index}
+                className={`rounded-lg border bg-white overflow-hidden transition-all ${
+                  isExpanded
+                    ? "border-[#CC6B27] shadow-sm"
+                    : "border-[#071E3D]/10 hover:border-[#CC6B27]/40"
+                }`}
+              >
                 <div className="p-4 flex flex-col md:flex-row md:items-start justify-between gap-4">
                   <div className="flex items-start gap-3 flex-1 cursor-pointer" onClick={() => toggleUnit(unit)}>
-                    <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${isExpanded ? "bg-[#CC6B27] text-white" : "bg-slate-100 text-slate-500"}`}>
+                    <div
+                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                        isExpanded ? "bg-[#CC6B27] text-white" : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
                       {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="rounded bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-600">Unit {getUnitUrutan(unit) || index + 1}</span>
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold font-mono text-[#071E3D]">{getUnitKode(unit)}</span>
+                        <span className="rounded bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-600">
+                          Unit {getUnitUrutan(unit) || index + 1}
+                        </span>
+                        <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold font-mono text-[#071E3D]">
+                          {getUnitKode(unit)}
+                        </span>
                       </div>
                       <h4 className="text-[14px] font-bold text-[#071E3D]">{getUnitJudul(unit)}</h4>
                       <p className="text-[11px] font-medium text-slate-400 mt-1">Ref: {getUnitSkkniTitle(unit)}</p>
@@ -678,12 +844,22 @@ const KelompokCard = ({
                     <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
                       <span className="text-[11px] font-bold text-slate-500">{elemenList.length} Elemen</span>
                       <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                      <span className="text-[11px] font-bold text-slate-500">{elemenList.reduce((sum, el) => sum + getKukList(el).length, 0)} KUK</span>
+                      <span className="text-[11px] font-bold text-slate-500">
+                        {elemenList.reduce((sum, el) => sum + getKukList(el).length, 0)} KUK
+                      </span>
                     </div>
-                    <button onClick={() => openEditUnitModal(kelompok, unit)} className="rounded-lg bg-[#CC6B27]/10 p-1.5 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white" title="Edit Unit">
+                    <button
+                      onClick={() => openEditUnitModal(kelompok, unit)}
+                      className="rounded-lg bg-[#CC6B27]/10 p-1.5 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white"
+                      title="Edit Unit"
+                    >
                       <Edit2 size={16} />
                     </button>
-                    <button onClick={() => handleDeleteUnit(unit)} className="rounded-lg border border-red-100 bg-red-50 p-1.5 text-red-600 transition-colors hover:bg-red-600 hover:text-white" title="Hapus Unit">
+                    <button
+                      onClick={() => handleDeleteUnit(unit)}
+                      className="rounded-lg border border-red-100 bg-red-50 p-1.5 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                      title="Hapus Unit"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -709,7 +885,9 @@ const KelompokCard = ({
           })
         ) : (
           <div className="rounded-lg border border-dashed border-[#071E3D]/20 p-6 text-center">
-            <p className="text-[13px] font-medium text-slate-500">Belum ada unit. Tambahkan melalui tombol Tambah Unit.</p>
+            <p className="text-[13px] font-medium text-slate-500">
+              Belum ada unit. Tambahkan melalui tombol Tambah Unit.
+            </p>
           </div>
         )}
       </div>
@@ -739,7 +917,10 @@ const UnitDetail = ({
           <Layers size={16} className="text-[#CC6B27]" />
           Daftar Elemen & KUK
         </h5>
-        <button onClick={() => handleAddElemen(unit)} className="px-3 py-1.5 bg-[#071E3D] text-white rounded-lg text-[11px] font-bold hover:bg-[#CC6B27] flex items-center gap-1.5 transition-colors">
+        <button
+          onClick={() => handleAddElemen(unit)}
+          className="px-3 py-1.5 bg-[#071E3D] text-white rounded-lg text-[11px] font-bold hover:bg-[#CC6B27] flex items-center gap-1.5 transition-colors"
+        >
           <Plus size={14} /> Elemen Baru
         </button>
       </div>
@@ -748,7 +929,10 @@ const UnitDetail = ({
           {elemenList.map((elemen, elemenIndex) => {
             const kukList = getKukList(elemen);
             return (
-              <div key={getElemenId(elemen) || elemenIndex} className="rounded-lg bg-white border border-[#071E3D]/10 p-4 shadow-sm">
+              <div
+                key={getElemenId(elemen) || elemenIndex}
+                className="rounded-lg bg-white border border-[#071E3D]/10 p-4 shadow-sm"
+              >
                 <div className="flex gap-3">
                   <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
                     {elemen.urutan || elemenIndex + 1}
@@ -759,27 +943,57 @@ const UnitDetail = ({
                         {getElemenText(elemen)}
                       </h5>
                       <div className="flex gap-2 shrink-0">
-                        <button onClick={() => handleEditElemen(unit, elemen)} className="rounded-lg bg-[#CC6B27]/10 p-1.5 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white"><Edit2 size={16}/></button>
-                        <button onClick={() => handleDeleteElemen(elemen)} className="rounded-lg border border-red-100 bg-red-50 p-1.5 text-red-600 transition-colors hover:bg-red-600 hover:text-white"><Trash2 size={16}/></button>
+                        <button
+                          onClick={() => handleEditElemen(unit, elemen)}
+                          className="rounded-lg bg-[#CC6B27]/10 p-1.5 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteElemen(elemen)}
+                          className="rounded-lg border border-red-100 bg-red-50 p-1.5 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </div>
                     <div className="mt-3 bg-[#FAFAFA] border border-slate-100 rounded-lg p-3">
                       <div className="flex justify-between items-center mb-3">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kriteria Unjuk Kerja (KUK)</p>
-                        <button onClick={() => handleAddKuk(elemen)} className="text-[11px] font-bold text-[#CC6B27] hover:underline flex items-center gap-1">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Kriteria Unjuk Kerja (KUK)
+                        </p>
+                        <button
+                          onClick={() => handleAddKuk(elemen)}
+                          className="text-[11px] font-bold text-[#CC6B27] hover:underline flex items-center gap-1"
+                        >
                           <Plus size={12} /> KUK
                         </button>
                       </div>
-                      
+
                       {kukList.length > 0 ? (
                         <div className="space-y-2">
                           {kukList.map((kuk, kukIndex) => (
-                            <div key={kuk.id_kuk || kuk.id} className="flex gap-2 text-[12px] text-[#182D4A] items-start group">
-                              <span className="font-bold text-[#CC6B27] shrink-0 min-w-[20px]">{kuk.urutan || kukIndex + 1}.</span>
+                            <div
+                              key={kuk.id_kuk || kuk.id}
+                              className="flex gap-2 text-[12px] text-[#182D4A] items-start group"
+                            >
+                              <span className="font-bold text-[#CC6B27] shrink-0 min-w-[20px]">
+                                {kuk.urutan || kukIndex + 1}.
+                              </span>
                               <span className="flex-1">{getKukText(kuk)}</span>
                               <div className="opacity-0 group-hover:opacity-100 flex gap-2 shrink-0 transition-opacity ml-2">
-                                <button onClick={() => handleEditKuk(elemen, kuk)} className="rounded-lg bg-[#CC6B27]/10 p-1 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white"><Edit2 size={14}/></button>
-                                <button onClick={() => handleDeleteKuk(kuk)} className="rounded-lg border border-red-100 bg-red-50 p-1 text-red-600 transition-colors hover:bg-red-600 hover:text-white"><Trash2 size={14}/></button>
+                                <button
+                                  onClick={() => handleEditKuk(elemen, kuk)}
+                                  className="rounded-lg bg-[#CC6B27]/10 p-1 text-[#CC6B27] transition-colors hover:bg-[#CC6B27] hover:text-white"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteKuk(kuk)}
+                                  className="rounded-lg border border-red-100 bg-red-50 p-1 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -814,7 +1028,9 @@ const StatCard = ({ icon, label, value, tone = "orange" }) => {
   };
   return (
     <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
-      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone] || tones.orange}`}>{icon}</div>
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone] || tones.orange}`}>
+        {icon}
+      </div>
       <div>
         <p className="text-[11px] font-bold uppercase tracking-widest text-[#182D4A]/60">{label}</p>
         <p className="mt-1 text-[20px] font-black text-[#071E3D]">{value}</p>
@@ -824,22 +1040,32 @@ const StatCard = ({ icon, label, value, tone = "orange" }) => {
 };
 
 const ModalWrapper = ({ children, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/40 backdrop-blur-sm" onClick={onClose}>
-    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white rounded-xl shadow-2xl overflow-hidden">
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#071E3D]/40 backdrop-blur-sm"
+    onClick={onClose}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="w-full max-w-lg bg-white rounded-xl shadow-2xl overflow-hidden"
+    >
       {children}
     </div>
   </div>
 );
 
-const ModalHeader = ({ title, icon, onClose }) => (
+const ModalHeader = ({ title, isEdit, onClose }) => (
   <div className="px-6 py-4 border-b border-[#071E3D]/10 bg-[#FAFAFA] flex justify-between items-center">
     <div className="flex items-center gap-3">
       <div className="bg-[#CC6B27]/10 p-2 rounded-lg text-[#CC6B27]">
-        {icon}
+        {isEdit ? <Edit2 size={20} /> : <Plus size={20} />}
       </div>
       <h3 className="font-bold text-[16px] text-[#071E3D]">{title}</h3>
     </div>
-    <button type="button" onClick={onClose} className="text-[#182D4A] hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all">
+    <button
+      type="button"
+      onClick={onClose}
+      className="text-[#182D4A] hover:text-[#CC6B27] hover:bg-[#CC6B27]/10 p-1.5 rounded-lg transition-all"
+    >
       <X size={20} />
     </button>
   </div>
@@ -847,10 +1073,18 @@ const ModalHeader = ({ title, icon, onClose }) => (
 
 const ModalFooter = ({ loading, onCancel, submitText }) => (
   <div className="pt-5 border-t border-[#071E3D]/10 flex justify-end gap-3 mt-2">
-    <button type="button" onClick={onCancel} className="px-5 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#182D4A] bg-[#FAFAFA] hover:bg-[#E2E8F0] text-[13px] font-bold transition-all">
+    <button
+      type="button"
+      onClick={onCancel}
+      className="px-5 py-2.5 rounded-lg border border-[#071E3D]/20 text-[#182D4A] bg-[#FAFAFA] hover:bg-[#E2E8F0] text-[13px] font-bold transition-all"
+    >
       Batal
     </button>
-    <button type="submit" disabled={loading} className="px-5 py-2.5 rounded-lg bg-[#CC6B27] text-white hover:bg-[#a8561f] font-bold flex items-center gap-2 text-[13px] transition-all disabled:opacity-50">
+    <button
+      type="submit"
+      disabled={loading}
+      className="px-5 py-2.5 rounded-lg bg-[#CC6B27] text-white hover:bg-[#a8561f] font-bold flex items-center gap-2 text-[13px] transition-all disabled:opacity-50"
+    >
       {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
       {submitText}
     </button>

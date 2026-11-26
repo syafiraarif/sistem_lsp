@@ -290,7 +290,8 @@ const Asesor = () => {
       else if (value.length !== 16) errorMsg = "NIK harus tepat 16 digit.";
     } else if (name === "no_hp") {
       if (!value || value === "08") errorMsg = "No HP tidak boleh kosong.";
-      else if (value.length !== 13 || !value.startsWith("08")) errorMsg = "No HP harus 13 digit dan diawali 08.";
+      else if (value.length < 11 || value.length > 13 || !value.startsWith("08")) {
+        errorMsg = "No HP harus 11–13 digit dan diawali 08.";}
     } else if (name === "email") {
       if (!value) errorMsg = "Email tidak boleh kosong.";
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) errorMsg = "Format email tidak valid.";
@@ -361,8 +362,8 @@ const Asesor = () => {
       return;
     }
 
-    if (!formData.no_hp || formData.no_hp.length !== 13 || !formData.no_hp.startsWith("08")) {
-      notifikasi.peringatan("No HP harus 13 digit dan diawali 08");
+    if (!formData.no_hp || formData.no_hp.length < 11 || formData.no_hp.length > 13 || !formData.no_hp.startsWith("08")) {
+      notifikasi.peringatan("No HP harus 11–13 digit dan diawali 08");
       return;
     }
 

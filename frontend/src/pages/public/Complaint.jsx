@@ -76,9 +76,9 @@ export default function Complaint() {
 
     if (no_hp_pengadu === "08") {
       newErrors.no_hp_pengadu = "Nomor WhatsApp wajib diisi";
-    } else if (no_hp_pengadu.length !== 13) {
+    } else if (no_hp_pengadu.length < 11 || no_hp_pengadu.length > 13) {
       newErrors.no_hp_pengadu =
-        "Nomor WhatsApp harus tepat 13 digit";
+        "Nomor WhatsApp harus 11–13 digit";
     }
 
     if (!sebagai_siapa) {

@@ -14,34 +14,28 @@ import {
   Clock,
   AlertCircle,
   Loader2,
-  Sparkles,
   Inbox,
   ClipboardList,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Edit
 } from "lucide-react";
 
 const Pengaduan = () => {
-  // --- STATE ---
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Pagination State (Client-side)
   const [pagination, setPagination] = useState({ page: 1, limit: 10 });
 
-  // Modal State
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [statusEdit, setStatusEdit] = useState("");
 
-  // --- FETCH DATA ---
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Filter Client-Side & Reset Pagination
   useEffect(() => {
     if (!data) return;
     const lowerTerm = searchTerm.toLowerCase();
@@ -56,7 +50,7 @@ const Pengaduan = () => {
       );
     });
     setFilteredData(filtered);
-    setPagination(prev => ({ ...prev, page: 1 }));
+    setPagination((prev) => ({ ...prev, page: 1 }));
   }, [searchTerm, data]);
 
   const fetchData = async () => {
@@ -74,7 +68,6 @@ const Pengaduan = () => {
     }
   };
 
-  // --- HANDLERS ---
   const handleDetailClick = (item) => {
     setSelectedItem(item);
     setStatusEdit(item.status_pengaduan || "masuk");
@@ -99,7 +92,6 @@ const Pengaduan = () => {
     }
   };
 
-  // --- HELPERS ---
   const getStatusBadge = (status) => {
     switch (status) {
       case "selesai":
@@ -138,7 +130,6 @@ const Pengaduan = () => {
   const totalDiproses = data.filter((item) => item.status_pengaduan === "tindak_lanjut").length;
   const totalSelesai = data.filter((item) => item.status_pengaduan === "selesai").length;
 
-  // PAGINATION CALCULATION
   const totalPages = Math.ceil(filteredData.length / pagination.limit) || 1;
   const currentData = filteredData.slice((pagination.page - 1) * pagination.limit, pagination.page * pagination.limit);
 
@@ -226,14 +217,16 @@ const Pengaduan = () => {
                         {getStatusBadge(item.status_pengaduan)}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleDetailClick(item)}
-                          className="rounded-lg bg-[#182D4A]/10 p-1.5 text-[#182D4A] transition-colors hover:bg-[#182D4A] hover:text-white"
-                          title="Lihat Detail"
-                        >
-                          <Eye size={16} />
-                        </button>
+                        <div className="flex justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDetailClick(item)}
+                            className="rounded-lg bg-[#182D4A]/10 p-1.5 text-[#182D4A] transition-colors hover:bg-[#182D4A] hover:text-white"
+                            title="Detail & Update Status"
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -242,29 +235,29 @@ const Pengaduan = () => {
             </table>
           </div>
 
-          {/* --- PAGINATION --- */}
+          {/* PAGINATION */}
           {filteredData.length > 0 && (
-            <div className="flex justify-between items-center mt-6 border-t border-[#071E3D]/10 pt-5 text-[13px] font-medium text-[#182D4A]">
+            <div className="mt-6 flex items-center justify-between border-t border-[#071E3D]/10 pt-5 text-[13px] font-medium text-[#182D4A]">
               <span>
                 Menampilkan {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, filteredData.length)} dari {filteredData.length} data
               </span>
               <div className="flex items-center gap-2">
-                <button 
-                  className="p-1.5 rounded-md border border-[#071E3D]/20 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 hover:text-[#CC6B27] disabled:opacity-50 disabled:hover:border-[#071E3D]/20 disabled:hover:bg-transparent disabled:hover:text-[#182D4A]"
+                <button
+                  className="rounded-md border border-[#071E3D]/20 p-1.5 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 hover:text-[#CC6B27] disabled:opacity-50"
                   disabled={pagination.page === 1}
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
                 >
-                  <ChevronLeft size={18}/>
+                  <ChevronLeft size={18} />
                 </button>
                 <span className="rounded-md border border-[#071E3D]/10 bg-[#FAFAFA] px-4 py-1.5 font-bold text-[#071E3D]">
                   {pagination.page} / {totalPages}
                 </span>
-                <button 
-                  className="p-1.5 rounded-md border border-[#071E3D]/20 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 hover:text-[#CC6B27] disabled:opacity-50 disabled:hover:border-[#071E3D]/20 disabled:hover:bg-transparent disabled:hover:text-[#182D4A]"
+                <button
+                  className="rounded-md border border-[#071E3D]/20 p-1.5 transition-all hover:border-[#CC6B27]/30 hover:bg-[#CC6B27]/10 hover:text-[#CC6B27] disabled:opacity-50"
                   disabled={pagination.page >= totalPages}
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
                 >
-                  <ChevronRight size={18}/>
+                  <ChevronRight size={18} />
                 </button>
               </div>
             </div>
@@ -272,18 +265,18 @@ const Pengaduan = () => {
         </div>
       </div>
 
-      {/* MODAL DETAIL */}
+      {/* MODAL DETAIL & TINDAKAN ADMIN */}
       {showModal && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[95vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+          <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
             {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-[#071E3D]/10 bg-[#FAFAFA] px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="rounded-lg bg-[#CC6B27]/10 p-2 text-[#CC6B27]">
-                  <MessageSquare size={20} />
+                  <Eye size={20} />
                 </div>
                 <div>
-                  <h3 className="m-0 text-[16px] font-bold text-[#071E3D]">Detail Pengaduan</h3>
+                  <h3 className="m-0 text-[16px] font-bold text-[#071E3D]">Detail & Tindak Lanjut Pengaduan</h3>
                 </div>
               </div>
               <button
@@ -296,55 +289,80 @@ const Pengaduan = () => {
             </div>
 
             {/* Content Modal */}
-            <div className="custom-scrollbar flex-1 overflow-y-auto bg-white p-6">
-              <div className="space-y-6">
-                
-                {/* INFO PENGIRIM */}
-                <DetailSection icon={<User size={16} />} title="Informasi Pengirim">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <DetailItem label="Nama Lengkap">
-                      {selectedItem.nama_pengadu}
-                    </DetailItem>
-                    <DetailItem label="Sebagai">
-                      <span className="capitalize">{selectedItem.sebagai_siapa}</span>
-                    </DetailItem>
-                    <DetailItem label="Email" icon={<Mail size={12} />}>
-                      {selectedItem.email_pengadu || "-"}
-                    </DetailItem>
-                    <DetailItem label="No HP" icon={<Phone size={12} />}>
-                      {selectedItem.no_hp_pengadu || "-"}
-                    </DetailItem>
+            <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto bg-white p-6">
+              {/* BARIS 1: INFORMASI PENGIRIM (KIRI) & TINDAKAN ADMIN (KANAN) SEJAJAR */}
+              <div className="grid grid-cols-1 items-stretch gap-5 md:grid-cols-12">
+                {/* KIRI: Informasi Pengirim (7 Kolom) */}
+                <div className="flex flex-col justify-between rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm md:col-span-7">
+                  <div>
+                    <h4 className="mb-4 flex items-center gap-2 border-b border-[#071E3D]/10 pb-3 text-[14px] font-bold text-[#071E3D]">
+                      <User size={16} className="text-[#CC6B27]" /> Informasi Pengirim (Read-Only)
+                    </h4>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <DetailItem label="Nama Lengkap">{selectedItem.nama_pengadu}</DetailItem>
+                      <DetailItem label="Sebagai">
+                        <span className="capitalize">{selectedItem.sebagai_siapa}</span>
+                      </DetailItem>
+                      <DetailItem label="Email" icon={<Mail size={12} />}>
+                        {selectedItem.email_pengadu || "-"}
+                      </DetailItem>
+                      <DetailItem label="No HP" icon={<Phone size={12} />}>
+                        {selectedItem.no_hp_pengadu || "-"}
+                      </DetailItem>
+                    </div>
                   </div>
-                </DetailSection>
-
-                {/* ISI PENGADUAN */}
-                <div className="rounded-xl border border-[#CC6B27]/20 bg-orange-50/40 p-5">
-                  <h4 className="mb-3 flex items-center gap-2 text-[14px] font-bold text-[#071E3D]">
-                    <MessageSquare size={16} className="text-[#CC6B27]" />
-                    Isi Laporan
-                  </h4>
-                  <div className="mb-3 inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 border border-[#071E3D]/10 text-[10px] font-bold uppercase tracking-widest text-[#182D4A]/60">
-                    <Clock size={12} />
-                    {formatDate(selectedItem.tanggal_pengaduan)}
-                  </div>
-                  <p className="whitespace-pre-wrap text-[13px] font-medium leading-relaxed text-[#182D4A]">
-                    {selectedItem.isi_pengaduan}
-                  </p>
                 </div>
 
-                {/* UPDATE STATUS */}
-                <DetailSection icon={<CheckCircle size={16} />} title="Update Status Penanganan">
-                  <select
-                    className="w-full rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] p-2.5 text-[13px] font-bold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:bg-white focus:ring-2 focus:ring-[#CC6B27]/10"
-                    value={statusEdit}
-                    onChange={(e) => setStatusEdit(e.target.value)}
-                  >
-                    <option value="masuk">Masuk (Belum dibaca)</option>
-                    <option value="tindak_lanjut">Sedang Ditindak Lanjuti</option>
-                    <option value="selesai">Selesai</option>
-                  </select>
-                </DetailSection>
+                {/* KANAN: Tindakan Admin (5 Kolom) */}
+                <div className="flex flex-col justify-between rounded-xl border-2 border-[#CC6B27]/30 bg-orange-50/40 p-5 md:col-span-5">
+                  <div>
+                    <div className="mb-4 flex items-center justify-between border-b border-[#CC6B27]/20 pb-3">
+                      <h4 className="m-0 flex items-center gap-2 text-[14px] font-bold text-[#071E3D]">
+                        <Edit size={16} className="text-[#CC6B27]" />
+                        Tindakan Admin
+                      </h4>
+                      <span className="rounded bg-[#CC6B27] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                        Dapat Diubah
+                      </span>
+                    </div>
 
+                    <div>
+                      <label className="mb-2 block text-[12px] font-bold text-[#071E3D]">
+                        Status Penanganan
+                      </label>
+                      <select
+                        className="w-full rounded-lg border border-[#071E3D]/20 bg-white p-2.5 text-[13px] font-bold text-[#071E3D] outline-none transition-all focus:border-[#CC6B27] focus:ring-2 focus:ring-[#CC6B27]/20"
+                        value={statusEdit}
+                        onChange={(e) => setStatusEdit(e.target.value)}
+                      >
+                        <option value="masuk">Masuk (Belum dibaca)</option>
+                        <option value="tindak_lanjut">Sedang Ditindak Lanjuti</option>
+                        <option value="selesai">Selesai</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <p className="mb-0 mt-4 text-[11px] leading-relaxed text-[#182D4A]/70">
+                    Admin hanya berwenang memperbarui status penanganan tanpa mengubah isi laporan.
+                  </p>
+                </div>
+              </div>
+
+              {/* BARIS 2: ISI LAPORAN PENGADUAN */}
+              <div className="rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] p-5">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-[#071E3D]/10 pb-2.5">
+                  <h4 className="m-0 flex items-center gap-2 text-[14px] font-bold text-[#071E3D]">
+                    <MessageSquare size={16} className="text-[#CC6B27]" />
+                    Isi Laporan Pengaduan
+                  </h4>
+                  <span className="inline-flex items-center gap-1 rounded-md border border-[#071E3D]/10 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/70">
+                    <Clock size={12} />
+                    {formatDate(selectedItem.tanggal_pengaduan)}
+                  </span>
+                </div>
+                <p className="m-0 whitespace-pre-wrap text-[13px] font-medium leading-relaxed text-[#182D4A]">
+                  {selectedItem.isi_pengaduan}
+                </p>
               </div>
             </div>
 
@@ -352,7 +370,7 @@ const Pengaduan = () => {
             <div className="flex justify-end gap-3 border-t border-[#071E3D]/10 bg-[#FAFAFA] px-6 py-4">
               <button
                 type="button"
-                className="rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-5 py-2.5 text-[13px] font-bold text-[#182D4A] transition-colors hover:bg-[#E2E8F0]"
+                className="rounded-lg border border-[#071E3D]/20 bg-white px-5 py-2.5 text-[13px] font-bold text-[#182D4A] transition-colors hover:bg-[#E2E8F0]"
                 onClick={() => setShowModal(false)}
               >
                 Tutup
@@ -370,24 +388,19 @@ const Pengaduan = () => {
         </div>
       )}
 
-      {/* SCROLLBAR CUSTOM */}
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #CC6B27; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8561f; }
       ` }} />
     </div>
   );
 };
 
-// --- SUB COMPONENTS ---
-
 const StatCard = ({ icon, label, value, tone = "orange" }) => {
   const tones = {
     orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
     green: "bg-green-50 text-green-600",
-    red: "bg-red-50 text-red-500",
     blue: "bg-blue-50 text-blue-600",
     navy: "bg-[#071E3D]/10 text-[#071E3D]"
   };
@@ -405,25 +418,14 @@ const StatCard = ({ icon, label, value, tone = "orange" }) => {
   );
 };
 
-function DetailSection({ icon, title, children }) {
-  return (
-    <div className="rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
-      <h4 className="mb-4 flex items-center gap-2 border-b border-[#CC6B27]/20 pb-3 text-[14px] font-bold text-[#CC6B27]">
-        {icon} {title}
-      </h4>
-      {children}
-    </div>
-  );
-}
-
 function DetailItem({ label, children, icon }) {
   return (
     <div>
-      <p className="mb-1 flex items-center gap-1 text-[11px] font-bold text-[#071E3D]">
+      <p className="mb-1 flex items-center gap-1 text-[11px] font-bold text-[#182D4A]/60">
         {icon}
         {label}
       </p>
-      <div className="text-[13px] font-medium text-[#182D4A]/80">{children}</div>
+      <div className="text-[13px] font-semibold text-[#071E3D]">{children}</div>
     </div>
   );
 }

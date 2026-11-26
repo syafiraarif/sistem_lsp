@@ -3,6 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const {
   FrAk04,
+  FrAk03,
+  FrAk03Detail,
   PesertaJadwal,
   Jadwal,
   Skema,
@@ -23,9 +25,10 @@ const getAsesorByJadwal = async (id_jadwal) => {
   return ProfileAsesor.findByPk(idAsesor);
 };
 
-const getPesertaContext = async (id_peserta) => {
-  const peserta = await PesertaJadwal.findOne({
-    where: { id_peserta },
+// Mendukung pencarian berdasarkan id_peserta maupun fallback id_user
+const getPesertaContext = async (idParam) => {
+  let peserta = await PesertaJadwal.findOne({
+    where: { id_peserta: idParam },
     include: [
       {
         model: Jadwal,
@@ -35,6 +38,22 @@ const getPesertaContext = async (id_peserta) => {
       { model: ProfileAsesi, as: "profileAsesi" }
     ]
   });
+
+  if (!peserta) {
+    peserta = await PesertaJadwal.findOne({
+      where: { id_user: idParam },
+      order: [["id_peserta", "DESC"]],
+      include: [
+        {
+          model: Jadwal,
+          as: "jadwal",
+          include: [{ model: Skema, as: "skema" }, { model: Tuk, as: "tuk" }]
+        },
+        { model: ProfileAsesi, as: "profileAsesi" }
+      ]
+    });
+  }
+
   if (!peserta) return null;
   
   let asesor = null;
@@ -75,34 +94,40 @@ const safeText = (value) => {
 
 exports.getFrAk04ByPeserta = async (req, res) => {
   try {
-    const id_peserta = Number(req.params.id_peserta);
-    if (!id_peserta) {
+    const idParam = Number(req.params.id_peserta);
+    if (!idParam) {
       return res.status(400).json({ success: false, message: "ID peserta wajib diisi." });
     }
 
-    const context = await getPesertaContext(id_peserta);
+    const context = await getPesertaContext(idParam);
     if (!context) {
       return res.status(404).json({ success: false, message: "Peserta tidak ditemukan." });
     }
 
     const { peserta, asesor } = context;
+    const realIdPeserta = peserta.id_peserta;
     const profile = peserta.profileAsesi;
     const jadwal = peserta.jadwal;
     const skema = jadwal?.skema;
     const tuk = jadwal?.tuk;
 
-    const data = await FrAk04.findOne({ where: { id_peserta } });
-    
+    const data = await FrAk04.findOne({ where: { id_peserta: realIdPeserta } });
     if (!data) {
       return res.status(404).json({ success: false, message: "FR.AK.04 belum diisi oleh Asesi." });
     }
+
+    // Sekaligus ambil FR.AK.03 jika asesi juga mengisinya
+    const dataAk03 = await FrAk03.findOne({
+      where: { id_peserta: realIdPeserta },
+      include: [{ model: FrAk03Detail, as: "detailAk03" }]
+    });
 
     return res.status(200).json({
       success: true,
       message: "Data FR.AK.04 berhasil diambil.",
       data: {
         id_fr_ak04: data.id_fr_ak04,
-        id_peserta: data.id_peserta,
+        id_peserta: realIdPeserta,
         id_jadwal: data.id_jadwal,
         id_skema: data.id_skema,
         id_tuk: data.id_tuk,
@@ -124,6 +149,7 @@ exports.getFrAk04ByPeserta = async (req, res) => {
         jadwal: jadwal || {},
         peserta: peserta.toJSON(),
         profileAsesi: profile?.toJSON() || null,
+        fr_ak03: dataAk03 ? dataAk03.toJSON() : null,
         is_submitted: true,
         can_submit: false
       }
@@ -136,19 +162,20 @@ exports.getFrAk04ByPeserta = async (req, res) => {
 
 exports.generatePdfFrAk04 = async (req, res) => {
   try {
-    const id_peserta = Number(req.params.id_peserta);
-    if (!id_peserta) {
+    const idParam = Number(req.params.id_peserta);
+    if (!idParam) {
       return res.status(400).json({ success: false, message: "ID peserta wajib diisi." });
     }
 
-    const context = await getPesertaContext(id_peserta);
+    const context = await getPesertaContext(idParam);
     if (!context) {
       return res.status(404).json({ success: false, message: "Data peserta tidak ditemukan." });
     }
 
-    const data = await FrAk04.findOne({ where: { id_peserta } });
+    const realIdPeserta = context.peserta.id_peserta;
+    const data = await FrAk04.findOne({ where: { id_peserta: realIdPeserta } });
     if (!data) {
-      return res.status(404).json({ success: false, message: "Data FR.AK.04 tidak ditemukan." });
+      return res.status(404).json({ success: false, message: "Data FR.AK.04 belum diisi oleh Asesi." });
     }
 
     const PAGE_WIDTH = 595.28, PAGE_HEIGHT = 841.89, LEFT = 42, RIGHT = 42, TOP = 32, BOTTOM = 34;
@@ -162,7 +189,7 @@ exports.generatePdfFrAk04 = async (req, res) => {
     });
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename=FR-AK-04-${id_peserta}.pdf`);
+    res.setHeader("Content-Disposition", `attachment; filename=FR-AK-04-${realIdPeserta}.pdf`);
     doc.pipe(res);
 
     const drawCell = (x, y, width, height, text = "", options = {}) => {

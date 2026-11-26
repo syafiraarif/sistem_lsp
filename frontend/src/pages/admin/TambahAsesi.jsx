@@ -161,7 +161,7 @@ const TambahAsesi = () => {
       else if (value.length !== 16) errorMsg = 'NIK harus tepat 16 digit.';
     } else if (name === 'no_hp') {
       if (!value) errorMsg = 'No HP tidak boleh kosong.';
-      else if (value.length < 12 || value.length > 13) errorMsg = 'No HP harus 12-13 digit.';
+      else if (value.length < 11 || value.length > 13) errorMsg = 'No HP harus 11–13 digit.';
     } else if (name === 'email') {
       if (!value) errorMsg = 'Email tidak boleh kosong.';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) errorMsg = 'Format email tidak valid.';
