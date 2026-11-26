@@ -108,6 +108,30 @@ const JadwalAsesor = () => {
     if (!formData.id_user) {
       return Swal.fire('Peringatan', 'Silakan pilih asesor terlebih dahulu', 'warning');
     }
+
+    const normalizeTask = (value) => String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+    const selectedUserId = String(formData.id_user);
+    const duplicateAssignment = assignedAsesors.find((item) => {
+      const assignedUserId = item.id_user ?? item.asesor?.id_user ?? item.Asesor?.id_user ?? item.asesor?.user?.id_user;
+      return String(assignedUserId ?? '') === selectedUserId && normalizeTask(item.jenis_tugas) === normalizeTask(formData.jenis_tugas);
+    });
+
+    if (duplicateAssignment) {
+      const selectedAsesor = availableAsesors.find((asesor) => {
+        const asesorId = asesor.id_user || asesor.id || asesor.user?.id_user || asesor.User?.id_user;
+        return String(asesorId ?? '') === selectedUserId;
+      });
+      const asesorName = selectedAsesor?.nama_lengkap || selectedAsesor?.user?.nama_lengkap || selectedAsesor?.user?.profileAsesor?.nama_lengkap || selectedAsesor?.user?.ProfileAsesor?.nama_lengkap || selectedAsesor?.username || selectedAsesor?.user?.username || 'Asesor yang dipilih';
+      const taskLabel = TUGAS_OPTIONS.find((option) => option.value === formData.jenis_tugas)?.label || formData.jenis_tugas.replace(/_/g, ' ');
+
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Penugasan Sudah Ada',
+        text: `${asesorName} sudah ditugaskan sebagai ${taskLabel} pada jadwal ini. Jenis tugas yang sama tidak dapat diberikan dua kali kepada asesor yang sama. Periksa daftar asesor bertugas atau pilih jenis tugas lain.`,
+        confirmButtonColor: '#CC6B27'
+      });
+    }
+
     try {
       setSubmitting(true);
       const payload = {
@@ -127,7 +151,33 @@ const JadwalAsesor = () => {
       setFormData({ ...formData, id_user: "", catatan: "" });
       fetchAllData();
     } catch (error) {
-      Swal.fire('Gagal', error.response?.data?.message || 'Gagal menugaskan asesor', 'error');
+      const responseData = error.response?.data || {};
+      const backendMessage = responseData.message || responseData.error || '';
+      const validationDetails = Array.isArray(responseData.errors)
+        ? responseData.errors.map((item) => item.message || item.msg || String(item)).join(' ')
+        : '';
+      const combinedMessage = `${backendMessage} ${validationDetails}`.toLowerCase();
+      const isDuplicateError = /unique|duplicate|already exists|already assigned|sudah ada/.test(combinedMessage);
+      const isGenericValidationError = combinedMessage.includes('validation error');
+
+      if (isDuplicateError) {
+        const taskLabel = TUGAS_OPTIONS.find((option) => option.value === formData.jenis_tugas)?.label || formData.jenis_tugas.replace(/_/g, ' ');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Penugasan Duplikat',
+          text: `Asesor dengan jenis tugas ${taskLabel} sudah tercatat pada jadwal ini. Satu asesor tidak dapat memiliki jenis tugas yang sama lebih dari satu kali.`,
+          confirmButtonColor: '#CC6B27'
+        });
+      } else if (isGenericValidationError) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Penugasan Tidak Dapat Disimpan',
+          text: 'Database menolak data penugasan karena ada aturan validasi yang tidak terpenuhi. Periksa apakah asesor dan jenis tugas tersebut sudah tercatat pada jadwal ini. Jika tidak ada duplikasi, periksa detail validasi di log backend.',
+          confirmButtonColor: '#CC6B27'
+        });
+      } else {
+        Swal.fire('Gagal Menugaskan Asesor', backendMessage || error.message || 'Terjadi kesalahan saat menyimpan penugasan asesor.', 'error');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -224,16 +274,16 @@ const JadwalAsesor = () => {
           <StatCard icon={<XCircle size={22} />} label="Status Nonaktif" value={`${totalNonaktif} Nonaktif`} tone="red" />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 items-start lg:grid-cols-[380px_1fr]">
+        <div className="grid grid-cols-1 gap-6 items-stretch lg:grid-cols-[380px_minmax(0,1fr)]">
           {/* PANEL KIRI: FORM PENUGASAN */}
-          <aside className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm sticky top-6">
+          <aside className="flex flex-col overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm lg:h-[520px]">
             <div className="border-b border-[#071E3D]/10 bg-[#FAFAFA] p-6">
               <h2 className="flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
                 <UserPlus size={18} className="text-[#CC6B27]" />
                 Form Penugasan Asesor
               </h2>
             </div>
-            <form onSubmit={handleAssign} className="space-y-5 p-6">
+            <form onSubmit={handleAssign} className="flex-1 space-y-5 overflow-y-auto p-6">
               <div>
                 <label className={labelClass}>Pilih Asesor <span className="text-red-500">*</span></label>
                 <select
@@ -302,8 +352,8 @@ const JadwalAsesor = () => {
 
           {/* PANEL KANAN: DAFTAR ASESOR YANG DITUGASKAN */}
           {/* Class min-w-0 SANGAT PENTING di sini agar grid item tidak melebar melebihi kontainer induknya */}
-          <section className="bg-white border border-[#071E3D]/10 rounded-xl shadow-sm p-6 flex flex-col gap-4 min-w-0">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
+          <section className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm lg:h-[520px] lg:min-h-0">
+            <div className="mb-2 flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h4 className="m-0 flex items-center gap-2 text-[16px] font-bold text-[#071E3D]">
                   <ClipboardCheck size={18} className="text-[#CC6B27]" />
@@ -312,18 +362,18 @@ const JadwalAsesor = () => {
               </div>
             </div>
 
-            {assignedAsesors.length === 0 ? (
-              <div className="py-16 text-center">
-                <Users size={48} className="mx-auto mb-3 text-[#071E3D]/20" />
-                <h3 className="text-[16px] font-bold text-[#071E3D]">Belum Ada Asesor</h3>
-                <p className="mt-1 text-[13px] font-medium text-[#182D4A]/60 max-w-sm mx-auto">
-                  Belum ada asesor yang ditugaskan untuk jadwal ini. Gunakan form di samping untuk menambahkan.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto rounded-lg border border-[#071E3D]/10">
+            <div className="min-h-[280px] flex-1 overflow-auto rounded-lg border border-[#071E3D]/10 lg:min-h-0">
+              {assignedAsesors.length === 0 ? (
+                <div className="flex h-full min-h-[280px] flex-col items-center justify-center px-5 py-10 text-center">
+                  <Users size={48} className="mb-3 text-[#071E3D]/20" />
+                  <h3 className="text-[16px] font-bold text-[#071E3D]">Belum Ada Asesor</h3>
+                  <p className="mx-auto mt-1 max-w-sm text-[13px] font-medium text-[#182D4A]/60">
+                    Belum ada asesor yang ditugaskan untuk jadwal ini. Gunakan form di samping untuk menambahkan.
+                  </p>
+                </div>
+              ) : (
                 <table className="w-full min-w-[650px] border-collapse bg-white text-left">
-                  <thead>
+                  <thead className="sticky top-0 z-10">
                     <tr>
                       <TableHead>Profil Asesor</TableHead>
                       <TableHead>Tugas</TableHead>
@@ -396,8 +446,8 @@ const JadwalAsesor = () => {
                     })}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
+            </div>
           </section>
         </div>
       </div>

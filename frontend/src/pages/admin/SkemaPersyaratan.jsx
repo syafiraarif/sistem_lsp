@@ -4,7 +4,7 @@ import api from "../../services/api";
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Search, Plus, Edit2, Trash2, X, Save, Loader2, FileCheck, ArrowLeft, Link as LinkIcon, Unlink,
-  Sparkles, ClipboardCheck, Layers, ShieldCheck
+  Sparkles, Layers, ShieldCheck
 } from 'lucide-react';
 
 const SkemaPersyaratan = () => {
@@ -138,26 +138,35 @@ const SkemaPersyaratan = () => {
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
 
         {/* HEADER SECTION */}
-        <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-          <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
-          <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <div>
+        <div className="rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
+          <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center">
+            <div className="min-w-0">
               <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">
                 Kelola Persyaratan Skema
               </h2>
-              <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">
+              <p className="m-0 text-[14px] font-medium leading-relaxed text-[#182D4A]/70">
                 Skema: <span className="font-bold text-[#CC6B27]">{skemaDetail?.kode_skema || 'Memuat...'}</span> {skemaDetail?.judul_skema ? `- ${skemaDetail.judul_skema}` : ''}
               </p>
             </div>
 
-            <div className="flex gap-4">
-              <div className="rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] px-5 py-3 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/60">Terpasang</p>
-                <p className="mt-1 text-2xl font-black text-[#071E3D] leading-none">{attachedData.length}</p>
+            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] px-5 py-4 sm:min-w-[230px]">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#071E3D]/10 text-[#071E3D]">
+                  <ShieldCheck size={21} />
+                </div>
+                <div>
+                  <p className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-[#182D4A]/60">Terpasang</p>
+                  <p className="mt-1 text-2xl font-black leading-none text-[#071E3D]">{attachedData.length}</p>
+                </div>
               </div>
-              <div className="rounded-xl border border-[#CC6B27]/20 bg-[#CC6B27]/5 px-5 py-3 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#CC6B27]">Master Data</p>
-                <p className="mt-1 text-2xl font-black text-[#CC6B27] leading-none">{masterData.length}</p>
+              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#CC6B27]/20 bg-[#CC6B27]/5 px-5 py-4 sm:min-w-[230px]">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#CC6B27]/10 text-[#CC6B27]">
+                  <Layers size={21} />
+                </div>
+                <div>
+                  <p className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-[#CC6B27]">Master Data</p>
+                  <p className="mt-1 text-2xl font-black leading-none text-[#CC6B27]">{masterData.length}</p>
+                </div>
               </div>
             </div>
           </div>

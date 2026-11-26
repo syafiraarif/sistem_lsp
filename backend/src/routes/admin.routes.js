@@ -72,7 +72,7 @@ router.post("/import-asesi", uploadExcel.single("file"), asesiAdmin.importAsesiE
 router.get("/asesi", asesiAdmin.getAll);
 router.get("/asesi/:id", asesiAdmin.getById);
 router.put("/asesi/:id", asesiAdmin.update);
-router.delete("/asesi/:id", asesiAdmin.delete);
+router.put("/asesi/:id/status", asesiAdmin.updateStatus);
 router.post("/asesi/:id/reset-password", asesiAdmin.resetPassword);
 router.get("/download-template-asesi", asesiAdmin.downloadTemplate);
 

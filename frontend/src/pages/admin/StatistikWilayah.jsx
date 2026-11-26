@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { FaMapMarkedAlt, FaChartBar, FaUsers, FaCity } from "react-icons/fa";
-import api from "../../services/api"; 
+import { FaMapMarkedAlt, FaCity } from "react-icons/fa";
+import { Users, BarChart3, Building2 } from "lucide-react";
+import api from "../../services/api";
 
 const StatistikWilayah = () => {
   const [dataAsesor, setDataAsesor] = useState([]);
@@ -16,7 +17,6 @@ const StatistikWilayah = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Tambahkan limit besar agar semua data asesor terambil untuk statistik
       const response = await api.get("/admin/asesor?limit=10000");
       const resBody = response.data !== undefined ? response.data : response;
       const listData = Array.isArray(resBody.data) ? resBody.data : resBody.data?.data && Array.isArray(resBody.data.data) ? resBody.data.data : Array.isArray(resBody) ? resBody : [];
@@ -32,13 +32,13 @@ const StatistikWilayah = () => {
 
   const processStats = (data) => {
     const daftarProvinsi = [
-      "Aceh", "Sumatera Utara", "Sumatera Barat", "Riau", "Jambi", "Sumatera Selatan", 
-      "Bengkulu", "Lampung", "Kepulauan Bangka Belitung", "Kepulauan Riau", "DKI Jakarta", 
-      "Jawa Barat", "Jawa Tengah", "DI Yogyakarta", "Jawa Timur", "Banten", "Bali", 
-      "Nusa Tenggara Barat", "Nusa Tenggara Timur", "Kalimantan Barat", "Kalimantan Tengah", 
-      "Kalimantan Selatan", "Kalimantan Timur", "Kalimantan Utara", "Sulawesi Utara", 
-      "Sulawesi Tengah", "Sulawesi Selatan", "Sulawesi Tenggara", "Gorontalo", "Sulawesi Barat", 
-      "Maluku", "Maluku Utara", "Papua", "Papua Barat", "Papua Selatan", "Papua Tengah", 
+      "Aceh", "Sumatera Utara", "Sumatera Barat", "Riau", "Jambi", "Sumatera Selatan",
+      "Bengkulu", "Lampung", "Kepulauan Bangka Belitung", "Kepulauan Riau", "DKI Jakarta",
+      "Jawa Barat", "Jawa Tengah", "DI Yogyakarta", "Jawa Timur", "Banten", "Bali",
+      "Nusa Tenggara Barat", "Nusa Tenggara Timur", "Kalimantan Barat", "Kalimantan Tengah",
+      "Kalimantan Selatan", "Kalimantan Timur", "Kalimantan Utara", "Sulawesi Utara",
+      "Sulawesi Tengah", "Sulawesi Selatan", "Sulawesi Tenggara", "Gorontalo", "Sulawesi Barat",
+      "Maluku", "Maluku Utara", "Papua", "Papua Barat", "Papua Selatan", "Papua Tengah",
       "Papua Pegunungan", "Papua Barat Daya"
     ];
 
@@ -46,7 +46,6 @@ const StatistikWilayah = () => {
     daftarProvinsi.forEach(prov => provCount[prov] = 0);
 
     data.forEach(curr => {
-      // Gunakan field dari database, utamakan domisili, jika kosong gunakan ktp
       const prov = curr.provinsi_domisili || curr.provinsi_ktp;
       if (prov) {
         provCount[prov] = (provCount[prov] || 0) + 1;
@@ -59,7 +58,6 @@ const StatistikWilayah = () => {
     })).sort((a, b) => b.count - a.count);
 
     const kotaCount = data.reduce((acc, curr) => {
-      // Gunakan field dari database untuk kota
       const kota = curr.kota_domisili || curr.kota_ktp || "Belum Ditentukan";
       acc[kota] = (acc[kota] || 0) + 1;
       return acc;
@@ -88,30 +86,16 @@ const StatistikWilayah = () => {
 
   return (
     <div className="p-6 md:p-8 bg-[#FAFAFA] min-h-screen flex flex-col gap-6">
-      
-      {/* HEADER SECTION */}
-      <div className="relative overflow-hidden bg-white p-6 rounded-xl border border-[#071E3D]/10 shadow-sm">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-[#CC6B27]/10 rounded-full blur-3xl translate-x-1/3 -translate-y-1/2"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-[24px] md:text-[28px] font-black text-[#071E3D] m-0 mb-1">
-              Statistik Wilayah Asesor
-            </h1>
-            <p className="text-[14px] text-[#182D4A]/70 m-0 font-medium">
-              Sebaran data asesor berdasarkan Provinsi dan Kota/Kabupaten.
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <SummaryCard icon={<FaUsers className="text-2xl" />} title="Total Asesor" value={totalAsesor} color="navy" />
-        <SummaryCard icon={<FaChartBar className="text-2xl" />} title="Total Provinsi" value={provinsiAktif} color="orange" />
-        <SummaryCard icon={<FaCity className="text-2xl" />} title="Total Kota/Kab" value={statsKota.length} color="blue" />
+        <SummaryCard icon={<Users size={22} />} title="Total Asesor" value={totalAsesor} color="navy" />
+        <SummaryCard icon={<BarChart3 size={22} />} title="Total Provinsi" value={provinsiAktif} color="orange" />
+        <SummaryCard icon={<Building2 size={22} />} title="Total Kota/Kab" value={statsKota.length} color="blue" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
         {/* STATISTIK PROVINSI */}
         <div className="bg-white rounded-xl shadow-sm border border-[#071E3D]/10 overflow-hidden">
           <div className="bg-[#071E3D] px-6 py-4 border-b-4 border-[#CC6B27]">
@@ -119,6 +103,7 @@ const StatistikWilayah = () => {
               <FaMapMarkedAlt className="text-[#CC6B27]" /> Sebaran Provinsi (Semua Wilayah)
             </h2>
           </div>
+
           <div className="p-5 max-h-[450px] overflow-y-auto custom-scrollbar">
             {statsProvinsi.length > 0 ? statsProvinsi.map((item, index) => {
               const percentage = totalAsesor === 0 ? 0 : (item.count / totalAsesor * 100).toFixed(1);
@@ -130,6 +115,7 @@ const StatistikWilayah = () => {
                       {item.count} Asesor ({percentage}%)
                     </span>
                   </div>
+
                   <div className="w-full bg-[#071E3D]/10 rounded-full h-2.5 overflow-hidden">
                     <div className="bg-[#CC6B27] h-2.5 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }}></div>
                   </div>
@@ -151,6 +137,7 @@ const StatistikWilayah = () => {
               <FaCity className="text-[#CC6B27]" /> Sebaran Kota/Kabupaten Terbanyak
             </h2>
           </div>
+
           <div className="overflow-x-auto max-h-[450px] overflow-y-auto custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-max bg-white">
               <thead className="sticky top-0 z-10">
@@ -160,6 +147,7 @@ const StatistikWilayah = () => {
                   <th className="py-3.5 px-4 bg-[#FAFAFA] text-[#071E3D] font-bold text-[12px] uppercase tracking-wider border-b border-[#071E3D]/10 text-center">Jumlah Asesor</th>
                 </tr>
               </thead>
+
               <tbody>
                 {statsKota.length > 0 ? statsKota.map((item, index) => (
                   <tr key={index} className="border-b border-[#071E3D]/5 hover:bg-[#CC6B27]/5 transition-colors">
@@ -197,19 +185,19 @@ const StatistikWilayah = () => {
 
 const SummaryCard = ({ icon, title, value, color }) => {
   const colors = {
-    navy: 'bg-[#071E3D]/10 text-[#071E3D]',
-    orange: 'bg-[#CC6B27]/10 text-[#CC6B27]',
-    blue: 'bg-blue-50 text-blue-600'
+    navy: "bg-[#071E3D]/10 text-[#071E3D]",
+    orange: "bg-[#CC6B27]/10 text-[#CC6B27]",
+    blue: "bg-blue-50 text-blue-600"
   };
 
   return (
-    <div className="bg-white p-5 rounded-xl shadow-sm border border-[#071E3D]/10 flex items-center gap-4 hover:shadow-md transition-all">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${colors[color]}`}>
+    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${colors[color]}`}>
         {icon}
       </div>
       <div>
-        <p className="text-[11px] text-[#182D4A]/60 font-black uppercase tracking-wider mb-0.5">{title}</p>
-        <p className="text-[26px] font-black text-[#071E3D] leading-none">{value}</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#182D4A]/60">{title}</p>
+        <p className="mt-1 text-[20px] font-black text-[#071E3D]">{value}</p>
       </div>
     </div>
   );

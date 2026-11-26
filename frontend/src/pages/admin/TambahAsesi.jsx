@@ -3,7 +3,7 @@ import Swal from 'sweetalert2';
 import api from "../../services/api"; 
 import { getProvinsi, getKota, getKecamatan, getKelurahan } from "../../services/wilayah.service";
 import { 
-  Search, Eye, Edit2, Trash2, X, Save, 
+  Search, Eye, Edit2, X, Save, 
   User as UserIcon, Loader2, Upload, FileSpreadsheet,
   GraduationCap, MapPin, Mail, Briefcase, Users, Key, ChevronLeft, ChevronRight, Download
 } from 'lucide-react';
@@ -20,6 +20,7 @@ const TambahAsesi = () => {
   const [isDetailMode, setIsDetailMode] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+  const [originalStatus, setOriginalStatus] = useState('aktif');
   
   // Pagination
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
@@ -44,14 +45,14 @@ const TambahAsesi = () => {
     alamat: '', rt: '', rw: '', provinsi: '', kota: '', kecamatan: '', kelurahan: '', kode_pos: '',
     pendidikan_terakhir: 'SMA/SMK', universitas: '', jurusan: '', tahun_lulus: '',
     pekerjaan: '', jabatan: '', nama_perusahaan: '', alamat_perusahaan: '',
-    telp_perusahaan: '', fax_perusahaan: '', email_perusahaan: ''
+    telp_perusahaan: '', fax_perusahaan: '', email_perusahaan: '', status_user: 'aktif'
   };
   const [formData, setFormData] = useState(initialFormState);
   const [fileExcel, setFileExcel] = useState(null);
 
   // --- FETCH DATA ---
-  const fetchData = async (page = 1, search = '') => {
-    setLoading(true);
+  const fetchData = async (page = 1, search = '', showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const response = await api.get(`/admin/asesi?page=${page}&limit=${pagination.limit}&search=${search}`);
       const resBody = response.data !== undefined ? response.data : response;
@@ -78,13 +79,19 @@ const TambahAsesi = () => {
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData(pagination.page, searchTerm);
     loadProvinsi();
+
+    const refreshInterval = setInterval(() => {
+      fetchData(pagination.page, searchTerm, false);
+    }, 15000);
+
+    return () => clearInterval(refreshInterval);
   }, [pagination.page, searchTerm]);
 
   // --- WILAYAH FETCHERS ---
@@ -212,13 +219,13 @@ const TambahAsesi = () => {
     validateInput(name, finalValue);
   };
 
-  // --- HANDLERS SUBMIT & DELETE ---
+  // --- HANDLERS SUBMIT ---
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     let isValid = true;
     Object.keys(formData).forEach(key => {
-      if (['email', 'no_hp', 'nik'].includes(key) && isEditMode) return; 
+      if (['email', 'no_hp', 'nik'].includes(key) && isEditMode) return;
       if (!validateInput(key, formData[key])) {
         isValid = false;
       }
@@ -230,9 +237,29 @@ const TambahAsesi = () => {
 
     if (!isEditMode) return;
 
+    const statusChanged = formData.status_user !== originalStatus;
+
+    if (statusChanged) {
+      const isDeactivating = formData.status_user === 'nonaktif';
+      const confirmation = await Swal.fire({
+        title: isDeactivating ? 'Nonaktifkan Akun Asesi?' : 'Aktifkan Kembali Akun Asesi?',
+        text: isDeactivating
+          ? 'Asesi tidak dapat login setelah akun dinonaktifkan. Data pembayaran, aktivitas, dan seluruh riwayat asesmen tetap tersimpan.'
+          : 'Asesi dapat login kembali. Seluruh data pembayaran, aktivitas, dan riwayat asesmen tetap tersimpan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: isDeactivating ? '#d97706' : '#15803d',
+        cancelButtonColor: '#182D4A',
+        confirmButtonText: isDeactivating ? 'Ya, Nonaktifkan' : 'Ya, Aktifkan',
+        cancelButtonText: 'Batal'
+      });
+
+      if (!confirmation.isConfirmed) return;
+    }
+
     try {
       Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-      
+
       const payload = { ...formData };
       if (payload.tanggal_lahir === "") payload.tanggal_lahir = null;
       payload.tahun_lulus = payload.tahun_lulus ? parseInt(payload.tahun_lulus) : null;
@@ -241,35 +268,22 @@ const TambahAsesi = () => {
       delete payload.no_hp;
 
       await api.put(`/admin/asesi/${currentId}`, payload);
-      Swal.fire('Sukses!', 'Data asesi berhasil diperbarui', 'success');
-      
+      await fetchData(pagination.page, searchTerm, false);
+
+      await Swal.fire(
+        'Sukses!',
+        statusChanged
+          ? `Data asesi berhasil diperbarui dan akun sekarang ${formData.status_user === 'aktif' ? 'Aktif' : 'Nonaktif'}.`
+          : 'Data asesi berhasil diperbarui.',
+        'success'
+      );
+
       setShowModal(false);
-      fetchData(pagination.page);
+      fetchData(pagination.page, searchTerm);
       resetForm();
     } catch (error) {
       Swal.fire('Error', error.response?.data?.message || 'Terjadi kesalahan saat memperbarui', 'error');
     }
-  };
-
-  const handleDelete = (id) => {
-    Swal.fire({
-      title: 'Hapus Asesi?',
-      text: "Data yang dihapus tidak dapat dikembalikan!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      confirmButtonText: 'Ya, Hapus!'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          await api.delete(`/admin/asesi/${id}`);
-          Swal.fire('Terhapus!', 'Data berhasil dihapus.', 'success');
-          fetchData(pagination.page);
-        } catch (error) {
-          Swal.fire('Error', 'Gagal menghapus data', 'error');
-        }
-      }
-    });
   };
 
   // LOGIKA DOWNLOAD TEMPLATE EXCEL
@@ -359,6 +373,7 @@ const TambahAsesi = () => {
     setFormData(initialFormState);
     setSelectedProvinsiId(''); setSelectedKotaId(''); setSelectedKecamatanId('');
     setIsEditMode(false); setIsDetailMode(false); setCurrentId(null);
+    setOriginalStatus('aktif');
     setErrors({});
   };
 
@@ -366,9 +381,11 @@ const TambahAsesi = () => {
     resetForm();
     setIsEditMode(true);
     setCurrentId(item.id_user || item.id);
+    const currentStatus = String(item.user?.status_user ?? item.status_user ?? 'aktif').trim().toLowerCase();
+    setOriginalStatus(currentStatus);
     
     setFormData({
-        nik: item.nik || '', email: item.user?.email || item.email || '', no_hp: item.user?.no_hp || item.no_hp || '',
+        nik: item.nik || '', email: item.user?.email || item.email || '', no_hp: item.user?.no_hp || item.no_hp || '', status_user: currentStatus,
         nama_lengkap: item.nama_lengkap || '', jenis_kelamin: item.jenis_kelamin || 'laki-laki', 
         tempat_lahir: item.tempat_lahir || '', tanggal_lahir: item.tanggal_lahir ? item.tanggal_lahir.split('T')[0] : '', 
         kebangsaan: item.kebangsaan || 'Indonesia', pendidikan_terakhir: item.pendidikan_terakhir || 'SMA/SMK', 
@@ -444,20 +461,22 @@ const TambahAsesi = () => {
                 <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27]">NIK</th>
                 <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27]">Nama Lengkap</th>
                 <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27]">Kontak</th>
-                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-56">Aksi</th>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center">Status</th>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27]">Aktivitas Terakhir</th>
+                <th className="py-3.5 px-4 bg-[#071E3D] text-[#FAFAFA] font-semibold text-[12px] uppercase tracking-wider border-b-4 border-[#CC6B27] text-center w-40">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="py-16 text-center">
+                  <td colSpan="7" className="py-16 text-center">
                     <Loader2 className="animate-spin text-[#CC6B27] mx-auto mb-3" size={36} />
                     <p className="text-[#182D4A] font-medium text-[14px]">Memuat data asesi...</p>
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="py-16 text-center">
+                  <td colSpan="7" className="py-16 text-center">
                     <UserIcon size={48} className="text-[#071E3D]/20 mx-auto mb-3"/>
                     <p className="text-[#182D4A] font-medium text-[14px]">Belum ada data asesi ditemukan.</p>
                   </td>
@@ -475,6 +494,39 @@ const TambahAsesi = () => {
                       <div className="flex items-center gap-1.5"><Mail size={14} className="text-[#CC6B27]"/> {item.user?.email || item.email || '-'}</div>
                     </td>
                     <td className="py-3 px-4 text-center">
+                      {(() => {
+                        const status = String(item.user?.status_user ?? item.status_user ?? 'aktif').trim().toLowerCase();
+                        return (
+                          <span className={`inline-flex items-center justify-center rounded-full px-3.5 py-1 text-[11px] font-bold ${status === 'aktif' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                            {status === 'aktif' ? 'Aktif' : 'Nonaktif'}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="py-3 px-4 text-[#182D4A] text-[12px]">
+                      {(() => {
+                        const lastActivity = item.last_activity_at || item.user?.last_activity_at;
+                        const lastLogin = item.last_login_at || item.user?.last_login_at;
+                        const source = lastActivity || lastLogin;
+                        if (!source) return <span className="text-[#182D4A]/50">Belum pernah login</span>;
+
+                        const dateValue = typeof source === 'string' && /^\d{4}-\d{2}-\d{2} \d/.test(source)
+                          ? source.replace(' ', 'T')
+                          : source;
+                        const date = new Date(dateValue);
+                        if (Number.isNaN(date.getTime())) return <span className="text-[#182D4A]/50">Belum pernah login</span>;
+
+                        const diffSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+                        let label;
+                        if (diffSeconds < 60) label = `${diffSeconds} detik lalu`;
+                        else if (diffSeconds < 3600) label = `${Math.floor(diffSeconds / 60)} menit lalu`;
+                        else if (diffSeconds < 86400) label = `${Math.floor(diffSeconds / 3600)} jam lalu`;
+                        else label = date.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+                        return <span className="font-semibold text-[#071E3D]">{label}</span>;
+                      })()}
+                    </td>
+                    <td className="py-3 px-4 text-center">
                       <div className="flex justify-center gap-2">
                         
                         <button 
@@ -487,7 +539,6 @@ const TambahAsesi = () => {
 
                         <button onClick={() => { handleEdit(item); setIsDetailMode(true); }} className="p-1.5 text-[#182D4A] bg-[#182D4A]/10 rounded-lg hover:bg-[#182D4A] hover:text-white transition-colors" title="Detail"><Eye size={16} /></button>
                         <button onClick={() => handleEdit(item)} className="p-1.5 text-[#CC6B27] bg-[#CC6B27]/10 rounded-lg hover:bg-[#CC6B27] hover:text-white transition-colors" title="Edit"><Edit2 size={16} /></button>
-                        <button onClick={() => handleDelete(item.id_user || item.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-600 hover:text-white border border-red-100 transition-colors" title="Hapus"><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>
@@ -566,6 +617,13 @@ const TambahAsesi = () => {
                   
                   <FormInput label="No HP / WhatsApp" required error={errors.no_hp}>
                     <input type="text" name="no_hp" value={formData.no_hp} onChange={handleInputChange} maxLength="13" required disabled={isDetailMode || isEditMode} placeholder="08xxxxxxxx" className={inputClass('no_hp')}/>
+                  </FormInput>
+
+                  <FormInput label="Status Akun">
+                    <select name="status_user" value={formData.status_user} onChange={handleInputChange} disabled={isDetailMode} className={inputClass('status_user')}>
+                      <option value="aktif">Aktif</option>
+                      <option value="nonaktif">Nonaktif</option>
+                    </select>
                   </FormInput>
                   
                   <FormInput label="Tempat Lahir">

@@ -105,29 +105,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8">
       <div className="flex flex-col gap-6">
 
-        <div className="relative overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white p-6 shadow-sm">
-          <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/2 rounded-full bg-[#CC6B27]/10 blur-3xl" />
-          <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <h2 className="m-0 mb-1 text-[24px] font-black text-[#071E3D] md:text-[28px]">
-                Ringkasan Sertifikasi
-              </h2>
-              <p className="m-0 text-[14px] font-medium text-[#182D4A]/70">
-                Pantau statistik pendaftaran, skema, asesor, serta status kelulusan asesi secara terpusat.
-              </p>
-            </div>
-
-            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-              <button
-                type="button"
-                onClick={() => navigate("/admin/laporan-sertifikasi")}
-                className="flex-1 rounded-lg bg-[#CC6B27] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-[#a8561f] hover:shadow-md md:flex-none"
-              >
-                Laporan Sertifikasi
-              </button>
-            </div>
-          </div>
-        </div>
+        
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard

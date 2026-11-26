@@ -259,7 +259,7 @@ const Skkni = () => {
     <div className="min-h-screen bg-[#FAFAFA] p-6 md:p-8 flex flex-col gap-6">
 
       {/* STATISTIK */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={<BookOpen size={22} />} label="Total Standar" value={`${dataList.length} Data`} tone="navy" />
         <StatCard icon={<FileText size={22} />} label="SKKNI" value={`${totalSkkni} Standar`} tone="orange" />
         <StatCard icon={<Layers size={22} />} label="SKK" value={`${totalSkk} Khusus`} tone="green" />
@@ -450,7 +450,7 @@ const Skkni = () => {
       {/* MODAL FORM (CREATE/EDIT) */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071E3D]/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+          <div className={`flex max-h-[95vh] w-full ${isEditing ? "max-w-4xl" : "max-w-5xl"} flex-col overflow-hidden rounded-xl bg-white shadow-2xl`}>
             <div className="flex items-center justify-between border-b border-[#071E3D]/10 bg-[#FAFAFA] px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="rounded-lg bg-[#CC6B27]/10 p-2 text-[#CC6B27]">
@@ -471,7 +471,7 @@ const Skkni = () => {
               </button>
             </div>
             <div className="custom-scrollbar flex-1 overflow-y-auto bg-white p-6">
-              <form id="skkniForm" onSubmit={handleSave} className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <form id="skkniForm" onSubmit={handleSave} className={isEditing ? "flex flex-col gap-6" : "grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]"}>
                 <div className="space-y-5">
                   <div className="overflow-hidden rounded-xl border border-[#071E3D]/10 bg-white shadow-sm">
                     <div className="border-b border-[#071E3D]/10 bg-[#FAFAFA] p-5">
@@ -669,9 +669,7 @@ const Skkni = () => {
                   <h4 className="mb-4 border-b border-[#071E3D]/10 pb-3 text-[14px] font-bold text-[#071E3D]">Informasi Standar</h4>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <DetailItem label="Judul Standar" value={selectedItem.judul_skkni} />
-                    <DetailItem label="Nomor Standar">
-                      <span className="inline-flex rounded-lg bg-[#CC6B27]/10 px-3 py-1.5 font-mono text-[13px] font-bold text-[#CC6B27]">{selectedItem.no_skkni}</span>
-                    </DetailItem>
+                    <DetailItem label="Nomor Standar" value={selectedItem.no_skkni} />
                     <DetailItem label="Jenis Standar" value={selectedItem.jenis_standar} />
                     <DetailItem label="Legalitas" value={selectedItem.legalitas || "-"} />
                     <DetailItem label="Sektor / Sub Sektor" value={`${selectedItem.sektor || "-"} / ${selectedItem.sub_sektor || "-"}`} />
@@ -731,13 +729,13 @@ const StatCard = ({ icon, label, value, tone = "orange" }) => {
     blue: "bg-blue-50 text-blue-600",
   };
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
+    <div className="flex min-w-0 items-center gap-4 rounded-xl border border-[#071E3D]/10 bg-white p-5 shadow-sm">
       <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[tone]}`}>
         {icon}
       </div>
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-[#182D4A]/60">{label}</p>
-        <p className="mt-1 text-[20px] font-black text-[#071E3D] leading-none">{value}</p>
+      <div className="min-w-0 flex-1">
+        <p className="break-words text-[11px] font-bold uppercase tracking-widest text-[#182D4A]/60">{label}</p>
+        <p className="mt-1 max-w-full break-words text-[clamp(15px,1.4vw,20px)] font-black leading-tight text-[#071E3D]">{value}</p>
       </div>
     </div>
   );
@@ -762,9 +760,11 @@ function Label({ children, required }) {
 
 function DetailItem({ label, value, children }) {
   return (
-    <div className="rounded-xl border border-[#071E3D]/10 bg-[#FAFAFA] p-4">
-      <p className="mb-1.5 text-[11px] font-bold text-[#071E3D]">{label}</p>
-      <div className="text-[13.5px] font-medium text-[#182D4A]/80">{children || value}</div>
+    <div className="min-w-0">
+      <p className="mb-1.5 block text-[11px] font-bold text-[#071E3D]">{label}</p>
+      <div className="flex min-h-[52px] w-full items-center rounded-lg border border-[#071E3D]/20 bg-[#FAFAFA] px-4 py-2.5 text-[13px] font-semibold text-[#071E3D]">
+        {children || value || "-"}
+      </div>
     </div>
   );
 }
